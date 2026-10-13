@@ -1,11 +1,9 @@
 {
- "version": "1.0.4",
+ "version": "1.0.5",
  "notes": [
-  "Quick Play: players always land in the same match",
-  "Relay fallback when a network blocks direct connections",
-  "Clear messages while finding or joining a match",
-  "Quick Play button always visible at the bottom of the lobby"
+  "Lobby shows whether the match service can be reached (green = online, red = blocked)",
+  "In a match, the top of the screen shows which Quick Play match you are in, whether you are hosting, and how many real players are in it"
  ],
- "sha256": "fc29aa0e7065478911d81e710647b4857c419f952a8a6e8b75a2160027d60966",
+ "sha256": "cfe8b26021eb30ef00391147a13f7dc70bbc734f5f062bc212ae9c8c740a8cd4",
  "minApp": "1.0.0"
 }
