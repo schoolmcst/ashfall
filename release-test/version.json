@@ -1,9 +1,10 @@
 {
- "version": "1.0.5",
+ "version": "1.0.6",
  "notes": [
-  "Lobby shows whether the match service can be reached (green = online, red = blocked)",
-  "In a match, the top of the screen shows which Quick Play match you are in, whether you are hosting, and how many real players are in it"
+  "New matches wait 30 seconds for players before bots join",
+  "Real players always take priority: a bot leaves the moment a player joins",
+  "The lobby warns you in red when a newer version is out"
  ],
- "sha256": "cfe8b26021eb30ef00391147a13f7dc70bbc734f5f062bc212ae9c8c740a8cd4",
+ "sha256": "56690830ec660d818e3f53b57597268b99a4b37a1ba2331d54a638d9bcbd1c96",
  "minApp": "1.0.0"
 }
