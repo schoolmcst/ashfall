@@ -3730,7 +3730,7 @@ function updateMatch(dt) {
   if (M.mode === 'ctf') updateCtf(dt);
   if (M.mode === 'snd') updateSnd(dt);
   if (M.cfg.time && M.mode !== 'snd' && M.t >= M.cfg.time * 60) { timeUp(); return; }
-  if (G.state === 'respawning') { G.respT -= dt; showCenter(M.online && !NET.teamSet ? (NET.app ? 'FINDING A MATCH' : 'JOINING ROOM') : 'RESPAWNING', Math.max(0, G.respT).toFixed(1)); if (G.respT <= 0 && !(M.online && !NET.teamSet)) respawnPlayer(); }
+  if (G.state === 'respawning') { G.respT -= dt; showCenter(M.online && !NET.teamSet ? (NET.app ? 'FINDING A MATCH' : 'JOINING ROOM') : 'RESPAWNING', M.online && !NET.teamSet && NET.app && P2P.current ? String(P2P.current.status || '').toUpperCase() : Math.max(0, G.respT).toFixed(1)); if (G.respT <= 0 && !(M.online && !NET.teamSet)) respawnPlayer(); }
   if (G.state === 'spectate') updateSpectate(dt);
   updateModeHud(false); updateMarkers();
 }
@@ -4879,7 +4879,21 @@ function updatePreview(dt) {
    If the host leaves, the next player in join order takes over the slot and everyone reconnects to them. */
 const P2P = (() => {
   const SIG = 'wss://0.peerjs.com:443/peerjs?key=peerjs', MAXP = 16, SLOTS = 6;
-  const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }];
+  const STUN = [{ urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302', 'stun:global.stun.twilio.com:3478'] }];
+  // relay for networks that block direct connections: the free Open Relay project's shared-secret TURN service
+  const TURN_HOST = 'staticauth.openrelay.metered.ca', TURN_SECRET = 'openrelayprojectsecret';
+  let turnCache = null;
+  async function iceServers() {
+    if (turnCache && turnCache.exp - Date.now() / 1000 > 3600) return turnCache.list;
+    try {
+      const exp = Math.floor(Date.now() / 1000) + 86400, username = exp + ':ashfall';
+      const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(TURN_SECRET), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+      const sig = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(username)));
+      const credential = btoa(String.fromCharCode(...sig));
+      const list = STUN.concat([{ urls: [`turn:${TURN_HOST}:80`, `turn:${TURN_HOST}:80?transport=tcp`, `turn:${TURN_HOST}:443`, `turns:${TURN_HOST}:443?transport=tcp`], username, credential }]);
+      turnCache = { exp, list }; return list;
+    } catch (e) { return STUN; }
+  }
   const rid = (n = 10) => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
   const sleep = ms => new Promise(r => setTimeout(r, ms));
   const VER = () => String((window.ASHFALL_APP && window.ASHFALL_APP.version) || 'dev').replace(/[^a-z0-9]/gi, '');
@@ -4909,8 +4923,8 @@ const P2P = (() => {
   }
 
   // one WebRTC link: an unreliable channel for state, a reliable one for control messages
-  function link(sig, dst, cid, offerer, onMsg, onState) {
-    const pc = new RTCPeerConnection({ iceServers: ICE }), L = { pc, cid, dst, u: null, r: null, open: false, closed: false, last: performance.now() };
+  function link(sig, dst, cid, offerer, onMsg, onState, ice, relayOnly) {
+    const pc = new RTCPeerConnection({ iceServers: ice || STUN, iceTransportPolicy: relayOnly ? 'relay' : 'all' }), L = { pc, cid, dst, u: null, r: null, open: false, closed: false, last: performance.now() };
     const wire = ch => { ch.onmessage = ev => { L.last = performance.now(); let m; try { m = JSON.parse(ev.data); } catch (e) { return; } onMsg(L, m); }; ch.onopen = check; ch.onclose = () => L.close(); };
     const check = () => { if (!L.open && L.u && L.r && L.u.readyState === 'open' && L.r.readyState === 'open') { L.open = true; onState(L, 'open'); } };
     L.close = () => { if (L.closed) return; L.closed = true; L.open = false; try { pc.close(); } catch (e) {} onState(L, 'closed'); };
@@ -4963,13 +4977,13 @@ const P2P = (() => {
         if (m.type === 'CLOSED') { if (!R.closed && R.host) reclaim(); return; }
         if (!m.src || !m.payload || !m.payload.cid) return;
         let L = R.links.get(m.payload.cid);
-        if (!L && m.type === 'OFFER') { L = link(sig, m.src, m.payload.cid, false, hostMsg, hostState); R.links.set(L.cid, L); }
+        if (!L && m.type === 'OFFER') { L = link(sig, m.src, m.payload.cid, false, hostMsg, hostState, R.ice); R.links.set(L.cid, L); }
         if (L) L.signal(m);
       });
       R.timer = setInterval(hostTick, 50);
     }
     async function reclaim() {   // lost the signalling socket: get the slot back so new players can still join
-      for (let i = 0; i < 20 && !R.closed; i++) { await sleep(1500); try { const s = await signal(R.slot); R.sig = s; s.on(m => { if (m.type === 'CLOSED') { if (!R.closed) reclaim(); return; } if (!m.src || !m.payload || !m.payload.cid) return; let L = R.links.get(m.payload.cid); if (!L && m.type === 'OFFER') { L = link(s, m.src, m.payload.cid, false, hostMsg, hostState); R.links.set(L.cid, L); } if (L) L.signal(m); }); return; } catch (e) {} }
+      for (let i = 0; i < 20 && !R.closed; i++) { await sleep(1500); try { const s = await signal(R.slot); R.sig = s; s.on(m => { if (m.type === 'CLOSED') { if (!R.closed) reclaim(); return; } if (!m.src || !m.payload || !m.payload.cid) return; let L = R.links.get(m.payload.cid); if (!L && m.type === 'OFFER') { L = link(s, m.src, m.payload.cid, false, hostMsg, hostState, R.ice); R.links.set(L.cid, L); } if (L) L.signal(m); }); return; } catch (e) {} }
     }
     function hostTick() {
       const now = performance.now(), all = [[me, R.mine]];
@@ -4991,17 +5005,24 @@ const P2P = (() => {
         for (const f of R.ls) try { f({}); } catch (e) {}
       }
     }
-    async function connectTo(slot, waitMs = 4000) {
+    // resolves the open link, or false; R.hostSeen says whether someone is hosting that slot at all
+    async function connectTo(slot, waitMs = 5000, relayOnly = false) {
       if (!R.sig || !R.sig.open) { if (R.sig) R.sig.close(); R.sig = await signal('a' + rid(14)); }
-      const sig = R.sig, cid = rid(8);
+      const sig = R.sig, cid = rid(8); R.hostSeen = false;
       return new Promise(res => {
-        let fin = false; const end = ok => { if (fin) return; fin = true; clearTimeout(to); off(); res(ok); };
+        let fin = false, to = null; const end = ok => { if (fin) return; fin = true; clearTimeout(to); off(); res(ok); };
         const L = link(sig, slot, cid, true, clientMsg, (l, st) => {
-          if (st === 'open') { const w0 = performance.now(); const wt = setInterval(() => { if (L.welcome) { clearInterval(wt); end(L.welcome.full ? false : L); if (L.welcome.full) L.close(); } else if (performance.now() - w0 > 2500) { clearInterval(wt); L.close(); end(false); } }, 50); }
+          if (st === 'open') { const w0 = performance.now(); const wt = setInterval(() => { if (L.welcome) { clearInterval(wt); if (L.welcome.full) { R.full = true; L.close(); end(false); } else end(L); } else if (performance.now() - w0 > 3000) { clearInterval(wt); L.close(); end(false); } }, 50); }
           if (st === 'closed') { end(false); if (R.hostLink === L) hostLost(); }
+        }, R.ice, relayOnly);
+        const off = sig.on(m => {
+          if (m.payload && m.payload.cid === cid) {
+            if (m.type === 'ANSWER' && !R.hostSeen) { R.hostSeen = true; clearTimeout(to); to = setTimeout(() => { L.close(); end(false); }, 15000); R.status = 'connecting to the host'; }
+            L.signal(m);
+          }
+          if ((m.type === 'EXPIRE' || m.type === 'LEAVE') && m.src === slot) { L.close(); end(false); }
         });
-        const off = sig.on(m => { if (m.payload && m.payload.cid === cid) L.signal(m); if ((m.type === 'EXPIRE' || m.type === 'LEAVE') && m.src === slot) { L.close(); end(false); } });
-        const to = setTimeout(() => { L.close(); end(false); }, waitMs);
+        to = setTimeout(() => { L.close(); end(false); }, waitMs);   // no answer at all: nobody is hosting this slot
       });
     }
     function startClient(L, slot) {
@@ -5021,26 +5042,35 @@ const P2P = (() => {
         else {
           await sleep(1500);
           let L = false;
-          for (let i = 0; i < 6 && !L && !R.closed; i++) { L = await connectTo(R.slot, 3000); if (!L) await sleep(700); }
+          for (let i = 0; i < 6 && !L && !R.closed; i++) { L = await connectTo(R.slot, 4000); if (!L && R.hostSeen) L = await connectTo(R.slot, 8000, true); if (!L) await sleep(700); }
           if (L) startClient(L, R.slot); else await claimWithRetry(R.slot);   // nobody took over: I will
         }
       } catch (e) { R.status = 'disconnected'; }
       R.migrating = false;
     }
     async function claimWithRetry(slot) {
-      for (let i = 0; i < 8; i++) { try { await becomeHost(slot); return; } catch (e) { if (e.message !== 'taken') throw e; const L = await connectTo(slot, 2500); if (L) { startClient(L, slot); return; } await sleep(1000); } }
+      for (let i = 0; i < 8; i++) { try { await becomeHost(slot); return; } catch (e) { if (e.message !== 'taken') throw e; const L = await connectTo(slot, 4000) || (R.hostSeen ? await connectTo(slot, 8000, true) : false); if (L) { startClient(L, slot); return; } await sleep(1000); } }
       throw new Error('slot busy');
     }
 
     // ---- find or make the match
     R.start = async () => {
+      R.ice = await iceServers();
       const tries = kind === 'quick' ? SLOTS : 1;
       for (let n = 1; n <= tries && !R.closed; n++) {
-        const slot = slotName(n);
-        const L = await connectTo(slot, 4000);
+        const slot = slotName(n); R.full = false; R.status = 'looking for a match';
+        let L = await connectTo(slot);
+        if (!L && R.hostSeen && !R.full) { R.status = 'trying the relay'; L = await connectTo(slot, 8000, true); }   // blocked direct path: go through the relay
         if (L) { startClient(L, slot); return R; }
+        if (R.full) continue;                                   // that match is full: try the next one
+        if (R.hostSeen) throw new Error('could not reach the host of that match - check your firewall and try again');
         try { await becomeHost(slot); return R; }
-        catch (e) { if (e.message === 'taken') { const L2 = await connectTo(slot, 4000); if (L2) { startClient(L2, slot); return R; } } else if (e.message !== 'taken') throw e; }
+        catch (e) {
+          if (e.message !== 'taken') throw e;
+          const L2 = await connectTo(slot, 6000) || (R.hostSeen ? await connectTo(slot, 8000, true) : false);   // someone claimed it a moment before us
+          if (L2) { startClient(L2, slot); return R; }
+          if (R.hostSeen) throw new Error('could not reach the host of that match - check your firewall and try again');
+        }
       }
       throw new Error(kind === 'quick' ? 'all matches full' : 'match full');
     };
@@ -5055,7 +5085,8 @@ const P2P = (() => {
   return {
     available: () => typeof RTCPeerConnection === 'function' && typeof WebSocket === 'function',
     // kind: 'quick' | 'code' | 'slot' (an exact slot, e.g. found on the local network)
-    async open(kind, mode, code) { const r = makeRoom(kind, mode, code); try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
+    current: null,
+    async open(kind, mode, code) { const r = makeRoom(kind, mode, code); this.current = r; try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
   };
 })();
 /* ================================================================== online play
@@ -5133,7 +5164,7 @@ async function netStart(mode) {
     const kind = NET.kind, code = kind === 'slot' ? NET.slot : NET.code; NET.joinKind = kind;
     let room = null;
     try { room = await P2P.open(kind, mode, code); }
-    catch (e) { if (NET.on && NET.mode === mode) { NET.on = false; showBanner('COULD NOT JOIN', e.message === 'timeout' || e.message === 'fail' ? 'no internet connection to the match service' : e.message); setTimeout(() => { if (M.online && !NET.room) toLobby(); }, 2500); } return; }
+    catch (e) { if (NET.on && NET.mode === mode) { NET.on = false; showBanner('COULD NOT JOIN', e.message === 'timeout' || e.message === 'fail' ? 'no internet connection to the match service' : e.message); setTimeout(() => { if (M.online && !NET.room) toLobby(); }, 6000); } return; }
     if (!NET.on || NET.mode !== mode) { room.leave(); return; }
     room.extras = () => NET.botPres;
     NET.room = room; NET.joinedAt = NOW; NET.botT = 2;

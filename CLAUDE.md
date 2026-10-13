@@ -10,9 +10,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   (`sigserver.js`); `game/test/mp.js` tests the claude.ai `room` version.
 
 ## Ship a patch (every installed app downloads it on next launch)
+**The owner tests every change before players get it. Always two steps:**
 1. Make the change in `game/src`, build, run the tests.
-2. `tools/release.sh <next version> "note" "note" ...` (writes `release/ashfall.html` + `release/version.json` with sha256).
-3. Commit and push to `main`. Done: apps read `https://raw.githubusercontent.com/schoolmcst/ashfall/main/release/version.json`.
+2. `tools/release.sh test <next version> "note" ...` then commit + push. This updates `release-test/`, which only the
+   owner's "ASHFALL TEST" launcher reads (`Documents\ASHFALL Setup\ASHFALL TEST.cmd`; it starts the app with
+   ASHFALL_UPDATE_BASE pointing at release-test/ and a separate profile folder). Tell the owner to open ASHFALL TEST.
+3. Only when the owner says it is good: `tools/release.sh public`, commit + push. Every player gets it on next launch.
 - Online matches only pair players on the same game version (the version is part of the match slot names).
 - Only `app/main.js` / `app/preload.js` changes need a new app download (`app/pack.sh`, then upload the zips to a
   GitHub Release); raise `minApp` in `release/version.json` if a patch depends on a new app.

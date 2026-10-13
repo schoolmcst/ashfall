@@ -1,15 +1,23 @@
 #!/bin/bash
-# Publish a game patch: every installed app downloads it the next time it opens.
-# usage: tools/release.sh 1.0.1 "What changed" "Another change" ...   then commit + push.
+# Patches go out in two steps.
+#   tools/release.sh test 1.0.1 "note" ...   -> release-test/ : only the owner's "ASHFALL TEST" launcher gets it
+#   tools/release.sh public                  -> copies the tested release-test/ to release/ : every player gets it
+# Commit + push after each step. Never run "public" until the owner has tested and said yes.
 set -e
-V=${1:?version like 1.0.1}; shift
-ROOT=$(cd "$(dirname "$0")/.." && pwd)
+ROOT=$(cd "$(dirname "$0")/.." && pwd); MODE=${1:?test or public}
+if [ "$MODE" = public ]; then
+  [ -f "$ROOT/release-test/version.json" ] || { echo "nothing in release-test"; exit 1; }
+  cp "$ROOT/release-test/ashfall.html" "$ROOT/release-test/version.json" "$ROOT/release/"
+  echo "promoted $(python3 -c "import json;print(json.load(open('$ROOT/release/version.json'))['version'])") to everyone"; exit 0
+fi
+[ "$MODE" = test ] || { echo "usage: release.sh test <version> notes... | release.sh public"; exit 1; }
+V=${2:?version like 1.0.1}; shift 2
 bash "$ROOT/game/build.sh"
-cp "$ROOT/game/ashfall.html" "$ROOT/release/ashfall.html"
-python3 - "$ROOT/release" "$V" "$@" <<'PY'
+cp "$ROOT/game/ashfall.html" "$ROOT/release-test/ashfall.html"
+python3 - "$ROOT/release-test" "$V" "$@" <<'PY'
 import hashlib, json, sys
 d, v, notes = sys.argv[1], sys.argv[2], sys.argv[3:]
 h = hashlib.sha256(open(d + '/ashfall.html', 'rb').read()).hexdigest()
 json.dump({"version": v, "notes": notes, "sha256": h, "minApp": "1.0.0"}, open(d + '/version.json', 'w'), indent=1)
-print('release', v, h[:12], notes)
+print('test release', v, h[:12], notes)
 PY
