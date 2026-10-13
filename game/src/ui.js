@@ -142,6 +142,8 @@ function actions(act) {
     case 'resume': resumeGame(); break;
     case 'restart': restartMatch(); break;
     case 'tomenu': toMenu(); break;
+    case 'map-': cycleMap(-1); break;
+    case 'map+': cycleMap(1); break;
     case 'class-': cycleClass(-1); break;
     case 'class+': cycleClass(1); break;
     case 'diff-': cycleDiff(-1); break;
@@ -475,7 +477,7 @@ function frame(now) {
 /* ------------------------------------------------------------------ boot: build the world in small steps so the loading bar can paint */
 const BOOT = [
   ['BUILDING TEXTURES', () => { buildTextures(); try { realTexStart(); } catch (e) {} }],
-  ['PREPARING MATERIALS', () => { buildMaterials(); buildViewmodelMaterials(); addFresnelAll(MAT); addFresnelAll(VM); }],
+  ['PREPARING MATERIALS', () => { buildMaterials(); buildViewmodelMaterials(); addFresnelAll(MAT); addFresnelAll(VM); buildMapMaterials(); }],
   ['RAISING THE RUINS', () => loadMap('ruins')],
   ['EQUIPPING SOLDIERS', () => { buildSoldierTemplates(); addFresnelAll(SOLD.mats); addFresnelAll(SOLD.skinMats); setupViewmodel(); initAttachments(); }],
   ['LOADING EFFECTS', buildFx],

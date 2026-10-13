@@ -3,7 +3,7 @@
 // Dynamic resolution is held off during the run so the numbers reflect the chosen settings.
 const BENCH_WARM = 2, BENCH_DUR = 20;
 function startBench() {
-  initAudio(); clearMenuSoldiers(); clearMatch(); resetGame();
+  initAudio(); clearMenuSoldiers(); clearMatch(); loadMap('ruins'); resetGame();
   G.bench = { t: 0, skipped: 0, dts: [], calls: 0, tris: 0, maxCalls: 0, n: 0, killT: 3, boomT: 7, dynRes: S.dynRes };
   S.dynRes = false; applyPR();
   G.state = 'playing'; showScreen(null); mouseDown = true;

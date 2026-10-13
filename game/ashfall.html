@@ -241,7 +241,7 @@
   .lob-mode.on{border-color:var(--accent);background:rgba(224,180,74,.10)} .lob-mode.on i{background:var(--accent);color:#14110a;border-color:var(--accent)}
   .lob-mode:hover,.lob-mode:focus{border-color:var(--accent);outline:none;background:rgba(224,180,74,.16)}
   .lob-card{border:1px solid var(--line);padding:16px 18px;background:rgba(255,255,255,.02);display:flex;flex-direction:column;gap:8px}
-  .lob-mname{font-size:26px;font-weight:800;letter-spacing:.14em} .lob-mdesc{font-size:13px;line-height:1.5;color:var(--dim)} .lob-rules{font-size:11px;letter-spacing:.22em;color:var(--accent)}
+  .lob-mname{font-size:26px;font-weight:800;letter-spacing:.14em} .lob-mdesc{font-size:13px;line-height:1.5;color:var(--dim)} .lob-rules{font-size:11px;letter-spacing:.22em;color:var(--accent)} .lob-map{display:flex;align-items:center;gap:12px;flex-wrap:wrap;font-size:11px;letter-spacing:.22em;color:var(--dim)} .lob-map b{color:var(--ink);font-size:13px;letter-spacing:.18em;min-width:150px;text-align:center;display:inline-block} .lob-map small{flex-basis:100%;font-size:11px;letter-spacing:.06em;opacity:.8}
   .lob-card .btn{margin:6px 0 0;width:100%;text-align:center}
   .lob-ctop{display:flex;justify-content:space-between;align-items:center} .lob-ctop>span{font-size:10px;letter-spacing:.35em;color:var(--dim)}
   .lob-cpick{display:flex;align-items:center;gap:10px} .lob-cpick b{font-size:15px;letter-spacing:.14em;min-width:130px;text-align:center}
@@ -3848,18 +3848,20 @@ function makeEnemy(type, x, z) {
   e.mag = e.magSize; rig.hits.forEach(m => { m.userData.enemy = e; });
   return e;
 }
+// a spawn spot (any floor) far from the player that can reach the player
 function pickSpawn() {
   updateNav(P.x, P.z, P.y);
-  for (let tries = 0; tries < 40; tries++) {
-    const ang = rnd(0, TAU), r = rnd(26, ARENA - 3), x = Math.cos(ang) * r, z = Math.sin(ang) * r;
-    if (Math.abs(x) > ARENA - 2 || Math.abs(z) > ARENA - 2 || Math.hypot(x - P.x, z - P.z) < 24) continue;
-    const c = cellOf(z) * NN + cellOf(x); if (navBlocked[c] || !navReach(c)) continue;
-    return { x, z };
+  const pts = buildSpawns();
+  for (let tries = 0; tries < 60; tries++) {
+    const p = pts[(Math.random() * pts.length) | 0];
+    if (Math.hypot(p.x - P.x, p.z - P.z) < 24) continue;
+    const n = nodeOf(p.x, p.z, p.y); if (n < 0 || !navField || navField[n] < 0) continue;
+    return p;
   }
   return randomOpenSpot(20, 30);
 }
-function spawnEnemy() { const sp = pickSpawn(); enemies.push(makeEnemy(pickType(), sp.x, sp.z)); }
-function relocateEnemy(e) { const sp = pickSpawn(); e.group.position.set(sp.x, 0, sp.z); e.noLosT = 0; e.avoidT = 0; e.lastX = sp.x; e.lastZ = sp.z; }
+function spawnEnemy() { const sp = pickSpawn(), e = makeEnemy(pickType(), sp.x, sp.z); e.group.position.y = sp.y || 0; enemies.push(e); }
+function relocateEnemy(e) { const sp = pickSpawn(); e.group.position.set(sp.x, sp.y || 0, sp.z); e.noLosT = 0; e.avoidT = 0; e.lastX = sp.x; e.lastZ = sp.z; }
 
 function hasLOS(e, dist) {
   _v.set(e.group.position.x, e.group.position.y + 1.5 - 0.4 * (e.crouchK || 0), e.group.position.z);
@@ -3974,7 +3976,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
       sfx.kill();
     }
     try { matchBotKilled(e, by, head, boom); } catch (err) { reportError(err); }
-    if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(e.group.position.x, e.group.position.z);
+    if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(e.group.position.x, e.group.position.z, groundAt(e.group.position.x, e.group.position.z, e.group.position.y + 0.3));
     _n.set(0, 1, 0); _v3.set(e.group.position.x, 0, e.group.position.z - 0.2); addDecal(_v3, _n, 'blood', 1.3);
     chunks('blood', _v.set(e.group.position.x, 1.2, e.group.position.z), 8, 3, 0.6);
     return true;
@@ -4002,26 +4004,26 @@ function updateDying(dt) {
 
 /* ------------------------------------------------------------------ ammo crates */
 const crateGeo = { body: null };
-function dropPickup(x, z) {
+function dropPickup(x, z, y = 0) {
   if (!crateGeo.body) crateGeo.body = mergeGeos([{ g: Bx(0.42, 0.26, 0.56), m: mat4(0, 0, 0) }, { g: Bx(0.44, 0.04, 0.2), m: mat4(0, 0.1, 0) }, { g: Bx(0.2, 0.03, 0.05), m: mat4(0, 0.16, 0) }]);
   const grp = new THREE.Group(); const pm = propGroup('ammo', { pickup: MAT.pickup, dark: MAT.dark, default: MAT.pickup });
   if (pm) grp.add(pm); else { const m = new THREE.Mesh(crateGeo.body, MAT.pickup); m.castShadow = true; grp.add(m); }
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0x66ff77, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.4 })); glow.scale.set(1.4, 1.4, 1); glow.position.y = 0.1; grp.add(glow);
-  grp.position.set(x, 0.3, z); scene.add(grp); pickups.push({ m: grp, x, z, t: 0, life: 35 });
+  grp.position.set(x, y + 0.3, z); scene.add(grp); pickups.push({ m: grp, x, z, y, t: 0, life: 35 });
 }
 function totalAmmo() { let n = 0; for (const w of WEAPONS) n += w.ammo + w.reserve; return n; }
+// an open spot between minR and maxR from the player, on about the player's floor if possible
 function randomOpenSpot(minR, maxR) {
-  for (let i = 0; i < 30; i++) {
-    const a = rnd(0, TAU), r = rnd(minR, maxR), x = clamp(P.x + Math.cos(a) * r, -ARENA + 2, ARENA - 2), z = clamp(P.z + Math.sin(a) * r, -ARENA + 2, ARENA - 2);
-    if (!navBlocked[cellOf(z) * NN + cellOf(x)]) return { x, z };
-  }
-  return { x: P.x, z: P.z + 2 };
+  const pts = buildSpawns();
+  let best = null, bs = 1e9;
+  for (const p of pts) { const d = Math.hypot(p.x - P.x, p.z - P.z), s = (d < minR ? minR - d : d > maxR ? d - maxR : 0) * 2 + Math.abs((p.y || 0) - P.y) * 3 + Math.random(); if (s < bs) { bs = s; best = p; } }
+  return best ? { x: best.x, z: best.z, y: best.y || 0 } : { x: P.x, z: P.z + 2, y: P.y };
 }
 function updatePickups(dt) {
-  if (G.waveActive && totalAmmo() === 0 && pickups.length === 0) { const sp = randomOpenSpot(5, 10); dropPickup(sp.x, sp.z); showMsg('SUPPLY DROP NEARBY'); }
+  if (G.waveActive && totalAmmo() === 0 && pickups.length === 0) { const sp = randomOpenSpot(5, 10); dropPickup(sp.x, sp.z, sp.y); showMsg('SUPPLY DROP NEARBY'); }
   for (let i = pickups.length - 1; i >= 0; i--) {
-    const k = pickups[i]; k.t += dt; k.m.rotation.y += dt * 1.5; k.m.position.y = 0.3 + Math.sin(k.t * 3) * 0.05;
-    if (Math.hypot(k.x - P.x, k.z - P.z) < 1.4 && P.y < 2.5) {
+    const k = pickups[i]; k.t += dt; k.m.rotation.y += dt * 1.5; k.m.position.y = (k.y || 0) + 0.3 + Math.sin(k.t * 3) * 0.05;
+    if (Math.hypot(k.x - P.x, k.z - P.z) < 1.4 && Math.abs(P.y - (k.y || 0)) < 1.5) {
       const sc = perk('scavenger'), eqMax = EQUIP[G.equip].max;
       for (const w of WEAPONS) w.reserve = Math.min(w.reserveMax, w.reserve + Math.ceil(w.magSize * (sc ? 1.6 : 0.8)));
       if (G.grenades < eqMax && (sc || Math.random() < 0.4)) G.grenades++;
@@ -4147,7 +4149,7 @@ function pauseGame() {
 }
 function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom || 'playing'; showScreen(null); lockPointer(); }
 function startGame() { startMatch('surv'); }
-function restartMatch() { if (M.mode === 'surv') startMatch('surv'); else startMatch(M.mode, M.cfg.custom ? M.cfg : null); }
+function restartMatch() { if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
 // leave whatever is running and go back to the menu scene (soldiers posing behind the menus)
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();
@@ -4328,10 +4330,11 @@ function spawnBot(en, pos) {
 function startMatch(mode, custom) {
   const cfg = matchCfg(mode, custom), def = MODES[mode];
   initAudio(); clearMenuSoldiers();
-  if (!def.online) { cfg.map = cfg.map && MAPS[cfg.map] ? cfg.map : pickMapFor(LOBBY.map); loadMap(cfg.map); }
+  if (!def.online) { cfg.map = pickMapFor(cfg.map || LOBBY.map); loadMap(cfg.map); }
+  else if (!NET.app) loadMap('ruins');   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
   resetGame();
-  if (mode === 'surv') { G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); return; }
+  if (mode === 'surv') { if (curMap !== 'ruins') { buildSpawns(); const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z); } G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); return; }
   buildSpawns();
   G.breakT = 1e9; G.waveActive = false; G.maxHp = M.maxHp; G.health = M.maxHp;
   if (def.online) {   // real players over the room: no bots; you drop in once the room has answered
@@ -4787,7 +4790,7 @@ function updateModeHud(force) {
   if (M.online && NET.app && NET.room) { const R = NET.room, n = (String(R.slot).match(/-q(\d+)$/) || [])[1], hum = 1 + [...NET.rem.values()].filter(x => !x.isBot).length;
     const hw = R.host ? warmLeft() : NET.hostWarm && performance.now() - NET.hostWarm.t < 1500 ? NET.hostWarm.left : 0;
     if (hw > 0) info = `WAITING FOR PLAYERS ${fmtT(hw)} · BOTS JOIN AFTER` + (info ? ' · ' + info : '');
-    info = `${n ? 'QUICK PLAY MATCH ' + n : R.kind === 'slot' ? 'WI-FI MATCH' : 'PRIVATE MATCH'} · ${R.host ? 'YOU ARE HOSTING' : 'JOINED'} · ${hum} PLAYER${hum > 1 ? 'S' : ''} · v${window.ASHFALL_APP.version} BETA` + (info ? ' · ' + info : ''); }
+    info = `${n ? 'QUICK PLAY MATCH ' + n : R.kind === 'slot' ? 'WI-FI MATCH' : 'PRIVATE MATCH'} · ${R.host ? 'YOU ARE HOSTING' : 'JOINED'} · ${hum} PLAYER${hum > 1 ? 'S' : ''} · ${mapName(curMap)} · v${window.ASHFALL_APP.version} BETA` + (info ? ' · ' + info : ''); }
   hudSet(el, 't', `<div class="mrow">${mid}</div><div class="minfo">${info}</div>`, true);
 }
 function showCenter(a, b) { const c = $('center'); const h = `<b>${a}</b>${b ? `<small>${b}</small>` : ''}`; if (c._h !== h) { c._h = h; c.innerHTML = h; } c.classList.remove('hide'); }
@@ -4838,7 +4841,7 @@ function renderLobby(focusSel) {
   const st = STATS, sel = LOBBY.mode, d = MODES[sel], c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   $('lobPlayer').innerHTML = `<span>K/D <b>${kdS(st.kills, st.deaths)}</b></span><span>WINS <b>${st.wins}</b></span><span>MATCHES <b>${st.matches}</b></span>`;
   $('lobModes').innerHTML = MODE_ORDER.map(k => `<button class="lob-mode${k === sel ? ' on' : ''}" data-mode="${k}"><i>${MODES[k].icon}</i><div><b>${MODES[k].name}</b><small>${modeRules(k)}</small></div></button>`).join('');
-  $('lobSel').innerHTML = `<div class="lob-mname">${d.name}</div><div class="lob-mdesc">${d.desc}</div><div class="lob-rules">${modeRules(sel)}${sel !== 'surv' && !d.online ? ` · BOTS ${SKILL[matchCfg(sel).skill].name}` : ''}</div><button class="btn primary lob-go" data-act="lob-start"${d.online && !netReady() ? ' disabled' : ''}>${d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'}</button>${d.online ? netLobbyHtml() : ''}`;
+  $('lobSel').innerHTML = `<div class="lob-mname">${d.name}</div><div class="lob-mdesc">${d.desc}</div><div class="lob-rules">${modeRules(sel)}${sel !== 'surv' && !d.online ? ` · BOTS ${SKILL[matchCfg(sel).skill].name}` : ''}</div>${lobbyMapRow(d)}<button class="btn primary lob-go" data-act="lob-start"${d.online && !netReady() ? ' disabled' : ''}>${d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'}</button>${d.online ? netLobbyHtml() : ''}`;
   $('lobClass').innerHTML = `<div class="lob-ctop"><span>YOUR CLASS</span><div class="lob-cpick"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><b id="lobClassName">${c.name}</b><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div></div>` +
     `<div class="lob-kit"><div><span>PRIMARY</span><b>${sel === 'gun' ? 'GUN GAME LADDER' : p.name}</b></div><div><span>SECONDARY</span><b>${sel === 'gun' ? '—' : s.name}</b></div><div><span>EQUIPMENT</span><b>${EQUIP[c.e].name}</b></div><div><span>PERK</span><b>${PERKS[c.k].name}</b></div></div>` +
     `<button class="btn" data-act="loadout">EDIT LOADOUT</button>`;
@@ -4847,11 +4850,19 @@ function renderLobby(focusSel) {
   if (d.online) netLobbyWire();
   if (focusSel) focusFirst(focusSel);
 }
+// MAP: random or a fixed map (online: used when you end up hosting)
+const MAP_CHOICES = () => ['random', ...MAP_ORDER.filter(id => !MAPS[id].hidden)];
+function lobbyMapRow(d) {
+  const id = LOBBY.map, m = MAPS[id];
+  const name = m ? m.name : 'RANDOM', sub = m ? m.place : d.online && NET.app ? 'the host picks; you pick when you host' : 'a different map each match';
+  return `<div class="lob-map"><span>MAP${d.online && NET.app ? ' (IF YOU HOST)' : ''}</span><div class="lob-cpick"><button class="mini" data-act="map-" aria-label="Previous map">&lsaquo;</button><b>${name}</b><button class="mini" data-act="map+" aria-label="Next map">&rsaquo;</button></div><small>${sub}</small></div>`;
+}
+function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.lob-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
 function lobbyTab(d) { const i = MODE_ORDER.indexOf(LOBBY.mode); LOBBY.mode = MODE_ORDER[(i + d + MODE_ORDER.length) % MODE_ORDER.length]; saveLobby(); sfx.ui(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); }
 
 /* ---------- custom game */
 const CUS_KEY = 'ashfall.custom.v1';
-let CUS = { mode: 'tdm', score: 50, time: 8, perTeam: 6, players: 8, skill: 'regular', hardcore: false };
+let CUS = { mode: 'tdm', score: 50, time: 8, perTeam: 6, players: 8, skill: 'regular', hardcore: false, map: 'random' };
 try { const o = JSON.parse(localStorage.getItem(CUS_KEY) || 'null'); if (o && MODES[o.mode]) CUS = Object.assign(CUS, o); } catch (e) {}
 const CUS_LIM = { tdm: [10, 150, 5], ffa: [5, 50, 5], hp: [50, 300, 10], ctf: [1, 10, 1], snd: [1, 8, 1] };
 function cusSetMode(k) {
@@ -4861,6 +4872,7 @@ function cusSetMode(k) {
 function renderCustom() {
   const k = CUS.mode, d = MODES[k], rows = [];
   rows.push({ name: 'MODE', t: 'seg', opts: MODE_ORDER.filter(m => !MODES[m].online).map(m => [m, MODES[m].short]), get: () => CUS.mode, set: v => { cusSetMode(v); } });
+  rows.push({ name: 'MAP', t: 'seg', opts: MAP_CHOICES().map(id => [id, id === 'random' ? 'RANDOM' : MAPS[id].name]), get: () => CUS.map || 'random', set: v => { CUS.map = v; } });
   if (CUS_LIM[k]) rows.push({ name: k === 'snd' ? 'ROUNDS TO WIN' : `SCORE LIMIT (${d.unit})`, t: 'range', min: CUS_LIM[k][0], max: CUS_LIM[k][1], step: CUS_LIM[k][2], get: () => CUS.score, set: v => { CUS.score = v; }, fmt: v => v });
   if (k !== 'snd' && k !== 'surv') rows.push({ name: 'TIME LIMIT', hint: '0 = no limit', t: 'range', min: 0, max: 20, step: 1, get: () => CUS.time, set: v => { CUS.time = v; }, fmt: v => v ? v + ' MIN' : 'NONE' });
   if (d.teams) rows.push({ name: 'TEAM SIZE', hint: 'Players on each team, you included', t: 'range', min: 1, max: 8, step: 1, get: () => CUS.perTeam, set: v => { CUS.perTeam = v; }, fmt: v => `${v} V ${v}` });
@@ -4880,8 +4892,8 @@ function renderCustom() {
 }
 function saveCus() { try { localStorage.setItem(CUS_KEY, JSON.stringify(CUS)); } catch (e) {} }
 function startCustom() {
-  if (CUS.mode === 'surv') return startMatch('surv');
-  startMatch(CUS.mode, { score: CUS.mode === 'gun' ? GUN_LADDER.length : CUS.score, time: CUS.time, perTeam: CUS.perTeam, players: CUS.players, skill: CUS.skill, hardcore: CUS.hardcore, custom: true });
+  if (CUS.mode === 'surv') return startMatch('surv', { map: CUS.map });
+  startMatch(CUS.mode, { map: CUS.map, score: CUS.mode === 'gun' ? GUN_LADDER.length : CUS.score, time: CUS.time, perTeam: CUS.perTeam, players: CUS.players, skill: CUS.skill, hardcore: CUS.hardcore, custom: true });
 }
 /* ================================================================== ragdoll physics (Verlet particles + stick constraints) */
 // 16 particles at the soldier's joints, held together by distance constraints, collide with the ground,
@@ -5306,7 +5318,7 @@ function addWind(mat, amp) {
 // Dynamic resolution is held off during the run so the numbers reflect the chosen settings.
 const BENCH_WARM = 2, BENCH_DUR = 20;
 function startBench() {
-  initAudio(); clearMenuSoldiers(); clearMatch(); resetGame();
+  initAudio(); clearMenuSoldiers(); clearMatch(); loadMap('ruins'); resetGame();
   G.bench = { t: 0, skipped: 0, dts: [], calls: 0, tris: 0, maxCalls: 0, n: 0, killT: 3, boomT: 7, dynRes: S.dynRes };
   S.dynRes = false; applyPR();
   G.state = 'playing'; showScreen(null); mouseDown = true;
@@ -6170,6 +6182,7 @@ async function netStart(mode) {
     room.extras = () => NET.botPres;
     NET.room = room; NET.joinedAt = performance.now() / 1000; NET.botT = 2;
     NET.warmEnd = room.host ? performance.now() / 1000 + WARMUP : 0;   // a new match waits for people before bots come in
+    if (room.host) netSwitchMap(pickMapFor(LOBBY.map));   // the host picks the map; everyone else follows it
     return;
   }
   if (!NET.ns) { NET.on = false; showMsg('OFFLINE: ONLINE PLAY NEEDS CLAUDE.AI'); return; }
@@ -6177,6 +6190,15 @@ async function netStart(mode) {
   try { room = await NET.ns.join(netRoomName()); } catch (e) { room = NET.ns; }   // named rooms unavailable: share the lobby, filtered by room name
   if (!NET.on || NET.mode !== mode) { if (room && room !== NET.ns && room.leave) room.leave().catch(() => {}); return; }
   NET.room = room; NET.joinedAt = performance.now() / 1000;
+}
+// load another map in the middle of an online match (host's choice): respawn me and my bots on it
+function netSwitchMap(id) {
+  if (!MAPS[id] || id === curMap) return;
+  loadMap(id);
+  if (!M || !M.online) return;
+  if (M.me && M.me.alive && G.state === 'playing') placePlayer(pickSpawnFor(M.myTeam, sideOf(M.myTeam)));
+  for (const en of M.entries) if (en.bot && !en.bot.net && enemies.includes(en.bot)) { const p = pickSpawnFor(en.team, sideOf(en.team)); en.bot.group.position.set(p.x, p.y || 0, p.z); en.bot.goal = null; }
+  showBanner(mapName(id), MAPS[id].place.toLowerCase());
 }
 function netLeave() {
   const r = NET.room; NET.room = null; NET.on = false;
@@ -6192,7 +6214,7 @@ const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && G.state === 'playing');
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0,
-    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep }).catch(() => {});
+    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ho: NET.room && NET.room.host ? 1 : 0 }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { if (NET.on) NET.sh++; }
@@ -6272,6 +6294,7 @@ function netTick(dt) {
       if (!pr.bot) feedLine(`${nameHtml(R.entry)} <span class="fw">JOINED</span>`);
     }
     R.entry.name = cleanNick(pr.n); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
+    if (pr.ho && !pr.bot && !isHost && typeof pr.mp === 'string' && MAPS[pr.mp] && pr.mp !== curMap && !NET.mapBusy) { NET.mapBusy = true; setTimeout(() => { NET.mapBusy = false; if (NET.on) netSwitchMap(pr.mp); }, 0); }
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
     R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
     R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
@@ -6328,7 +6351,7 @@ function netTick(dt) {
   if (M.def.teams) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
   // score limit: show the winner, then everyone starts a fresh round
   if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
-  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; showBanner('NEW ROUND', 'scores reset'); } }
+  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor('random')); showBanner('NEW ROUND', mapName(curMap) + ' · scores reset'); } }
   else {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
@@ -6567,6 +6590,8 @@ function actions(act) {
     case 'resume': resumeGame(); break;
     case 'restart': restartMatch(); break;
     case 'tomenu': toMenu(); break;
+    case 'map-': cycleMap(-1); break;
+    case 'map+': cycleMap(1); break;
     case 'class-': cycleClass(-1); break;
     case 'class+': cycleClass(1); break;
     case 'diff-': cycleDiff(-1); break;
@@ -6900,7 +6925,7 @@ function frame(now) {
 /* ------------------------------------------------------------------ boot: build the world in small steps so the loading bar can paint */
 const BOOT = [
   ['BUILDING TEXTURES', () => { buildTextures(); try { realTexStart(); } catch (e) {} }],
-  ['PREPARING MATERIALS', () => { buildMaterials(); buildViewmodelMaterials(); addFresnelAll(MAT); addFresnelAll(VM); }],
+  ['PREPARING MATERIALS', () => { buildMaterials(); buildViewmodelMaterials(); addFresnelAll(MAT); addFresnelAll(VM); buildMapMaterials(); }],
   ['RAISING THE RUINS', () => loadMap('ruins')],
   ['EQUIPPING SOLDIERS', () => { buildSoldierTemplates(); addFresnelAll(SOLD.mats); addFresnelAll(SOLD.skinMats); setupViewmodel(); initAttachments(); }],
   ['LOADING EFFECTS', buildFx],

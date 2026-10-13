@@ -12,7 +12,7 @@ function renderLobby(focusSel) {
   const st = STATS, sel = LOBBY.mode, d = MODES[sel], c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   $('lobPlayer').innerHTML = `<span>K/D <b>${kdS(st.kills, st.deaths)}</b></span><span>WINS <b>${st.wins}</b></span><span>MATCHES <b>${st.matches}</b></span>`;
   $('lobModes').innerHTML = MODE_ORDER.map(k => `<button class="lob-mode${k === sel ? ' on' : ''}" data-mode="${k}"><i>${MODES[k].icon}</i><div><b>${MODES[k].name}</b><small>${modeRules(k)}</small></div></button>`).join('');
-  $('lobSel').innerHTML = `<div class="lob-mname">${d.name}</div><div class="lob-mdesc">${d.desc}</div><div class="lob-rules">${modeRules(sel)}${sel !== 'surv' && !d.online ? ` · BOTS ${SKILL[matchCfg(sel).skill].name}` : ''}</div><button class="btn primary lob-go" data-act="lob-start"${d.online && !netReady() ? ' disabled' : ''}>${d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'}</button>${d.online ? netLobbyHtml() : ''}`;
+  $('lobSel').innerHTML = `<div class="lob-mname">${d.name}</div><div class="lob-mdesc">${d.desc}</div><div class="lob-rules">${modeRules(sel)}${sel !== 'surv' && !d.online ? ` · BOTS ${SKILL[matchCfg(sel).skill].name}` : ''}</div>${lobbyMapRow(d)}<button class="btn primary lob-go" data-act="lob-start"${d.online && !netReady() ? ' disabled' : ''}>${d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'}</button>${d.online ? netLobbyHtml() : ''}`;
   $('lobClass').innerHTML = `<div class="lob-ctop"><span>YOUR CLASS</span><div class="lob-cpick"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><b id="lobClassName">${c.name}</b><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div></div>` +
     `<div class="lob-kit"><div><span>PRIMARY</span><b>${sel === 'gun' ? 'GUN GAME LADDER' : p.name}</b></div><div><span>SECONDARY</span><b>${sel === 'gun' ? '—' : s.name}</b></div><div><span>EQUIPMENT</span><b>${EQUIP[c.e].name}</b></div><div><span>PERK</span><b>${PERKS[c.k].name}</b></div></div>` +
     `<button class="btn" data-act="loadout">EDIT LOADOUT</button>`;
@@ -21,11 +21,19 @@ function renderLobby(focusSel) {
   if (d.online) netLobbyWire();
   if (focusSel) focusFirst(focusSel);
 }
+// MAP: random or a fixed map (online: used when you end up hosting)
+const MAP_CHOICES = () => ['random', ...MAP_ORDER.filter(id => !MAPS[id].hidden)];
+function lobbyMapRow(d) {
+  const id = LOBBY.map, m = MAPS[id];
+  const name = m ? m.name : 'RANDOM', sub = m ? m.place : d.online && NET.app ? 'the host picks; you pick when you host' : 'a different map each match';
+  return `<div class="lob-map"><span>MAP${d.online && NET.app ? ' (IF YOU HOST)' : ''}</span><div class="lob-cpick"><button class="mini" data-act="map-" aria-label="Previous map">&lsaquo;</button><b>${name}</b><button class="mini" data-act="map+" aria-label="Next map">&rsaquo;</button></div><small>${sub}</small></div>`;
+}
+function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.lob-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
 function lobbyTab(d) { const i = MODE_ORDER.indexOf(LOBBY.mode); LOBBY.mode = MODE_ORDER[(i + d + MODE_ORDER.length) % MODE_ORDER.length]; saveLobby(); sfx.ui(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); }
 
 /* ---------- custom game */
 const CUS_KEY = 'ashfall.custom.v1';
-let CUS = { mode: 'tdm', score: 50, time: 8, perTeam: 6, players: 8, skill: 'regular', hardcore: false };
+let CUS = { mode: 'tdm', score: 50, time: 8, perTeam: 6, players: 8, skill: 'regular', hardcore: false, map: 'random' };
 try { const o = JSON.parse(localStorage.getItem(CUS_KEY) || 'null'); if (o && MODES[o.mode]) CUS = Object.assign(CUS, o); } catch (e) {}
 const CUS_LIM = { tdm: [10, 150, 5], ffa: [5, 50, 5], hp: [50, 300, 10], ctf: [1, 10, 1], snd: [1, 8, 1] };
 function cusSetMode(k) {
@@ -35,6 +43,7 @@ function cusSetMode(k) {
 function renderCustom() {
   const k = CUS.mode, d = MODES[k], rows = [];
   rows.push({ name: 'MODE', t: 'seg', opts: MODE_ORDER.filter(m => !MODES[m].online).map(m => [m, MODES[m].short]), get: () => CUS.mode, set: v => { cusSetMode(v); } });
+  rows.push({ name: 'MAP', t: 'seg', opts: MAP_CHOICES().map(id => [id, id === 'random' ? 'RANDOM' : MAPS[id].name]), get: () => CUS.map || 'random', set: v => { CUS.map = v; } });
   if (CUS_LIM[k]) rows.push({ name: k === 'snd' ? 'ROUNDS TO WIN' : `SCORE LIMIT (${d.unit})`, t: 'range', min: CUS_LIM[k][0], max: CUS_LIM[k][1], step: CUS_LIM[k][2], get: () => CUS.score, set: v => { CUS.score = v; }, fmt: v => v });
   if (k !== 'snd' && k !== 'surv') rows.push({ name: 'TIME LIMIT', hint: '0 = no limit', t: 'range', min: 0, max: 20, step: 1, get: () => CUS.time, set: v => { CUS.time = v; }, fmt: v => v ? v + ' MIN' : 'NONE' });
   if (d.teams) rows.push({ name: 'TEAM SIZE', hint: 'Players on each team, you included', t: 'range', min: 1, max: 8, step: 1, get: () => CUS.perTeam, set: v => { CUS.perTeam = v; }, fmt: v => `${v} V ${v}` });
@@ -54,6 +63,6 @@ function renderCustom() {
 }
 function saveCus() { try { localStorage.setItem(CUS_KEY, JSON.stringify(CUS)); } catch (e) {} }
 function startCustom() {
-  if (CUS.mode === 'surv') return startMatch('surv');
-  startMatch(CUS.mode, { score: CUS.mode === 'gun' ? GUN_LADDER.length : CUS.score, time: CUS.time, perTeam: CUS.perTeam, players: CUS.players, skill: CUS.skill, hardcore: CUS.hardcore, custom: true });
+  if (CUS.mode === 'surv') return startMatch('surv', { map: CUS.map });
+  startMatch(CUS.mode, { map: CUS.map, score: CUS.mode === 'gun' ? GUN_LADDER.length : CUS.score, time: CUS.time, perTeam: CUS.perTeam, players: CUS.players, skill: CUS.skill, hardcore: CUS.hardcore, custom: true });
 }

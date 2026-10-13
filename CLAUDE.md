@@ -23,6 +23,13 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
 
 ## Game architecture (short)
 - Three.js r128 (from cdnjs; the app swaps in a local `three.min.js`). Coordinates: x right, y up, -z forward.
+- Maps: `maps.js` (registry, `loadMap`, building kit: blk/slab/wall/stairs/ramp/rail/container...), one file per map
+  (`map_docks.js`, `map_town.js`, `map_metro.js`; the original is `buildWorld` in `world.js`, id `ruins`). Each map has a
+  `layout` (spawns, hardpoints, flags, sites; points can carry `y`), `env` (sky/sun/fog), `navPts` for tests.
+  `nav.js` is a 0.5 m grid with up to 3 floors per cell; stairs/ramps are flagged so bots climb them only head-on.
+  Boxes can have a bottom (`y`) so you can walk under floors. Check a map with `MAP=<id> node game/test/run.js
+  game/test/s_map.js` (plan + views + reachability) and `s_navsim.js` (bots walking between points).
+- Online: the host picks the map (`netSwitchMap`), publishes `mp`/`ho` in presence; others follow; it rotates each round.
 - `armory.js` 32 guns (`ARMORY`, `ARM[id]`); `HQDATA` (in `hqdata.js`, generated) holds the Blender meshes; `attach.js`
   attachments, loadout menu and 3D preview; `match.js` modes and bots; `net.js` online play; `p2p.js` WebRTC transport for
   the app (host-star, Quick Play slots, host migration); `ui.js` screens, input, main loop.

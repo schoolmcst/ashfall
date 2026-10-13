@@ -23,18 +23,20 @@ function makeEnemy(type, x, z) {
   e.mag = e.magSize; rig.hits.forEach(m => { m.userData.enemy = e; });
   return e;
 }
+// a spawn spot (any floor) far from the player that can reach the player
 function pickSpawn() {
   updateNav(P.x, P.z, P.y);
-  for (let tries = 0; tries < 40; tries++) {
-    const ang = rnd(0, TAU), r = rnd(26, ARENA - 3), x = Math.cos(ang) * r, z = Math.sin(ang) * r;
-    if (Math.abs(x) > ARENA - 2 || Math.abs(z) > ARENA - 2 || Math.hypot(x - P.x, z - P.z) < 24) continue;
-    const c = cellOf(z) * NN + cellOf(x); if (navBlocked[c] || !navReach(c)) continue;
-    return { x, z };
+  const pts = buildSpawns();
+  for (let tries = 0; tries < 60; tries++) {
+    const p = pts[(Math.random() * pts.length) | 0];
+    if (Math.hypot(p.x - P.x, p.z - P.z) < 24) continue;
+    const n = nodeOf(p.x, p.z, p.y); if (n < 0 || !navField || navField[n] < 0) continue;
+    return p;
   }
   return randomOpenSpot(20, 30);
 }
-function spawnEnemy() { const sp = pickSpawn(); enemies.push(makeEnemy(pickType(), sp.x, sp.z)); }
-function relocateEnemy(e) { const sp = pickSpawn(); e.group.position.set(sp.x, 0, sp.z); e.noLosT = 0; e.avoidT = 0; e.lastX = sp.x; e.lastZ = sp.z; }
+function spawnEnemy() { const sp = pickSpawn(), e = makeEnemy(pickType(), sp.x, sp.z); e.group.position.y = sp.y || 0; enemies.push(e); }
+function relocateEnemy(e) { const sp = pickSpawn(); e.group.position.set(sp.x, sp.y || 0, sp.z); e.noLosT = 0; e.avoidT = 0; e.lastX = sp.x; e.lastZ = sp.z; }
 
 function hasLOS(e, dist) {
   _v.set(e.group.position.x, e.group.position.y + 1.5 - 0.4 * (e.crouchK || 0), e.group.position.z);
@@ -149,7 +151,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
       sfx.kill();
     }
     try { matchBotKilled(e, by, head, boom); } catch (err) { reportError(err); }
-    if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(e.group.position.x, e.group.position.z);
+    if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(e.group.position.x, e.group.position.z, groundAt(e.group.position.x, e.group.position.z, e.group.position.y + 0.3));
     _n.set(0, 1, 0); _v3.set(e.group.position.x, 0, e.group.position.z - 0.2); addDecal(_v3, _n, 'blood', 1.3);
     chunks('blood', _v.set(e.group.position.x, 1.2, e.group.position.z), 8, 3, 0.6);
     return true;
@@ -177,26 +179,26 @@ function updateDying(dt) {
 
 /* ------------------------------------------------------------------ ammo crates */
 const crateGeo = { body: null };
-function dropPickup(x, z) {
+function dropPickup(x, z, y = 0) {
   if (!crateGeo.body) crateGeo.body = mergeGeos([{ g: Bx(0.42, 0.26, 0.56), m: mat4(0, 0, 0) }, { g: Bx(0.44, 0.04, 0.2), m: mat4(0, 0.1, 0) }, { g: Bx(0.2, 0.03, 0.05), m: mat4(0, 0.16, 0) }]);
   const grp = new THREE.Group(); const pm = propGroup('ammo', { pickup: MAT.pickup, dark: MAT.dark, default: MAT.pickup });
   if (pm) grp.add(pm); else { const m = new THREE.Mesh(crateGeo.body, MAT.pickup); m.castShadow = true; grp.add(m); }
   const glow = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0x66ff77, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.4 })); glow.scale.set(1.4, 1.4, 1); glow.position.y = 0.1; grp.add(glow);
-  grp.position.set(x, 0.3, z); scene.add(grp); pickups.push({ m: grp, x, z, t: 0, life: 35 });
+  grp.position.set(x, y + 0.3, z); scene.add(grp); pickups.push({ m: grp, x, z, y, t: 0, life: 35 });
 }
 function totalAmmo() { let n = 0; for (const w of WEAPONS) n += w.ammo + w.reserve; return n; }
+// an open spot between minR and maxR from the player, on about the player's floor if possible
 function randomOpenSpot(minR, maxR) {
-  for (let i = 0; i < 30; i++) {
-    const a = rnd(0, TAU), r = rnd(minR, maxR), x = clamp(P.x + Math.cos(a) * r, -ARENA + 2, ARENA - 2), z = clamp(P.z + Math.sin(a) * r, -ARENA + 2, ARENA - 2);
-    if (!navBlocked[cellOf(z) * NN + cellOf(x)]) return { x, z };
-  }
-  return { x: P.x, z: P.z + 2 };
+  const pts = buildSpawns();
+  let best = null, bs = 1e9;
+  for (const p of pts) { const d = Math.hypot(p.x - P.x, p.z - P.z), s = (d < minR ? minR - d : d > maxR ? d - maxR : 0) * 2 + Math.abs((p.y || 0) - P.y) * 3 + Math.random(); if (s < bs) { bs = s; best = p; } }
+  return best ? { x: best.x, z: best.z, y: best.y || 0 } : { x: P.x, z: P.z + 2, y: P.y };
 }
 function updatePickups(dt) {
-  if (G.waveActive && totalAmmo() === 0 && pickups.length === 0) { const sp = randomOpenSpot(5, 10); dropPickup(sp.x, sp.z); showMsg('SUPPLY DROP NEARBY'); }
+  if (G.waveActive && totalAmmo() === 0 && pickups.length === 0) { const sp = randomOpenSpot(5, 10); dropPickup(sp.x, sp.z, sp.y); showMsg('SUPPLY DROP NEARBY'); }
   for (let i = pickups.length - 1; i >= 0; i--) {
-    const k = pickups[i]; k.t += dt; k.m.rotation.y += dt * 1.5; k.m.position.y = 0.3 + Math.sin(k.t * 3) * 0.05;
-    if (Math.hypot(k.x - P.x, k.z - P.z) < 1.4 && P.y < 2.5) {
+    const k = pickups[i]; k.t += dt; k.m.rotation.y += dt * 1.5; k.m.position.y = (k.y || 0) + 0.3 + Math.sin(k.t * 3) * 0.05;
+    if (Math.hypot(k.x - P.x, k.z - P.z) < 1.4 && Math.abs(P.y - (k.y || 0)) < 1.5) {
       const sc = perk('scavenger'), eqMax = EQUIP[G.equip].max;
       for (const w of WEAPONS) w.reserve = Math.min(w.reserveMax, w.reserve + Math.ceil(w.magSize * (sc ? 1.6 : 0.8)));
       if (G.grenades < eqMax && (sc || Math.random() < 0.4)) G.grenades++;
@@ -322,7 +324,7 @@ function pauseGame() {
 }
 function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom || 'playing'; showScreen(null); lockPointer(); }
 function startGame() { startMatch('surv'); }
-function restartMatch() { if (M.mode === 'surv') startMatch('surv'); else startMatch(M.mode, M.cfg.custom ? M.cfg : null); }
+function restartMatch() { if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
 // leave whatever is running and go back to the menu scene (soldiers posing behind the menus)
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();
