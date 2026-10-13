@@ -1,8 +1,11 @@
 {
- "version": "1.0.0",
+ "version": "1.0.4",
  "notes": [
-  "First release of the ASHFALL app"
+  "Quick Play: players always land in the same match",
+  "Relay fallback when a network blocks direct connections",
+  "Clear messages while finding or joining a match",
+  "Quick Play button always visible at the bottom of the lobby"
  ],
- "sha256": "2c5a4cfdef1ab50b768d05335703400a1cbb9e966d35da910dbb3ea35020fabe",
+ "sha256": "fc29aa0e7065478911d81e710647b4857c419f952a8a6e8b75a2160027d60966",
  "minApp": "1.0.0"
 }
