@@ -1,10 +1,10 @@
 {
- "version": "1.0.6",
+ "version": "1.0.7",
  "notes": [
+  "FIX: joining another player's match now works (the matchmaking service was rejecting join requests)",
   "New matches wait 30 seconds for players before bots join",
-  "Real players always take priority: a bot leaves the moment a player joins",
-  "The lobby warns you in red when a newer version is out"
+  "Lobby shows match service status and warns when a newer version is out"
  ],
- "sha256": "56690830ec660d818e3f53b57597268b99a4b37a1ba2331d54a638d9bcbd1c96",
+ "sha256": "3b3fbd736a83fb624771cc95110794df1c09020891f075069f9aa1cb602b4283",
  "minApp": "1.0.0"
 }

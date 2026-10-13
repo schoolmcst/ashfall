@@ -24,6 +24,10 @@ module.exports = function start(port) {
         if (op !== 1) continue;
         let msg; try { msg = JSON.parse(p.toString()); } catch (e) { continue; }
         if (msg.type === 'HEARTBEAT') continue;
+        // be as strict as the real public server: exact payload shapes, or the socket is dropped
+        const SHAPES = { OFFER: ['sdp', 'type', 'connectionId', 'label', 'reliable', 'serialization'], ANSWER: ['sdp', 'type', 'connectionId'], CANDIDATE: ['candidate', 'type', 'connectionId'] };
+        const want = SHAPES[msg.type], pl = msg.payload || {};
+        if (want && (Object.keys(pl).some(k => !want.includes(k)) || !pl.connectionId || pl.type !== 'data' || (msg.type !== 'CANDIDATE' && (!pl.sdp || pl.sdp.type !== msg.type.toLowerCase())))) { sock.end(); continue; }
         const dst = clients.get(msg.dst);
         if (dst) dst.send({ type: msg.type, src: id, dst: msg.dst, payload: msg.payload });
         else if (msg.type === 'OFFER') send({ type: 'EXPIRE', src: msg.dst, dst: id });

@@ -4934,18 +4934,18 @@ const P2P = (() => {
     const check = () => { if (!L.open && L.u && L.r && L.u.readyState === 'open' && L.r.readyState === 'open') { L.open = true; onState(L, 'open'); } };
     L.close = () => { if (L.closed) return; L.closed = true; L.open = false; try { pc.close(); } catch (e) {} onState(L, 'closed'); };
     L.send = (m, reliable) => { const ch = reliable ? L.r : L.u; if (ch && ch.readyState === 'open') try { ch.send(typeof m === 'string' ? m : JSON.stringify(m)); } catch (e) {} };
-    pc.onicecandidate = ev => { if (ev.candidate) sig.send(dst, 'CANDIDATE', { cid, c: ev.candidate.toJSON ? ev.candidate.toJSON() : ev.candidate }); };
+    pc.onicecandidate = ev => { if (ev.candidate) sig.send(dst, 'CANDIDATE', { candidate: ev.candidate.toJSON ? ev.candidate.toJSON() : ev.candidate, type: 'data', connectionId: cid }); };
     pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed' || pc.connectionState === 'closed') L.close(); };
     pc.ondatachannel = ev => { if (ev.channel.label === 'u') L.u = ev.channel; else L.r = ev.channel; wire(ev.channel); };
     if (offerer) {
       L.u = pc.createDataChannel('u', { ordered: false, maxRetransmits: 0 }); L.r = pc.createDataChannel('r'); wire(L.u); wire(L.r);
-      pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => sig.send(dst, 'OFFER', { cid, sdp: pc.localDescription.toJSON ? pc.localDescription.toJSON() : pc.localDescription })).catch(() => L.close());
+      pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => sig.send(dst, 'OFFER', { sdp: pc.localDescription.toJSON ? pc.localDescription.toJSON() : pc.localDescription, type: 'data', connectionId: cid, label: cid, reliable: false, serialization: 'binary' })).catch(() => L.close());
     }
     L.signal = async m => {
       try {
-        if (m.type === 'OFFER') { await pc.setRemoteDescription(m.payload.sdp); const a = await pc.createAnswer(); await pc.setLocalDescription(a); sig.send(dst, 'ANSWER', { cid, sdp: pc.localDescription.toJSON ? pc.localDescription.toJSON() : pc.localDescription }); }
+        if (m.type === 'OFFER') { await pc.setRemoteDescription(m.payload.sdp); const a = await pc.createAnswer(); await pc.setLocalDescription(a); sig.send(dst, 'ANSWER', { sdp: pc.localDescription.toJSON ? pc.localDescription.toJSON() : pc.localDescription, type: 'data', connectionId: cid }); }
         else if (m.type === 'ANSWER') await pc.setRemoteDescription(m.payload.sdp);
-        else if (m.type === 'CANDIDATE' && m.payload.c) await pc.addIceCandidate(m.payload.c);
+        else if (m.type === 'CANDIDATE' && m.payload.candidate) await pc.addIceCandidate(m.payload.candidate);
       } catch (e) {}
     };
     return L;
@@ -4980,15 +4980,15 @@ const P2P = (() => {
       R.sig = sig; R.slot = slot; R.host = true; R.status = 'hosting'; R.order = [me, ...R.order.filter(x => x !== me)];
       sig.on(m => {
         if (m.type === 'CLOSED') { if (!R.closed && R.host) reclaim(); return; }
-        if (!m.src || !m.payload || !m.payload.cid) return;
-        let L = R.links.get(m.payload.cid);
-        if (!L && m.type === 'OFFER') { L = link(sig, m.src, m.payload.cid, false, hostMsg, hostState, R.ice); R.links.set(L.cid, L); }
+        if (!m.src || !m.payload || !m.payload.connectionId) return;
+        let L = R.links.get(m.payload.connectionId);
+        if (!L && m.type === 'OFFER') { L = link(sig, m.src, m.payload.connectionId, false, hostMsg, hostState, R.ice); R.links.set(L.cid, L); }
         if (L) L.signal(m);
       });
       R.timer = setInterval(hostTick, 50);
     }
     async function reclaim() {   // lost the signalling socket: get the slot back so new players can still join
-      for (let i = 0; i < 20 && !R.closed; i++) { await sleep(1500); try { const s = await signal(R.slot); R.sig = s; s.on(m => { if (m.type === 'CLOSED') { if (!R.closed) reclaim(); return; } if (!m.src || !m.payload || !m.payload.cid) return; let L = R.links.get(m.payload.cid); if (!L && m.type === 'OFFER') { L = link(s, m.src, m.payload.cid, false, hostMsg, hostState, R.ice); R.links.set(L.cid, L); } if (L) L.signal(m); }); return; } catch (e) {} }
+      for (let i = 0; i < 20 && !R.closed; i++) { await sleep(1500); try { const s = await signal(R.slot); R.sig = s; s.on(m => { if (m.type === 'CLOSED') { if (!R.closed) reclaim(); return; } if (!m.src || !m.payload || !m.payload.connectionId) return; let L = R.links.get(m.payload.connectionId); if (!L && m.type === 'OFFER') { L = link(s, m.src, m.payload.connectionId, false, hostMsg, hostState, R.ice); R.links.set(L.cid, L); } if (L) L.signal(m); }); return; } catch (e) {} }
     }
     function hostTick() {
       const now = performance.now(), all = [[me, R.mine]];
@@ -5013,7 +5013,7 @@ const P2P = (() => {
     // resolves the open link, or false; R.hostSeen says whether someone is hosting that slot at all
     async function connectTo(slot, waitMs = 5000, relayOnly = false) {
       if (!R.sig || !R.sig.open) { if (R.sig) R.sig.close(); R.sig = await signal('a' + rid(14)); }
-      const sig = R.sig, cid = rid(8); R.hostSeen = false;
+      const sig = R.sig, cid = 'dc_' + rid(10); R.hostSeen = false;
       return new Promise(res => {
         let fin = false, to = null; const end = ok => { if (fin) return; fin = true; clearTimeout(to); off(); res(ok); };
         const L = link(sig, slot, cid, true, clientMsg, (l, st) => {
@@ -5021,7 +5021,7 @@ const P2P = (() => {
           if (st === 'closed') { end(false); if (R.hostLink === L) hostLost(); }
         }, R.ice, relayOnly);
         const off = sig.on(m => {
-          if (m.payload && m.payload.cid === cid) {
+          if (m.payload && m.payload.connectionId === cid) {
             if (m.type === 'ANSWER' && !R.hostSeen) { R.hostSeen = true; clearTimeout(to); to = setTimeout(() => { L.close(); end(false); }, 15000); R.status = 'connecting to the host'; }
             L.signal(m);
           }
