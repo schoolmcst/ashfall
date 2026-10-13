@@ -21,6 +21,7 @@ const SCHEMA = {
     { k: 'brightness', t: 'range', name: 'BRIGHTNESS', min: 60, max: 150, step: 5, fmt: pct },
     { k: 'sheen', t: 'range', name: 'SURFACE SHEEN', hint: 'Fresnel glint on metal and wet surfaces at grazing angles', min: 0, max: 150, step: 10, fmt: pct },
     { k: 'gunShader', t: 'toggle', name: 'CUSTOM GUN SHADER', hint: 'Physically based GGX shader on weapon metal. Turn off if guns look wrong' },
+    { k: 'realTex', t: 'toggle', name: 'SCANNED TEXTURES', hint: 'Photo-scanned ground, brick, concrete, wood and metal from Poly Haven (CC0), downloaded once. Applies on next launch' },
     { k: 'grain', t: 'toggle', name: 'FILM GRAIN' },
     { k: 'bob', t: 'toggle', name: 'VIEW BOBBING' },
     { k: 'shake', t: 'range', name: 'SCREEN SHAKE', min: 0, max: 150, step: 10, fmt: pct },
@@ -463,14 +464,14 @@ function frame(now) {
   try { updateDynRes(raw); } catch (e) { reportError(e); }
   if (ready && G.bench) { try { benchPre(raw); } catch (e) { reportError(e); } }
   if (ready && G.look && G.state === 'playing') { Object.assign(P, G.look, { vx: 0, vz: 0 }); mouseDown = false; G.health = 100; if (G.lookAds) mouseAds = true; }
-  if (ready) { try { tick(dt); } catch (e) { reportError(e); } }
+  if (ready) { try { tick(dt); } catch (e) { reportError(e); } try { realTexTick(); } catch (e) { reportError(e); } }
   if (!G.noRender) { try { renderFrame(); updatePreview(dt); } catch (e) { reportError(e); } }   // noRender: logic-only test runs
   if (G.bench) { try { benchPost(); } catch (e) { reportError(e); } }
 }
 
 /* ------------------------------------------------------------------ boot: build the world in small steps so the loading bar can paint */
 const BOOT = [
-  ['BUILDING TEXTURES', buildTextures],
+  ['BUILDING TEXTURES', () => { buildTextures(); try { realTexStart(); } catch (e) {} }],
   ['PREPARING MATERIALS', () => { buildMaterials(); buildViewmodelMaterials(); addFresnelAll(MAT); addFresnelAll(VM); }],
   ['RAISING THE RUINS', buildWorld],
   ['PLOTTING ROUTES', () => { buildNav(); buildGrass(); addWind(grassMesh && grassMesh.material, 1); addWind(MAT.leaf, 3); }],
@@ -503,7 +504,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, REALTEX, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

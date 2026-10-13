@@ -13,6 +13,7 @@ const fs = require('fs'), path = require('path');
   await p.route('**/*', r => {
     const u = r.request().url();
     if (u.includes('three')) return r.fulfill({ body: three, contentType: 'application/javascript' });
+    if (u.startsWith('https://dl.polyhaven.org/')) { const f = /nor_gl/.test(u) ? 'nor' : /_rough_/.test(u) ? 'rough' : 'diff'; return r.fulfill({ body: fs.readFileSync(path.join(__dirname, 'fx', f + '.jpg')), contentType: 'image/jpeg', headers: { 'Access-Control-Allow-Origin': '*' } }); }
     if (u.startsWith('http://game.test/')) return r.fulfill({ body: html, contentType: 'text/html' });
     return r.abort();
   });
