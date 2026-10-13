@@ -76,14 +76,14 @@ async function netStart(mode) {
     catch (e) { if (NET.on && NET.mode === mode) { NET.on = false; showBanner('COULD NOT JOIN', e.message === 'timeout' || e.message === 'fail' ? 'no internet connection to the match service' : e.message); setTimeout(() => { if (M.online && !NET.room) toLobby(); }, 6000); } return; }
     if (!NET.on || NET.mode !== mode) { room.leave(); return; }
     room.extras = () => NET.botPres;
-    NET.room = room; NET.joinedAt = NOW; NET.botT = 2;
+    NET.room = room; NET.joinedAt = performance.now() / 1000; NET.botT = 2;
     return;
   }
   if (!NET.ns) { NET.on = false; showMsg('OFFLINE: ONLINE PLAY NEEDS CLAUDE.AI'); return; }
   let room = null;
   try { room = await NET.ns.join(netRoomName()); } catch (e) { room = NET.ns; }   // named rooms unavailable: share the lobby, filtered by room name
   if (!NET.on || NET.mode !== mode) { if (room && room !== NET.ns && room.leave) room.leave().catch(() => {}); return; }
-  NET.room = room; NET.joinedAt = NOW;
+  NET.room = room; NET.joinedAt = performance.now() / 1000;
 }
 function netLeave() {
   const r = NET.room; NET.room = null; NET.on = false;
@@ -150,7 +150,7 @@ function netTick(dt) {
   const peers = netPeers(), seenNow = new Set(), rn = netRoomName(), inRoom = pr => (NET.app || pr.rm === rn) && pr.on;
   const isHost = NET.app && NET.room.host, botBy = lbl => isHost && lbl ? M.entries.find(en => en.botLabel === lbl) : null;
   // pick a team once the room has answered (the side with fewer players)
-  if (!NET.teamSet && NOW - NET.joinedAt > 1.4) {
+  if (!NET.teamSet && performance.now() / 1000 - NET.joinedAt > 1.4) {
     NET.teamSet = true; NET.me = netSelf();
     if (M.def.teams) { const c = [0, 0]; for (const p of peers) if (!p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot) c[p.presence.tm === 1 ? 1 : 0]++; M.myTeam = M.me.team = c[1] < c[0] ? 1 : 0; }
     else M.myTeam = M.me.team = 0;

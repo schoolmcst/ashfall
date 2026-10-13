@@ -1,10 +1,11 @@
 {
- "version": "1.0.1",
+ "version": "1.0.2",
  "notes": [
   "Quick Play: players always land in the same match",
   "Relay fallback when a network blocks direct connections",
-  "Clear messages while finding or joining a match"
+  "Clear messages while finding or joining a match",
+  "Joining no longer waits on slow computers"
  ],
- "sha256": "2c0c635a54058cfaf44f125e9fd75a0561d4eaec278ca575fd97a76f8b7ac397",
+ "sha256": "e0f90bd2cf086ce85119bf1487737392c4b57bbbb3d0b5b76a12c9d735695c88",
  "minApp": "1.0.0"
 }
