@@ -1,8 +1,9 @@
 {
- "version": "1.0.9",
+ "version": "1.0.10",
  "notes": [
+  "NEW: real recorded gunshots, reloads, shell casings, footsteps and explosions (CC0). Settings > Audio > RECORDED SOUNDS switches back to the old sounds",
   "NEW: photo-scanned ground, brick, concrete, asphalt, wood and metal surfaces (Poly Haven, CC0). Downloaded once on first launch; Settings > Video > SCANNED TEXTURES turns them off"
  ],
- "sha256": "22e11817195099aad4ee96f712abbb4448afa44627502e85ec8682552bed8729",
+ "sha256": "88d65c298dba9099dc114ef0acafe1e10b6a4af07230b3b19f36fc6694b46757",
  "minApp": "1.0.0"
 }

@@ -15,7 +15,7 @@ const QUALITY = {
   ultra:  { scale: 100, shadows: 'high', fx: 1.5,  grass: 1,    anis: 16, grain: false, tex: 512, shadowRes: 4096, prCap: 2,    shadowR: 50 },
 };
 const DEFAULTS = {
-  quality: 'auto', cfgVer: 4, dynRes: true, gunShader: true, realTex: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
+  quality: 'auto', cfgVer: 4, dynRes: true, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
   master: 80, sfx: 100, ambience: 60,
   sens: 100, adsSens: 70, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
@@ -65,7 +65,7 @@ function initAudio() {
       conv.buffer = ir; revSend.gain.value = 0.35;
       sfxG.connect(master); sfxG.connect(revSend); revSend.connect(conv); conv.connect(master); ambG.connect(master);
       bus = { master, sfx: sfxG, amb: ambG };
-      applyAudioSettings(); startAmbience();
+      applyAudioSettings(); startAmbience(); try { loadSamples(); } catch (e) {}
     } catch (e) { actx = null; }
   }
   if (actx && actx.state === 'suspended') actx.resume();
