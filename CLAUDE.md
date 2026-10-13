@@ -10,6 +10,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   (`sigserver.js`); `game/test/mp.js` tests the claude.ai `room` version.
 
 ## Ship a patch (every installed app downloads it on next launch)
+**The game is in BETA.** Every release is a beta: the title screen, version tag and patch-notes popup say BETA. Keep it that way until the owner says otherwise.
 **The owner tests every change before players get it. Always two steps:**
 1. Make the change in `game/src`, build, run the tests.
 2. `tools/release.sh test <next version> "note" ...` then commit + push. This updates `release-test/`, which only the

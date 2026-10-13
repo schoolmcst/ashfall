@@ -591,7 +591,7 @@ function updateModeHud(force) {
   if (M.online && NET.app && NET.room) { const R = NET.room, n = (String(R.slot).match(/-q(\d+)$/) || [])[1], hum = 1 + [...NET.rem.values()].filter(x => !x.isBot).length;
     const hw = R.host ? warmLeft() : NET.hostWarm && performance.now() - NET.hostWarm.t < 1500 ? NET.hostWarm.left : 0;
     if (hw > 0) info = `WAITING FOR PLAYERS ${fmtT(hw)} · BOTS JOIN AFTER` + (info ? ' · ' + info : '');
-    info = `${n ? 'QUICK PLAY MATCH ' + n : R.kind === 'slot' ? 'WI-FI MATCH' : 'PRIVATE MATCH'} · ${R.host ? 'YOU ARE HOSTING' : 'JOINED'} · ${hum} PLAYER${hum > 1 ? 'S' : ''} · v${window.ASHFALL_APP.version}` + (info ? ' · ' + info : ''); }
+    info = `${n ? 'QUICK PLAY MATCH ' + n : R.kind === 'slot' ? 'WI-FI MATCH' : 'PRIVATE MATCH'} · ${R.host ? 'YOU ARE HOSTING' : 'JOINED'} · ${hum} PLAYER${hum > 1 ? 'S' : ''} · v${window.ASHFALL_APP.version} BETA` + (info ? ' · ' + info : ''); }
   hudSet(el, 't', `<div class="mrow">${mid}</div><div class="minfo">${info}</div>`, true);
 }
 function showCenter(a, b) { const c = $('center'); const h = `<b>${a}</b>${b ? `<small>${b}</small>` : ''}`; if (c._h !== h) { c._h = h; c.innerHTML = h; } c.classList.remove('hide'); }

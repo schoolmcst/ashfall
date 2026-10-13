@@ -81,7 +81,7 @@ function netLanList() {
 }
 function netLobbyCount() {
   const c = $('netCount'); if (!c) return;
-  if (NET.app) { c.textContent = `VERSION ${(window.ASHFALL_APP.version || '').toUpperCase()} · YOU ONLY MEET PLAYERS ON THE SAME VERSION`; return; }
+  if (NET.app) { c.textContent = `BETA ${(window.ASHFALL_APP.version || '').toUpperCase()} · YOU ONLY MEET PLAYERS ON THE SAME VERSION`; return; }
   if (!NET.ns) return;
   let n = 0; try { n = NET.ns.peers().length; } catch (e) {}
   c.textContent = n > 1 ? `${n} PLAYERS HAVE THE GAME OPEN RIGHT NOW` : 'NOBODY ELSE HAS THE GAME OPEN YET';
@@ -333,11 +333,11 @@ function netBots(dt) {
 setTimeout(() => {
   try {
     const A = window.ASHFALL_APP; if (!A) return;
-    const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version; document.body.appendChild(tag);
+    const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version + ' BETA'; document.body.appendChild(tag);
     const u = A.justUpdated; if (!u) return;
     const m = document.createElement('div'); m.className = 'app-notes';
     const box = document.createElement('div'), h = document.createElement('b'), ul = document.createElement('ul'), ok = document.createElement('button');
-    h.textContent = 'UPDATED TO VERSION ' + String(u.version).toUpperCase();
+    h.textContent = 'BETA UPDATE ' + String(u.version).toUpperCase();
     for (const n of (u.notes || []).slice(0, 12)) { const li = document.createElement('li'); li.textContent = String(n); ul.appendChild(li); }
     if (!ul.children.length) { const li = document.createElement('li'); li.textContent = 'Fixes and improvements.'; ul.appendChild(li); }
     ok.className = 'btn primary'; ok.textContent = 'OK'; ok.onclick = () => m.remove();
@@ -346,7 +346,8 @@ setTimeout(() => {
 }, 600);
 (() => {
   const s = document.createElement('style');
-  s.textContent = `.app-ver{position:fixed;right:10px;bottom:6px;font:11px monospace;opacity:.45;z-index:5;pointer-events:none;color:#fff}
+  s.textContent = `.beta-tag{display:inline-block;vertical-align:top;margin-left:14px;margin-top:.35em;font-size:.22em;letter-spacing:.2em;padding:.25em .6em;border:2px solid #ffd24a;color:#ffd24a;border-radius:4px;font-style:normal}
+.app-ver{position:fixed;right:10px;bottom:6px;font:11px monospace;opacity:.45;z-index:5;pointer-events:none;color:#fff}
 .app-notes{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200}
 .app-notes>div{background:#14171b;border:1px solid rgba(255,210,74,.5);padding:22px 26px;max-width:520px;width:calc(100% - 32px);box-sizing:border-box;color:#e8e2d0}
 .app-notes b{display:block;font-size:18px;letter-spacing:.14em;color:#ffd24a;margin-bottom:12px}.app-notes ul{margin:0 0 18px;padding-left:20px;line-height:1.55;font-size:14px}`;

@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ASHFALL</title>
+<title>ASHFALL (BETA)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   :root{--accent:#e0b44a;--ink:#e9e6d8;--dim:rgba(233,230,216,.6);--panel:rgba(10,12,13,.82);--line:rgba(233,230,216,.18)}
@@ -296,7 +296,7 @@
 
 <div id="menu" class="screen hide">
   <div class="col">
-    <div class="logo">ASH<em>FALL</em></div>
+    <div class="logo">ASH<em>FALL</em><span class="beta-tag">BETA</span></div>
     <div class="tag">HOLD THE LINE &middot; SURVIVE THE WAVES</div>
     <button class="btn primary" data-act="play">PLAY</button>
     <button class="btn" data-act="loadout">LOADOUT</button>
@@ -3815,7 +3815,7 @@ function updateModeHud(force) {
   if (M.online && NET.app && NET.room) { const R = NET.room, n = (String(R.slot).match(/-q(\d+)$/) || [])[1], hum = 1 + [...NET.rem.values()].filter(x => !x.isBot).length;
     const hw = R.host ? warmLeft() : NET.hostWarm && performance.now() - NET.hostWarm.t < 1500 ? NET.hostWarm.left : 0;
     if (hw > 0) info = `WAITING FOR PLAYERS ${fmtT(hw)} · BOTS JOIN AFTER` + (info ? ' · ' + info : '');
-    info = `${n ? 'QUICK PLAY MATCH ' + n : R.kind === 'slot' ? 'WI-FI MATCH' : 'PRIVATE MATCH'} · ${R.host ? 'YOU ARE HOSTING' : 'JOINED'} · ${hum} PLAYER${hum > 1 ? 'S' : ''} · v${window.ASHFALL_APP.version}` + (info ? ' · ' + info : ''); }
+    info = `${n ? 'QUICK PLAY MATCH ' + n : R.kind === 'slot' ? 'WI-FI MATCH' : 'PRIVATE MATCH'} · ${R.host ? 'YOU ARE HOSTING' : 'JOINED'} · ${hum} PLAYER${hum > 1 ? 'S' : ''} · v${window.ASHFALL_APP.version} BETA` + (info ? ' · ' + info : ''); }
   hudSet(el, 't', `<div class="mrow">${mid}</div><div class="minfo">${info}</div>`, true);
 }
 function showCenter(a, b) { const c = $('center'); const h = `<b>${a}</b>${b ? `<small>${b}</small>` : ''}`; if (c._h !== h) { c._h = h; c.innerHTML = h; } c.classList.remove('hide'); }
@@ -5179,7 +5179,7 @@ function netLanList() {
 }
 function netLobbyCount() {
   const c = $('netCount'); if (!c) return;
-  if (NET.app) { c.textContent = `VERSION ${(window.ASHFALL_APP.version || '').toUpperCase()} · YOU ONLY MEET PLAYERS ON THE SAME VERSION`; return; }
+  if (NET.app) { c.textContent = `BETA ${(window.ASHFALL_APP.version || '').toUpperCase()} · YOU ONLY MEET PLAYERS ON THE SAME VERSION`; return; }
   if (!NET.ns) return;
   let n = 0; try { n = NET.ns.peers().length; } catch (e) {}
   c.textContent = n > 1 ? `${n} PLAYERS HAVE THE GAME OPEN RIGHT NOW` : 'NOBODY ELSE HAS THE GAME OPEN YET';
@@ -5431,11 +5431,11 @@ function netBots(dt) {
 setTimeout(() => {
   try {
     const A = window.ASHFALL_APP; if (!A) return;
-    const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version; document.body.appendChild(tag);
+    const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version + ' BETA'; document.body.appendChild(tag);
     const u = A.justUpdated; if (!u) return;
     const m = document.createElement('div'); m.className = 'app-notes';
     const box = document.createElement('div'), h = document.createElement('b'), ul = document.createElement('ul'), ok = document.createElement('button');
-    h.textContent = 'UPDATED TO VERSION ' + String(u.version).toUpperCase();
+    h.textContent = 'BETA UPDATE ' + String(u.version).toUpperCase();
     for (const n of (u.notes || []).slice(0, 12)) { const li = document.createElement('li'); li.textContent = String(n); ul.appendChild(li); }
     if (!ul.children.length) { const li = document.createElement('li'); li.textContent = 'Fixes and improvements.'; ul.appendChild(li); }
     ok.className = 'btn primary'; ok.textContent = 'OK'; ok.onclick = () => m.remove();
@@ -5444,7 +5444,8 @@ setTimeout(() => {
 }, 600);
 (() => {
   const s = document.createElement('style');
-  s.textContent = `.app-ver{position:fixed;right:10px;bottom:6px;font:11px monospace;opacity:.45;z-index:5;pointer-events:none;color:#fff}
+  s.textContent = `.beta-tag{display:inline-block;vertical-align:top;margin-left:14px;margin-top:.35em;font-size:.22em;letter-spacing:.2em;padding:.25em .6em;border:2px solid #ffd24a;color:#ffd24a;border-radius:4px;font-style:normal}
+.app-ver{position:fixed;right:10px;bottom:6px;font:11px monospace;opacity:.45;z-index:5;pointer-events:none;color:#fff}
 .app-notes{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200}
 .app-notes>div{background:#14171b;border:1px solid rgba(255,210,74,.5);padding:22px 26px;max-width:520px;width:calc(100% - 32px);box-sizing:border-box;color:#e8e2d0}
 .app-notes b{display:block;font-size:18px;letter-spacing:.14em;color:#ffd24a;margin-bottom:12px}.app-notes ul{margin:0 0 18px;padding-left:20px;line-height:1.55;font-size:14px}`;

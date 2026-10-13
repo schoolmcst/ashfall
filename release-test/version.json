@@ -1,10 +1,11 @@
 {
- "version": "1.0.7",
+ "version": "1.0.8",
  "notes": [
   "FIX: joining another player's match now works (the matchmaking service was rejecting join requests)",
+  "ASHFALL is now in BETA: the title screen, version tag and patch notes show it",
   "New matches wait 30 seconds for players before bots join",
   "Lobby shows match service status and warns when a newer version is out"
  ],
- "sha256": "3b3fbd736a83fb624771cc95110794df1c09020891f075069f9aa1cb602b4283",
+ "sha256": "5153e62179068c996aeb0483dd87b9ea8da6e2842fed67e3351aac78e79a396b",
  "minApp": "1.0.0"
 }
