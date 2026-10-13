@@ -1,11 +1,11 @@
 {
- "version": "1.0.2",
+ "version": "1.0.3",
  "notes": [
   "Quick Play: players always land in the same match",
   "Relay fallback when a network blocks direct connections",
   "Clear messages while finding or joining a match",
-  "Joining no longer waits on slow computers"
+  "Quick Play button moved to the top of the lobby panel so it is always visible"
  ],
- "sha256": "e0f90bd2cf086ce85119bf1487737392c4b57bbbb3d0b5b76a12c9d735695c88",
+ "sha256": "683060196ca932933d57ea12778a368aba57fac339e900d9cb317c06d2945b4d",
  "minApp": "1.0.0"
 }

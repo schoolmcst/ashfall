@@ -25,7 +25,7 @@ const netReady = () => NET.app || !!NET.ns;
 /* ---------- lobby panel for the online modes */
 function netLobbyHtml() {
   if (NET.app) return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label></div>` +
-    `<div class="net-hint">QUICK PLAY drops you into the first open public match, or starts one other players will join. Bots fill empty spots.</div>` +
+    `<div class="net-hint">Quick Play finds a public match. Bots fill empty spots.</div>` +
     `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div>` +
     `<div class="net-lan" id="netLan"></div><div class="net-count" id="netCount"></div>`;
   if (!NET.ns) return `<div class="net-off">Online play runs when this game is open on claude.ai. Share the page with friends (they need a Claude account), then everyone picks the same room code.</div>`;
@@ -289,7 +289,7 @@ function netBots(dt) {
 /* ---------- styles for the lobby form */
 (() => {
   const s = document.createElement('style');
-  s.textContent = `.net-form{display:flex;gap:10px;margin:10px 0 6px}.net-form label{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.12em;opacity:.85}
+  s.textContent = `.net-form{display:flex;gap:10px;margin:8px 0 4px}#lobSel .lob-go{margin:10px 0 4px}.net-form label{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.12em;opacity:.85}
 .net-form input{font:inherit;font-size:15px;letter-spacing:.06em;padding:8px 10px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:4px;min-width:0;width:100%;box-sizing:border-box}
 .net-form input:focus{outline:none;border-color:#ffd24a}.net-count{font-size:11px;letter-spacing:.1em;opacity:.7;margin-bottom:8px}
 .net-hint{font-size:12px;line-height:1.4;opacity:.7;margin:2px 0 4px}.net-codebtn{align-self:flex-end;white-space:nowrap;padding:8px 14px;width:auto!important;flex:0 0 auto;margin:0!important}
