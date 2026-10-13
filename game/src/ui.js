@@ -1,0 +1,525 @@
+/* ================================================================== UI: screens, settings, input, loop, boot */
+const SCREENS = ['menu', 'settings', 'howto', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results'];
+let curScreen = null, returnScreen = 'menu';
+function showScreen(id) {
+  curScreen = id;
+  for (const s of SCREENS) $(s).classList.toggle('hide', s !== id);
+  $('hud').classList.toggle('hide', !(G.state === 'playing' || G.state === 'paused' || G.state === 'dead' || G.state === 'respawning' || G.state === 'spectate' || G.state === 'deathcam'));
+  if (id) setTimeout(() => { const f = focusables(); if (f.length && !f.includes(document.activeElement)) { try { f[0].focus(); } catch (e) {} } }, 0);
+}
+function lockPointer() { try { const r = renderer.domElement.requestPointerLock && renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
+
+/* ------------------------------------------------------------------ settings UI */
+const pct = v => v + '%';
+const SCHEMA = {
+  VIDEO: [
+    { k: 'quality', t: 'seg', name: 'GRAPHICS PRESET', hint: 'AUTO picks ' + AUTO_TIER.toUpperCase() + ' for this graphics card. Texture detail changes apply on next launch', opts: [['auto', 'AUTO'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
+    { k: 'renderScale', t: 'range', name: 'RENDER SCALE', hint: 'Lower this if the game runs slowly', min: 50, max: 100, step: 5, fmt: pct },
+    { k: 'dynRes', t: 'toggle', name: 'DYNAMIC RESOLUTION', hint: 'Lowers the render scale automatically if the frame rate drops' },
+    { k: 'shadows', t: 'seg', name: 'SHADOWS', opts: [['off', 'OFF'], ['low', 'LOW'], ['high', 'HIGH']] },
+    { k: 'fov', t: 'range', name: 'FIELD OF VIEW', min: 60, max: 110, step: 1, fmt: v => v + '°' },
+    { k: 'brightness', t: 'range', name: 'BRIGHTNESS', min: 60, max: 150, step: 5, fmt: pct },
+    { k: 'sheen', t: 'range', name: 'SURFACE SHEEN', hint: 'Fresnel glint on metal and wet surfaces at grazing angles', min: 0, max: 150, step: 10, fmt: pct },
+    { k: 'gunShader', t: 'toggle', name: 'CUSTOM GUN SHADER', hint: 'Physically based GGX shader on weapon metal. Turn off if guns look wrong' },
+    { k: 'grain', t: 'toggle', name: 'FILM GRAIN' },
+    { k: 'bob', t: 'toggle', name: 'VIEW BOBBING' },
+    { k: 'shake', t: 'range', name: 'SCREEN SHAKE', min: 0, max: 150, step: 10, fmt: pct },
+    { k: 'showFps', t: 'toggle', name: 'SHOW FPS' },
+  ],
+  AUDIO: [
+    { k: 'master', t: 'range', name: 'MASTER VOLUME', min: 0, max: 100, step: 5, fmt: pct },
+    { k: 'sfx', t: 'range', name: 'EFFECTS VOLUME', min: 0, max: 100, step: 5, fmt: pct },
+    { k: 'ambience', t: 'range', name: 'AMBIENCE VOLUME', hint: 'Wind and distant artillery', min: 0, max: 100, step: 5, fmt: pct },
+  ],
+  CONTROLS: [
+    { k: 'sens', t: 'range', name: 'MOUSE SENSITIVITY', min: 20, max: 300, step: 5, fmt: pct },
+    { k: 'adsSens', t: 'range', name: 'AIM DOWN SIGHTS SENSITIVITY', hint: 'Multiplier while aiming', min: 20, max: 150, step: 5, fmt: pct },
+    { k: 'invertY', t: 'toggle', name: 'INVERT MOUSE Y' },
+    { k: 'toggleAds', t: 'toggle', name: 'TOGGLE AIM', hint: 'Press right mouse once to aim, again to stop' },
+  ],
+  CONTROLLER: [
+    { k: 'padSens', t: 'range', name: 'LOOK SENSITIVITY', min: 40, max: 250, step: 5, fmt: pct },
+    { k: 'padAdsSens', t: 'range', name: 'AIM DOWN SIGHTS SENSITIVITY', hint: 'Multiplier while aiming', min: 30, max: 150, step: 5, fmt: pct },
+    { k: 'padCurve', t: 'seg', name: 'RESPONSE CURVE', hint: 'Dynamic: precise near the centre, fast at full tilt. Linear: stick position = turn speed', opts: [['dynamic', 'DYNAMIC'], ['standard', 'STANDARD'], ['linear', 'LINEAR']] },
+    { k: 'padAccel', t: 'range', name: 'TURN BOOST', hint: 'Extra turn speed when the stick is held at full tilt', min: 0, max: 100, step: 5, fmt: pct },
+    { k: 'padSmooth', t: 'range', name: 'LOOK SMOOTHING', hint: 'Evens out jittery input. Higher feels heavier', min: 0, max: 100, step: 5, fmt: pct },
+    { k: 'padAssist', t: 'seg', name: 'AIM ASSIST', hint: 'Slowdown near targets, follows them as you move, and a gentle snap when you aim', opts: [['off', 'OFF'], ['low', 'LOW'], ['standard', 'STANDARD'], ['strong', 'STRONG']] },
+    { k: 'padDeadzone', t: 'range', name: 'INNER DEADZONE', hint: 'Raise this if the view drifts', min: 2, max: 40, step: 1, fmt: pct },
+    { k: 'padOuterDz', t: 'range', name: 'OUTER DEADZONE', hint: 'Stick travel that counts as full tilt', min: 70, max: 100, step: 1, fmt: pct },
+    { k: 'padDrift', t: 'toggle', name: 'DRIFT CORRECTION', hint: 'Learns a worn stick\u2019s resting position and cancels it out' },
+    { k: 'padInvertY', t: 'toggle', name: 'INVERT LOOK Y' },
+    { k: 'padSprint', t: 'seg', name: 'SPRINT', hint: 'Auto sprints when the left stick is pushed fully forward', opts: [['toggle', 'TOGGLE'], ['hold', 'HOLD'], ['auto', 'AUTO']] },
+    { k: 'padCrouch', t: 'seg', name: 'CROUCH', opts: [['toggle', 'TOGGLE'], ['hold', 'HOLD']] },
+    { k: 'padTrigger', t: 'range', name: 'TRIGGER THRESHOLD', hint: 'How far to pull RT / LT before it counts', min: 5, max: 80, step: 5, fmt: pct },
+    { k: 'padVibration', t: 'toggle', name: 'VIBRATION' },
+    { k: 'padRumble', t: 'range', name: 'VIBRATION STRENGTH', min: 0, max: 150, step: 10, fmt: pct },
+  ],
+  GAMEPLAY: [
+    { k: 'difficulty', t: 'seg', name: 'DIFFICULTY', hint: 'Changes enemy health, damage, accuracy and numbers', opts: [['recruit', 'RECRUIT'], ['regular', 'REGULAR'], ['veteran', 'VETERAN']] },
+    { k: 'crosshair', t: 'seg', name: 'CROSSHAIR', opts: [['cross', 'CROSS'], ['dot', 'DOT'], ['none', 'NONE']] },
+    { k: 'crosshairColor', t: 'seg', name: 'CROSSHAIR COLOUR', opts: [['white', 'WHITE'], ['green', 'GREEN'], ['yellow', 'YELLOW'], ['red', 'RED'], ['cyan', 'CYAN']] },
+    { k: 'ragdoll', t: 'toggle', name: 'RAGDOLL PHYSICS', hint: 'Bodies fall and tumble with physics instead of a canned animation' },
+    { k: 'deathCam', t: 'toggle', name: 'DEATH CAM', hint: 'Slow-motion shot of whoever killed you before the K.I.A. screen' },
+    { k: 'hitMarkers', t: 'toggle', name: 'HIT MARKERS' },
+    { k: 'dmgIndicator', t: 'toggle', name: 'DAMAGE DIRECTION INDICATOR' },
+    { k: 'radar', t: 'toggle', name: 'RADAR' },
+  ],
+};
+let curTab = 'VIDEO';
+const VIDEO_KEYS = new Set(['quality', 'renderScale', 'dynRes', 'shadows', 'fov', 'brightness', 'sheen', 'gunShader', 'grain', 'showFps', 'radar', 'crosshair', 'crosshairColor']);
+function applySetting(k) {
+  if (k === 'quality') { const q = QUALITY[qKey()]; S.renderScale = q.scale; S.shadows = q.shadows; S.grain = q.grain; renderSettings(); }
+  if (VIDEO_KEYS.has(k)) applyVideoSettings();
+  if (k === 'master' || k === 'sfx' || k === 'ambience') applyAudioSettings();
+  if (k === 'difficulty') updateDiffUI();
+  saveSettings(); sfx.ui();
+}
+function buildTabs() {
+  const t = $('tabs'); t.innerHTML = '';
+  for (const name of Object.keys(SCHEMA)) {
+    const b = document.createElement('button'); b.className = 'tab' + (name === curTab ? ' on' : ''); b.textContent = name;
+    b.onclick = () => { curTab = name; buildTabs(); renderSettings(); sfx.ui(); };
+    t.appendChild(b);
+  }
+}
+function renderSettings() {
+  const body = $('setBody'); body.innerHTML = '';
+  for (const it of SCHEMA[curTab]) {
+    const row = document.createElement('div'); row.className = 'setrow';
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
+    if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
+    const ctl = document.createElement('div'); ctl.className = 'ctl';
+    if (it.t === 'range') {
+      const r = document.createElement('input'); r.type = 'range'; r.min = it.min; r.max = it.max; r.step = it.step; r.value = S[it.k];
+      const n = document.createElement('span'); n.className = 'num'; n.textContent = it.fmt(S[it.k]);
+      r.oninput = () => { S[it.k] = +r.value; n.textContent = it.fmt(S[it.k]); applySetting(it.k); };
+      ctl.append(r, n);
+    } else if (it.t === 'toggle') {
+      const sw = document.createElement('div'); sw.className = 'sw' + (S[it.k] ? ' on' : ''); sw.tabIndex = 0; sw.setAttribute('role', 'switch');
+      sw.onclick = () => { S[it.k] = !S[it.k]; sw.classList.toggle('on', S[it.k]); applySetting(it.k); };
+      sw.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sw.click(); } };
+      ctl.appendChild(sw);
+    } else {
+      const seg = document.createElement('div'); seg.className = 'seg';
+      for (const [val, label] of it.opts) { const b = document.createElement('button'); b.textContent = label; b.className = S[it.k] === val ? 'on' : ''; b.onclick = () => { S[it.k] = val; applySetting(it.k); if (it.k !== 'quality') [...seg.children].forEach(c => c.classList.toggle('on', c === b)); }; seg.appendChild(b); }
+      ctl.appendChild(seg);
+    }
+    row.append(nm, ctl); body.appendChild(row);
+  }
+}
+function updateClassUI() { const v = $('classVal'); if (v) v.textContent = activeClass().name; }
+function cycleClass(d) { ACTIVE_CLASS = (ACTIVE_CLASS + d + CLASSES.length) % CLASSES.length; saveClasses(); updateClassUI(); sfx.ui(); if (curScreen === 'lobby') { renderLobby(); focusFirst('#lobClass [data-act="class' + (d > 0 ? '+' : '-') + '"]'); } }
+let statsReturn = 'lobby';
+function updateDiffUI() { $('diffVal').textContent = diff().name; }
+function cycleDiff(d) { const ks = Object.keys(DIFFS); S.difficulty = ks[(ks.indexOf(S.difficulty) + d + ks.length) % ks.length]; updateDiffUI(); saveSettings(); sfx.ui(); if (curTab === 'GAMEPLAY') renderSettings(); }
+
+function actions(act) {
+  switch (act) {
+    case 'deploy': case 'play': toLobby(); break;
+    case 'lob-start': startMatch(LOBBY.mode); break;
+    case 'lobby-back': showScreen('menu'); break;
+    case 'custom': renderCustom(); showScreen('custom'); break;
+    case 'cus-back': renderLobby(); showScreen('lobby'); break;
+    case 'cus-start': startCustom(); break;
+    case 'stats': statsReturn = curScreen || 'lobby'; renderStats(); showScreen('career'); break;
+    case 'stats-back': if (statsReturn === 'lobby') renderLobby(); showScreen(statsReturn); break;
+    case 'res-again': restartMatch(); break;
+    case 'res-lobby': toLobby(); break;
+    case 'res-stats': statsReturn = 'results'; renderStats(); showScreen('career'); break;
+    case 'settings': returnScreen = curScreen || 'menu'; showScreen('settings'); break;
+    case 'settings-back': showScreen(returnScreen); break;
+    case 'bench': startBench(); break;
+    case 'loadout': openLoadout(curScreen || 'menu'); break;
+    case 'lo-back': updateClassUI(); if (returnScreen === 'lobby') renderLobby(); showScreen(returnScreen); break;
+    case 'lo-reset': resetLoadoutWeapon(); break;
+    case 'howto': returnScreen = curScreen || 'menu'; showScreen('howto'); break;
+    case 'howto-back': showScreen(returnScreen); break;
+    case 'reset-settings': for (const it of SCHEMA[curTab]) S[it.k] = DEFAULTS[it.k]; applyVideoSettings(); applyAudioSettings(); updateDiffUI(); saveSettings(); renderSettings(); break;
+    case 'resume': resumeGame(); break;
+    case 'restart': restartMatch(); break;
+    case 'tomenu': toMenu(); break;
+    case 'class-': cycleClass(-1); break;
+    case 'class+': cycleClass(1); break;
+    case 'diff-': cycleDiff(-1); break;
+    case 'diff+': cycleDiff(1); break;
+  }
+}
+document.addEventListener('click', e => {
+  initAudio();
+  const b = e.target.closest ? e.target.closest('[data-act]') : null;
+  if (b) { sfx.ui(); actions(b.getAttribute('data-act')); }
+});
+function goBack() {
+  if (curScreen === 'loadout') { updateClassUI(); if (returnScreen === 'lobby') renderLobby(); showScreen(returnScreen); }
+  else if (curScreen === 'lobby') showScreen('menu');
+  else if (curScreen === 'custom') { renderLobby(); showScreen('lobby'); }
+  else if (curScreen === 'career') actions('stats-back');
+  else if (curScreen === 'results') toLobby();
+  else if (curScreen === 'settings' || curScreen === 'howto') showScreen(returnScreen);
+  else if (curScreen === 'pause') resumeGame();
+}
+
+/* ------------------------------------------------------------------ keyboard / pointer focus navigation in menus */
+function focusables() {
+  const root = curScreen ? $(curScreen) : null; if (!root) return [];
+  return [...root.querySelectorAll('button, .sw, input[type=range]')].filter(x => x.offsetParent !== null);
+}
+function moveFocus(d) {
+  const f = focusables(); if (!f.length) return;
+  let i = f.indexOf(document.activeElement); i = i < 0 ? 0 : (i + d + f.length) % f.length;
+  try { f[i].focus(); } catch (e) {} sfx.ui();
+}
+function adjustFocused(d) {
+  const a = document.activeElement; if (!a) return;
+  if (a.type === 'range') { a.value = +a.value + d * (+a.step || 1); a.dispatchEvent(new Event('input')); }
+  else if (a.classList && a.classList.contains('sw')) a.click();
+  else if (a.parentElement && a.parentElement.classList.contains('seg')) { const sib = d > 0 ? a.nextElementSibling : a.previousElementSibling; if (sib) { sib.click(); sib.focus(); } }
+  else if (a.getAttribute && a.getAttribute('data-act') === 'diff-') { cycleDiff(d); }
+  else if (a.getAttribute && /^diff/.test(a.getAttribute('data-act') || '')) cycleDiff(d);
+  else if (a.getAttribute && /^class/.test(a.getAttribute('data-act') || '')) cycleClass(d);
+}
+
+/* ------------------------------------------------------------------ input */
+addEventListener('keydown', e => {
+  keys[e.code] = true;
+  if (G.state === 'deathcam') { if (G.dc && G.dc.t > 0.6 && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) finishDeath(); return; }
+  if ((G.state === 'respawning' || G.state === 'spectate') && e.code === 'Escape') { pauseGame(); return; }
+  if (G.state === 'spectate' && (e.code === 'Space' || e.code === 'Enter')) { G.specNext = true; return; }
+  if (e.code === 'Tab') e.preventDefault();
+  if (G.state !== 'playing') {
+    if (!curScreen) return;
+    if (e.code === 'ArrowDown') { moveFocus(1); e.preventDefault(); }
+    else if (e.code === 'ArrowUp') { moveFocus(-1); e.preventDefault(); }
+    else if (e.code === 'ArrowRight' && document.activeElement && (document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(1); e.preventDefault(); }
+    else if (e.code === 'ArrowLeft' && document.activeElement && (document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(-1); e.preventDefault(); }
+    else if (e.code === 'Escape') goBack();
+    return;
+  }
+  if (e.code === 'Escape') { pauseGame(); return; }
+  if (e.code === 'KeyR') startReload();
+  if (e.code === 'KeyF' && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
+  if (e.code === 'KeyG') throwGrenade();
+  if (e.code === 'Digit1') switchWeapon(0);
+  if (e.code === 'Digit2') switchWeapon(1);
+  if (e.code === 'KeyQ') cycleWeapon(1);
+  if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab') e.preventDefault();
+});
+addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('blur', () => { if (G.bench || G.look) return; for (const k in keys) keys[k] = false; mouseDown = false; if (!S.toggleAds) mouseAds = false; pad.crouch = false; pauseGame(); });
+addEventListener('mousedown', e => {
+  if (G.state === 'deathcam') { if (G.dc && G.dc.t > 0.6) finishDeath(); return; }
+  if (G.state === 'spectate') { G.specNext = true; return; }
+  if (G.state !== 'playing') return;
+  if (e.button === 0) { mouseDown = true; clickQueued = true; }
+  if (e.button === 2) mouseAds = S.toggleAds ? !mouseAds : true;
+});
+addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; if (e.button === 2 && !S.toggleAds) mouseAds = false; });
+addEventListener('contextmenu', e => e.preventDefault());
+addEventListener('wheel', e => { if (G.state === 'playing') cycleWeapon(e.deltaY > 0 ? 1 : -1); });
+addEventListener('mousemove', e => {
+  if (G.state !== 'playing' || document.pointerLockElement !== renderer.domElement) return;
+  const sens = 0.0022 * S.sens / 100 * lerp(1, S.adsSens / 100, G.ads);
+  P.yaw -= e.movementX * sens; P.pitch = clamp(P.pitch - e.movementY * sens * (S.invertY ? -1 : 1), -1.5, 1.5);
+});
+document.addEventListener('pointerlockerror', () => showMsg('MOUSE CAPTURE BLOCKED · USE ARROW KEYS TO LOOK'));
+let hadLock = false;
+document.addEventListener('pointerlockchange', () => { if (document.pointerLockElement === renderer.domElement) { hadLock = true; return; } const was = hadLock; hadLock = false; if (was && (G.state === 'playing' || G.state === 'respawning' || G.state === 'spectate') && !G.bench && !G.look) pauseGame(); });
+
+/* ------------------------------------------------------------------ gamepad */
+// Sticks: radial deadzone with an outer saturation ring, plus slow auto-calibration of a drifting centre.
+// Look: response curve, full-tilt turn boost, light smoothing, separate ADS sensitivity, and aim assist
+// (slowdown + friction near targets, rotational follow while moving, a gentle snap when you aim down sights).
+let prevBtn = [], padBlocked = false;
+const padCal = { l: [0, 0], r: [0, 0], lq: [0, 0, 0], rq: [0, 0, 0] };
+const nav = { dir: '', t: 0, n: 0 };
+function learnCentre(raw, cal, q, dt) {
+  // a stick resting still near (not at) the centre for over 1.5 s is drift: slowly learn that as the new centre
+  const m = Math.hypot(raw[0], raw[1]), moved = Math.hypot(raw[0] - q[0], raw[1] - q[1]);
+  q[0] = raw[0]; q[1] = raw[1];
+  if (m < 0.26 && moved < 0.006) q[2] += dt; else q[2] = 0;
+  if (q[2] > 1.5) { const k = Math.min(1, dt * 0.8); cal[0] = clamp(lerp(cal[0], raw[0], k), -0.25, 0.25); cal[1] = clamp(lerp(cal[1], raw[1], k), -0.25, 0.25); }
+}
+function stick(x, y, cal) {
+  if (cal && S.padDrift) { x -= cal[0]; y -= cal[1]; }
+  const dz = S.padDeadzone / 100, outer = Math.max(dz + 0.05, S.padOuterDz / 100), m = Math.hypot(x, y);
+  if (m < dz) return [0, 0, 0];
+  const k = clamp((m - dz) / (outer - dz), 0, 1); return [x / m * k, y / m * k, k];
+}
+function lookCurve(m) {
+  if (S.padCurve === 'linear') return m;
+  if (S.padCurve === 'standard') return Math.pow(m, 1.8);
+  return 0.3 * m + 0.7 * Math.pow(m, 2.6);   // dynamic: fine near the centre, fast at the edge
+}
+function padNavDir(mx, my, down) {
+  if (down(12) || my < -0.55 && Math.abs(my) >= Math.abs(mx)) return 'up';
+  if (down(13) || my > 0.55 && Math.abs(my) >= Math.abs(mx)) return 'down';
+  if (down(14) || mx < -0.55) return 'left';
+  if (down(15) || mx > 0.55) return 'right';
+  return '';
+}
+function pollPad(dt) {
+  if (G.look) return;   // test views ignore controllers
+  let list = [];
+  if (!padBlocked) { try { list = navigator.getGamepads ? navigator.getGamepads() : []; } catch (e) { padBlocked = true; } }
+  let gp = null; for (const g of list) { if (g && g.connected) { gp = g; break; } }
+  if (!gp) {
+    if (pad.on) { pad.on = false; showMsg('CONTROLLER DISCONNECTED'); }
+    pad.gp = null; pad.mx = pad.my = pad.lx = pad.ly = 0; pad.fire = pad.ads = pad.jump = pad.sprint = pad.crouch = false; prevBtn = []; return;
+  }
+  if (!pad.on) { pad.on = true; showMsg('CONTROLLER CONNECTED'); }
+  pad.gp = gp;
+  const down = i => !!(gp.buttons[i] && gp.buttons[i].pressed), val = i => (gp.buttons[i] ? gp.buttons[i].value : 0), press = i => down(i) && !prevBtn[i];
+  const rawL = [gp.axes[0] || 0, gp.axes[1] || 0], rawR = [gp.axes[2] || 0, gp.axes[3] || 0];
+  if (S.padDrift) { learnCentre(rawL, padCal.l, padCal.lq, dt); learnCentre(rawR, padCal.r, padCal.rq, dt); }
+  const [mx, my, mm] = stick(rawL[0], rawL[1], padCal.l), [lx, ly, lm] = stick(rawR[0], rawR[1], padCal.r);
+  pad.mx = mx; pad.my = my; pad.mm = mm; pad.lx = lx; pad.ly = ly; pad.lm = lm;
+  const playing = G.state === 'playing';
+  if (G.state === 'deathcam') { if ((press(0) || press(9)) && G.dc && G.dc.t > 0.6) finishDeath(); prevBtn = gp.buttons.map(b => b.pressed); return; }
+  if (press(9)) { if (playing || G.state === 'respawning' || G.state === 'spectate') pauseGame(); else if (G.state === 'paused') resumeGame(); else if (curScreen === 'lobby') actions('lob-start'); else if (curScreen === 'menu') toLobby(); else if (G.state === 'dead') restartMatch(); }
+  pad.board = down(8); pad.use = playing && down(2);
+  if (G.state === 'spectate' && press(0)) G.specNext = true;
+  // analog triggers with a little hysteresis so a half-pull doesn't chatter
+  const thr = S.padTrigger / 100, rt = Math.max(val(7), down(7) && !gp.buttons[7].value ? 1 : 0), lt = Math.max(val(6), down(6) && !gp.buttons[6].value ? 1 : 0);
+  const fireNow = playing && (pad.fire ? rt > thr - 0.06 : rt > thr);
+  if (fireNow && !pad.fire) clickQueued = true;
+  pad.fire = fireNow;
+  const adsNow = playing && (pad.ads ? lt > thr - 0.06 : lt > thr);
+  if (adsNow && !pad.ads) startAdsSnap();
+  pad.ads = adsNow; pad.jump = playing && down(0);
+  if (playing) {
+    if (S.padCrouch === 'hold') pad.crouch = down(1); else if (press(1)) pad.crouch = !pad.crouch;
+    if (press(2) && !G.interactTxt) startReload();
+    if (press(3) || press(15) || press(4)) cycleWeapon(1);
+    if (press(14)) cycleWeapon(-1);
+    if (press(5)) throwGrenade();
+    if (press(13) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
+    const fwdPush = -my;
+    if (S.padSprint === 'hold') pad.sprint = down(10);
+    else if (S.padSprint === 'auto') { pad.autoT = fwdPush > 0.85 && mm > 0.92 ? (pad.autoT || 0) + dt : 0; pad.sprint = pad.autoT > 0.22 || (pad.sprint && fwdPush > 0.6) || press(10) || (pad.sprint && down(10)); }
+    else if (press(10)) pad.sprint = !pad.sprint;
+    if (pad.sprint && (pad.crouch && press(1))) pad.sprint = false;
+  } else {
+    pad.crouch = false;
+    if (curScreen) menuPad(dt, mx, my, ly, press, down);
+  }
+  if (!playing || (S.padSprint !== 'hold' && Math.hypot(mx, my) < 0.3)) pad.sprint = false;
+  prevBtn = gp.buttons.map(b => b.pressed);
+}
+// menus: hold a direction to repeat (accelerating), bumpers change tabs, right stick scrolls, Y resets
+function menuPad(dt, mx, my, ry, press, down) {
+  const d = padNavDir(mx, my, down);
+  if (d !== nav.dir) { nav.dir = d; nav.n = 0; if (d) { menuMove(d); nav.t = 0.34; } }
+  else if (d) { nav.t -= dt; if (nav.t <= 0) { menuMove(d); nav.n++; nav.t = Math.max(0.045, 0.1 - nav.n * 0.005); } }
+  if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); }
+  if (press(1)) goBack();
+  if (press(4) || press(5)) menuTab(press(4) ? -1 : 1);
+  if (press(3)) { if (curScreen === 'loadout') actions('lo-reset'); else if (curScreen === 'settings') actions('reset-settings'); }
+  if (Math.abs(ry) > 0.05) { let el = document.activeElement; while (el && el !== document.body && !(el.scrollHeight > el.clientHeight + 4 && /auto|scroll/.test(getComputedStyle(el).overflowY))) el = el.parentElement; if (el && el !== document.body) el.scrollTop += ry * 900 * dt; }
+}
+function menuTab(d) {
+  if (curScreen === 'loadout') loadoutTab(d);
+  else if (curScreen === 'lobby') lobbyTab(d);
+  else if (curScreen === 'career') statsTab(d);
+  else if (curScreen === 'settings') { const ks = Object.keys(SCHEMA); curTab = ks[(ks.indexOf(curTab) + d + ks.length) % ks.length]; buildTabs(); renderSettings(); sfx.ui(); setTimeout(() => { const t = $('tabs').querySelector('.on'); if (t) t.focus(); }, 0); }
+  else if (curScreen === 'menu') cycleClass(d);
+}
+function menuMove(d) {
+  const a = document.activeElement, adjustable = a && (a.type === 'range' || (a.classList && a.classList.contains('sw')) || (a.parentElement && a.parentElement.classList.contains('seg')) || /^(diff|class)/.test((a.getAttribute && a.getAttribute('data-act')) || ''));
+  if ((d === 'left' || d === 'right') && adjustable && curScreen !== 'loadout') { adjustFocused(d === 'right' ? 1 : -1); return; }
+  spatialFocus(d);
+}
+// move focus to the nearest control in a direction (falls back to list order at the ends)
+function spatialFocus(d) {
+  const f = focusables(); if (!f.length) return;
+  const a = document.activeElement; if (!f.includes(a)) { try { f[0].focus(); } catch (e) {} return; }
+  const r0 = a.getBoundingClientRect(), cx = r0.left + r0.width / 2, cy = r0.top + r0.height / 2;
+  const dx = d === 'left' ? -1 : d === 'right' ? 1 : 0, dy = d === 'up' ? -1 : d === 'down' ? 1 : 0;
+  let best = null, bs = 1e9;
+  for (const el of f) {
+    if (el === a) continue;
+    const r = el.getBoundingClientRect(); if (!r.width && !r.height) continue;
+    // distance from the edge of the current control, so long rows and short chips both behave
+    const ex = clamp(cx, r.left, r.right), ey = clamp(cy, r.top, r.bottom);
+    const vx = (dx ? (dx > 0 ? r.left - r0.right : r0.left - r.right) * dx : ex - cx), vy = (dy ? (dy > 0 ? r.top - r0.bottom : r0.top - r.bottom) * dy : ey - cy);
+    const along = dx ? vx * dx : vy * dy, across = dx ? Math.abs((r.top + r.height / 2) - cy) : Math.abs((r.left + r.width / 2) - cx);
+    if (along < -2) continue;
+    const s = Math.max(0, along) + across * (dx ? 1.2 : 0.6);
+    if (s < bs) { bs = s; best = el; }
+  }
+  if (!best && dy) { const i = f.indexOf(a); best = f[(i + dy + f.length) % f.length]; }
+  if (best) { try { best.focus(); best.scrollIntoView && best.scrollIntoView({ block: 'nearest' }); } catch (e) {} sfx.ui(); }
+}
+
+/* ---------- aim assist */
+const AA = { off: null, low: { fr: 0.72, cone: 0.05, rot: 0.25, snap: 0 }, standard: { fr: 0.55, cone: 0.075, rot: 0.5, snap: 0.55 }, strong: { fr: 0.45, cone: 0.1, rot: 0.7, snap: 0.9 } };
+const _toE = new THREE.Vector3(), _fw = new THREE.Vector3(), _aaR = new THREE.Raycaster();
+let aaT = null, aaLosT = 0, aaLos = false, aaYaw = 0, aaPitch = 0, aaHad = false;
+function aimPoint(e, out) { const sc = (e.rig.root.userData.scale || 1); return out.set(e.group.position.x, (e.crouchK ? 1.25 - e.crouchK * 0.35 : 1.25) * sc, e.group.position.z); }
+// nearest enemy to the crosshair inside the cone (angle in radians), visible, within 50 m
+function aaPick(cone) {
+  _fw.set(0, 0, -1).applyQuaternion(camera.quaternion);
+  let best = null, ba = cone;
+  for (const e of enemies) {
+    if (isFriend(e)) continue;
+    aimPoint(e, _toE).sub(camera.position); const d = _toE.length(); if (d > 50 || d < 1) continue;
+    const ang = Math.acos(clamp(_toE.normalize().dot(_fw), -1, 1)) * Math.min(1, 0.35 + d / 25);   // a bit more forgiving close up
+    if (ang < ba) { ba = ang; best = e; }
+  }
+  if (best !== aaT) { aaT = best; aaLosT = 0; aaHad = false; }
+  if (aaT && (aaLosT -= 1 / 60) <= 0) { aaLosT = 0.1; aimPoint(aaT, _toE); const dist = _toE.distanceTo(camera.position); _aaR.set(camera.position, _toE.sub(camera.position).normalize()); _aaR.far = dist - 0.6; aaLos = _aaR.intersectObjects(wallMeshes, false).length === 0; }
+  return aaT && aaLos ? aaT : null;
+}
+function bearingTo(e) { aimPoint(e, _toE).sub(camera.position); return [Math.atan2(-_toE.x, -_toE.z), Math.atan2(_toE.y, Math.hypot(_toE.x, _toE.z))]; }
+function startAdsSnap() {
+  const L = AA[S.padAssist]; if (!L || !L.snap || !pad.on) return;
+  const e = aaPick(L.cone * 1.4); if (e) G.snap = { e, t: 0.16, k: L.snap };
+}
+function applyPadLook(dt) {
+  if (!pad.on) return;
+  const L = AA[S.padAssist], target = L && G.state === 'playing' ? aaPick(L.cone) : null;
+  // stick -> angular velocity
+  const m = pad.lm || 0, out = m > 0 ? lookCurve(m) / m : 0;
+  if (m > 0.93) pad.turnT = (pad.turnT || 0) + dt; else pad.turnT = Math.max(0, (pad.turnT || 0) - dt * 5);
+  const boost = 1 + (S.padAccel / 100) * 0.9 * smooth(0.12, 0.45, pad.turnT) * (1 - G.ads);
+  let k = lerp(1, S.padAdsSens / 100, G.ads) * S.padSens / 100;
+  if (target) k *= lerp(L.fr, 1, clamp(Math.acos(clamp(_toE.copy(aimPoint(target, _toE)).sub(camera.position).normalize().dot(_fw.set(0, 0, -1).applyQuaternion(camera.quaternion)), -1, 1)) / L.cone, 0, 1) * 0.6);
+  const tvx = -pad.lx * out * 3.6 * k * boost, tvy = -pad.ly * out * 2.7 * k * (S.padInvertY ? -1 : 1);
+  const tau = S.padSmooth / 100 * 0.07, a = tau > 0 ? 1 - Math.exp(-dt / tau) : 1;
+  pad.vx = lerp(pad.vx || 0, tvx, a); pad.vy = lerp(pad.vy || 0, tvy, a);
+  if (Math.abs(pad.vx) < 1e-4 && !tvx) pad.vx = 0; if (Math.abs(pad.vy) < 1e-4 && !tvy) pad.vy = 0;
+  P.yaw += pad.vx * dt; P.pitch = clamp(P.pitch + pad.vy * dt, -1.5, 1.5);
+  // rotational assist: while you move or aim, follow part of the target's drift across the screen
+  if (target) {
+    const [by, bp] = bearingTo(target);
+    if (aaHad && (pad.mm > 0.1 || m > 0.05)) { let dy = by - aaYaw; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; P.yaw += clamp(dy, -0.05, 0.05) * L.rot; P.pitch = clamp(P.pitch + clamp(bp - aaPitch, -0.03, 0.03) * L.rot * 0.6, -1.5, 1.5); }
+    aaYaw = by; aaPitch = bp; aaHad = true;
+  } else aaHad = false;
+  // ADS snap: ease toward the target for a fraction of a second
+  if (G.snap) {
+    const s = G.snap; s.t -= dt;
+    if (s.t <= 0 || !enemies.includes(s.e) || !G.adsOn) G.snap = null;
+    else { const [by, bp] = bearingTo(s.e); let dy = by - P.yaw; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; const f = clamp(dt * 14, 0, 1) * s.k; P.yaw += dy * f; P.pitch = clamp(P.pitch + (bp - P.pitch) * f, -1.5, 1.5); }
+  }
+}
+
+/* ------------------------------------------------------------------ main loop */
+let last = performance.now(), ready = false, fpsAcc = 0, fpsN = 0;
+function menuCamera() {
+  const a = NOW * 0.07, r = 12.5;
+  camera.position.set(Math.cos(a) * r - 1, 2.1 + Math.sin(NOW * 0.25) * 0.25, Math.sin(a) * r * 0.8);
+  _fw.set(-Math.sin(a), 0, Math.cos(a)); // sideways, so the soldiers sit right of the menu text
+  camera.lookAt(_toE.set(0, 1.3, 0).addScaledVector(_fw, 1.8));
+  if (camera.fov !== 52) { camera.fov = 52; camera.updateProjectionMatrix(); }
+}
+function tick(dt) {
+  pollPad(dt);
+  skyMat.uniforms.time.value += dt; sky.position.copy(camera.position);
+  updateGrain(dt); updateAmbience(NOW); updateFires(dt, NOW);
+  fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5) { if (S.showFps) $('fps').textContent = Math.round(fpsN / fpsAcc) + ' FPS' + (S.dynRes && DR.scale < 0.999 ? `  ·  RES ${Math.round(DR.scale * 100)}%` : ''); fpsAcc = 0; fpsN = 0; }
+  if (G.state === 'playing') {
+    G.time += dt;
+    G.adsOn = mouseAds || pad.ads;
+    applyPadLook(dt);
+    const lkx = (keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0), lky = (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0);
+    if (lkx || lky) { const k = lerp(1, 0.55, G.ads) * S.sens / 100; P.yaw += lkx * 2.4 * k * dt; P.pitch = clamp(P.pitch + lky * 1.7 * k * dt, -1.5, 1.5); }
+    const { moving, sprint } = updatePlayer(dt);
+    G.fireT -= dt; if (G.swapT > 0) G.swapT -= dt;
+    const w = WEAPONS[G.cur];
+    if (G.reloading) { G.reloadT -= dt; if (G.reloadT <= 0) finishReload(); }
+    const want = w.auto ? isFiring() : clickQueued;
+    if (want && !sprint && !G.reloading && G.swapT <= 0 && G.fireT <= 0 && G.state === 'playing') {
+      if (w.ammo > 0) shoot(moving); else { sfx.click(); G.fireT = 0.25; startReload(); }
+    }
+    else if (G.burstLeft > 0 && G.fireT <= 0 && !G.reloading && G.swapT <= 0 && w.ammo > 0 && G.state === 'playing') shoot(moving);
+    clickQueued = false;
+    if (w.ammo === 0 && !G.reloading && w.reserve > 0 && G.swapT <= 0 && G.fireT <= 0) startReload();
+    const used = inMatch() ? playerInteract(dt, !!keys.KeyE || pad.use) : false;
+    if (inMatch()) { updateBots(dt); updateMatch(dt); } else { updateNav(P.x, P.z); updateWaves(dt); updateEnemies(dt); }
+    updateGrenades(dt); updatePickups(dt); updateHud();
+  } else if (G.state === 'menu') { menuCamera(); updateMenuSoldiers(dt); }
+  else if (G.state === 'respawning' || G.state === 'spectate') {
+    if (G.state === 'respawning' && G.dc) { G.dc.t += dt; aimDeathCam(dt, Math.min(G.dc.t / G.dc.dur, 1)); }
+    updateBots(dt); updateMatch(dt); updateGrenades(dt); updateHud();
+  }
+  else if (G.state === 'deathcam' && inMatch()) { updateDeathCam(dt); updateBots(dt); updateMatch(dt); updateGrenades(dt); }
+  else if (G.state === 'dead' && G.dcHold) { if (G.dc) { G.dc.t += dt; aimDeathCam(dt, Math.min(G.dc.t / G.dc.dur, 1)); } }
+  else if (G.state === 'dead') { P.pitch = lerp(P.pitch, -0.35, dt * 2); camera.rotation.set(P.pitch, P.yaw, lerp(camera.rotation.z, 0.5, dt * 2)); camera.position.y = lerp(camera.position.y, 0.5, dt * 3); }
+  else if (G.state === 'deathcam') { const w = dt * 0.32; updateDeathCam(dt); updateEnemies(w); updateGrenades(w); }
+  if (M.online) { try { netTick(dt); } catch (err) { reportError(err); } }
+  const wdt = G.state === 'deathcam' && !inMatch() ? dt * 0.32 : dt;
+  tickStats(dt); setScoreboard(keys.Tab || pad.board);
+  try { updatePolish(dt); } catch (err) { reportError(err); }
+  updateDying(wdt); updateFx(wdt);
+}
+function renderFrame() {
+  const showVm = viewmodel && (G.state === 'playing' || G.state === 'paused') && !G.scoped;
+  if (viewmodel) viewmodel.visible = !!showVm;
+  renderer.clear(); renderer.render(scene, camera);
+  if (showVm) { updateGunShader(); renderer.clearDepth(); renderer.render(vmScene, vmCamera); }
+}
+function frame(now) {
+  requestAnimationFrame(frame);
+  const raw = (now - last) / 1000, dt = Math.min(raw, 0.05); last = now; NOW += dt;
+  try { updateDynRes(raw); } catch (e) { reportError(e); }
+  if (ready && G.bench) { try { benchPre(raw); } catch (e) { reportError(e); } }
+  if (ready && G.look && G.state === 'playing') { Object.assign(P, G.look, { vx: 0, vz: 0 }); mouseDown = false; G.health = 100; if (G.lookAds) mouseAds = true; }
+  if (ready) { try { tick(dt); } catch (e) { reportError(e); } }
+  if (!G.noRender) { try { renderFrame(); updatePreview(dt); } catch (e) { reportError(e); } }   // noRender: logic-only test runs
+  if (G.bench) { try { benchPost(); } catch (e) { reportError(e); } }
+}
+
+/* ------------------------------------------------------------------ boot: build the world in small steps so the loading bar can paint */
+const BOOT = [
+  ['BUILDING TEXTURES', buildTextures],
+  ['PREPARING MATERIALS', () => { buildMaterials(); buildViewmodelMaterials(); addFresnelAll(MAT); addFresnelAll(VM); }],
+  ['RAISING THE RUINS', buildWorld],
+  ['PLOTTING ROUTES', () => { buildNav(); buildGrass(); addWind(grassMesh && grassMesh.material, 1); addWind(MAT.leaf, 3); }],
+  ['EQUIPPING SOLDIERS', () => { buildSoldierTemplates(); addFresnelAll(SOLD.mats); addFresnelAll(SOLD.skinMats); setupViewmodel(); initAttachments(); }],
+  ['LOADING EFFECTS', buildFx],
+  ['LIGHTING THE SKY', () => { buildEnvironment(); applyVideoSettings(); applyAudioSettings(); }],
+];
+function bootStep(i) {
+  if (i >= BOOT.length) {
+    setLoad(1, 'READY'); ready = true; G.state = 'menu';
+    if (typeof location !== 'undefined' && /^#bench/.test(location.hash || '')) setTimeout(() => { if (G.state === 'menu') startBench(); }, 600);
+    // #look: a quiet still view of cover and concrete (no enemies) for checking materials
+    if (typeof location !== 'undefined' && /^#look/.test(location.hash || '')) setTimeout(() => {
+      clearMenuSoldiers(); resetGame(); G.state = 'playing'; G.breakT = 1e9; showScreen(null);
+      G.look = { x: -3.5, z: 10.5, yaw: 0.05, pitch: -0.18 };
+      // #lookatt / #lookscope: show a demo attachment set (not saved)
+      try { Storage.prototype.setItem = function () {}; } catch (e) {}
+      const gm = /^#lookgun=(\w+)(?:,(\w+))?/.exec(location.hash);
+      if (/^#lookatt/.test(location.hash)) { ATTS.marc = { optic: 'holo', muzzle: 'suppressor', underbarrel: 'laser', magazine: 'drum', barrel: 'long', stock: 'tacstock' }; equipClass({ p: 'marc', s: 'sidearm', e: 'frag', k: 'none' }); }
+      if (/^#lookscope/.test(location.hash)) { ATTS.marc = { optic: 'acog4', muzzle: 'brake', underbarrel: 'vgrip' }; equipClass({ p: 'marc', s: 'sidearm', e: 'frag', k: 'none' }); G.lookAds = true; }
+      if (gm && ARM[gm[1]]) { const d = ARM[gm[1]], pri = CATS[d.cat].slot === 'primary'; equipClass({ p: pri ? d.id : 'marc', s: pri ? 'sidearm' : d.id, e: 'frag', k: 'none' }); if (!pri) switchWeapon(1); G.swapT = 0; if (gm[2] === 'ads') G.lookAds = true; }
+    }, 600);
+    spawnMenuSoldiers(); updateDiffUI(); updateClassUI(); updateBestUI(); buildTabs(); renderSettings(); showScreen('menu');
+    $('loading').classList.add('hide'); return;
+  }
+  setLoad(i / BOOT.length, BOOT[i][0]);
+  setTimeout(() => { try { BOOT[i][1](); } catch (e) { reportError(e); return; } bootStep(i + 1); }, 30);
+}
+requestAnimationFrame(frame);
+bootStep(0);
+
+// test hook: open the page with #debug to expose a few internals for play-testing
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+// self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
+if (window.ASHFALL_AUTOTEST) {
+  try { Storage.prototype.setItem = function () {}; } catch (e) {}
+  const T0 = performance.now(), past = s => performance.now() - T0 > s * 1000;
+  const tag = document.createElement('div'); tag.style.cssText = 'position:fixed;left:8px;top:8px;z-index:99;font:12px monospace;color:#ff0;background:rgba(0,0,0,.5);padding:2px 6px'; document.body.appendChild(tag);
+  let phase = 0, test = [];
+  const put = (d, lat) => { const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), rx = Math.cos(P.yaw), rz = -Math.sin(P.yaw); return [P.x + fx * d + rx * lat, P.z + fz * d + rz * lat]; };
+  const spawnAt = (type, d, lat) => { const [x, z] = put(d, lat); const e = makeEnemy(type, x, z); e.group.rotation.y = Math.atan2(P.x - x, P.z - z); e.cd = 99; enemies.push(e); return e; };
+  setInterval(() => {
+    tag.textContent = 'AUTOTEST ' + ['menu', 'deployed', 'enemies', 'shots', 'grenade', 'death cam'][phase] + '  t=' + ((performance.now() - T0) / 1000).toFixed(1) + 's  state=' + G.state + '  ragdolls=' + dying.filter(d => d.rd).length;
+    if (!ready) return;
+    if (phase >= 1 && phase < 5 && G.state === 'playing') G.health = 1e6;
+    if (phase === 0 && past(7)) { phase = 1; startGame(); }
+    else if (phase === 1 && past(9)) { phase = 2; for (const e of enemies.slice()) { scene.remove(e.group); enemies.splice(enemies.indexOf(e), 1); } test = [spawnAt('rifleman', 7, -1.6), spawnAt('heavy', 8, 0.6), spawnAt('scout', 10, 2.4), spawnAt('rifleman', 11, -0.4)]; }
+    else if (phase === 2 && past(15)) { phase = 3; const f = new THREE.Vector3(-Math.sin(P.yaw), 0, -Math.cos(P.yaw)); if (enemies.includes(test[0])) damageEnemy(test[0], 1e5, false, f); if (enemies.includes(test[1])) damageEnemy(test[1], 1e5, true, f); }
+    else if (phase === 3 && past(18)) { phase = 4; const a = test[2].group.position, b = test[3].group.position; explode(new THREE.Vector3((a.x + b.x) / 2, 0.4, (a.z + b.z) / 2)); }
+    else if (phase === 4 && past(25)) { phase = 5; const k = spawnAt('heavy', 9, 1.5); G.killer = k; G.health = 1; hurtPlayer(5, k.group.position.x, k.group.position.z); }
+  }, 100);
+}

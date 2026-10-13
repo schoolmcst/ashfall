@@ -1,0 +1,188 @@
+/* ================================================================== app multiplayer: player-hosted matches over WebRTC
+   Used by the desktop app (no claude.ai). Players find each other through the free public PeerJS signalling server
+   (only used to exchange connection details), then talk directly. One player hosts: everyone sends their state to the
+   host, the host sends everyone's state back out ~20 times a second. The API mirrors the claude.ai `room` capability
+   (peers / presence / join / leave), so net.js runs unchanged on top of it.
+   Quick Play: fixed public match slots per mode; join the first open one, or host it. Private: a slot named by a code.
+   If the host leaves, the next player in join order takes over the slot and everyone reconnects to them. */
+const P2P = (() => {
+  const SIG = 'wss://0.peerjs.com:443/peerjs?key=peerjs', MAXP = 16, SLOTS = 6;
+  const ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' }];
+  const rid = (n = 10) => Array.from(crypto.getRandomValues(new Uint8Array(n)), b => 'abcdefghijkmnpqrstuvwxyz23456789'[b % 32]).join('');
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+  const VER = () => String((window.ASHFALL_APP && window.ASHFALL_APP.version) || 'dev').replace(/[^a-z0-9]/gi, '');
+
+  // signalling socket registered under `id`; resolves when the server accepts the id
+  function signal(id) {
+    return new Promise((res, rej) => {
+      let ws, done = false, hb = null; const hs = new Set();
+      try { ws = new WebSocket(`${SIG}&id=${encodeURIComponent(id)}&token=${rid(8)}&version=1.5.4`); } catch (e) { return rej(new Error('fail')); }
+      const to = setTimeout(() => { if (!done) { done = true; try { ws.close(); } catch (e) {} rej(new Error('timeout')); } }, 8000);
+      const api = {
+        id, send(dst, type, payload) { if (ws.readyState === 1) ws.send(JSON.stringify({ type, dst, payload })); },
+        on(fn) { hs.add(fn); return () => hs.delete(fn); },
+        close() { clearInterval(hb); try { ws.close(); } catch (e) {} }, get open() { return ws.readyState === 1; },
+      };
+      ws.onmessage = ev => {
+        let m; try { m = JSON.parse(ev.data); } catch (e) { return; }
+        if (!done) {
+          if (m.type === 'OPEN') { done = true; clearTimeout(to); hb = setInterval(() => { if (ws.readyState === 1) ws.send('{"type":"HEARTBEAT"}'); }, 5000); res(api); return; }
+          if (m.type === 'ID-TAKEN' || m.type === 'ERROR' || m.type === 'INVALID-KEY') { done = true; clearTimeout(to); try { ws.close(); } catch (e) {} rej(new Error(m.type === 'ID-TAKEN' ? 'taken' : 'fail')); return; }
+        }
+        for (const f of hs) try { f(m); } catch (e) {}
+      };
+      ws.onerror = () => { if (!done) { done = true; clearTimeout(to); rej(new Error('fail')); } };
+      ws.onclose = () => { clearInterval(hb); for (const f of hs) try { f({ type: 'CLOSED' }); } catch (e) {} };
+    });
+  }
+
+  // one WebRTC link: an unreliable channel for state, a reliable one for control messages
+  function link(sig, dst, cid, offerer, onMsg, onState) {
+    const pc = new RTCPeerConnection({ iceServers: ICE }), L = { pc, cid, dst, u: null, r: null, open: false, closed: false, last: performance.now() };
+    const wire = ch => { ch.onmessage = ev => { L.last = performance.now(); let m; try { m = JSON.parse(ev.data); } catch (e) { return; } onMsg(L, m); }; ch.onopen = check; ch.onclose = () => L.close(); };
+    const check = () => { if (!L.open && L.u && L.r && L.u.readyState === 'open' && L.r.readyState === 'open') { L.open = true; onState(L, 'open'); } };
+    L.close = () => { if (L.closed) return; L.closed = true; L.open = false; try { pc.close(); } catch (e) {} onState(L, 'closed'); };
+    L.send = (m, reliable) => { const ch = reliable ? L.r : L.u; if (ch && ch.readyState === 'open') try { ch.send(typeof m === 'string' ? m : JSON.stringify(m)); } catch (e) {} };
+    pc.onicecandidate = ev => { if (ev.candidate) sig.send(dst, 'CANDIDATE', { cid, c: ev.candidate.toJSON ? ev.candidate.toJSON() : ev.candidate }); };
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed' || pc.connectionState === 'closed') L.close(); };
+    pc.ondatachannel = ev => { if (ev.channel.label === 'u') L.u = ev.channel; else L.r = ev.channel; wire(ev.channel); };
+    if (offerer) {
+      L.u = pc.createDataChannel('u', { ordered: false, maxRetransmits: 0 }); L.r = pc.createDataChannel('r'); wire(L.u); wire(L.r);
+      pc.createOffer().then(o => pc.setLocalDescription(o)).then(() => sig.send(dst, 'OFFER', { cid, sdp: pc.localDescription.toJSON ? pc.localDescription.toJSON() : pc.localDescription })).catch(() => L.close());
+    }
+    L.signal = async m => {
+      try {
+        if (m.type === 'OFFER') { await pc.setRemoteDescription(m.payload.sdp); const a = await pc.createAnswer(); await pc.setLocalDescription(a); sig.send(dst, 'ANSWER', { cid, sdp: pc.localDescription.toJSON ? pc.localDescription.toJSON() : pc.localDescription }); }
+        else if (m.type === 'ANSWER') await pc.setRemoteDescription(m.payload.sdp);
+        else if (m.type === 'CANDIDATE' && m.payload.c) await pc.addIceCandidate(m.payload.c);
+      } catch (e) {}
+    };
+    return L;
+  }
+
+  // ------------------------------------------------------------------ a match room
+  function makeRoom(kind, mode, code) {
+    const me = rid(10);   // my stable label (peers() key)
+    const R = { me, mode, kind, code, host: false, slot: '', mine: {}, snap: new Map(), order: [], ls: new Set(), closed: false, sig: null, hostLink: null, links: new Map(), extras: () => [], status: 'connecting', players: 1 };
+    const slotName = n => kind === 'quick' ? `ashfall-${VER()}-${mode}-q${n}` : kind === 'slot' ? code : `ashfall-${VER()}-${mode}-c-${code}`;
+
+    R.peers = () => {
+      const out = [{ peer: me, presence: R.mine, isMe: true, sameTab: true, kind: 'viewer', guest: false, by: null }];
+      for (const [peer, presence] of R.snap) if (peer !== me) out.push({ peer, presence, isMe: false, sameTab: false, kind: 'viewer', guest: false, by: null });
+      return out;
+    };
+    R.presence = patch => { for (const k in patch) { if (patch[k] === null) delete R.mine[k]; else R.mine[k] = patch[k]; } return Promise.resolve(); };
+    R.onPeers = fn => { R.ls.add(fn); return () => R.ls.delete(fn); };
+    R.connected = () => R.host || !!(R.hostLink && R.hostLink.open);
+
+    // ---- as host: accept offers on the slot id, collect states, send everyone the room ~20 Hz
+    function hostMsg(L, m) {
+      if (m.t === 'p' && m.l && typeof m.p === 'object') { L.label = String(m.l).slice(0, 16); L.pres = m.p; if (!R.order.includes(L.label)) R.order.push(L.label); }
+    }
+    function hostState(L, st) {
+      if (st === 'open') { const full = R.links.size > MAXP - 1; L.send({ t: 'w', full, n: R.links.size + 1 }, true); if (full) setTimeout(() => L.close(), 300); }
+      if (st === 'closed') { R.links.delete(L.cid); if (L.label) R.order = R.order.filter(x => x !== L.label); }
+    }
+    async function becomeHost(slot) {
+      const sig = await signal(slot);
+      if (R.closed) { sig.close(); return; }
+      R.sig = sig; R.slot = slot; R.host = true; R.status = 'hosting'; R.order = [me, ...R.order.filter(x => x !== me)];
+      sig.on(m => {
+        if (m.type === 'CLOSED') { if (!R.closed && R.host) reclaim(); return; }
+        if (!m.src || !m.payload || !m.payload.cid) return;
+        let L = R.links.get(m.payload.cid);
+        if (!L && m.type === 'OFFER') { L = link(sig, m.src, m.payload.cid, false, hostMsg, hostState); R.links.set(L.cid, L); }
+        if (L) L.signal(m);
+      });
+      R.timer = setInterval(hostTick, 50);
+    }
+    async function reclaim() {   // lost the signalling socket: get the slot back so new players can still join
+      for (let i = 0; i < 20 && !R.closed; i++) { await sleep(1500); try { const s = await signal(R.slot); R.sig = s; s.on(m => { if (m.type === 'CLOSED') { if (!R.closed) reclaim(); return; } if (!m.src || !m.payload || !m.payload.cid) return; let L = R.links.get(m.payload.cid); if (!L && m.type === 'OFFER') { L = link(s, m.src, m.payload.cid, false, hostMsg, hostState); R.links.set(L.cid, L); } if (L) L.signal(m); }); return; } catch (e) {} }
+    }
+    function hostTick() {
+      const now = performance.now(), all = [[me, R.mine]];
+      for (const [, L] of R.links) { if (now - L.last > 6000) { L.close(); continue; } if (L.label && L.pres) all.push([L.label, L.pres]); }
+      R.snap = new Map(all.filter(([p]) => p !== me)); R.players = 1 + [...R.links.values()].filter(L => L.open).length;
+      for (const x of R.extras()) all.push(x);   // the host's bots go out to everyone, but the host itself runs them locally
+      const msg = JSON.stringify({ t: 's', h: me, o: R.order, a: all });
+      for (const [, L] of R.links) if (L.open) L.send(msg);
+      for (const f of R.ls) try { f({}); } catch (e) {}
+    }
+
+    // ---- as a client: connect to the slot's host, send my state, take the room from the host
+    function clientMsg(L, m) {
+      if (m.t === 'w') { L.welcome = m; return; }
+      if (m.t === 's' && Array.isArray(m.a)) {
+        R.lastSnap = performance.now(); R.order = Array.isArray(m.o) ? m.o.slice(0, 32) : R.order; R.hostLabel = m.h;
+        const mp = new Map(); for (const e of m.a) if (Array.isArray(e) && typeof e[0] === 'string' && e[1] && typeof e[1] === 'object') mp.set(e[0].slice(0, 24), e[1]);
+        R.snap = mp; R.players = mp.size + (mp.has(me) ? 0 : 1);
+        for (const f of R.ls) try { f({}); } catch (e) {}
+      }
+    }
+    async function connectTo(slot, waitMs = 4000) {
+      if (!R.sig || !R.sig.open) { if (R.sig) R.sig.close(); R.sig = await signal('a' + rid(14)); }
+      const sig = R.sig, cid = rid(8);
+      return new Promise(res => {
+        let fin = false; const end = ok => { if (fin) return; fin = true; clearTimeout(to); off(); res(ok); };
+        const L = link(sig, slot, cid, true, clientMsg, (l, st) => {
+          if (st === 'open') { const w0 = performance.now(); const wt = setInterval(() => { if (L.welcome) { clearInterval(wt); end(L.welcome.full ? false : L); if (L.welcome.full) L.close(); } else if (performance.now() - w0 > 2500) { clearInterval(wt); L.close(); end(false); } }, 50); }
+          if (st === 'closed') { end(false); if (R.hostLink === L) hostLost(); }
+        });
+        const off = sig.on(m => { if (m.payload && m.payload.cid === cid) L.signal(m); if ((m.type === 'EXPIRE' || m.type === 'LEAVE') && m.src === slot) { L.close(); end(false); } });
+        const to = setTimeout(() => { L.close(); end(false); }, waitMs);
+      });
+    }
+    function startClient(L, slot) {
+      R.hostLink = L; R.slot = slot; R.host = false; R.status = 'joined'; R.lastSnap = performance.now();
+      R.timer = setInterval(() => {
+        if (R.closed) return;
+        if (R.hostLink && R.hostLink.open) R.hostLink.send({ t: 'p', l: me, p: R.mine });
+        if (performance.now() - R.lastSnap > 4000 && !R.migrating) { try { R.hostLink && R.hostLink.close(); } catch (e) {} hostLost(); }
+      }, 50);
+    }
+    async function hostLost() {
+      if (R.closed || R.migrating || R.host) return;
+      R.migrating = true; clearInterval(R.timer); R.status = 'host left: reconnecting';
+      const old = R.hostLabel, line = R.order.filter(x => x !== old), next = line[0];
+      try {
+        if (next === me) { await sleep(800); await claimWithRetry(R.slot); }
+        else {
+          await sleep(1500);
+          let L = false;
+          for (let i = 0; i < 6 && !L && !R.closed; i++) { L = await connectTo(R.slot, 3000); if (!L) await sleep(700); }
+          if (L) startClient(L, R.slot); else await claimWithRetry(R.slot);   // nobody took over: I will
+        }
+      } catch (e) { R.status = 'disconnected'; }
+      R.migrating = false;
+    }
+    async function claimWithRetry(slot) {
+      for (let i = 0; i < 8; i++) { try { await becomeHost(slot); return; } catch (e) { if (e.message !== 'taken') throw e; const L = await connectTo(slot, 2500); if (L) { startClient(L, slot); return; } await sleep(1000); } }
+      throw new Error('slot busy');
+    }
+
+    // ---- find or make the match
+    R.start = async () => {
+      const tries = kind === 'quick' ? SLOTS : 1;
+      for (let n = 1; n <= tries && !R.closed; n++) {
+        const slot = slotName(n);
+        const L = await connectTo(slot, 4000);
+        if (L) { startClient(L, slot); return R; }
+        try { await becomeHost(slot); return R; }
+        catch (e) { if (e.message === 'taken') { const L2 = await connectTo(slot, 4000); if (L2) { startClient(L2, slot); return R; } } else if (e.message !== 'taken') throw e; }
+      }
+      throw new Error(kind === 'quick' ? 'all matches full' : 'match full');
+    };
+    R.leave = async () => {
+      R.closed = true; clearInterval(R.timer);
+      for (const [, L] of R.links) L.close(); R.links.clear();
+      if (R.hostLink) R.hostLink.close(); if (R.sig) R.sig.close();
+    };
+    return R;
+  }
+
+  return {
+    available: () => typeof RTCPeerConnection === 'function' && typeof WebSocket === 'function',
+    // kind: 'quick' | 'code' | 'slot' (an exact slot, e.g. found on the local network)
+    async open(kind, mode, code) { const r = makeRoom(kind, mode, code); try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
+  };
+})();

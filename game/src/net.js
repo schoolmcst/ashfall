@@ -1,0 +1,323 @@
+/* ================================================================== online play
+   Real players fight each other in ONLINE TDM / ONLINE FFA. Everyone who has this page open on claude.ai and picks the
+   same room code lands in the same match. It runs on the artifact's `room` capability: each player publishes their own
+   state as presence (position, aim, alive, kills, shots, and the hits they landed); every page draws the others as
+   soldiers. The victim's page owns their health: a hit is a record in the shooter's presence that the victim applies. */
+const NET = { ns: null, room: null, on: false, mode: 'otdm', code: 'public', nick: '', me: '', joinedAt: 0, teamSet: false,
+  k: 0, d: 0, ds: 0, kb: '', kh: 0, sh: 0, hseq: 0, hs: [], ep: 0, endT: 0, lastAtk: '', lastAtkT: -9, wasAlive: false,
+  rem: new Map(), app: false, kind: 'quick', slot: '', botT: 0, botPres: [], botN: 0, ffaN: 0, lastEp: 0, lanT: 0 };
+// in the desktop app, online play is player-hosted (p2p.js) and needs no claude.ai
+NET.app = !!(window.ASHFALL_APP && typeof P2P !== 'undefined' && P2P.available());   // peer -> { entry, bot, seen, ds, sh, ep, x, y, z, yw, pt }
+const NICK_KEY = 'ashfall.nick.v1', ROOMC_KEY = 'ashfall.roomcode.v1';
+try { NET.nick = localStorage.getItem(NICK_KEY) || ''; NET.code = localStorage.getItem(ROOMC_KEY) || 'public'; } catch (e) {}
+if (!NET.nick) NET.nick = 'PLAYER' + ((Math.random() * 900 + 100) | 0);
+const cleanNick = s => String(s || '').toUpperCase().replace(/[^A-Z0-9 _-]/g, '').trim().slice(0, 14) || 'PLAYER';
+const cleanCode = s => String(s || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20) || 'public';
+NET.nick = cleanNick(NET.nick); NET.code = cleanCode(NET.code);
+const netRoomName = () => `ashfall-${NET.mode}-${NET.code}`;
+const netReady = () => NET.app || !!NET.ns;
+(async () => {
+  try { if (window.claude && typeof window.claude.use === 'function') NET.ns = await window.claude.use('room'); } catch (e) { NET.ns = null; }
+  if (NET.ns) { try { NET.ns.onPeers(() => { if (typeof LOBBY !== 'undefined' && curScreen === 'lobby' && MODES[LOBBY.mode].online) netLobbyCount(); }); } catch (e) {} }
+  setTimeout(() => { try { if (curScreen === 'lobby') renderLobby(); } catch (e) {} }, 0);
+})();
+
+/* ---------- lobby panel for the online modes */
+function netLobbyHtml() {
+  if (NET.app) return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label></div>` +
+    `<div class="net-hint">QUICK PLAY drops you into the first open public match, or starts one other players will join. Bots fill empty spots.</div>` +
+    `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div>` +
+    `<div class="net-lan" id="netLan"></div><div class="net-count" id="netCount"></div>`;
+  if (!NET.ns) return `<div class="net-off">Online play runs when this game is open on claude.ai. Share the page with friends (they need a Claude account), then everyone picks the same room code.</div>`;
+  return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label>` +
+    `<label>ROOM CODE<input id="netCode" maxlength="20" value="${NET.code}" autocomplete="off" spellcheck="false"></label></div><div class="net-count" id="netCount"></div>`;
+}
+function netLobbyWire() {
+  for (const id of ['netNick', 'netCode']) {
+    const i = $(id); if (!i) continue;
+    i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') { i.blur(); if (NET.app && id === 'netCode') netGo('code'); else actions('lob-start'); } };
+    i.onkeyup = e => e.stopPropagation();
+    i.oninput = () => { if (id === 'netNick') NET.nick = cleanNick(i.value); else NET.code = cleanCode(i.value); try { localStorage.setItem(NICK_KEY, NET.nick); localStorage.setItem(ROOMC_KEY, NET.code); } catch (e) {} };
+  }
+  const cg = $('netCodeGo'); if (cg) cg.onclick = () => { sfx.ui(); netGo('code'); };
+  NET.kind = 'quick';
+  netLobbyCount(); netLanList();
+  if (NET.app && !NET.lanTimer) NET.lanTimer = setInterval(() => { if (curScreen === 'lobby') netLanList(); }, 2000);
+}
+// start a match a particular way (the big lobby button is Quick Play)
+function netGo(kind, slot) {
+  if (kind === 'code' && (!NET.code || NET.code === 'public')) { const i = $('netCode'); if (i) { i.focus(); i.placeholder = 'type a code first'; } return; }
+  NET.kind = kind; NET.slot = slot || ''; startMatch(LOBBY.mode); NET.kind = 'quick';
+}
+function netLanList() {
+  const box = $('netLan'); if (!box || !NET.app) return;
+  let games = []; try { games = (window.ASHFALL_APP.lan && window.ASHFALL_APP.lan.games()) || []; } catch (e) {}
+  games = games.filter(g => g && typeof g.slot === 'string' && MODES[g.mode] && MODES[g.mode].online).slice(0, 4);
+  const key = JSON.stringify(games); if (box._k === key) return; box._k = key;
+  box.innerHTML = games.length ? `<span>ON YOUR WI-FI</span>` + games.map((g, i) => `<button class="btn net-lanbtn" data-lan="${i}">${cleanNick(g.name)}'S ${MODES[g.mode].short} · ${Math.min(16, g.n | 0)} PLAYERS</button>`).join('') : '';
+  for (const b of box.querySelectorAll('[data-lan]')) b.onclick = () => { const g = games[+b.dataset.lan]; sfx.ui(); LOBBY.mode = g.mode; netGo('slot', g.slot); };
+}
+function netLobbyCount() {
+  const c = $('netCount'); if (!c) return;
+  if (NET.app) { c.textContent = `VERSION ${(window.ASHFALL_APP.version || '').toUpperCase()} · YOU ONLY MEET PLAYERS ON THE SAME VERSION`; return; }
+  if (!NET.ns) return;
+  let n = 0; try { n = NET.ns.peers().length; } catch (e) {}
+  c.textContent = n > 1 ? `${n} PLAYERS HAVE THE GAME OPEN RIGHT NOW` : 'NOBODY ELSE HAS THE GAME OPEN YET';
+}
+
+/* ---------- joining and leaving */
+async function netStart(mode) {
+  netLeave();
+  NET.mode = mode; NET.on = true; NET.teamSet = false; NET.joinedAt = 0; NET.k = NET.d = NET.ds = NET.sh = NET.hseq = 0; NET.hs = []; NET.kb = ''; NET.ep = 0; NET.endT = 0; NET.wasAlive = false;
+  if (NET.app) {
+    const kind = NET.kind, code = kind === 'slot' ? NET.slot : NET.code; NET.joinKind = kind;
+    let room = null;
+    try { room = await P2P.open(kind, mode, code); }
+    catch (e) { if (NET.on && NET.mode === mode) { NET.on = false; showBanner('COULD NOT JOIN', e.message === 'timeout' || e.message === 'fail' ? 'no internet connection to the match service' : e.message); setTimeout(() => { if (M.online && !NET.room) toLobby(); }, 2500); } return; }
+    if (!NET.on || NET.mode !== mode) { room.leave(); return; }
+    room.extras = () => NET.botPres;
+    NET.room = room; NET.joinedAt = NOW; NET.botT = 2;
+    return;
+  }
+  if (!NET.ns) { NET.on = false; showMsg('OFFLINE: ONLINE PLAY NEEDS CLAUDE.AI'); return; }
+  let room = null;
+  try { room = await NET.ns.join(netRoomName()); } catch (e) { room = NET.ns; }   // named rooms unavailable: share the lobby, filtered by room name
+  if (!NET.on || NET.mode !== mode) { if (room && room !== NET.ns && room.leave) room.leave().catch(() => {}); return; }
+  NET.room = room; NET.joinedAt = NOW;
+}
+function netLeave() {
+  const r = NET.room; NET.room = null; NET.on = false;
+  if (r) { try { if (r !== NET.ns && r.leave) r.leave().catch(() => {}); else r.presence({ on: null, rm: null }).catch(() => {}); } catch (e) {} }
+  for (const [, R] of NET.rem) netDropBot(R, false);
+  NET.rem.clear(); netClearBots();
+}
+function netPeers() { try { return NET.room ? NET.room.peers() : []; } catch (e) { return []; } }
+function netSelf() { for (const p of netPeers()) if (p.sameTab) return p.peer; return ''; }
+
+/* ---------- my state out */
+const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
+function netPublish() {
+  const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && G.state === 'playing');
+  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0,
+    a: alive ? 1 : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep }).catch(() => {});
+}
+// called by shoot(): one per trigger pull, for the others' muzzle flashes
+function netShot() { if (NET.on) NET.sh++; }
+// called by damageEnemy() for a remote soldier: record the hit for its owner to apply
+function netHit(e, dmg, head, by) {
+  if (!NET.on || !e.net) return;
+  if (by === 'player') { if (isFriend(e)) return; NET.hseq++; NET.hs.push([e.net, Math.round(dmg), head ? 1 : 0, NET.hseq]); if (NET.hs.length > 8) NET.hs.shift(); }
+  else if (by && by.entry && by.entry.botLabel) { const en = by.entry; if (M.def.teams && en.team === e.team) return; en.hseq++; en.hs.push([e.net, Math.round(dmg), head ? 1 : 0, en.hseq]); if (en.hs.length > 8) en.hs.shift(); }
+  else return;
+  e.flinch = 1;
+}
+
+/* ---------- other players in */
+function netNum(v, lo, hi, d = 0) { v = +v; return isFinite(v) ? clamp(v, lo, hi) : d; }
+function netMakeBot(R, pr) {
+  const e = makeEnemy('rifleman', R.x, R.z);
+  Object.assign(e, { team: R.entry.team, entry: R.entry, name: R.entry.name, pvp: true, net: R.peer, hp: 1e9, maxHp: 100, aim: 1, crouchy: false, los: true, holding: true, lastShotT: -9 });
+  e.group.position.set(R.x, R.y, R.z); e.group.rotation.y = R.yw + Math.PI;
+  if (M.def.teams && R.entry.team === M.myTeam) e.group.add(friendlyMarker());
+  enemies.push(e); R.bot = e; R.entry.alive = true; R.entry.bot = e;
+}
+function netDropBot(R, dead, head) {
+  const e = R.bot; if (!e) return; R.bot = null; R.entry.bot = null; R.entry.alive = false;
+  const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1);
+  if (!dead) { scene.remove(e.group); return; }
+  const k = NET.rem.get(R.kb), kx = R.kb === NET.me ? P.x : k ? k.x : e.group.position.x, kz = R.kb === NET.me ? P.z : k ? k.z : e.group.position.z + 1;
+  const dir = new THREE.Vector3(e.group.position.x - kx, 0, e.group.position.z - kz); if (dir.lengthSq() < 1e-4) dir.set(0, 0, 1); dir.normalize();
+  const dd = { e, t: 0, boom: false, dx: dir.x, dz: dir.z, head: !!head, a: [rnd(0.5, 1.4), rnd(0.5, 1.4), rnd(-0.4, 0.4), rnd(-0.4, 0.4)] };
+  if (S.ragdoll) { try { dd.rd = makeRagdoll(e, dir, false, head); } catch (err) { dd.rd = null; } }
+  dying.push(dd); e.rig.flash.visible = false;
+  chunks('blood', _v.set(e.group.position.x, 1.2, e.group.position.z), 8, 3, 0.6);
+}
+const _nf = new THREE.Vector3(), _nm = new THREE.Vector3();
+function netRemoteShot(R) {
+  const e = R.bot; if (!e) return;
+  e.lastShotT = M.t; e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
+  const from = enemyMuzzle(e, _nm), cp = Math.cos(R.pt);
+  _nf.set(-Math.sin(R.yw) * cp, Math.sin(R.pt), -Math.cos(R.yw) * cp).normalize();
+  raycaster.set(from, _nf); raycaster.far = 80; const h = raycaster.intersectObjects(wallMeshes, false)[0];
+  addTracer(from, h ? h.point : from.clone().addScaledVector(_nf, 80), 0.05, 0.016);
+  enemyFlashLight.position.copy(from); enemyFlashLight.intensity = 3; enemyFlashLight.userData.t = 0.05;
+  sfx.enemy(at(e.group.position.x, e.group.position.z, 24));
+}
+function netFeedName(R) { return R ? nameHtml(R.entry) : '?'; }
+function netTick(dt) {
+  if (!NET.on || !NET.room || !inMatch() || !M.online) return;
+  NET.me = NET.me || netSelf();
+  const peers = netPeers(), seenNow = new Set(), rn = netRoomName(), inRoom = pr => (NET.app || pr.rm === rn) && pr.on;
+  const isHost = NET.app && NET.room.host, botBy = lbl => isHost && lbl ? M.entries.find(en => en.botLabel === lbl) : null;
+  // pick a team once the room has answered (the side with fewer players)
+  if (!NET.teamSet && NOW - NET.joinedAt > 1.4) {
+    NET.teamSet = true; NET.me = netSelf();
+    if (M.def.teams) { const c = [0, 0]; for (const p of peers) if (!p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot) c[p.presence.tm === 1 ? 1 : 0]++; M.myTeam = M.me.team = c[1] < c[0] ? 1 : 0; }
+    else M.myTeam = M.me.team = 0;
+    for (const [, R] of NET.rem) netDropBot(R, false);   // redraw with the right friend markers
+  }
+  // my death: who did it
+  const alive = !!(M.me.alive && G.state === 'playing');
+  if (NET.wasAlive && !M.me.alive) {
+    const k = G.killer && typeof G.killer === 'object' ? (G.killer.net || (G.killer.entry && G.killer.entry.botLabel) || '') : '';
+    NET.d++; NET.ds++; NET.kb = k || (NOW - NET.lastAtkT < 4 ? NET.lastAtk : ''); NET.kh = NET.kb ? NET.lastHead || 0 : 0;
+  }
+  NET.wasAlive = M.me.alive;
+  let maxEp = NET.ep;
+  for (const p of peers) {
+    if (p.sameTab || p.kind !== 'viewer') continue;
+    const pr = p.presence || {};
+    if (!inRoom(pr)) continue;
+    seenNow.add(p.peer);
+    let R = NET.rem.get(p.peer);
+    const team = M.def.teams ? (pr.tm === 1 ? 1 : 0) : R ? R.entry.team : 100 + (++NET.ffaN);   // free-for-all: everyone on their own team
+    if (!R) {
+      const hs = Array.isArray(pr.hs) ? pr.hs : [];
+      R = { peer: p.peer, entry: { name: cleanNick(pr.n), team, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false, netPeer: p.peer }, bot: null,
+        seen: hs.reduce((m, h) => Math.max(m, +(h && h[3]) || 0), 0), ds: +pr.ds || 0, sh: +pr.sh || 0, ep: 0, x: 0, y: 0, z: 0, yw: 0, pt: 0, kb: '' };
+      NET.rem.set(p.peer, R); M.entries.push(R.entry); R.isBot = !!pr.bot;
+      if (!pr.bot) feedLine(`${nameHtml(R.entry)} <span class="fw">JOINED</span>`);
+    }
+    R.entry.name = cleanNick(pr.n);
+    if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
+    R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
+    R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
+    R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;
+    // a death since last time: drop them, credit the killer
+    const ds = +pr.ds | 0;
+    if (ds > R.ds) {
+      R.ds = ds; R.kb = typeof pr.kb === 'string' ? pr.kb : ''; const head = !!pr.kh;
+      const bot = R.bot;
+      if (R.kb && R.kb === NET.me) {
+        NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill();
+        if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
+        else feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
+      } else if (botBy(R.kb)) { const ke = botBy(R.kb); ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> ${nameHtml(R.entry)}`); }
+      else if (R.kb && NET.rem.get(R.kb)) feedLine(`${netFeedName(NET.rem.get(R.kb))} <span class="fw">✦</span> ${nameHtml(R.entry)}${head ? ' <span class="ft">HEADSHOT</span>' : ''}`);
+      netDropBot(R, true, head);
+    }
+    // hits on me
+    if (Array.isArray(pr.hs)) for (const h of pr.hs) {
+      if (!Array.isArray(h) || (+h[3] || 0) <= R.seen) continue;
+      R.seen = +h[3] || 0;
+      if (h[0] === NET.me && alive && R.ep === NET.ep && !(M.def.teams && team === M.myTeam)) {
+        NET.lastAtk = p.peer; NET.lastAtkT = NOW; NET.lastHead = h[2] ? 1 : 0;
+        G.killer = R.bot || null; hurtPlayer(netNum(h[1], 0, 250), R.x, R.z);
+      } else if (isHost && R.ep === NET.ep) {   // a hit on one of my bots
+        const be = botBy(h[0]);
+        if (be && be.bot && !(M.def.teams && be.team === team)) { const d = new THREE.Vector3(be.bot.group.position.x - R.x, 0, be.bot.group.position.z - R.z).normalize(); be.lastHead = h[2] ? 1 : 0; damageEnemy(be.bot, netNum(h[1], 0, 250), !!h[2], d, false, R.bot || { net: p.peer, entry: R.entry }); }
+      }
+    }
+    // body
+    if (pr.a && !R.bot) netMakeBot(R, pr);
+    else if (!pr.a && R.bot) netDropBot(R, false);
+    const e = R.bot;
+    if (e) {
+      const g = e.group, ox = g.position.x, oz = g.position.z, k = Math.min(1, dt * 14);
+      if (Math.hypot(R.x - ox, R.z - oz) > 6) g.position.set(R.x, R.y, R.z); else { g.position.x += (R.x - ox) * k; g.position.z += (R.z - oz) * k; g.position.y += (R.y - g.position.y) * k; }
+      let dy = R.yw + Math.PI - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 16);
+      e.crouchy = !!pr.cr; e.holding = true; e.los = true; e.aim = 1;
+      animEnemy(e, dt, dt > 0 ? Math.min(6, Math.hypot(g.position.x - ox, g.position.z - oz) / dt) : 0);
+    }
+    const sh = +pr.sh | 0;
+    if (sh > R.sh) { const n = Math.min(2, sh - R.sh); R.sh = sh; for (let i = 0; i < n; i++) netRemoteShot(R); }
+  }
+  // people who left
+  for (const [peer, R] of NET.rem) if (!seenNow.has(peer)) {
+    netDropBot(R, false); NET.rem.delete(peer); const i = M.entries.indexOf(R.entry); if (i >= 0) M.entries.splice(i, 1);
+    if (!R.isBot) feedLine(`${nameHtml(R.entry)} <span class="fw">LEFT</span>`);
+  }
+  if (isHost) netBots(dt); else if (NET.botPres.length || M.entries.some(en => en.botLabel)) netClearBots();
+  if (NET.app && isHost && (NET.lanT -= dt) <= 0) { NET.lanT = 2; try { window.ASHFALL_APP.lan.announce({ slot: NET.room.slot, name: NET.nick, mode: M.mode, n: NET.room.players }); } catch (e) {} }
+  // someone already started the next round
+  if (maxEp > NET.ep) { NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; }
+  M.me.kills = NET.k; M.me.deaths = NET.d; M.me.score = NET.k * 100; M.me.name = 'YOU';
+  if (M.def.teams) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
+  // score limit: show the winner, then everyone starts a fresh round
+  if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
+  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; showBanner('NEW ROUND', 'scores reset'); } }
+  else {
+    const lim = M.cfg.score; let win = null;
+    if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
+    else for (const en of M.entries) if (en.kills >= lim) win = en.isPlayer ? 'YOU WIN' : en.name + ' WINS';
+    if (win) { NET.endT = 8; showBanner(win, 'next round in 8 seconds'); sfx.streak(); }
+  }
+  netPublish();
+}
+
+/* ---------- bots that fill empty spots (the host runs them; everyone else sees them like players) */
+const BOT_FILL = { teams: 6, ffa: 8 };
+function netNewBot(team) {
+  const names = BOT_NAMES.filter(n => !M.entries.some(e => e.name === n.toUpperCase() + ' BOT'));
+  const en = { name: (names[(Math.random() * names.length) | 0] || 'BOT').toUpperCase() + ' BOT', team, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: Math.random() < 0.5 ? 'obj' : 'hunt',
+    botLabel: 'bot-' + (++NET.botN) + '-' + ((Math.random() * 1e6) | 0), ds: 0, sh: 0, hs: [], hseq: 0, kb: '', kh: 0, wasAlive: true };
+  M.entries.push(en); spawnBot(en, pickSpawnFor(team, sideOf(team)));
+}
+function netRemoveBot(en) {
+  if (en.bot) { scene.remove(en.bot.group); const i = enemies.indexOf(en.bot); if (i >= 0) enemies.splice(i, 1); en.bot = null; }
+  M.respawnQ = M.respawnQ.filter(r => r.en !== en); const j = M.entries.indexOf(en); if (j >= 0) M.entries.splice(j, 1);
+}
+function netClearBots() { for (const en of M.entries.slice()) if (en.botLabel) netRemoveBot(en); NET.botPres = []; }
+const botLbl = by => by === 'player' ? NET.me : by && by.net ? by.net : by && by.entry && by.entry.botLabel ? by.entry.botLabel : '';
+function netBots(dt) {
+  const bots = M.entries.filter(en => en.botLabel);
+  // deaths: tell everyone who did it
+  for (const en of bots) {
+    if (en.wasAlive && !en.alive) { en.ds++; en.kb = botLbl(en.lastBy); en.kh = en.lastHead || 0; if (en.kb === NET.me) NET.k++; }
+    en.wasAlive = !!en.alive;
+  }
+  // keep the teams topped up
+  if ((NET.botT -= dt) <= 0 && NET.teamSet) {
+    NET.botT = 1.5;
+    const humans = [0, 0]; let hum = 1; humans[M.myTeam]++;
+    for (const R of NET.rem.values()) if (!R.isBot) { hum++; if (M.def.teams) humans[R.entry.team]++; }
+    if (M.def.teams) for (let t = 0; t < 2; t++) {
+      const mine = bots.filter(b => b.team === t), want = Math.max(0, BOT_FILL.teams - humans[t]);
+      if (mine.length < want) netNewBot(t); else if (mine.length > want) netRemoveBot(mine[mine.length - 1]);
+    } else {
+      const want = Math.max(0, BOT_FILL.ffa - hum);
+      if (bots.length < want) netNewBot(1000 + NET.botN); else if (bots.length > want) netRemoveBot(bots[bots.length - 1]);
+    }
+  }
+  NET.botPres = M.entries.filter(en => en.botLabel).map(en => {
+    const e = en.bot, g = e && e.group;
+    return [en.botLabel, { v: 1, on: 1, bot: 1, n: en.name, tm: M.def.teams ? en.team : 0, x: g ? r2(g.position.x) : 0, y: 0, z: g ? r2(g.position.z) : 0, yw: g ? r3(g.rotation.y - Math.PI) : 0, pt: 0,
+      cr: e && e.crouchK > 0.5 ? 1 : 0, a: e && en.alive ? 1 : 0, wn: 'RIFLE', k: en.kills, d: en.deaths, ds: en.ds, kb: en.kb, kh: en.kh, sh: en.sh, hs: en.hs, ep: NET.ep }];
+  });
+}
+
+/* ---------- styles for the lobby form */
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `.net-form{display:flex;gap:10px;margin:10px 0 6px}.net-form label{flex:1 1 0;min-width:0;display:flex;flex-direction:column;gap:4px;font-size:11px;letter-spacing:.12em;opacity:.85}
+.net-form input{font:inherit;font-size:15px;letter-spacing:.06em;padding:8px 10px;background:rgba(0,0,0,.35);border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:4px;min-width:0;width:100%;box-sizing:border-box}
+.net-form input:focus{outline:none;border-color:#ffd24a}.net-count{font-size:11px;letter-spacing:.1em;opacity:.7;margin-bottom:8px}
+.net-hint{font-size:12px;line-height:1.4;opacity:.7;margin:2px 0 4px}.net-codebtn{align-self:flex-end;white-space:nowrap;padding:8px 14px;width:auto!important;flex:0 0 auto;margin:0!important}
+.net-lan{display:flex;flex-direction:column;gap:6px;margin:6px 0}.net-lan span{font-size:11px;letter-spacing:.12em;opacity:.7}.net-lanbtn{text-align:left;font-size:13px;padding:8px 12px}
+.net-off{font-size:13px;line-height:1.45;opacity:.85;margin:10px 0;padding:10px;border:1px dashed rgba(255,255,255,.3);border-radius:4px}`;
+  document.head.appendChild(s);
+})();
+
+/* ---------- desktop app: version tag and the patch notes after an update */
+setTimeout(() => {
+  try {
+    const A = window.ASHFALL_APP; if (!A) return;
+    const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version; document.body.appendChild(tag);
+    const u = A.justUpdated; if (!u) return;
+    const m = document.createElement('div'); m.className = 'app-notes';
+    const box = document.createElement('div'), h = document.createElement('b'), ul = document.createElement('ul'), ok = document.createElement('button');
+    h.textContent = 'UPDATED TO VERSION ' + String(u.version).toUpperCase();
+    for (const n of (u.notes || []).slice(0, 12)) { const li = document.createElement('li'); li.textContent = String(n); ul.appendChild(li); }
+    if (!ul.children.length) { const li = document.createElement('li'); li.textContent = 'Fixes and improvements.'; ul.appendChild(li); }
+    ok.className = 'btn primary'; ok.textContent = 'OK'; ok.onclick = () => m.remove();
+    box.append(h, ul, ok); m.appendChild(box); document.body.appendChild(m); setTimeout(() => ok.focus(), 50);
+  } catch (e) {}
+}, 600);
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `.app-ver{position:fixed;right:10px;bottom:6px;font:11px monospace;opacity:.45;z-index:5;pointer-events:none;color:#fff}
+.app-notes{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200}
+.app-notes>div{background:#14171b;border:1px solid rgba(255,210,74,.5);padding:22px 26px;max-width:520px;width:calc(100% - 32px);box-sizing:border-box;color:#e8e2d0}
+.app-notes b{display:block;font-size:18px;letter-spacing:.14em;color:#ffd24a;margin-bottom:12px}.app-notes ul{margin:0 0 18px;padding-left:20px;line-height:1.55;font-size:14px}`;
+  document.head.appendChild(s);
+})();

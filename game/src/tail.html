@@ -1,0 +1,29 @@
+};
+</script>
+<script>
+(function () {
+  var fallbacks = [
+    'https://cdn.jsdelivr.net/npm/three@0.128.0/build/three.min.js',
+    'https://unpkg.com/three@0.128.0/build/three.min.js'
+  ];
+  function go() {
+    try { window.__ashfallBoot(); }
+    catch (e) {
+      var m = String(e && e.message || e);
+      showErr('Could not start the game: ' + m + (/webgl/i.test(m) ? '\nWebGL is unavailable. Enable hardware acceleration in your browser settings.' : ''));
+    }
+  }
+  function next(i) {
+    if (window.THREE) return go();
+    if (i >= fallbacks.length) { showErr('Three.js could not be loaded from any CDN.\nCheck your internet connection or ad-blocker, then reload.'); return; }
+    var sc = document.createElement('script');
+    sc.onload = function () { next(i + 1); };
+    sc.onerror = function () { next(i + 1); };
+    sc.src = fallbacks[i];
+    document.head.appendChild(sc);
+  }
+  next(0);
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+app/dl/
+app/dist/
+node_modules/
+*.png
