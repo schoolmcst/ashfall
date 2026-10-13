@@ -214,6 +214,8 @@ const P2P = (() => {
     available: () => typeof RTCPeerConnection === 'function' && typeof WebSocket === 'function',
     // kind: 'quick' | 'code' | 'slot' (an exact slot, e.g. found on the local network)
     current: null,
+    // can this computer reach the match service? resolves the round-trip in ms, or throws
+    async ping() { const t = performance.now(), s = await signal('p' + rid(14)); const ms = Math.round(performance.now() - t); s.close(); return ms; },
     async open(kind, mode, code) { const r = makeRoom(kind, mode, code); this.current = r; try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
   };
 })();

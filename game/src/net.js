@@ -27,7 +27,7 @@ function netLobbyHtml() {
   if (NET.app) return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label></div>` +
     `<div class="net-hint">Quick Play finds a public match. Bots fill empty spots.</div>` +
     `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div>` +
-    `<div class="net-lan" id="netLan"></div><div class="net-count" id="netCount"></div>`;
+    `<div class="net-lan" id="netLan"></div><div class="net-svc" id="netSvc">MATCH SERVICE: CHECKING…</div><div class="net-count" id="netCount"></div>`;
   if (!NET.ns) return `<div class="net-off">Online play runs when this game is open on claude.ai. Share the page with friends (they need a Claude account), then everyone picks the same room code.</div>`;
   return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label>` +
     `<label>ROOM CODE<input id="netCode" maxlength="20" value="${NET.code}" autocomplete="off" spellcheck="false"></label></div><div class="net-count" id="netCount"></div>`;
@@ -41,13 +41,26 @@ function netLobbyWire() {
   }
   const cg = $('netCodeGo'); if (cg) cg.onclick = () => { sfx.ui(); netGo('code'); };
   NET.kind = 'quick';
-  netLobbyCount(); netLanList();
+  netLobbyCount(); netLanList(); netCheckService();
   if (NET.app && !NET.lanTimer) NET.lanTimer = setInterval(() => { if (curScreen === 'lobby') netLanList(); }, 2000);
 }
 // start a match a particular way (the big lobby button is Quick Play)
 function netGo(kind, slot) {
   if (kind === 'code' && (!NET.code || NET.code === 'public')) { const i = $('netCode'); if (i) { i.focus(); i.placeholder = 'type a code first'; } return; }
   NET.kind = kind; NET.slot = slot || ''; startMatch(LOBBY.mode); NET.kind = 'quick';
+}
+// green "online" or red "can't reach" so a connection problem is visible before pressing Quick Play
+function netCheckService() {
+  const el = $('netSvc'); if (!el || !NET.app) return;
+  if (NET.svc && performance.now() - NET.svc.t < 20000) return netShowService();
+  el.textContent = 'MATCH SERVICE: CHECKING…'; el.className = 'net-svc';
+  P2P.ping().then(ms => { NET.svc = { ok: true, ms, t: performance.now() }; netShowService(); })
+    .catch(e => { NET.svc = { ok: false, why: e.message, t: performance.now() }; netShowService(); });
+}
+function netShowService() {
+  const el = $('netSvc'), s = NET.svc; if (!el || !s) return;
+  el.className = 'net-svc ' + (s.ok ? 'ok' : 'bad');
+  el.textContent = s.ok ? `MATCH SERVICE: ONLINE (${s.ms} MS)` : `MATCH SERVICE: CAN'T REACH IT (${s.why === 'timeout' ? 'no answer' : 'blocked'}) - check your internet or firewall`;
 }
 function netLanList() {
   const box = $('netLan'); if (!box || !NET.app) return;
@@ -294,6 +307,7 @@ function netBots(dt) {
 .net-form input:focus{outline:none;border-color:#ffd24a}.net-count{font-size:11px;letter-spacing:.1em;opacity:.7;margin-bottom:8px}
 .net-hint{font-size:12px;line-height:1.4;opacity:.7;margin:2px 0 4px}.net-codebtn{align-self:flex-end;white-space:nowrap;padding:8px 14px;width:auto!important;flex:0 0 auto;margin:0!important}
 .net-lan{display:flex;flex-direction:column;gap:6px;margin:6px 0}.net-lan span{font-size:11px;letter-spacing:.12em;opacity:.7}.net-lanbtn{text-align:left;font-size:13px;padding:8px 12px}
+.net-svc{font-size:11px;letter-spacing:.1em;margin:6px 0 2px;opacity:.85}.net-svc.ok{color:#7fd16b}.net-svc.bad{color:#ff6a5a}
 .net-off{font-size:13px;line-height:1.45;opacity:.85;margin:10px 0;padding:10px;border:1px dashed rgba(255,255,255,.3);border-radius:4px}`;
   document.head.appendChild(s);
 })();

@@ -588,6 +588,8 @@ function updateModeHud(force) {
     info = lead === me ? 'YOU ARE IN THE LEAD' : `LEADER: ${lead.name.toUpperCase()}`;
     if (M.mode === 'gun') info = `GUN ${me.level + 1}/${GUN_LADDER.length}${me.level + 1 < GUN_LADDER.length ? ' · NEXT ' + ARM[GUN_LADDER[me.level + 1]].name : ' · FINAL GUN'} · ${info}`;
   }
+  if (M.online && NET.app && NET.room) { const R = NET.room, n = (String(R.slot).match(/-q(\d+)$/) || [])[1], hum = 1 + [...NET.rem.values()].filter(x => !x.isBot).length;
+    info = `${n ? 'QUICK PLAY MATCH ' + n : R.kind === 'slot' ? 'WI-FI MATCH' : 'PRIVATE MATCH'} · ${R.host ? 'YOU ARE HOSTING' : 'JOINED'} · ${hum} PLAYER${hum > 1 ? 'S' : ''} · v${window.ASHFALL_APP.version}` + (info ? ' · ' + info : ''); }
   hudSet(el, 't', `<div class="mrow">${mid}</div><div class="minfo">${info}</div>`, true);
 }
 function showCenter(a, b) { const c = $('center'); const h = `<b>${a}</b>${b ? `<small>${b}</small>` : ''}`; if (c._h !== h) { c._h = h; c.innerHTML = h; } c.classList.remove('hide'); }
