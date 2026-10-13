@@ -1,0 +1,9 @@
+# One-click deploy on Render (free plan): New -> Blueprint -> pick this repository.
+services:
+  - type: web
+    name: ashfall-match
+    runtime: node
+    plan: free
+    buildCommand: echo "no build step"
+    startCommand: node server/index.js
+    healthCheckPath: /stats
