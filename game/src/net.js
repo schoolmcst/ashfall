@@ -311,7 +311,7 @@ function netBots(dt) {
   }
   NET.botPres = M.entries.filter(en => en.botLabel).map(en => {
     const e = en.bot, g = e && e.group;
-    return [en.botLabel, { v: 1, on: 1, bot: 1, n: en.name, tm: M.def.teams ? en.team : 0, x: g ? r2(g.position.x) : 0, y: 0, z: g ? r2(g.position.z) : 0, yw: g ? r3(g.rotation.y - Math.PI) : 0, pt: 0,
+    return [en.botLabel, { v: 1, on: 1, bot: 1, n: en.name, tm: M.def.teams ? en.team : 0, x: g ? r2(g.position.x) : 0, y: g ? r2(g.position.y) : 0, z: g ? r2(g.position.z) : 0, yw: g ? r3(g.rotation.y - Math.PI) : 0, pt: 0,
       cr: e && e.crouchK > 0.5 ? 1 : 0, a: e && en.alive ? 1 : 0, wn: 'RIFLE', k: en.kills, d: en.deaths, ds: en.ds, kb: en.kb, kh: en.kh, sh: en.sh, hs: en.hs, ep: NET.ep }];
   });
 }

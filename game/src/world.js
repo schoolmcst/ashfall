@@ -87,20 +87,25 @@ function addBox(cx, cz, w, d, h, key, o = {}) {
   m.position.set(cx, (o.y || 0) + h / 2, cz);
   m.castShadow = m.receiveShadow = true;
   scene.add(m);
-  if (!o.deco) { wallMeshes.push(m); boxes.push({ minx: cx - w / 2, maxx: cx + w / 2, minz: cz - d / 2, maxz: cz + d / 2, top: h }); }
+  if (!o.deco) { wallMeshes.push(m); boxes.push(mkBox(cx, cz, w, d, h, o)); }
   return m;
 }
 function deco(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, shadow = true) {
   const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.rotation.set(rx, ry, rz);
   m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m;
 }
-function addCollider(cx, cz, w, d, h, mesh) {
+// o: { y: bottom height (boxes you can walk under), walk: top counts as floor for bots, stair: part of a stair/ramp }
+function mkBox(cx, cz, w, d, h, o = {}) {
+  const y = o.y || 0;
+  return { minx: cx - w / 2, maxx: cx + w / 2, minz: cz - d / 2, maxz: cz + d / 2, top: y + h, bot: y, walk: o.walk !== undefined ? o.walk : Math.min(w, d) >= 0.9, stair: !!o.stair };
+}
+function addCollider(cx, cz, w, d, h, mesh, o) {
   if (mesh) wallMeshes.push(mesh);
-  boxes.push({ minx: cx - w / 2, maxx: cx + w / 2, minz: cz - d / 2, maxz: cz + d / 2, top: h });
+  boxes.push(mkBox(cx, cz, w, d, h, o));
 }
 
 /* ------------------------------------------------------------------ collision */
-const STEP = 0.35;
+const STEP = 0.35, HEAD = 1.75;
 // uniform grid over the arena so collision queries only look at nearby boxes (was: every box, every call)
 const GCELL = 4, GMARGIN = 1.0, GORIG = -ARENA - 6, GN = Math.ceil((ARENA * 2 + 12) / GCELL);
 let boxGrid = null, boxGridN = -1, boxGridDirty = true;
@@ -122,7 +127,7 @@ function boxesNear(x, z) {
 }
 function resolve(pos, r, feetY) {
   for (const b of boxesNear(pos.x, pos.z)) {
-    if (b.top <= feetY + STEP) continue;
+    if (b.top <= feetY + STEP || b.bot >= feetY + HEAD) continue;
     const cx = clamp(pos.x, b.minx, b.maxx), cz = clamp(pos.z, b.minz, b.maxz);
     const dx = pos.x - cx, dz = pos.z - cz, d2 = dx * dx + dz * dz;
     if (d2 >= r * r) continue;
@@ -132,6 +137,12 @@ function resolve(pos, r, feetY) {
       if (m === l) pos.x = b.minx - r; else if (m === rr) pos.x = b.maxx + r; else if (m === t) pos.z = b.minz - r; else pos.z = b.maxz + r;
     }
   }
+}
+// lowest overhead surface above someone standing at feetY (for jumping into floors above)
+function ceilingAt(x, z, feetY, r = 0.3) {
+  let c = 1e9;
+  for (const b of boxesNear(x, z)) if (b.bot > feetY + 0.5 && x > b.minx - r && x < b.maxx + r && z > b.minz - r && z < b.maxz + r) c = Math.min(c, b.bot);
+  return c;
 }
 function groundAt(x, z, feetY) {
   let g = 0;
@@ -331,72 +342,18 @@ function rubble(x, z, n) {
   }
 }
 
-/* ------------------------------------------------------------------ navigation (flow field toward the player) */
-const NN = ARENA * 2;
-const NX = [1, -1, 0, 0, 1, 1, -1, -1], NZ = [0, 0, 1, -1, 1, -1, 1, -1];
-const navBlocked = new Uint8Array(NN * NN), navDist = new Int32Array(NN * NN), navQueue = new Int32Array(NN * NN);
-let navTarget = -1;
-const cellOf = v => clamp(Math.floor(v + ARENA), 0, NN - 1);
-function buildNav() {
-  for (let cz = 0; cz < NN; cz++) for (let cx = 0; cx < NN; cx++) {
-    const x = -ARENA + cx + 0.5, z = -ARENA + cz + 0.5; let blocked = 0;
-    for (const b of boxes) { if (b.top <= STEP) continue; if (x > b.minx - 0.75 && x < b.maxx + 0.75 && z > b.minz - 0.75 && z < b.maxz + 0.75) { blocked = 1; break; } }
-    navBlocked[cz * NN + cx] = blocked;
-  }
-}
-function updateNav(px, pz) {
-  const cx = cellOf(px), cz = cellOf(pz), key = cz * NN + cx;
-  if (key === navTarget) return;
-  let start = key;
-  if (navBlocked[start]) {
-    start = -1;
-    for (let r = 1; r <= 4 && start < 0; r++) for (let dz = -r; dz <= r && start < 0; dz++) for (let dx = -r; dx <= r; dx++) {
-      const x = cx + dx, z = cz + dz; if (x < 0 || z < 0 || x >= NN || z >= NN) continue;
-      if (!navBlocked[z * NN + x]) { start = z * NN + x; break; }
-    }
-    if (start < 0) return;
-  }
-  navTarget = key; navDist.fill(-1);
-  let head = 0, tail = 0; navQueue[tail++] = start; navDist[start] = 0;
-  while (head < tail) {
-    const c = navQueue[head++], x = c % NN, z = (c / NN) | 0, d = navDist[c] + 1;
-    for (let k = 0; k < 8; k++) {
-      const nx = x + NX[k], nz = z + NZ[k]; if (nx < 0 || nz < 0 || nx >= NN || nz >= NN) continue;
-      const n = nz * NN + nx; if (navDist[n] >= 0 || navBlocked[n]) continue;
-      if (k >= 4 && (navBlocked[z * NN + nx] || navBlocked[nz * NN + x])) continue;
-      navDist[n] = d; navQueue[tail++] = n;
-    }
-  }
-}
-function navDir(x, z) {
-  const cx = cellOf(x), cz = cellOf(z), c = cz * NN + cx;
-  let bestD = navDist[c] >= 0 && !navBlocked[c] ? navDist[c] : 1e9, bk = -1;
-  for (let k = 0; k < 8; k++) {
-    const nx = cx + NX[k], nz = cz + NZ[k]; if (nx < 0 || nz < 0 || nx >= NN || nz >= NN) continue;
-    const n = nz * NN + nx; if (navDist[n] < 0 || navDist[n] >= bestD) continue;
-    if (k >= 4 && (navBlocked[cz * NN + nx] || navBlocked[nz * NN + cx])) continue;
-    bestD = navDist[n]; bk = k;
-  }
-  if (bk < 0) return null;
-  const tx = -ARENA + (cx + NX[bk] + 0.5) - x, tz = -ARENA + (cz + NZ[bk] + 0.5) - z, l = Math.hypot(tx, tz) || 1;
-  return [tx / l, tz / l];
-}
-function gridClear(x0, z0, x1, z1) {
-  const dx = x1 - x0, dz = z1 - z0, n = Math.ceil(Math.hypot(dx, dz) / 0.5);
-  for (let i = 1; i < n; i++) { const t = i / n; if (navBlocked[cellOf(z0 + dz * t) * NN + cellOf(x0 + dx * t)]) return false; }
-  return true;
-}
-
 /* grass tufts: crossed alpha cards, instanced, scaled by the quality setting */
-function buildGrass() {
+function buildGrass(o = {}) {
   const cards = [{ g: new THREE.PlaneGeometry(0.9, 0.7), m: mat4(0, 0.35, 0) }, { g: new THREE.PlaneGeometry(0.9, 0.7), m: mat4(0, 0.35, 0, 0, Math.PI / 2, 0) }, { g: new THREE.PlaneGeometry(0.9, 0.7), m: mat4(0, 0.35, 0, 0, Math.PI / 4, 0) }];
-  const mat = new THREE.MeshStandardMaterial({ map: TEX.grass.map, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 1, color: C(0xd8e0c0) });
-  grassMax = 4000;
+  const mat = new THREE.MeshStandardMaterial({ map: TEX.grass.map, alphaTest: 0.45, side: THREE.DoubleSide, roughness: 1, color: C(o.color || 0xd8e0c0) });
+  grassMax = o.count !== undefined ? o.count : 4000;
+  if (!grassMax) { grassMesh = null; return; }
   grassMesh = new THREE.InstancedMesh(mergeGeos(cards), mat, grassMax);
   const dummy = new THREE.Object3D(); let n = 0, guard = 0;
   while (n < grassMax && guard++ < grassMax * 6) {
     const x = rnd(-ARENA + 1, ARENA - 1), z = rnd(-ARENA + 1, ARENA - 1);
-    if (navBlocked[cellOf(z) * NN + cellOf(x)] || (Math.abs(z - 2) < 3.4) || (Math.abs(x) < 3.4 && z > -24 && z < 44)) continue;
+    const gc = cellOf(z) * NN + cellOf(x);
+    if (navBlocked[gc] || (lvN[gc] > 1) || (o.avoid && o.avoid(x, z))) continue;
     const s = 0.7 + Math.random() * 0.9;
     dummy.position.set(x, 0, z); dummy.rotation.set(0, Math.random() * TAU, 0); dummy.scale.set(s, s * (0.8 + Math.random() * 0.6), s); dummy.updateMatrix();
     grassMesh.setMatrixAt(n++, dummy.matrix);

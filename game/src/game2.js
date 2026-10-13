@@ -24,11 +24,11 @@ function makeEnemy(type, x, z) {
   return e;
 }
 function pickSpawn() {
-  updateNav(P.x, P.z);
+  updateNav(P.x, P.z, P.y);
   for (let tries = 0; tries < 40; tries++) {
     const ang = rnd(0, TAU), r = rnd(26, ARENA - 3), x = Math.cos(ang) * r, z = Math.sin(ang) * r;
     if (Math.abs(x) > ARENA - 2 || Math.abs(z) > ARENA - 2 || Math.hypot(x - P.x, z - P.z) < 24) continue;
-    const c = cellOf(z) * NN + cellOf(x); if (navBlocked[c] || navDist[c] < 0) continue;
+    const c = cellOf(z) * NN + cellOf(x); if (navBlocked[c] || !navReach(c)) continue;
     return { x, z };
   }
   return randomOpenSpot(20, 30);
@@ -37,14 +37,14 @@ function spawnEnemy() { const sp = pickSpawn(); enemies.push(makeEnemy(pickType(
 function relocateEnemy(e) { const sp = pickSpawn(); e.group.position.set(sp.x, 0, sp.z); e.noLosT = 0; e.avoidT = 0; e.lastX = sp.x; e.lastZ = sp.z; }
 
 function hasLOS(e, dist) {
-  _v.set(e.group.position.x, 1.5 - 0.4 * (e.crouchK || 0), e.group.position.z);
+  _v.set(e.group.position.x, e.group.position.y + 1.5 - 0.4 * (e.crouchK || 0), e.group.position.z);
   _v2.set(P.x, P.y + P.eye * 0.85, P.z).sub(_v).normalize();
   raycaster.set(_v, _v2); raycaster.far = dist;
   return raycaster.intersectObjects(wallMeshes, false).length === 0;
 }
 function enemyMuzzle(e, out) {
   const g = e.group, s = g.userData.scale || 1, ry = g.rotation.y, fx = Math.sin(ry), fz = Math.cos(ry);
-  return out.set(g.position.x + (fx * 0.95 + fz * 0.1) * s, (1.38 - 0.4 * (e.crouchK || 0)) * s, g.position.z + (fz * 0.95 - fx * 0.1) * s);
+  return out.set(g.position.x + (fx * 0.95 + fz * 0.1) * s, g.position.y + (1.38 - 0.4 * (e.crouchK || 0)) * s, g.position.z + (fz * 0.95 - fx * 0.1) * s);
 }
 function enemyShoot(e, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
@@ -105,12 +105,12 @@ function updateEnemies(dt) {
     let mx, mz; const holding = e.los && dist <= e.hold;
     if (e.avoidT > 0) { e.avoidT -= dt; mx = -nz * e.avoidDir; mz = nx * e.avoidDir; }
     else if (!holding) {
-      if (gridClear(g.position.x, g.position.z, P.x, P.z)) { mx = nx - nz * e.strafe * 0.25; mz = nz + nx * e.strafe * 0.25; }
-      else { const nd = navDir(g.position.x, g.position.z); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
+      if (gridClear(g.position.x, g.position.z, P.x, P.z, g.position.y, P.y)) { mx = nx - nz * e.strafe * 0.25; mz = nz + nx * e.strafe * 0.25; }
+      else { const nd = navDir(g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
     } else { mx = -nz * e.strafe + (dist < e.hold * 0.55 ? -nx : 0); mz = nx * e.strafe + (dist < e.hold * 0.55 ? -nz : 0); }
     const ml = Math.hypot(mx, mz) || 1, sp = e.speed * (holding ? 0.55 : 1) * ((e.slowT = Math.max(0, (e.slowT || 0) - 1 / 60)) > 0 ? 0.35 : 1);
     g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt;
-    resolve(g.position, 0.45, 0);
+    resolve(g.position, 0.45, g.position.y); botGround(g, dt);
     for (let j = 0; j < enemies.length; j++) {
       if (j === i) continue;
       const o = enemies[j].group.position, sx = g.position.x - o.x, sz = g.position.z - o.z, sd = Math.hypot(sx, sz);
@@ -284,12 +284,12 @@ function resetGame() {
   equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; el.slots._cur = -1;
   mouseAds = false; mouseDown = false;
   vig.style.opacity = 0; lastMsg = ''; camera.fov = baseFov; camera.updateProjectionMatrix(); hideCenter(); FLOW.clear();
-  showBanner('ASHFALL', 'hold the line');
+  showBanner('DARKZONE', 'hold the line');
 }
 const MENU_SPOTS = [[-3.2, 3.0, 0.6, 'rifleman'], [3.0, 2.0, -0.5, 'heavy'], [0.2, -3.5, 3.3, 'scout'], [-7, -6, 1.0, 'rifleman']];
 function spawnMenuSoldiers() {
   clearMenuSoldiers();
-  for (const [x, z, ry, type] of MENU_SPOTS) { const rig = cloneSoldier(type); rig.root.rotation.order = 'YXZ'; rig.root.position.set(x, 0, z); rig.root.rotation.y = ry; scene.add(rig.root); rig.e = { rig, aim: 0.35, phase: Math.random() * 6, phase0: Math.random() * 6, flinch: 0, flashT: 0 }; menuSoldiers.push(rig); }
+  for (const [x, z, ry, type] of MENU_SPOTS) { const rig = cloneSoldier(type); rig.root.rotation.order = 'YXZ'; rig.root.position.set(x + MENU_VIEW.x, MENU_VIEW.by || 0, z + MENU_VIEW.z); rig.root.rotation.y = ry; scene.add(rig.root); rig.e = { rig, aim: 0.35, phase: Math.random() * 6, phase0: Math.random() * 6, flinch: 0, flashT: 0 }; menuSoldiers.push(rig); }
 }
 function clearMenuSoldiers() { for (const m of menuSoldiers) scene.remove(m.root); menuSoldiers.length = 0; }
 function updateMenuSoldiers(dt) { for (const m of menuSoldiers) animEnemy(m.e, dt, 0); }

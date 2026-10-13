@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>ASHFALL (BETA)</title>
+<title>DARKZONE (BETA)</title>
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <style>
   :root{--accent:#e0b44a;--ink:#e9e6d8;--dim:rgba(233,230,216,.6);--panel:rgba(10,12,13,.82);--line:rgba(233,230,216,.18)}
@@ -59,6 +59,7 @@
   .logo{font-size:clamp(54px,9vw,112px);font-weight:800;letter-spacing:.16em;line-height:.95;color:#efe9d2;text-shadow:0 4px 30px rgba(0,0,0,.6)}
   .logo em{font-style:normal;color:var(--accent)}
   .tag{font-size:13px;letter-spacing:.5em;opacity:.65;margin:14px 0 40px 4px}
+  .credits-body{max-height:60vh;overflow:auto;font-size:13px;line-height:1.55;letter-spacing:.02em}.credits-body h3{font-size:12px;letter-spacing:.25em;color:var(--dim);margin:16px 0 4px}.credits-body p{margin:0 0 6px}.credits-body .lic{font-size:11px;opacity:.7}
   .btn{display:block;width:340px;max-width:86vw;text-align:left;font:600 18px/1 inherit;font-family:inherit;letter-spacing:.28em;color:var(--ink);background:transparent;border:0;border-left:3px solid transparent;padding:15px 18px;margin:4px 0;cursor:pointer;transition:all .12s;pointer-events:auto}
   .screen.center .btn{text-align:center;border-left:0;border-bottom:2px solid transparent;margin:6px auto}
   .btn:hover,.btn:focus,.btn.focus{outline:0;background:linear-gradient(90deg,rgba(224,180,74,.2),rgba(224,180,74,0));border-left-color:var(--accent);padding-left:26px;color:#fff}
@@ -292,17 +293,18 @@
   <div id="ihold" class="hide"><span></span><div><i></i></div></div>
 </div>
 
-<div id="loading"><div class="logo" style="font-size:44px">ASH<em>FALL</em></div><div class="bar"><div id="ldbar"></div></div><div class="ld" id="ldtxt">BUILDING WORLD</div></div>
+<div id="loading"><div class="logo" style="font-size:44px">DARK<em>ZONE</em></div><div class="bar"><div id="ldbar"></div></div><div class="ld" id="ldtxt">BUILDING WORLD</div></div>
 
 <div id="menu" class="screen hide">
   <div class="col">
-    <div class="logo">ASH<em>FALL</em><span class="beta-tag">BETA</span></div>
+    <div class="logo">DARK<em>ZONE</em><span class="beta-tag">BETA</span></div>
     <div class="tag">HOLD THE LINE &middot; SURVIVE THE WAVES</div>
     <button class="btn primary" data-act="play">PLAY</button>
     <button class="btn" data-act="loadout">LOADOUT</button>
     <button class="btn" data-act="settings">SETTINGS</button>
     <button class="btn" data-act="howto">HOW TO PLAY</button>
     <button class="btn" data-act="bench">BENCHMARK</button>
+    <button class="btn" data-act="credits">CREDITS</button>
     <div class="row-opt"><span>CLASS</span><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><span class="val" id="classVal">ASSAULT</span><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div>
     <div class="row-opt"><span>DIFFICULTY</span><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><span class="val" id="diffVal">REGULAR</span><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div>
     <div class="best">BEST &middot; WAVE <b id="bestWave">0</b> &middot; SCORE <b id="bestScore">0</b></div>
@@ -316,6 +318,26 @@
     <div class="tabs" id="tabs"></div>
     <div class="body" id="setBody"></div>
     <div class="actions"><button class="btn" data-act="reset-settings">RESET TAB</button><button class="btn primary" data-act="settings-back">BACK</button></div>
+  </div>
+</div>
+
+<div id="credits" class="screen center hide">
+  <div class="panel">
+    <h2>CREDITS</h2>
+    <div class="body credits-body">
+      <p><b>DARKZONE</b> is an original work of fiction. All weapons, places and characters are invented or generic; any resemblance to real products or brands is not intended and no endorsement is implied.</p>
+      <h3>SOFTWARE</h3>
+      <p>Three.js &mdash; &copy; 2010&ndash;2021 three.js authors, MIT License.<br>Electron (desktop app) &mdash; &copy; Electron contributors, MIT License. Chromium and Node.js under their own open-source licenses.</p>
+      <h3>TEXTURES</h3>
+      <p>Photo-scanned surfaces from <b>Poly Haven</b> (polyhaven.com), CC0. Thank you to Poly Haven and its supporters.</p>
+      <h3>SOUND</h3>
+      <p>Recorded sounds are CC0 (public domain): The Free Firearm Sound Library and Medieval Weapons library by Still North Media; sound packs on OpenGameArt by bart, BMacZero, zer0_sol, pauliuw, rubberduck, qubodup, kurt, iamoneabe, EZduzziteh and others, as collected and trimmed by the GodotFall project.</p>
+      <h3>MODELS</h3>
+      <p>Weapons, attachments, soldiers and props modelled for this game.</p>
+      <h3>MIT LICENSE (Three.js, Electron)</h3>
+      <p class="lic">Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions: The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software. THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.</p>
+    </div>
+    <div class="actions"><span></span><button class="btn primary" data-act="credits-back">BACK</button></div>
   </div>
 </div>
 

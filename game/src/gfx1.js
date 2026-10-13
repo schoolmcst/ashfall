@@ -21,6 +21,7 @@ if (NEED_AUTO_DERIVE && S.quality === 'auto') { const q = QUALITY[AUTO_TIER]; S.
 const MAXANIS = renderer.capabilities && renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 4;
 
 const HORIZON_HEX = 0xb9c2c4, TOP_HEX = 0x5f86b4;
+let ENV_EXPOSURE = 1.05;   // per-map exposure (maps.js applyEnv)
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(HORIZON_HEX, 0.0105);
 const camera = new THREE.PerspectiveCamera(75, innerWidth / innerHeight, 0.05, 500);
@@ -119,7 +120,7 @@ function applyVideoSettings() {
   const res = S.shadows === 'high' ? Math.max(2048, q.shadowRes) : 1024;
   sun.castShadow = S.shadows !== 'off';
   if (sun.shadow.mapSize.x !== res) { sun.shadow.mapSize.set(res, res); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
-  renderer.toneMappingExposure = 1.05 * S.brightness / 100;
+  renderer.toneMappingExposure = ENV_EXPOSURE * S.brightness / 100;
   FX.mult = q.fx; FX.grass = q.grass;
   if (grassMesh) grassMesh.count = Math.floor(grassMax * q.grass);
   $('grain').style.display = S.grain ? 'block' : 'none';

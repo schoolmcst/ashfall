@@ -24,47 +24,6 @@ let M = { mode: 'surv', def: MODES.surv, entries: [] };
 const inMatch = () => M && M.mode !== 'surv' && !G.bench;
 const isFriend = e => M.def.teams && e.team === M.myTeam;
 
-/* ---------- flow fields to any goal (cached), so bots can path anywhere on the map */
-const FLOW = new Map(), flowQ = new Int32Array(NN * NN);
-function goalCell(x, z) {
-  let cx = cellOf(x), cz = cellOf(z);
-  if (!navBlocked[cz * NN + cx]) return cz * NN + cx;
-  for (let r = 1; r < 6; r++) for (let dz = -r; dz <= r; dz++) for (let dx = -r; dx <= r; dx++) { const x2 = cx + dx, z2 = cz + dz; if (x2 >= 0 && z2 >= 0 && x2 < NN && z2 < NN && !navBlocked[z2 * NN + x2]) return z2 * NN + x2; }
-  return cz * NN + cx;
-}
-function flowField(x, z) {
-  const cell = goalCell(x, z);
-  let f = FLOW.get(cell); if (f) { f.used = NOW; return f.d; }
-  const d = new Int32Array(NN * NN).fill(-1), q = flowQ;
-  let head = 0, tail = 0; q[tail++] = cell; d[cell] = 0;
-  while (head < tail) {
-    const c = q[head++], cx = c % NN, cz = (c / NN) | 0, nd = d[c] + 1;
-    for (let k = 0; k < 8; k++) {
-      const nx = cx + NX[k], nz = cz + NZ[k]; if (nx < 0 || nz < 0 || nx >= NN || nz >= NN) continue;
-      const n = nz * NN + nx; if (d[n] >= 0 || navBlocked[n]) continue;
-      if (k >= 4 && (navBlocked[cz * NN + nx] || navBlocked[nz * NN + cx])) continue;
-      d[n] = nd; q[tail++] = n;
-    }
-  }
-  if (FLOW.size > 48) { let ok = null, ou = 1e9; FLOW.forEach((v, k) => { if (v.used < ou) { ou = v.used; ok = k; } }); FLOW.delete(ok); }
-  FLOW.set(cell, { d, used: NOW });
-  return d;
-}
-function flowDir(d, x, z) {
-  const cx = cellOf(x), cz = cellOf(z), c = cz * NN + cx;
-  let best = d[c] >= 0 && !navBlocked[c] ? d[c] : 1e9, bk = -1;
-  for (let k = 0; k < 8; k++) {
-    const nx = cx + NX[k], nz = cz + NZ[k]; if (nx < 0 || nz < 0 || nx >= NN || nz >= NN) continue;
-    const n = nz * NN + nx; if (d[n] < 0 || d[n] >= best) continue;
-    if (k >= 4 && (navBlocked[cz * NN + nx] || navBlocked[nz * NN + cx])) continue;
-    best = d[n]; bk = k;
-  }
-  if (bk < 0) return null;
-  const tx = -ARENA + (cx + NX[bk] + 0.5) - x, tz = -ARENA + (cz + NZ[bk] + 0.5) - z, l = Math.hypot(tx, tz) || 1;
-  return [tx / l, tz / l];
-}
-function openNear(x, z) { const c = goalCell(x, z); return { x: -ARENA + (c % NN) + 0.5, z: -ARENA + ((c / NN) | 0) + 0.5 }; }
-
 /* ---------- map layout for the modes */
 const LAYOUT = {
   spawn: [{ x: 0, z: 37 }, { x: 0, z: -37 }],   // team 0 south, team 1 north
@@ -73,11 +32,20 @@ const LAYOUT = {
   sites: [{ x: -22, z: -24, n: 'A' }, { x: 24, z: -30, n: 'B' }],
 };
 let SPAWNS = null;
+// spawn candidates spread over the map, on every floor up to the map's spawnMaxY (not on stairs)
 function buildSpawns() {
   if (SPAWNS) return SPAWNS;
   SPAWNS = [];
-  for (let z = -38; z <= 38; z += 6) for (let x = -38; x <= 38; x += 6) { const p = openNear(x + rnd(-1, 1), z + rnd(-1, 1)); if (!navBlocked[cellOf(p.z) * NN + cellOf(p.x)]) SPAWNS.push(p); }
-  for (const k of ['spawn', 'hp', 'flags', 'sites']) LAYOUT[k] = LAYOUT[k].map(p => Object.assign({}, p, openNear(p.x, p.z)));
+  const maxY = (MAPS[curMap] && MAPS[curMap].spawnMaxY) || 0.5, ok = MAPS[curMap] && MAPS[curMap].spawnOk;
+  for (let z = -40; z <= 40; z += 5) for (let x = -40; x <= 40; x += 5) {
+    const cx = cellOf(x + rnd(-1, 1)), cz = cellOf(z + rnd(-1, 1)), c = cz * NN + cx, opts = [];
+    for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h <= maxY && !lvS[c * NL + l]) opts.push(h); }
+    if (!opts.length) continue;
+    const p = { x: -ARENA + cx + 0.5, z: -ARENA + cz + 0.5, y: opts[(Math.random() * opts.length) | 0] };
+    if (ok && !ok(p)) continue;
+    SPAWNS.push(p);
+  }
+  for (const k of ['spawn', 'hp', 'flags', 'sites']) LAYOUT[k] = LAYOUT[k].map(p => p.y !== undefined ? Object.assign({}, p) : Object.assign({}, p, openNear(p.x, p.z), { y: 0 }));
   return SPAWNS;
 }
 // the alive positions of everyone hostile to `team`
@@ -98,14 +66,16 @@ function pickSpawnFor(team, side) {
     if (near < 9) s -= 60;
     if (s > bs) { bs = s; best = p; }
   }
-  return { x: best.x + rnd(-0.6, 0.6), z: best.z + rnd(-0.6, 0.6) };
+  return { x: best.x + rnd(-0.3, 0.3), z: best.z + rnd(-0.3, 0.3), y: best.y || 0 };
 }
 const sideOf = team => !M.def.teams ? -1 : M.mode === 'snd' ? (team === M.snd.att ? 0 : 1) : team;
 
 /* ---------- match setup */
 const MATCH_CFG_KEY = 'ashfall.match.v1';
-let LOBBY = { mode: 'tdm' };
-try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; } catch (e) {}
+let LOBBY = { mode: 'tdm', map: 'random' };
+// 'random' picks any map except the one you just played
+function pickMapFor(sel) { if (sel && MAPS[sel]) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : 'ruins'; }
+try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || MAPS[o.map])) LOBBY.map = o.map; } catch (e) {}
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
 function matchCfg(mode, custom) {
@@ -127,7 +97,7 @@ function spawnBot(en, pos) {
   const e = makeEnemy(type, pos.x, pos.z), sk = SKILL[M.cfg.skill] || SKILL.regular;
   Object.assign(e, { team: en.team, entry: en, name: en.name, pvp: true, hp: M.maxHp, maxHp: M.maxHp, speed: 3.6 + rnd(-0.2, 0.4) + (type === 'scout' ? 0.25 : 0), dmg: sk.dmg * (M.cfg.hardcore ? 1.4 : 1), acc: sk.acc, aimRate: sk.aim,
     hold: rnd(9, 20), think: rnd(0, 0.3), tgt: null, goal: null, goalT: 0, role: en.role || 'hunt', act: 0, seenT: -9, lastShotT: -9 });
-  e.group.rotation.y = Math.atan2(-pos.x, -pos.z);
+  e.group.rotation.y = Math.atan2(-pos.x, -pos.z); e.group.position.y = pos.y || 0;
   if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
   en.bot = e; en.alive = true; enemies.push(e);
   return e;
@@ -135,6 +105,7 @@ function spawnBot(en, pos) {
 function startMatch(mode, custom) {
   const cfg = matchCfg(mode, custom), def = MODES[mode];
   initAudio(); clearMenuSoldiers();
+  if (!def.online) { cfg.map = cfg.map && MAPS[cfg.map] ? cfg.map : pickMapFor(LOBBY.map); loadMap(cfg.map); }
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
   resetGame();
   if (mode === 'surv') { G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); return; }
@@ -156,7 +127,7 @@ function startMatch(mode, custom) {
     for (let i = 1; i < n; i++) M.entries.push({ name: names[ni++ % names.length], team: i, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: 'hunt' });
   }
   if (mode === 'hp') M.hp = { idx: 0, t: 60, owner: -1, status: 'neutral', mesh: null, wait: 5 };
-  if (mode === 'ctf') M.ctf = { flags: LAYOUT.flags.map((h, t) => ({ team: t, home: h, x: h.x, z: h.z, state: 'home', carrier: null, dropT: 0, mesh: null })) };
+  if (mode === 'ctf') M.ctf = { flags: LAYOUT.flags.map((h, t) => ({ team: t, home: h, x: h.x, z: h.z, y: h.y || 0, state: 'home', carrier: null, dropT: 0, mesh: null })) };
   if (mode === 'snd') M.snd = { round: 0, wins: [0, 0], att: 0, state: 'freeze', t: 0, bomb: null, site: 0 };
   buildObjectiveMeshes();
   if (mode === 'snd') startRound(); else { placeEveryone(); }
@@ -177,7 +148,7 @@ function placeEveryone() {
   }
 }
 function placePlayer(p) {
-  Object.assign(P, { x: p.x, z: p.z, y: 0, vx: 0, vz: 0, vy: 0, eye: 1.7, onGround: true, recoilAcc: 0, pitch: 0 });
+  Object.assign(P, { x: p.x, z: p.z, y: p.y || 0, vx: 0, vz: 0, vy: 0, eye: 1.7, onGround: true, recoilAcc: 0, pitch: 0 });
   // face the middle of the map
   P.yaw = Math.atan2(p.x, p.z) + rnd(-0.2, 0.2);
   G.health = G.maxHp = M.maxHp || 100; G.lastHit = -99; G.spawnProt = 1.5; M.me.alive = true;
@@ -244,13 +215,13 @@ function checkScoreLimit() {
 
 /* ---------- bots */
 const _bt = new THREE.Vector3(), _bd = new THREE.Vector3();
-function botEye(e, out) { const s = e.group.userData.scale || e.rig.root.userData.scale || 1; return out.set(e.group.position.x, (1.45 - 0.4 * (e.crouchK || 0)) * s, e.group.position.z); }
+function botEye(e, out) { const s = e.group.userData.scale || e.rig.root.userData.scale || 1; return out.set(e.group.position.x, e.group.position.y + (1.45 - 0.4 * (e.crouchK || 0)) * s, e.group.position.z); }
 function targetPoint(t, out) { if (t === 'P') return out.set(P.x, P.y + P.eye * 0.8, P.z); return botEye(t, out).setY(out.y - 0.25); }
 function losTo(e, t) {
   botEye(e, _bt); targetPoint(t, _bd); _bd.sub(_bt); const d = _bd.length(); _bd.normalize();
   raycaster.set(_bt, _bd); raycaster.far = d - 0.3; return raycaster.intersectObjects(wallMeshes, false).length === 0;
 }
-function tpos(t) { return t === 'P' ? { x: P.x, z: P.z } : t.group.position; }
+function tpos(t) { return t === 'P' ? { x: P.x, y: P.y, z: P.z } : t.group.position; }
 function botValidTarget(e, t) { if (t === 'P') return playerAlive() && e.team !== M.myTeam && !(G.spawnProt > 0); return enemies.includes(t) && t.team !== e.team; }
 function botThink(e) {
   // target: nearest hostile in sight (checks the closest few)
@@ -267,7 +238,7 @@ function botThink(e) {
 function botGoal(e, cands) {
   const ex = e.group.position.x, ez = e.group.position.z;
   const keep = e.goal && M.t < e.goalT && Math.hypot(e.goal.x - ex, e.goal.z - ez) > 2;
-  const near = (p, r) => ({ x: p.x + rnd(-r, r), z: p.z + rnd(-r, r) });
+  const near = (p, r) => ({ x: p.x + rnd(-r, r), z: p.z + rnd(-r, r), y: p.y || 0 });
   const set = (p, hold) => { e.goalT = M.t + (hold || rnd(3, 6)); return p; };
   if (M.mode === 'hp' && M.hp && !M.hp.wait) {
     const z = LAYOUT.hp[M.hp.idx];
@@ -326,14 +297,14 @@ function updateBots(dt) {
       mx = -nz * e.strafe + (dist < e.hold * 0.45 ? -nx : 0); mz = nx * e.strafe + (dist < e.hold * 0.45 ? -nz : 0);
     } else if (goal && goalD > 0.7) {
       if (e.avoidT > 0) { e.avoidT -= dt; const nx = (goal.x - ex) / goalD, nz = (goal.z - ez) / goalD; mx = -nz * e.avoidDir; mz = nx * e.avoidDir; }
-      else if (gridClear(ex, ez, goal.x, goal.z)) { mx = goal.x - ex; mz = goal.z - ez; }
-      else { const d = flowDir(flowField(goal.x, goal.z), ex, ez); if (d) { mx = d[0]; mz = d[1]; } else { mx = goal.x - ex; mz = goal.z - ez; } }
+      else if (gridClear(ex, ez, goal.x, goal.z, g.position.y, goal.y || 0)) { mx = goal.x - ex; mz = goal.z - ez; }
+      else { const d = flowDir(flowField(goal.x, goal.z, goal.y || 0), ex, ez, g.position.y); if (d) { mx = d[0]; mz = d[1]; } else { mx = goal.x - ex; mz = goal.z - ez; } }
     } else { holding = true; e.strafeT -= dt; if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = rnd(1, 3); } mx = Math.cos(e.phase0 + M.t * 0.3) * 0.4 * e.strafe; mz = Math.sin(e.phase0 + M.t * 0.3) * 0.4; }
     const ml = Math.hypot(mx, mz), stun = e.stunT > 0 ? 0.25 : 1;
     let sp = ml > 0.01 ? e.speed * (holding ? 0.5 : 1) * stun * ((e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.4 : 1) : 0;
     if (ml > 0.01) { g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt; if (!face) face = Math.atan2(mx, mz); }
     if (e.stunT > 0) { e.stunT -= dt; e.aim = 0; }
-    resolve(g.position, 0.45, 0);
+    resolve(g.position, 0.45, g.position.y); botGround(g, dt);
     for (let j = 0; j < enemies.length; j++) { if (j === i) continue; const o = enemies[j].group.position, sx = g.position.x - o.x, sz = g.position.z - o.z, sd = Math.hypot(sx, sz); if (sd < 0.85 && sd > 0.001) { const pu = (0.85 - sd) * 0.5; g.position.x += sx / sd * pu; g.position.z += sz / sd * pu; } }
     const pd = Math.hypot(P.x - g.position.x, P.z - g.position.z); if (pd < 0.9 && pd > 0.001 && G.state === 'playing') { g.position.x -= (P.x - g.position.x) / pd * (0.9 - pd); g.position.z -= (P.z - g.position.z) / pd * (0.9 - pd); }
     g.position.x = clamp(g.position.x, -ARENA + 0.6, ARENA - 0.6); g.position.z = clamp(g.position.z, -ARENA + 0.6, ARENA - 0.6);
@@ -365,8 +336,8 @@ function buildObjectiveMeshes() {
   if (OBJ.group) scene.remove(OBJ.group);
   OBJ.group = new THREE.Group(); scene.add(OBJ.group);
   if (M.mode === 'hp') { OBJ.ring = makeRing(5, '#ffffff'); OBJ.group.add(OBJ.ring); }
-  if (M.mode === 'ctf') for (const f of M.ctf.flags) { const col = TEAM_COL[f.team === M.myTeam ? 0 : 1]; const base = makeRing(1.6, col); base.position.set(f.home.x, 0.04, f.home.z); OBJ.group.add(base); f.mesh = makeFlag(f.team); OBJ.group.add(f.mesh); }
-  if (M.mode === 'snd') { for (const s of LAYOUT.sites) { const r = makeRing(3, '#ffd24a'); r.position.set(s.x, 0.04, s.z); OBJ.group.add(r); }
+  if (M.mode === 'ctf') for (const f of M.ctf.flags) { const col = TEAM_COL[f.team === M.myTeam ? 0 : 1]; const base = makeRing(1.6, col); base.position.set(f.home.x, (f.home.y || 0) + 0.04, f.home.z); OBJ.group.add(base); f.mesh = makeFlag(f.team); OBJ.group.add(f.mesh); }
+  if (M.mode === 'snd') { for (const s of LAYOUT.sites) { const r = makeRing(3, '#ffd24a'); r.position.set(s.x, (s.y || 0) + 0.04, s.z); OBJ.group.add(r); }
     const b = new THREE.Group(); b.add(new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.18, 0.3), new THREE.MeshStandardMaterial({ color: C(0x2b2e22), roughness: 0.7 })));
     const led = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2020 })); led.position.set(0.12, 0.1, 0); b.add(led); b.userData.led = led; b.visible = false; OBJ.bomb = b; OBJ.group.add(b); }
 }
@@ -378,12 +349,13 @@ function updateHardpoint(dt) {
   h.t -= dt;
   if (h.t <= 0) { h.idx = (h.idx + 1) % LAYOUT.hp.length; h.t = 60; showBanner('HARDPOINT MOVED', 'find the new zone'); sfx.ui(); for (const e of enemies) e.goalT = 0; }
   const z = LAYOUT.hp[h.idx], cnt = [0, 0];
-  if (playerAlive() && Math.hypot(P.x - z.x, P.z - z.z) < 5) cnt[M.myTeam]++;
-  for (const e of enemies) if (Math.hypot(e.group.position.x - z.x, e.group.position.z - z.z) < 5) cnt[e.team]++;
+  const zy = z.y || 0;
+  if (playerAlive() && Math.hypot(P.x - z.x, P.z - z.z) < 5 && Math.abs(P.y - zy) < 2.5) cnt[M.myTeam]++;
+  for (const e of enemies) if (Math.hypot(e.group.position.x - z.x, e.group.position.z - z.z) < 5 && Math.abs(e.group.position.y - zy) < 2.5) cnt[e.team]++;
   h.status = cnt[0] && cnt[1] ? 'contested' : cnt[0] ? 'team0' : cnt[1] ? 'team1' : 'neutral';
   h.acc = (h.acc || 0) + dt;
   if (h.acc >= 1) { h.acc -= 1; const t = cnt[0] && !cnt[1] ? 0 : cnt[1] && !cnt[0] ? 1 : -1; if (t >= 0) { M.teamScore[t]++; if (t === M.myTeam && playerAlive() && Math.hypot(P.x - z.x, P.z - z.z) < 5) { M.me.score += 5; M.me.obj++; MS.hpTime++; } for (const e of enemies) if (e.team === t && Math.hypot(e.group.position.x - z.x, e.group.position.z - z.z) < 5) { e.entry.score += 5; e.entry.obj++; } checkScoreLimit(); } }
-  OBJ.ring.position.set(z.x, 0.04, z.z);
+  OBJ.ring.position.set(z.x, (z.y || 0) + 0.04, z.z);
   OBJ.ring.material.color.set(h.status === 'contested' ? '#ffd24a' : h.status === 'neutral' ? '#ffffff' : TEAM_COL[h.status === 'team' + M.myTeam ? 0 : 1]);
   OBJ.ring.material.opacity = 0.4 + Math.sin(NOW * 4) * 0.15;
 }
@@ -416,7 +388,7 @@ function updateCtf(dt) {
       resetFlag(f); checkScoreLimit();
     }
   }
-  for (const f of fl) { f.mesh.position.set(f.x, f.state === 'carried' ? 0.3 : 0, f.z); f.mesh.visible = !(f.carrier === 'player'); const c = f.mesh.userData.cloth; c.rotation.y = Math.sin(NOW * 3 + f.team) * 0.3; }
+  for (const f of fl) { f.mesh.position.set(f.x, (f.y || 0) + (f.state === 'carried' ? 0.3 : 0), f.z); f.mesh.visible = !(f.carrier === 'player'); const c = f.mesh.userData.cloth; c.rotation.y = Math.sin(NOW * 3 + f.team) * 0.3; }
 }
 function resetFlag(f) { f.state = 'home'; f.carrier = null; f.x = f.home.x; f.z = f.home.z; }
 
@@ -449,9 +421,9 @@ function sndBotAct(e, dt) {
   e.act = Math.max(0, e.act - dt * 2); return false;
 }
 function plantBomb(site, en) {
-  const sn = M.snd; sn.bomb = { x: site.x + rnd(-0.8, 0.8), z: site.z + rnd(-0.8, 0.8), t: 35, n: site.n }; sn.state = 'planted';
+  const sn = M.snd; sn.bomb = { x: site.x + rnd(-0.8, 0.8), z: site.z + rnd(-0.8, 0.8), y: site.y || 0, t: 35, n: site.n }; sn.state = 'planted';
   en.score += 200; en.obj++; if (en.isPlayer) { MS.plants++; popScore('+200', 'big', 'BOMB PLANTED'); }
-  OBJ.bomb.position.set(sn.bomb.x, 0.09, sn.bomb.z); OBJ.bomb.visible = true;
+  OBJ.bomb.position.set(sn.bomb.x, (sn.bomb.y || 0) + 0.09, sn.bomb.z); OBJ.bomb.visible = true;
   showBanner('BOMB PLANTED', `site ${site.n} · 35 seconds`); sfx.pin(); for (const e of enemies) { e.goalT = 0; e.act = 0; }
 }
 function defuseBomb(en) {

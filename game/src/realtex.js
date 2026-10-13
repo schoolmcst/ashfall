@@ -22,7 +22,7 @@ function realTexLoad(url) {
   });
 }
 function realTexStart() {
-  if (typeof S !== 'undefined' && S.realTex === false) return;
+  if ((typeof S !== 'undefined' && S.realTex === false) || window.NO_REALTEX) return;
   if (typeof location !== 'undefined' && /^#(bench|look)/.test(location.hash || '') && !/realtex/.test(location.hash)) return;  // keep test views deterministic
   if (typeof navigator !== 'undefined' && navigator.onLine === false) return;
   for (const key in REALTEX_SETS) {
@@ -57,10 +57,17 @@ function realTexTick() {
     old.image = L.d; old.needsUpdate = true;      // every material sharing this texture updates at once
     byMap.set(old, { normal: realTexFrom(L.n, old, false), rough: realTexFrom(L.r, old, false), ns: REALTEX_SETS[key].ns });
   }
+  REALTEX.byMap = byMap;
+  realTexRepatch();
+  REALTEX.count = keys.length;
+}
+// add the normal / roughness maps to every material that uses a swapped texture (again after each map load)
+function realTexRepatch() {
+  const byMap = REALTEX.byMap; if (!byMap) return;
   const seen = new Set();
   const patch = m => {
     if (!m || !m.isMeshStandardMaterial || seen.has(m)) return; seen.add(m);
-    const e = byMap.get(m.map); if (!e) return;
+    const e = byMap.get(m.map); if (!e || m.userData.realTex) return; m.userData.realTex = true;
     m.normalMap = e.normal; m.normalScale = new THREE.Vector2(e.ns, e.ns); m.bumpMap = null;
     m.roughnessMap = e.rough; m.roughness = Math.min(1, m.roughness * 1.15);
     m.color.lerp(new THREE.Color(1, 1, 1), 0.35);   // the photos carry their own colour; soften the old tints
@@ -69,5 +76,4 @@ function realTexTick() {
   const walk = o => { if (!o) return; if (o.isMaterial) patch(o); else if (Array.isArray(o) || Object.getPrototypeOf(o) === Object.prototype) for (const k in o) walk(o[k]); };
   try { walk(MAT); } catch (e) {}
   try { scene.traverse(o => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(patch); }); } catch (e) {}
-  REALTEX.count = keys.length;
 }

@@ -8,6 +8,7 @@ const fs = require('fs'), path = require('path');
   const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
   const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
   const errs = [];
+  if (process.env.NOREALTEX) await p.addInitScript(() => { window.NO_REALTEX = 1; });
   p.on('pageerror', e => errs.push('PAGEERR ' + e.message));
   p.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text()); if (m.text().startsWith('T:')) console.log(m.text()); });
   await p.route('**/*', r => {
@@ -23,7 +24,7 @@ const fs = require('fs'), path = require('path');
   try { res = await require(path.resolve(scen))(p); } catch (e) { errs.push('SCEN ' + e.message); }
   const errText = await p.evaluate(() => document.getElementById('err') && document.getElementById('err').textContent);
   if (errText) errs.push('ERRBOX ' + errText);
-  console.log(JSON.stringify(res, null, 1));
+  console.log(JSON.stringify(res, null, process.env.COMPACT ? 0 : 1));
   console.log(errs.length ? 'ERRORS:\n' + errs.join('\n') : 'NO ERRORS');
   await b.close();
 })();

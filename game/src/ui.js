@@ -1,5 +1,5 @@
 /* ================================================================== UI: screens, settings, input, loop, boot */
-const SCREENS = ['menu', 'settings', 'howto', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results'];
+const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results'];
 let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
   curScreen = id;
@@ -136,6 +136,8 @@ function actions(act) {
     case 'lo-reset': resetLoadoutWeapon(); break;
     case 'howto': returnScreen = curScreen || 'menu'; showScreen('howto'); break;
     case 'howto-back': showScreen(returnScreen); break;
+    case 'credits': returnScreen = curScreen || 'menu'; showScreen('credits'); break;
+    case 'credits-back': showScreen(returnScreen); break;
     case 'reset-settings': for (const it of SCHEMA[curTab]) S[it.k] = DEFAULTS[it.k]; applyVideoSettings(); applyAudioSettings(); updateDiffUI(); saveSettings(); renderSettings(); break;
     case 'resume': resumeGame(); break;
     case 'restart': restartMatch(); break;
@@ -157,7 +159,7 @@ function goBack() {
   else if (curScreen === 'custom') { renderLobby(); showScreen('lobby'); }
   else if (curScreen === 'career') actions('stats-back');
   else if (curScreen === 'results') toLobby();
-  else if (curScreen === 'settings' || curScreen === 'howto') showScreen(returnScreen);
+  else if (curScreen === 'settings' || curScreen === 'howto' || curScreen === 'credits') showScreen(returnScreen);
   else if (curScreen === 'pause') resumeGame();
 }
 
@@ -407,10 +409,10 @@ function applyPadLook(dt) {
 /* ------------------------------------------------------------------ main loop */
 let last = performance.now(), ready = false, fpsAcc = 0, fpsN = 0;
 function menuCamera() {
-  const a = NOW * 0.07, r = 12.5;
-  camera.position.set(Math.cos(a) * r - 1, 2.1 + Math.sin(NOW * 0.25) * 0.25, Math.sin(a) * r * 0.8);
+  const V = MENU_VIEW, a = NOW * 0.07, r = V.r || 12.5, by = V.by || 0;
+  camera.position.set(V.x + Math.cos(a) * r - 1, by + (V.y || 2.1) + Math.sin(NOW * 0.25) * 0.25, V.z + Math.sin(a) * r * 0.8);
   _fw.set(-Math.sin(a), 0, Math.cos(a)); // sideways, so the soldiers sit right of the menu text
-  camera.lookAt(_toE.set(0, 1.3, 0).addScaledVector(_fw, 1.8));
+  camera.lookAt(_toE.set(V.x, by + 1.3, V.z).addScaledVector(_fw, 1.8));
   if (camera.fov !== 52) { camera.fov = 52; camera.updateProjectionMatrix(); }
 }
 function tick(dt) {
@@ -474,8 +476,7 @@ function frame(now) {
 const BOOT = [
   ['BUILDING TEXTURES', () => { buildTextures(); try { realTexStart(); } catch (e) {} }],
   ['PREPARING MATERIALS', () => { buildMaterials(); buildViewmodelMaterials(); addFresnelAll(MAT); addFresnelAll(VM); }],
-  ['RAISING THE RUINS', buildWorld],
-  ['PLOTTING ROUTES', () => { buildNav(); buildGrass(); addWind(grassMesh && grassMesh.material, 1); addWind(MAT.leaf, 3); }],
+  ['RAISING THE RUINS', () => loadMap('ruins')],
   ['EQUIPPING SOLDIERS', () => { buildSoldierTemplates(); addFresnelAll(SOLD.mats); addFresnelAll(SOLD.skinMats); setupViewmodel(); initAttachments(); }],
   ['LOADING EFFECTS', buildFx],
   ['LIGHTING THE SKY', () => { buildEnvironment(); applyVideoSettings(); applyAudioSettings(); }],
@@ -505,7 +506,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, NL, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

@@ -83,7 +83,8 @@ function updatePlayer(dt) {
   resolve(P, 0.4, P.y);
   P.x = clamp(P.x, -ARENA + 0.5, ARENA - 0.5); P.z = clamp(P.z, -ARENA + 0.5, ARENA - 0.5);
   if ((keys.Space || pad.jump) && P.onGround) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); }
-  P.vy -= 22 * dt; P.y += P.vy * dt;
+  P.vy -= 22 * dt; const py0 = P.y; P.y += P.vy * dt;
+  if (P.vy > 0) { const ce = ceilingAt(P.x, P.z, py0); if (P.y + 1.8 > ce) { P.y = Math.max(py0, ce - 1.8); P.vy = 0; } }
   const gy = groundAt(P.x, P.z, P.y);
   if (P.y <= gy) { if (!P.onGround && P.vy < -2) G.landT = clamp(-P.vy / 11, 0.25, 1); if (!P.onGround && P.vy < -4 && !perk('light')) { G.shake = Math.max(G.shake, 0.01); sfx.thud({ vol: 0.8 }); } P.y = gy; P.vy = 0; P.onGround = true; } else if (P.y > gy + 0.05) P.onGround = false;
   P.eye = lerp(P.eye, crouch ? 1.1 : 1.7, clamp(10 * dt, 0, 1));
