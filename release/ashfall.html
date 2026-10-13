@@ -3813,6 +3813,8 @@ function updateModeHud(force) {
     if (M.mode === 'gun') info = `GUN ${me.level + 1}/${GUN_LADDER.length}${me.level + 1 < GUN_LADDER.length ? ' · NEXT ' + ARM[GUN_LADDER[me.level + 1]].name : ' · FINAL GUN'} · ${info}`;
   }
   if (M.online && NET.app && NET.room) { const R = NET.room, n = (String(R.slot).match(/-q(\d+)$/) || [])[1], hum = 1 + [...NET.rem.values()].filter(x => !x.isBot).length;
+    const hw = R.host ? warmLeft() : NET.hostWarm && performance.now() - NET.hostWarm.t < 1500 ? NET.hostWarm.left : 0;
+    if (hw > 0) info = `WAITING FOR PLAYERS ${fmtT(hw)} · BOTS JOIN AFTER` + (info ? ' · ' + info : '');
     info = `${n ? 'QUICK PLAY MATCH ' + n : R.kind === 'slot' ? 'WI-FI MATCH' : 'PRIVATE MATCH'} · ${R.host ? 'YOU ARE HOSTING' : 'JOINED'} · ${hum} PLAYER${hum > 1 ? 'S' : ''} · v${window.ASHFALL_APP.version}` + (info ? ' · ' + info : ''); }
   hudSet(el, 't', `<div class="mrow">${mid}</div><div class="minfo">${info}</div>`, true);
 }
@@ -5137,7 +5139,7 @@ function netLobbyWire() {
   }
   const cg = $('netCodeGo'); if (cg) cg.onclick = () => { sfx.ui(); netGo('code'); };
   NET.kind = 'quick';
-  netLobbyCount(); netLanList(); netCheckService();
+  netLobbyCount(); netLanList(); netCheckService(); netCheckVersion();
   if (NET.app && !NET.lanTimer) NET.lanTimer = setInterval(() => { if (curScreen === 'lobby') netLanList(); }, 2000);
 }
 // start a match a particular way (the big lobby button is Quick Play)
@@ -5157,6 +5159,15 @@ function netShowService() {
   const el = $('netSvc'), s = NET.svc; if (!el || !s) return;
   el.className = 'net-svc ' + (s.ok ? 'ok' : 'bad');
   el.textContent = s.ok ? `MATCH SERVICE: ONLINE (${s.ms} MS)` : `MATCH SERVICE: CAN'T REACH IT (${s.why === 'timeout' ? 'no answer' : 'blocked'}) - check your internet or firewall`;
+}
+// a newer game version is out but this copy has not updated: you would never meet players on the new one
+const UPD_URL = 'https://raw.githubusercontent.com/schoolmcst/ashfall/main/release/version.json';
+const verNum = v => String(v).split('.').map(n => parseInt(n, 10) || 0).reduce((a, n) => a * 1000 + n, 0);
+function netCheckVersion() {
+  const el = $('netCount'); if (!el || !NET.app) return;
+  const show = () => { if (NET.latest && verNum(NET.latest) > verNum(window.ASHFALL_APP.version)) { el.className = 'net-count bad'; el.textContent = `A NEWER VERSION (${NET.latest}) IS OUT - CLOSE AND REOPEN ASHFALL TO UPDATE. UNTIL THEN YOU WON'T MEET PLAYERS ON IT.`; } };
+  if (NET.latest !== undefined) return show();
+  fetch(UPD_URL + '?t=' + Date.now(), { cache: 'no-store' }).then(r => r.json()).then(j => { NET.latest = j && j.version || null; show(); }).catch(() => { NET.latest = null; });
 }
 function netLanList() {
   const box = $('netLan'); if (!box || !NET.app) return;
@@ -5186,6 +5197,7 @@ async function netStart(mode) {
     if (!NET.on || NET.mode !== mode) { room.leave(); return; }
     room.extras = () => NET.botPres;
     NET.room = room; NET.joinedAt = performance.now() / 1000; NET.botT = 2;
+    NET.warmEnd = room.host ? performance.now() / 1000 + WARMUP : 0;   // a new match waits for people before bots come in
     return;
   }
   if (!NET.ns) { NET.on = false; showMsg('OFFLINE: ONLINE PLAY NEEDS CLAUDE.AI'); return; }
@@ -5208,7 +5220,7 @@ const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && G.state === 'playing');
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0,
-    a: alive ? 1 : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep }).catch(() => {});
+    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { if (NET.on) NET.sh++; }
@@ -5287,7 +5299,7 @@ function netTick(dt) {
       NET.rem.set(p.peer, R); M.entries.push(R.entry); R.isBot = !!pr.bot;
       if (!pr.bot) feedLine(`${nameHtml(R.entry)} <span class="fw">JOINED</span>`);
     }
-    R.entry.name = cleanNick(pr.n);
+    R.entry.name = cleanNick(pr.n); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
     R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
     R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
@@ -5355,7 +5367,8 @@ function netTick(dt) {
 }
 
 /* ---------- bots that fill empty spots (the host runs them; everyone else sees them like players) */
-const BOT_FILL = { teams: 6, ffa: 8 };
+const BOT_FILL = { teams: 6, ffa: 8 }, WARMUP = 30;
+const warmLeft = () => Math.max(0, (NET.warmEnd || 0) - performance.now() / 1000);
 function netNewBot(team) {
   const names = BOT_NAMES.filter(n => !M.entries.some(e => e.name === n.toUpperCase() + ' BOT'));
   const en = { name: (names[(Math.random() * names.length) | 0] || 'BOT').toUpperCase() + ' BOT', team, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: Math.random() < 0.5 ? 'obj' : 'hunt',
@@ -5375,17 +5388,23 @@ function netBots(dt) {
     if (en.wasAlive && !en.alive) { en.ds++; en.kb = botLbl(en.lastBy); en.kh = en.lastHead || 0; if (en.kb === NET.me) NET.k++; }
     en.wasAlive = !!en.alive;
   }
-  // keep the teams topped up
+  // keep the teams topped up: real players always come first, bots only fill what is left (and not during the warm-up)
+  const wl = warmLeft();
+  if (NET.warmWas > 0 && wl <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; showBanner('MATCH STARTED', 'bots fill the empty spots'); }   // warm-up over: fresh scores
+  NET.warmWas = wl;
   if ((NET.botT -= dt) <= 0 && NET.teamSet) {
-    NET.botT = 1.5;
+    NET.botT = 0.5;
     const humans = [0, 0]; let hum = 1; humans[M.myTeam]++;
     for (const R of NET.rem.values()) if (!R.isBot) { hum++; if (M.def.teams) humans[R.entry.team]++; }
+    const add = wl <= 0 && (NET.addT = (NET.addT || 0) - 0.5) <= 0;   // add one bot every 1.5 s; remove extras at once
     if (M.def.teams) for (let t = 0; t < 2; t++) {
-      const mine = bots.filter(b => b.team === t), want = Math.max(0, BOT_FILL.teams - humans[t]);
-      if (mine.length < want) netNewBot(t); else if (mine.length > want) netRemoveBot(mine[mine.length - 1]);
+      const mine = bots.filter(b => b.team === t), want = wl > 0 ? 0 : Math.max(0, BOT_FILL.teams - humans[t]);
+      for (let i = mine.length - 1; i >= want; i--) netRemoveBot(mine[i]);
+      if (mine.length < want && add) { netNewBot(t); NET.addT = 1.5; }
     } else {
-      const want = Math.max(0, BOT_FILL.ffa - hum);
-      if (bots.length < want) netNewBot(1000 + NET.botN); else if (bots.length > want) netRemoveBot(bots[bots.length - 1]);
+      const want = wl > 0 ? 0 : Math.max(0, BOT_FILL.ffa - hum);
+      for (let i = bots.length - 1; i >= want; i--) netRemoveBot(bots[i]);
+      if (bots.length < want && add) { netNewBot(1000 + NET.botN); NET.addT = 1.5; }
     }
   }
   NET.botPres = M.entries.filter(en => en.botLabel).map(en => {
@@ -5403,7 +5422,7 @@ function netBots(dt) {
 .net-form input:focus{outline:none;border-color:#ffd24a}.net-count{font-size:11px;letter-spacing:.1em;opacity:.7;margin-bottom:8px}
 .net-hint{font-size:12px;line-height:1.4;opacity:.7;margin:2px 0 4px}.net-codebtn{align-self:flex-end;white-space:nowrap;padding:8px 14px;width:auto!important;flex:0 0 auto;margin:0!important}
 .net-lan{display:flex;flex-direction:column;gap:6px;margin:6px 0}.net-lan span{font-size:11px;letter-spacing:.12em;opacity:.7}.net-lanbtn{text-align:left;font-size:13px;padding:8px 12px}
-.net-svc{font-size:11px;letter-spacing:.1em;margin:6px 0 2px;opacity:.85}.net-svc.ok{color:#7fd16b}.net-svc.bad{color:#ff6a5a}
+.net-svc{font-size:11px;letter-spacing:.1em;margin:6px 0 2px;opacity:.85}.net-svc.ok{color:#7fd16b}.net-svc.bad{color:#ff6a5a}.net-count.bad{color:#ff6a5a;opacity:1}
 .net-off{font-size:13px;line-height:1.45;opacity:.85;margin:10px 0;padding:10px;border:1px dashed rgba(255,255,255,.3);border-radius:4px}`;
   document.head.appendChild(s);
 })();
