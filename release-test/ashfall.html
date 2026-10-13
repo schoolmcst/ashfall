@@ -435,7 +435,7 @@
         <div class="lob-btns"><button class="btn" data-act="custom">CUSTOM GAME</button><button class="btn" data-act="stats">CAREER STATS</button></div>
       </div>
     </div>
-    <div class="actions"><button class="btn" data-act="lobby-back">BACK</button><span class="padhint">LB / RB  CHANGE MODE · START  PLAY</span></div>
+    <div class="actions"><button class="btn" data-act="lobby-back">BACK</button><span class="padhint">LB / RB  CHANGE MODE · START  PLAY</span><button class="btn primary" id="lobGoFoot" data-act="lob-start" style="margin-left:auto">START MATCH</button></div>
   </div>
 </div>
 
@@ -3867,6 +3867,7 @@ function renderLobby(focusSel) {
     `<div class="lob-kit"><div><span>PRIMARY</span><b>${sel === 'gun' ? 'GUN GAME LADDER' : p.name}</b></div><div><span>SECONDARY</span><b>${sel === 'gun' ? '—' : s.name}</b></div><div><span>EQUIPMENT</span><b>${EQUIP[c.e].name}</b></div><div><span>PERK</span><b>${PERKS[c.k].name}</b></div></div>` +
     `<button class="btn" data-act="loadout">EDIT LOADOUT</button>`;
   for (const b of $('lobModes').children) { b.onclick = () => { LOBBY.mode = b.dataset.mode; saveLobby(); sfx.ui(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); }; b.onfocus = () => { if (LOBBY.mode !== b.dataset.mode) { LOBBY.mode = b.dataset.mode; saveLobby(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); } }; }
+  const foot = $('lobGoFoot'); if (foot) { foot.textContent = d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'; foot.disabled = !!(d.online && !netReady()); }
   if (d.online) netLobbyWire();
   if (focusSel) focusFirst(focusSel);
 }
