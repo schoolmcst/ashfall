@@ -41,7 +41,7 @@ function buildSpawns() {
     const cx = cellOf(x + rnd(-1, 1)), cz = cellOf(z + rnd(-1, 1)), c = cz * NN + cx, opts = [];
     for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h <= maxY && !lvS[c * NL + l]) opts.push(h); }
     if (!opts.length) continue;
-    const p = { x: -ARENA + cx + 0.5, z: -ARENA + cz + 0.5, y: opts[(Math.random() * opts.length) | 0] };
+    const p = { x: cellPos(cx), z: cellPos(cz), y: opts[(Math.random() * opts.length) | 0] };
     if (ok && !ok(p)) continue;
     SPAWNS.push(p);
   }
@@ -288,7 +288,8 @@ function updateBots(dt) {
     const busy = sndBotAct(e, dt);
     if (tp) face = Math.atan2(tp.x - ex, tp.z - ez);
     const goal = e.goal;
-    const goalD = goal ? Math.hypot(goal.x - ex, goal.z - ez) : 0;
+    let goalD = goal ? Math.hypot(goal.x - ex, goal.z - ez) : 0;
+    if (goal && Math.abs((goal.y || 0) - g.position.y) > 1.2) goalD = Math.max(goalD, 3);   // right above or below it: not there yet
     const objUrgent = goal && goalD > 3 && (M.mode === 'hp' || M.mode === 'ctf' || M.mode === 'snd') && (e.role === 'obj' || (M.ctf && M.ctf.flags[1 - e.team].carrier === e));
     if (busy) holding = true;
     else if (tp && dist <= e.hold && !objUrgent) {

@@ -95,9 +95,10 @@ function deco(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, shadow = true) {
   m.castShadow = shadow; m.receiveShadow = true; scene.add(m); return m;
 }
 // o: { y: bottom height (boxes you can walk under), walk: top counts as floor for bots, stair: part of a stair/ramp }
+const STAIR_CODE = { n: 1, s: 2, e: 3, w: 4 };   // which way a stair climbs (0 = not a stair)
 function mkBox(cx, cz, w, d, h, o = {}) {
   const y = o.y || 0;
-  return { minx: cx - w / 2, maxx: cx + w / 2, minz: cz - d / 2, maxz: cz + d / 2, top: y + h, bot: y, walk: o.walk !== undefined ? o.walk : Math.min(w, d) >= 0.9, stair: !!o.stair };
+  return { minx: cx - w / 2, maxx: cx + w / 2, minz: cz - d / 2, maxz: cz + d / 2, top: y + h, bot: y, walk: o.walk !== undefined ? o.walk : Math.min(w, d) >= 0.9, stair: o.stair ? (STAIR_CODE[o.stair] || 1) : 0, rail: !!o.rail };
 }
 function addCollider(cx, cz, w, d, h, mesh, o) {
   if (mesh) wallMeshes.push(mesh);

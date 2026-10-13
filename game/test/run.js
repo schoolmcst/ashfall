@@ -9,6 +9,8 @@ const fs = require('fs'), path = require('path');
   const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
   const errs = [];
   if (process.env.NOREALTEX) await p.addInitScript(() => { window.NO_REALTEX = 1; });
+  if (process.env.NCS) await p.addInitScript(v => { window.NCS = v; }, process.env.NCS);
+  if (process.env.NAVT) await p.addInitScript(v => { window.NAVT = JSON.parse(v); }, process.env.NAVT);
   p.on('pageerror', e => errs.push('PAGEERR ' + e.message));
   p.on('console', m => { if (m.type() === 'error') errs.push('CONSOLE ' + m.text()); if (m.text().startsWith('T:')) console.log(m.text()); });
   await p.route('**/*', r => {

@@ -57,7 +57,7 @@ function stairs(x, z, dir, w, y0, y1, key = 'concrete', o = {}) {
   const [dx, dz] = DIRV[dir], n = Math.max(1, Math.ceil((y1 - y0) / 0.27)), rise = (y1 - y0) / n, run = o.run || 0.42;
   for (let i = 0; i < n; i++) {
     const c = (i + 0.5) * run, top = y0 + rise * (i + 1), base = o.open ? top - 0.22 : y0;
-    blk(x + dx * c, z + dz * c, dx ? run : w, dx ? w : run, top - base, key, { y: base, walk: true, stair: true, tile: 1.5 });
+    blk(x + dx * c, z + dz * c, dx ? run : w, dx ? w : run, top - base, key, { y: base, walk: true, stair: dir, tile: 1.5 });
   }
   if (o.rails !== false) for (const s of [-1, 1]) {   // side rails
     const ox = dz ? s * (w / 2 + 0.03) : 0, oz = dx ? s * (w / 2 + 0.03) : 0, L = n * run, len = Math.hypot(L, y1 - y0), ang = Math.atan2(y1 - y0, L);
@@ -68,7 +68,7 @@ function stairs(x, z, dir, w, y0, y1, key = 'concrete', o = {}) {
 // a smooth ramp (drawn as a slope, collides as fine invisible steps)
 function ramp(x, z, dir, w, len, y0, y1, key = 'concrete', o = {}) {
   const [dx, dz] = DIRV[dir], n = Math.max(2, Math.ceil(Math.abs(y1 - y0) / 0.12)), run = len / n, rise = (y1 - y0) / n;
-  for (let i = 0; i < n; i++) { const c = (i + 0.5) * run, top = y0 + rise * (i + 1); boxes.push(mkBox(x + dx * c, z + dz * c, dx ? run : w, dx ? w : run, top - (o.base !== undefined ? o.base : 0), { y: o.base || 0, walk: true, stair: true })); }
+  for (let i = 0; i < n; i++) { const c = (i + 0.5) * run, top = y0 + rise * (i + 1); boxes.push(mkBox(x + dx * c, z + dz * c, dx ? run : w, dx ? w : run, top - (o.base !== undefined ? o.base : 0), { y: o.base || 0, walk: true, stair: dir })); }
   const sl = Math.hypot(len, y1 - y0), ang = Math.atan2(y1 - y0, len), th = 0.25;
   const m = mat4(x + dx * len / 2, (y0 + y1) / 2 - th / 2, z + dz * len / 2, dz ? -dz * ang : 0, 0, dx ? dx * ang : 0);
   const g = scaledBox(dx ? sl : w, th, dx ? w : sl, TILES[key] || 2);
@@ -77,7 +77,7 @@ function ramp(x, z, dir, w, len, y0, y1, key = 'concrete', o = {}) {
 // railing: blocks walking, bullets pass
 function rail(x0, z0, x1, z1, y = 0, o = {}) {
   const alongX = Math.abs(z1 - z0) < 0.01, L = alongX ? Math.abs(x1 - x0) : Math.abs(z1 - z0), cx = (x0 + x1) / 2, cz = (z0 + z1) / 2, hh = o.h || 1.05;
-  boxes.push(mkBox(cx, cz, alongX ? L : 0.12, alongX ? 0.12 : L, hh, { y, walk: false }));
+  boxes.push(mkBox(cx, cz, alongX ? L : 0.12, alongX ? 0.12 : L, hh, { y, walk: false, rail: true }));
   const parts = [{ g: new THREE.BoxGeometry(alongX ? L : 0.06, 0.06, alongX ? 0.06 : L), m: mat4(cx, y + hh, cz) }, { g: new THREE.BoxGeometry(alongX ? L : 0.04, 0.04, alongX ? 0.04 : L), m: mat4(cx, y + hh * 0.5, cz) }];
   const n = Math.max(1, Math.round(L / 1.4));
   for (let i = 0; i <= n; i++) { const f = i / n - 0.5; parts.push({ g: new THREE.BoxGeometry(0.05, hh, 0.05), m: mat4(cx + (alongX ? f * L : 0), y + hh / 2, cz + (alongX ? 0 : f * L)) }); }
@@ -112,9 +112,9 @@ function jersey(x, z, alongX, y = 0) {
   if (!placeProp('barrier', mat4(x, y, z, 0, alongX ? 0 : Math.PI / 2, 0))) batchAdd('concrete', new THREE.BoxGeometry(alongX ? 3 : 0.7, 0.95, alongX ? 0.7 : 3), mat4(x, y + 0.48, z));
   boxes.push(mkBox(x, z, alongX ? 3 : 0.7, alongX ? 0.7 : 3, 0.95, { y, walk: false })); rayAdd(new THREE.BoxGeometry(alongX ? 3 : 0.7, 0.95, alongX ? 0.7 : 3), mat4(x, y + 0.48, z));
 }
-function carWreck(x, z, alongX, col) {
-  if (placeProp('car', mat4(x, 0, z, 0, alongX ? 0 : Math.PI / 2, 0), col ? { car: col } : {})) { boxes.push(mkBox(x, z, alongX ? 4.4 : 1.9, alongX ? 1.9 : 4.4, 1.5, { walk: false })); rayAdd(new THREE.BoxGeometry(alongX ? 4.4 : 1.9, 1.5, alongX ? 1.9 : 4.4), mat4(x, 0.75, z)); return; }
-  blk(x, z, alongX ? 4.4 : 1.9, alongX ? 1.9 : 4.4, 1.4, 'car', { walk: false });
+function carWreck(x, z, alongX, col, y = 0) {
+  if (placeProp('car', mat4(x, y, z, 0, alongX ? 0 : Math.PI / 2, 0), col ? { car: col } : {})) { boxes.push(mkBox(x, z, alongX ? 4.4 : 1.9, alongX ? 1.9 : 4.4, 1.5, { y, walk: false })); rayAdd(new THREE.BoxGeometry(alongX ? 4.4 : 1.9, 1.5, alongX ? 1.9 : 4.4), mat4(x, y + 0.75, z)); return; }
+  blk(x, z, alongX ? 4.4 : 1.9, alongX ? 1.9 : 4.4, 1.4, 'car', { y, walk: false });
 }
 function tree(x, z, dead = false, s = 1) {
   const h = (4.5 + Math.random() * 2.5) * s, k = h / 5.6;
