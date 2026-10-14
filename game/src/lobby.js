@@ -14,7 +14,7 @@ function playerCard(st) {
 }
 function renderMenuCard() {
   const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true));
-  const nb = $('newsBody'); if (nb && typeof NEWS !== 'undefined' && !nb._done) { nb._done = 1; nb.innerHTML = NEWS.map((v, i) => `<div class="cn-v"><b>${v.v} BETA${i === 0 ? '<em>NEW</em>' : ''}</b><small>${v.d}</small><ul>${v.n.map(n => `<li>${String(n).replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}</li>`).join('')}</ul></div>`).join(''); }
+  const nb = $('newsBody'); if (nb && typeof NEWS !== 'undefined' && !nb._done) { nb._done = 1; nb.innerHTML = NEWS.map((v, i) => `<div class="cn-v"><b>${v.v} BETA${i === 0 ? '<em>NEW</em>' : ''}</b><small>${v.d}</small>${v.name ? `<div class="cn-name">${v.name}</div>` : ''}<ul>${v.n.map(n => `<li>${String(n).replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}</li>`).join('')}</ul></div>`).join(''); }
   const q = $('quitBtn'); if (q) q.style.display = window.ASHFALL_APP ? '' : 'none';
   renderMenuClasses();
 }

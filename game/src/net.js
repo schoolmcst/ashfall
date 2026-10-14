@@ -390,7 +390,7 @@ setTimeout(() => {
   try {
     const A = window.ASHFALL_APP; if (!A) return;
     const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version + ' BETA'; document.body.appendChild(tag);
-    const u = A.justUpdated; if (!u) return;
+    const u = A.justUpdated; if (!u || (typeof HC_VER !== 'undefined' && String(u.version) === HC_VER)) return;   // the Homecoming splash shows instead
     const m = document.createElement('div'); m.className = 'app-notes';
     const box = document.createElement('div'), h = document.createElement('b'), ul = document.createElement('ul'), ok = document.createElement('button');
     h.textContent = 'BETA UPDATE ' + String(u.version).toUpperCase();

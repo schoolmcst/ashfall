@@ -12,7 +12,8 @@ const NEWS = [
 "FIXES: muzzle flash and kick on iron sights toned down, stuns only blind people looking at them, more realistic grenade throws, Survival no longer stays frozen at the start",
 "SETTINGS: ADS sensitivity for every scope zoom (mouse and controller), controller button remapping (Controller > Edit Controller Buttons), rename classes in the Weapons tab",
 "NEW: lobby music (Music volume in Audio), a Replay tab to rewatch your last match on a tactical map, and Career mode stats now cover every online mode"
-]
+],
+"name": "PROJECT HOMECOMING · MAJOR UPDATE"
 },
 {
 "v": "1.1.9",

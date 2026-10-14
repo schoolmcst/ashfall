@@ -77,6 +77,7 @@
   .mc-r{display:flex;align-items:center;gap:10px;padding:6px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.mc-r:last-child{border-bottom:0}.mc-r .mc-n{pointer-events:auto;cursor:text;background:none;border:0;color:#fff;font:700 13px/1 inherit;font-family:inherit;letter-spacing:.18em;padding:4px 0;text-align:left;min-width:150px}.mc-r .mc-n:hover,.mc-r .mc-n:focus{outline:0;color:var(--accent)}.mc-r span{font-size:11px;letter-spacing:.08em;color:var(--dim)}.mc-r.on .mc-n::before{content:'★ ';color:var(--accent)}.mc-r input{pointer-events:auto;font:inherit;font-size:13px;letter-spacing:.16em;padding:3px 6px;background:rgba(0,0,0,.4);border:1px solid var(--accent);color:#fff;width:160px;text-transform:uppercase}
   .cn-body{max-height:230px;overflow:auto;padding:4px 0}.cn-v{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.cn-v:last-child{border-bottom:0}
   .cn-v b{font-size:13px;letter-spacing:.2em;color:#fff}.cn-v b em{font-style:normal;font-size:9px;letter-spacing:.2em;color:#111;background:var(--accent);padding:2px 5px;margin-left:8px;vertical-align:2px}
+  .cn-name{margin-top:6px;font-size:15px;font-weight:800;letter-spacing:.22em;color:var(--accent)}
   .cn-v small{float:right;font-size:10px;letter-spacing:.15em;color:var(--dim)}.cn-v ul{margin:6px 0 0;padding-left:16px;font-size:12px;line-height:1.45;color:var(--dim)}
   .cus-priv{margin:10px 26px 4px;padding:12px 14px;border:1px solid rgba(224,180,74,.4);background:rgba(224,180,74,.06);text-align:left}.cus-priv .cp-h{font-size:11px;letter-spacing:.3em;color:var(--accent);margin-bottom:4px}
   .cus-sub{margin:10px 26px 0;font-size:11px;letter-spacing:.3em;color:var(--accent);text-align:left}
@@ -4775,7 +4776,8 @@ const NEWS = [
 "FIXES: muzzle flash and kick on iron sights toned down, stuns only blind people looking at them, more realistic grenade throws, Survival no longer stays frozen at the start",
 "SETTINGS: ADS sensitivity for every scope zoom (mouse and controller), controller button remapping (Controller > Edit Controller Buttons), rename classes in the Weapons tab",
 "NEW: lobby music (Music volume in Audio), a Replay tab to rewatch your last match on a tactical map, and Career mode stats now cover every online mode"
-]
+],
+"name": "PROJECT HOMECOMING · MAJOR UPDATE"
 },
 {
 "v": "1.1.9",
@@ -5663,7 +5665,7 @@ function playerCard(st) {
 }
 function renderMenuCard() {
   const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true));
-  const nb = $('newsBody'); if (nb && typeof NEWS !== 'undefined' && !nb._done) { nb._done = 1; nb.innerHTML = NEWS.map((v, i) => `<div class="cn-v"><b>${v.v} BETA${i === 0 ? '<em>NEW</em>' : ''}</b><small>${v.d}</small><ul>${v.n.map(n => `<li>${String(n).replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}</li>`).join('')}</ul></div>`).join(''); }
+  const nb = $('newsBody'); if (nb && typeof NEWS !== 'undefined' && !nb._done) { nb._done = 1; nb.innerHTML = NEWS.map((v, i) => `<div class="cn-v"><b>${v.v} BETA${i === 0 ? '<em>NEW</em>' : ''}</b><small>${v.d}</small>${v.name ? `<div class="cn-name">${v.name}</div>` : ''}<ul>${v.n.map(n => `<li>${String(n).replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}</li>`).join('')}</ul></div>`).join(''); }
   const q = $('quitBtn'); if (q) q.style.display = window.ASHFALL_APP ? '' : 'none';
   renderMenuClasses();
 }
@@ -7638,7 +7640,7 @@ setTimeout(() => {
   try {
     const A = window.ASHFALL_APP; if (!A) return;
     const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version + ' BETA'; document.body.appendChild(tag);
-    const u = A.justUpdated; if (!u) return;
+    const u = A.justUpdated; if (!u || (typeof HC_VER !== 'undefined' && String(u.version) === HC_VER)) return;   // the Homecoming splash shows instead
     const m = document.createElement('div'); m.className = 'app-notes';
     const box = document.createElement('div'), h = document.createElement('b'), ul = document.createElement('ul'), ok = document.createElement('button');
     h.textContent = 'BETA UPDATE ' + String(u.version).toUpperCase();
@@ -8425,6 +8427,57 @@ function rpSide() {
 @media (max-width:800px){.rp-side{display:none}}`;
   document.head.appendChild(s);
 })();
+/* ================================================================== PROJECT HOMECOMING (1.2.0): the major update splash
+   Shown once to every player the first time they open the game on this version (app or browser). */
+const HC_VER = '1.2.0', HC_KEY = 'dz_seen_update';
+const HC_CARDS = [
+  ['SOCIAL', 'Friend requests, see who is online and join them, and a friends leaderboard.'],
+  ['PARTIES', 'Squad up and stay together: your party is always on the same team.'],
+  ['MATCH START', 'Loading screen with the map, then 15 seconds to pick your class before the fight.'],
+  ['SPAWNS', 'Two spawn areas per team that switch when enemies push in, plus spawn protection.'],
+  ['GUNS', 'Every gun rebalanced, attachments that do what they say, advanced stats.'],
+  ['REPLAY', 'Rewatch your last match on a tactical map with the full kill feed.'],
+  ['MUSIC', 'An original soundtrack for the menus and lobby.'],
+  ['CONTROLS', 'Sensitivity for every scope zoom, controller remapping, rename your classes.']
+];
+function hcShow(force) {
+  let seen = null; try { seen = localStorage.getItem(HC_KEY); } catch (e) {}
+  if (!force && seen === HC_VER) return false;
+  try { localStorage.setItem(HC_KEY, HC_VER); } catch (e) {}
+  const shots = typeof MAPSHOTS !== 'undefined' ? Object.values(MAPSHOTS).flat() : [];
+  const m = document.createElement('div'); m.id = 'hcSplash';
+  m.innerHTML = `<div class="hc-bg"${shots.length ? ` style="background-image:url(${shots[(Math.random() * shots.length) | 0]})"` : ''}></div>
+<div class="hc-in"><div class="hc-kick">MAJOR UPDATE · ${HC_VER} BETA</div><h1>PROJECT<br><em>HOMECOMING</em></h1>
+<p class="hc-sub">The biggest update DARKZONE has had. Bring your friends home.</p>
+<div class="hc-grid">${HC_CARDS.map(([h, t], i) => `<div class="hc-c" style="animation-delay:${0.35 + i * 0.07}s"><b>${h}</b><span>${t}</span></div>`).join('')}</div>
+<button class="btn primary hc-go" id="hcGo">LET'S GO</button><div class="hc-hint">ENTER / A TO CONTINUE · FULL PATCH NOTES IN NEWS</div></div>`;
+  document.body.appendChild(m);
+  const close = () => { if (!m.isConnected) return; m.classList.add('out'); setTimeout(() => m.remove(), 500); removeEventListener('keydown', key, true); try { sfx.ui(); } catch (e) {} };
+  const key = e => { if (e.code === 'Enter' || e.code === 'Space' || e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
+  addEventListener('keydown', key, true); $('hcGo').onclick = close;
+  let held = true;   // wait for the controller buttons to be released first
+  const poll = () => { if (!m.isConnected) return; const gp = navigator.getGamepads ? [...navigator.getGamepads()].find(g => g) : null;
+    const a = gp && gp.buttons[0] && gp.buttons[0].pressed; if (!a) held = false; else if (!held) { close(); return; } requestAnimationFrame(poll); };
+  requestAnimationFrame(poll);
+  setTimeout(() => { try { $('hcGo').focus(); } catch (e) {} }, 60);
+  try { sfx.streak(); } catch (e) {}
+  return true;
+}
+const hcWait = setInterval(() => { if (typeof G !== 'undefined' && G.state === 'menu' && $('menu') && !$('menu').classList.contains('hide')) { clearInterval(hcWait); setTimeout(() => hcShow(false), 700); } }, 400);
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `#hcSplash{position:fixed;inset:0;z-index:250;display:flex;align-items:center;justify-content:center;background:#050607;overflow:auto;animation:hcIn .6s ease both;transition:opacity .5s}#hcSplash.out{opacity:0}
+.hc-bg{position:fixed;inset:0;background-size:cover;background-position:center;opacity:.32;filter:saturate(.8);animation:hcZoom 18s ease-out both}#hcSplash::before{content:"";position:fixed;inset:0;background:radial-gradient(circle at 50% 40%,rgba(5,6,7,.2),rgba(5,6,7,.92) 75%);z-index:0}
+.hc-in{position:relative;z-index:1;text-align:center;padding:28px 16px;max-width:1040px;width:100%;box-sizing:border-box}
+.hc-kick{display:inline-block;font-size:12px;letter-spacing:.45em;color:#0b0c0d;background:var(--accent);padding:6px 14px;animation:hcUp .6s .1s both}
+#hcSplash h1{margin:16px 0 6px;font-size:clamp(44px,8.5vw,108px);line-height:.92;letter-spacing:.12em;font-weight:900;color:#fff;animation:hcUp .7s .18s both}#hcSplash h1 em{font-style:normal;color:var(--accent);text-shadow:0 0 40px rgba(224,180,74,.35)}
+.hc-sub{color:var(--dim);letter-spacing:.18em;font-size:14px;margin:12px 0 26px;animation:hcUp .6s .28s both}
+.hc-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:10px;text-align:left;margin-bottom:26px}
+.hc-c{background:rgba(12,14,15,.78);border:1px solid var(--line);border-top:2px solid var(--accent);padding:12px 14px;animation:hcUp .5s both}.hc-c b{display:block;font-size:13px;letter-spacing:.3em;color:var(--accent);margin-bottom:5px}.hc-c span{font-size:13px;line-height:1.45;color:#d9dcde}
+.hc-go{display:inline-block;width:auto;min-width:0;text-align:center;font-size:18px;letter-spacing:.4em;padding:14px 48px;animation:hcUp .6s .9s both}.hc-hint{margin-top:12px;font-size:11px;letter-spacing:.25em;color:var(--dim);animation:hcUp .6s 1s both}
+@keyframes hcIn{from{opacity:0}}@keyframes hcUp{from{opacity:0;transform:translateY(18px)}}@keyframes hcZoom{from{transform:scale(1.12)}}`;
+  document.head.appendChild(s);
+})();
 /* ================================================================== UI: screens, settings, input, loop, boot */
 const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist', 'classpick', 'leaderboard', 'replay'];
 let curScreen = null, returnScreen = 'menu';
@@ -9048,7 +9101,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, hcShow, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

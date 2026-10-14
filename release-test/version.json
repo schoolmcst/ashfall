@@ -10,6 +10,6 @@
   "SETTINGS: ADS sensitivity for every scope zoom (mouse and controller), controller button remapping (Controller > Edit Controller Buttons), rename classes in the Weapons tab",
   "NEW: lobby music (Music volume in Audio), a Replay tab to rewatch your last match on a tactical map, and Career mode stats now cover every online mode"
  ],
- "sha256": "88aa2d63fc648769066c3b201a4d8c6eaa1876b59b70a75c2dbb033b9c45575f",
+ "sha256": "627ad5e05fd0c539ca0cfaf8b12fe21f6e4b9f7e9cbb70e7004065ced5aff6eb",
  "minApp": "1.0.0"
 }
