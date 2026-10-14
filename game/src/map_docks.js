@@ -23,7 +23,7 @@ function buildDocks() {
   for (const [x, z] of [[-120, -60], [-125, 30], [-95, 110], [70, -120], [90, 90]]) { batchAdd('paintOrange', new THREE.BoxGeometry(2, 34, 2), mat4(x, 17, z), false); batchAdd('paintOrange', new THREE.BoxGeometry(2, 2, 40), mat4(x, 33, z + 12), false); }
   skyline(30, 110, 170, 10, 30);
 
-  for (const s of [1, -1]) halfDocks(s);
+  for (const s of [1, -1]) { halfDocks(s); dressDocks(s); }
 
   // ---- centre: the gantry crane straddling the quay
   for (const x of [-35.5, -22.5]) for (const z of [-3.8, 3.8]) blk(x, z, 1, 1, 6.7, 'paintYellow', { walk: false });
@@ -62,8 +62,11 @@ function buildDocks() {
     wall(34, s * 12, 42, s * 12, 2.8, 'plaster', { y: 3.6, t: 0.2, holes: [{ at: 2, w: 1.1, b: 0, h: 2.1 }, { at: 5.5, w: 3, b: 1, h: 1.2 }] });
     wall(34, s * 12, 34, s * 17.7, 2.8, 'plaster', { y: 3.6, t: 0.2, holes: [{ at: 2.8, w: 2.6, b: 1, h: 1.2 }] });
     crate(39.5, s * 15.5, 1.0, 3.6, 0.8); crate(36.2, s * 16.6, 0.9, 3.6, 0.75);
+    // office furniture: desks with screens, chairs, filing cabinets
+    for (const dx of [37.2, 40.2]) { blk(dx, s * 13.8, 1.5, 0.75, 0.75, 'wood', { y: 3.6, walk: false }); B('screen', 0.5, 0.32, 0.03, dx, 3.6 + 0.95, s * 13.65); B('dark', 0.45, 0.5, 0.45, dx, 3.6 + 0.25, s * 14.55); }
+    blk(41.6, s * 16.9, 0.6, 0.5, 1.3, 'steel', { y: 3.6, walk: false });
     // pallet racks on the ground floor
-    for (const x of [21.5, 26.5]) {
+    for (const x of [22, 27]) {
       const z0 = s * 3.5, z1 = s * 13.5, cz = (z0 + z1) / 2;
       blk(x, cz, 1.3, 10, 4.2, 'steel', { walk: false, tile: 1.2 });
       for (let k = 0; k < 4; k++) for (let lv = 0; lv < 3; lv++) if (Math.random() < 0.75) batchAdd('wood', scaledBox(1.35, 0.9, 2, 1.2), mat4(x, 0.5 + lv * 1.35, cz - 3.75 + k * 2.5), false);
@@ -73,7 +76,7 @@ function buildDocks() {
     stairs(20.3, s * 9, 'w', 2.4, 0, 1.2, 'concrete', { rails: false });
     crate(30.5, s * 9.5, 1.2); crate(30.5, s * 11, 1.0); barrelAt(37.5, s * 6, 'blue'); barrelAt(38.2, s * 7, 'red');
   }
-  blk(20.5, -0.2, 3, 1.4, 1.1, 'paintYellow', { walk: false });   // forklift body (centre aisle)
+  forklift(20.5, -0.2, 0, true);
   // loading docks outside the west wall
   slab(14.4, 0, 3, 28, 1.2, 'concrete', 1.2, { walk: true });
   for (const s of [1, -1]) ramp(14.4, s * 14, s > 0 ? 's' : 'n', 3, 4, 1.2, 0, 'concrete');
@@ -102,7 +105,7 @@ function halfDocks(s) {
   crate(-25.5, Z(11), 1.4, 0, 1.4);
   for (const [x, z] of [[-35.5, 30], [-34.4, 31.2], [-24.5, 33]]) crate(x, Z(z), 1.2);
   container(-33.2, Z(28), true, 0, 'paintOrange');
-  blk(-26.5, Z(26.5), 1.4, 2.6, 1.6, 'paintYellow', { walk: false });      // forklift
+  forklift(-26.5, Z(26.5), 0, false);
   for (const z of [7, 13]) { batchAdd('wood', new THREE.CylinderGeometry(1.0, 1.0, 1.4, 16), mat4(-36, 1.0, Z(z), Math.PI / 2, 0, 0)); boxes.push(mkBox(-36, Z(z), 2.0, 1.4, 2.0, { walk: false })); rayAdd(new THREE.BoxGeometry(2, 2, 1.4), mat4(-36, 1, Z(z))); }   // cable reels
   // the long crane stair (exposed) from the quay to the deck
   stairs(-21.4, Z(14.1), N, 1.3, 0, 7.5, 'paintYellow', { open: true, run: 0.34 });
@@ -129,6 +132,38 @@ function halfDocks(s) {
   crate(28.5, Z(32), 1.2); crate(17.5, Z(30), 1.2); barrelAt(19, Z(21.5), 'red'); barrelAt(37, Z(34), 'blue');
   jersey(18.5, Z(26), false);
   for (const z of [20.5, 34]) for (const x of [40]) tree(x + 1.5, Z(z + 4), Math.random() < 0.5, 0.8);
+}
+// set dressing (one half; mirrored)
+function dressDocks(s) {
+  const Z = z => z * s;
+  floodlight(-37.3, Z(21)); floodlight(15.2, Z(34)); floodlight(-17, Z(41.5));
+  for (let z = 2; z < 42; z += 6) B('rubber', 0.35, 0.9, 1.4, -39.25, -0.35, Z(z));                       // quay fenders
+  for (const [x, z] of [[-36.6, 6], [-36.6, 25]]) beam('dark', -38.2, 0.5, Z(z - 1), -40, -0.9, Z(z - 1.5), 0.05, 0.05, false);   // mooring lines
+  pallet(13.4, Z(20.4), 0, 4); pallet(18.5, Z(38.5), 0, 3, false); pallet(-20, Z(34.5), 0, 2); pallet(-35, Z(34.5), 0, 5, false);
+  palletLoad(14.4, Z(5), 1.2, 1.0, 'cloth2'); palletLoad(14.6, Z(11.5), 1.2, 1.2, 'cloth1');
+  palletLoad(29, Z(4), 0, 1.3); palletLoad(31, Z(14.5), 0, 0.9, 'cloth2');
+  tirePile(-36.6, Z(23)); tirePile(27, Z(39)); gasBottles(42.6, Z(20.5)); gasBottles(-34.6, Z(13.6));
+  for (const [x, z] of [[-20.2, 15.4], [-22.6, 15.6], [-19.4, 13]]) cone(x, Z(z));
+  for (const [x, z] of [[2.6, 23], [3.6, 24.4], [-16, 2.5]]) cone(x, Z(z));
+  lampPost(-6, Z(24.5), 0, 6.5, 0, -s); lampPost(11.6, Z(27), 0, 6.5, -1, 0); lampPost(-24, Z(39.5), 0, 6.5, 0, -s);
+  // gate: barrier arm and a sign
+  B('hazard', 6, 0.12, 0.12, -1.3, 1.0, Z(38.2)); B('dark', 0.3, 1.1, 0.3, -4.4, 0.55, Z(38.2));
+  billboard(-6, Z(41.0), 0, 2.4, 1.0, s > 0 ? 'n' : 's', 'paintBlue', 2.2);
+  billboard(22, Z(18.3), 4.5, 6, 1.4, s > 0 ? 's' : 'n', 'paintWhite');                                     // warehouse name board
+  // electrical boxes, bins, puddles, litter
+  blk(-34.7, Z(24.5), 0.5, 0.9, 1.4, 'paintWhite', { walk: false }); blk(43.9, Z(31), 0.5, 1.2, 1.6, 'paintWhite', { walk: false });
+  dumpster(41.8, Z(36.5), 0, false, 'paintBlue'); trashBin(-8.6, Z(36.3), 0, 'paintBlue');
+  for (const [x, z, r] of [[-25, 4.5, 1.8], [5, 10.5, 1.2], [20, 30, 2.2], [-10, 31, 1.4], [30, 1.5, 1.6], [-30, 14, 1.3]]) puddle(x, Z(z), 0, r);
+  paperScatter(-3, Z(20), 0, 2.5, 5); rubbleScatter(36, Z(25), 0, 2, 6); rubbleScatter(-14, Z(30), 0, 1.5, 5);
+  acUnit(-32.6, Z(17.4), 3.25, 1.1); acUnit(-29.6, Z(20.6), 3.25, 0.9);                                     // cover on the hut roof
+  // painted lanes on the yard and inside the warehouse
+  floorQuad(-18.5, Z(22), 0.2, 40, 0, 'paintYellow', 1); floorQuad(12, Z(22), 0.2, 40, 0, 'paintYellow', 1);
+  floorQuad(28.5, Z(9), 0.15, 18, 0, 'paintYellow', 1); floorQuad(31.8, Z(9), 0.15, 18, 0, 'paintYellow', 1);
+  B('hazard', 1.95, 0.08, 4.25, 17.2, 1.2, Z(9), 0, 0, 0, false);
+  // lights inside the warehouse and the offices
+  lampLight(26, 6.8, Z(8), 0xffe2b0, 0.8, 18);
+  for (const x of [21, 26, 31]) B('signal', 1.6, 0.06, 0.25, x, 7.9, Z(9), 0, 0, 0, false);
+  for (const x of [36.5, 40]) B('signalCold', 1.2, 0.05, 0.3, x, 6.3, Z(15), 0, 0, 0, false);
 }
 defineMap({
   id: 'docks', name: 'KESSEL DOCKS', place: 'Container port, golden hour', desc: 'Quay, container yard and warehouse. A gantry crane looks down the waterfront; the warehouse mezzanine controls the east.',

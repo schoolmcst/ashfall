@@ -37,7 +37,7 @@ function buildTown() {
   wall(-28, -6, -28, 6, 5.6, 'plasterOchre', { holes: [{ at: 2.5, w: 1.6, b: 0.9, h: 1.3 }, { at: 6, w: 1.4, b: 0, h: 2.3 }, { at: 9.5, w: 1.6, b: 0.9, h: 1.3 }] });
   slab(-32, 0, 8.4, 12.4, 5.9, 'terracotta', 0.3);
   blk(-33.5, 0, 1, 5, 1.0, 'wood', { walk: false }); crate(-30, -3.5, 0.9); crate(-30.4, 3.6, 0.9);
-  for (const s of [1, -1]) halfTown(s);
+  for (const s of [1, -1]) { halfTown(s); dressTown(s); }
 }
 function halfTown(s) {
   const Z = z => z * s, N = s > 0 ? 'n' : 's';
@@ -76,9 +76,9 @@ function halfTown(s) {
   wall(16, zA, 16, zB, 6.4, 'plasterOchre', { y: y5, holes: [{ at: 7, w: 1.4, b: 0, h: 2.3 }, { at: 3, w: 1.2, b: 4.2, h: 1.2 }] });
   wall(9, zA, 16, zA, 6.4, 'plasterOchre', { y: y5, holes: [{ at: 3.5, w: 1.2, b: 4.2, h: 1.2 }, { at: 3.5, w: 1.2, b: 1.0, h: 1.1 }].slice(0, 1) });
   wall(9, zB, 16, zB, 6.4, 'plasterOchre', { y: y5, holes: [{ at: 2, w: 1.2, b: 1.0, h: 1.1 }, { at: 5, w: 1.2, b: 4.2, h: 1.2 }] });
-  stairs(14.9, Z(4.2), s > 0 ? 's' : 'n', 1.1, 3.0, 6.2, 'wood', { run: 0.4 });
-  slab(11.6, Z(8), 5.2, 10, 6.2, 'wood', 0.25); slab(15.1, Z(11), 1.8, 4, 6.2, 'wood', 0.25);
-  rail(14.2, Z(3.4), 14.2, Z(8.8), 6.2, { h: 0.95 });
+  stairs(15.05, Z(5.0), s > 0 ? 's' : 'n', 1.3, 3.0, 6.2, 'wood', { run: 0.4 });
+  slab(11.6, Z(8), 5.2, 10, 6.2, 'wood', 0.25); slab(15.1, Z(11.4), 1.8, 3.2, 6.2, 'wood', 0.25);
+  rail(14.2, Z(3.4), 14.2, Z(9.6), 6.2, { h: 0.95 });
   slab(12.5, Z(8), 7.4, 10.4, 9.4, 'terracotta', 0.3);
   crate(10.4, Z(11.6), 0.9, 3); blk(12, Z(5.5), 1.8, 0.8, 0.8, 'wood', { y: 6.2, walk: false });
   // piazza dressing: benches, planters, a café's tables and awning
@@ -131,12 +131,47 @@ function houseTrim(x, z, w, d, top, faceS) {
   }
   if (parts.length) batchAdd('dark', mergeGeos(parts), null, false);
   if (shut.length) batchAdd('awningGreen', mergeGeos(shut), null, false);
+  // flower boxes under some windows, drainpipes on two corners
+  let k2 = 0;
+  for (const side of [-1, 1]) for (let k = -w / 2 + 1.6; k < w / 2 - 1; k += 2.6) for (let fy = top - 2.2; fy > top - 6 && fy > 1.5; fy -= 2.8) if ((k2++ % 3) === 1) flowerBox(x + k, z + side * (d / 2 + 0.14), fy - 0.86, true, 0.95);
+  for (const sx of [-1, 1]) drainpipe(x + sx * (w / 2 + 0.06), z + (d / 2 + 0.06), Math.max(0, top - 9), top);
 }
 // an olive tree standing on a terrace at height y
 function treeAt(x, z, y, s = 0.75) {
   const h = 4.2 * s;
   if (!placeProp('treeA', mat4(x, y, z, 0, Math.random() * TAU, 0, s, s * 0.8, s))) batchAdd('bark', new THREE.CylinderGeometry(0.1, 0.22, h, 8), mat4(x, y + h / 2, z));
   boxes.push(mkBox(x, z, 0.5, 0.5, h, { y, walk: false })); rayAdd(new THREE.CylinderGeometry(0.18, 0.22, h, 6), mat4(x, y + h / 2, z));
+}
+// set dressing (one half; mirrored)
+function dressTown(s) {
+  const Z = z => z * s;
+  // café on the piazza: parasols over the tables, chairs
+  for (const x of [-20, -17]) parasol(x, Z(4.5), 3.75, s > 0 ? 'awningRed' : 'awningGreen');
+  cafeTable(-14.3, Z(4.4), 3); bench(-12.6, Z(12.6), 3, true); bench(6.8, Z(12.2), 3, true);
+  // laundry across the alleys, balconies, lamps by the doors
+  laundry(-14, 4.4, Z(19.4), -6, 4.9, Z(19.4)); laundry(0, 4.9, Z(21.8), 6, 5.6, Z(21.8));
+  laundry(-22, 7.4, Z(12.5), -24.5, 7, Z(12.5));
+  balcony(-15, Z(10), 6.1, 'e', 2.4); balcony(10, Z(23), 4.4, s > 0 ? 's' : 'n', 2.6);
+  wallLamp(-14, 4.0, Z(21), 'e'); wallLamp(9, 5.8, Z(8), 'w'); wallLamp(-28, 3.2, Z(4), 'e'); wallLamp(16, 5.8, Z(10), 'e');
+  // the lower road: power poles and wires, a parked cart, crates, wine barrels at the osteria
+  powerPole(-40.8, Z(4), 0, 8); powerPole(-40.8, Z(24), 0, 8); powerPole(-40.8, Z(42), 0, 8);
+  wire(-40.1, 7.5, Z(4), -40.1, 7.5, Z(24), 0.7); wire(-40.1, 7.5, Z(24), -40.1, 7.5, Z(42), 0.7); wire(-41.5, 7.5, Z(4), -41.5, 7.5, Z(24), 0.8);
+  for (const [x, z] of [[-27.3, 2.2], [-27.3, 3.2]]) { CYL('wood', 0.38, 0.38, 0.95, 12, x, 0.48, Z(z)); }
+  PZ(-27.3, 0, Z(2.7), 0.8, 0.95, 1.8);
+  pallet(-38.6, Z(33), 0, 2); crate(-39.2, Z(14), 0.9); trashBin(-23, Z(28.5), 0, 'paintGreen');
+  // market produce on the stalls and a scooter-sized clutter of crates
+  for (const [x, z] of [[-12, 30], [-7, 33], [6, 30], [12, 34]]) for (let i = 0; i < 6; i++) batchAdd(['paintRed', 'paintOrange', 'paintYellow', 'paintGreen'][(i + x) & 3], new THREE.IcosahedronGeometry(0.13, 0), mat4(x - 0.9 + (i % 3) * 0.6, 0.98, Z(z) + (i < 3 ? -0.25 : 0.25)), false);
+  bench(-15.5, Z(36.5), 0, true); bench(15, Z(37.5), 0, true); trashBin(3, Z(36.8), 0, 'dark');
+  lampPost(-17, Z(33.5), 0, 5, 1, 0); lampPost(18, Z(27.5), 0, 5, -1, 0); lampPost(-10.8, Z(13), 3, 4.5, 1, 0); lampPost(7, Z(1.6), 3, 4.5, 0, s);
+  // gardens: vines over the pergola, pots, a stone bench, a garden table
+  for (let x = 30; x <= 38; x += 1.3) batchAdd('leaf', new THREE.BoxGeometry(1.1, 0.25, 4.6), mat4(x, 4.45, Z(16.3), 0, 0, (Math.random() - 0.5) * 0.2), false);
+  for (const [x, z, y] of [[21, 9.5, 3], [27.5, 10.5, 3], [34, 13.5, 1.5], [41, 13.5, 1.5]]) { CYL('terracotta', 0.4, 0.3, 0.7, 12, x, y + 0.35, Z(z)); batchAdd('leaf', new THREE.IcosahedronGeometry(0.5, 0), mat4(x, y + 0.95, Z(z)), false); PZ(x, y, Z(z), 0.8, 0.7, 0.8); }
+  blk(33, Z(10.8), 2.2, 0.6, 0.5, 'stone', { y: 3, walk: false }); cafeTable(35.5, Z(19), 1.5);
+  // roofs: chimneys, a water tank, an aerial
+  blk(12, Z(18), 0.7, 0.7, 1.2, 'plaster', { y: 6.5, walk: false, noRay: true }); blk(-2, Z(19.5), 0.6, 0.6, 1, 'plaster', { y: 5.5, walk: false, noRay: true });
+  CYL('paintWhite', 0.6, 0.6, 1.2, 12, -19.5, 9.2, Z(9)); beam('dark', 13, 9.7, Z(10), 13, 11.5, Z(10), 0.04, 0.04, false);
+  // a few loose stones on the lower road and in the tunnel
+  rubbleScatter(-33, Z(20), 0, 1.5, 5); rubbleScatter(-20, Z(0.6), 0, 1, 3);
 }
 defineMap({
   id: 'town', name: 'CASTELLMARE', place: 'Hill town on the coast, midday', desc: 'Stepped alleys climb to a piazza. Take the lower road under the windows, the tunnel beneath the square, or the gardens and the loggia roof.',

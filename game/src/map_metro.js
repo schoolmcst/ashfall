@@ -22,7 +22,7 @@ function buildMetro() {
   for (const s of [1, -1]) trainCar(1.6, s * 6.7, 12.4);
   // ---- the car park (east lane)
   garage();
-  for (const s of [1, -1]) halfMetro(s);
+  for (const s of [1, -1]) { halfMetro(s); dressMetro(s); }
   // a few lamps under the square
   for (const [x, z] of [[-8, -9], [8, 9], [0, 0]]) lampLight(x, 3.6, z, 0xcfe2ff, 0.9, 16);
 }
@@ -43,7 +43,7 @@ function halfMetro(s) {
   fill(-14, -3, 0, 20, 1.0, 'tileFloor'); fill(3, 14, 0, 20, 1.0, 'tileFloor');
   floorQuad(-3.3, Z(10), 0.5, 20, 1.0, 'paintYellow', 1); floorQuad(3.3, Z(10), 0.5, 20, 1.0, 'paintYellow', 1);
   for (const x of [-6.5, 6.5]) for (const z of [4.5, 10.5, 17.5]) blk(x, Z(z), 0.7, 0.7, MSY - 1.4, 'tile', { y: 1, walk: false });
-  for (const x of [-12.5, 12.5]) blk(x, Z(6), 0.6, 2.4, 0.5, 'wood', { y: 1, walk: false });
+  for (const x of [-12.8, 12.8]) bench(x, Z(6), 1, false);
   for (const x of [-9, 9]) { blk(x, Z(3), 1.2, 0.6, 1.0, 'steel', { y: 1, walk: false }); }
   // ceiling light strips
   for (const x of [-8.5, 8.5]) for (const z of [2, 8, 18]) batchAdd('signalCold', new THREE.BoxGeometry(0.3, 0.06, 3), mat4(x, MSY - 0.42, Z(z)), false);
@@ -60,8 +60,9 @@ function halfMetro(s) {
     batchAdd('signal', new THREE.BoxGeometry(1.6, 0.4, 0.08), mat4(x, MSY + 2.4, Z(s > 0 ? 17.0 : 17.0)), false);
   }
   for (const [x, z] of [[-6, 4], [6, 4], [-6, 18.5], [6, 18.5]]) { blk(x, Z(z), 2.2, 1.0, 0.9, 'concrete', { y: MSY, walk: false }); batchAdd('leaf', new THREE.IcosahedronGeometry(0.7, 0), mat4(x, MSY + 1.3, Z(z))); }
-  blk(0, Z(12.5), 1.6, 1.6, 2.2, 'stone', { y: MSY, walk: false });   // statue plinths
-  batchAdd('steel', new THREE.CylinderGeometry(0.25, 0.35, 1.8, 8), mat4(0, MSY + 3.1, Z(12.5)));
+  blk(0, Z(12.5), 1.6, 1.6, 1.3, 'stone', { y: MSY, walk: false }); blk(0, Z(12.5), 1.9, 1.9, 0.25, 'stone', { y: MSY, walk: false, noRay: true });   // statue plinths
+  CYL('steel', 0.22, 0.3, 1.3, 10, 0, MSY + 2.0, Z(12.5)); batchAdd('steel', new THREE.SphereGeometry(0.17, 10, 8), mat4(0, MSY + 2.85, Z(12.5)));
+  beam('steel', 0.2, MSY + 2.5, Z(12.5), 0.55, MSY + 3.1, Z(12.5) - s * 0.2, 0.1, 0.1); beam('steel', -0.2, MSY + 2.5, Z(12.5), -0.3, MSY + 1.9, Z(12.5), 0.1, 0.1);
   blk(-12.5, Z(2.5), 1.4, 2.6, 2.4, 'paintGreen', { y: MSY, walk: false });   // newspaper kiosk
   // ---- the avenue (west lane)
   floorQuad(-28, Z(22), 14, 44, MSY, 'asphalt', 4);
@@ -74,7 +75,7 @@ function halfMetro(s) {
   carWreck(-31.5, Z(18), false, null, MSY); carWreck(-23, Z(27), false, null, MSY); carWreck(-33, Z(31), true, null, MSY);
   jersey(-29, Z(2.5), true, MSY); jersey(-24.5, Z(14.5), true, MSY); jersey(-35.5, Z(12), false, MSY + 0.15);
   sandbags(-20, Z(9), 4, false, 3, MSY + 0.15);
-  for (const z of [6, 20, 34]) { blk(-37.2, Z(z), 0.2, 0.2, 4.5, 'steel', { y: MSY + 0.15, walk: false, noRay: true }); batchAdd('signal', new THREE.BoxGeometry(0.5, 0.2, 0.5), mat4(-36.6, MSY + 4.6, Z(z)), false); }
+  for (const z of [6, 20, 34]) lampPost(-37.2, Z(z), MSY + 0.15, 6.5, 1, 0);
   // corner café on the far side of the avenue (enterable)
   const cy = MSY + 0.15;
   wall(-42, Z(16), -42, Z(25), 3.4, 'plasterOchre', { y: cy });
@@ -146,6 +147,41 @@ function facadeWindowsX(x, z, d, y0, h) {
   const parts = [];
   for (let fy = y0 + 2; fy < h - 1; fy += 3.2) for (let k = -d / 2 + 1.5; k < d / 2 - 1; k += 2.8) parts.push({ g: new THREE.BoxGeometry(0.1, 1.8, 1.4), m: mat4(x + 0.02, fy, z + k) });
   if (parts.length) batchAdd('glass', mergeGeos(parts), null, false);
+}
+// set dressing (one half; mirrored)
+function dressMetro(s) {
+  const Z = z => z * s, y = MSY, sw = MSY + 0.15;
+  // the station: vending machines, bins, timetable screens, hanging signs, wall tiles, name boards
+  for (const [x, f] of [[-13.3, 'e'], [13.3, 'w']]) { vending(x, Z(14.6), 1, f); trashBin(x + (x < 0 ? 0.4 : -0.4), Z(9.6), 1, 'steel'); billboard(x < 0 ? -13.92 : 13.92, Z(12.2), 2.0, 1.3, 0.75, f, 'screen'); billboard(x < 0 ? -13.92 : 13.92, Z(3.2), 2.6, 3.4, 0.6, f, 'paintBlue'); }
+  for (const x of [-13.97, 13.97]) blk(x, Z(10), 0.1, 20, 2.5, 'tile', { y: 1, noCol: true, noRay: true, shadow: false });
+  for (const x of [-8.5, 8.5]) { B('dark', 2.4, 0.5, 0.08, x, 3.45, Z(7.5), 0, 0, 0, false); B('signal', 2.2, 0.34, 0.1, x, 3.45, Z(7.5), 0, 0, 0, false); for (const o of [-1, 1]) B('dark', 0.03, 0.4, 0.03, x + o, 3.85, Z(7.5), 0, 0, 0, false); }
+  paperScatter(-1.5, Z(12), 0, 1.5, 6); puddle(-1.6, Z(5), 0, 0.9); rubbleScatter(-2, Z(17), 0, 0.8, 3);
+  // the square: bollards on the avenue edge, benches, bins
+  for (const z of [5, 8, 11, 14, 17]) { CYL('dark', 0.11, 0.13, 0.9, 10, -14.35, y + 0.45, Z(z)); PZ(-14.35, y, Z(z), 0.26, 0.9, 0.26, { noRay: true }); }
+  bench(-6.5, Z(12), y, false); bench(6.5, Z(12), y, false); trashBin(-3.9, Z(10), y, 'dark'); trashBin(3.9, Z(19), y, 'dark');
+  puddle(1.5, Z(15.5), y, 1.3);
+  // the avenue: crossing, lamps, hydrants, bins, dumpster, traffic lights, cones by the bus, manholes, puddles
+  stripes(-28, Z(23.8), y, false, 14);
+  lampPost(-20.6, Z(13), sw, 6.5, -1, 0); lampPost(-20.6, Z(33), sw, 6.5, -1, 0);
+  hydrant(-21.3, Z(18), sw); hydrant(-36.2, Z(28.5), sw);
+  trashBin(-36.5, Z(8.5), sw, 'paintGreen'); trashBin(-20.8, Z(29.5), sw, 'paintGreen');
+  dumpster(-41.6, Z(29.5), sw, false, 'paintGreen'); blk(-20.7, Z(21), 0.5, 0.5, 1.05, 'paintBlue', { y: sw, walk: false });
+  trafficLight(-21.4, Z(25.4), sw, s > 0 ? 's' : 'n'); trafficLight(-34.6, Z(25.4), sw, s > 0 ? 's' : 'n');
+  for (const [x, z] of [[-29.4, 3.6], [-29.8, 5.2], [-24.6, 14.2], [-25.2, 15.4]]) cone(x, Z(z), y);
+  for (const [x, z] of [[-28, 16], [-25, 33], [10, 31]]) manhole(x, Z(z), y);
+  for (const [x, z, r] of [[-30.5, 12, 1.8], [-24, 30.5, 1.4], [14, 29.5, 1.6], [-8, 34, 1.2]]) puddle(x, Z(z), y, r);
+  billboard(-43.1, Z(10), y + 6, 8, 3, 'e', 'screen');
+  scaffold(-24, Z(43), -12, Z(43), y, 10, s > 0 ? 'n' : 's');
+  for (const x of [-25, -20, -15]) acUnit(x, Z(42.4), y + 14, 1.2);
+  billboard(-2.6, Z(24), y, 0.5, 0.7, s > 0 ? 'n' : 's', 'paintBlue', 2.2);   // tram stop sign
+  // the car park: hazard bands on the columns, ceiling lights, wheel stops, extinguishers, parking lines upstairs
+  for (const x of [26, 32]) for (const z of [3, 9, 15]) { B('hazard', 0.64, 0.6, 0.64, x, y + 0.3, Z(z), 0, 0, 0, false); if (z < 12) B('hazard', 0.64, 0.6, 0.64, x, L2V + 0.3, Z(z), 0, 0, 0, false); }
+  for (const x of [23, 29, 35]) for (const z of [5.5, 11.5]) { B('signalCold', 1.6, 0.05, 0.25, x, L2V - 0.33, Z(z), 0, 0, 0, false); if (z < 12 && x > 25) B('signalCold', 1.6, 0.05, 0.25, x, 10.8 - 0.33, Z(z), 0, 0, 0, false); }
+  for (let x = 22.5; x < 40; x += 3) { B('concrete', 1.4, 0.12, 0.2, x, y + 0.06, Z(17.3), 0, 0, 0, false); }
+  for (const x of [26, 32]) CYL('paintRed', 0.09, 0.09, 0.45, 8, x + 0.36, y + 1.2, Z(9));
+  for (let x = 22; x < 40; x += 3) { floorQuad(x, Z(9), 0.12, 4, L2V + 0.01, 'paintWhite', 1); if (x > 25) floorQuad(x, Z(4), 0.12, 4, 10.81, 'paintWhite', 1); }
+  billboard(20.2, Z(9), y + 2.2, 1.6, 0.5, 'w', 'paintYellow');
+  lampLight(30, L2V - 0.6, Z(9), 0xdfeaff, 0.7, 16);
 }
 defineMap({
   id: 'metro', name: 'VERNON SQUARE', place: 'City square over a metro station, dusk', desc: 'Fight on the street, under it, or above it: the avenue, the station and its open atrium, and a three-storey car park.',

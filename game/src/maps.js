@@ -27,7 +27,7 @@ function rayFlush() {
 // solid block: drawn in the merged batches, collides, stops bullets
 function blk(x, z, w, d, h, key, o = {}) {
   const y = o.y || 0, m = mat4(x, y + h / 2, z);
-  batchAdd(key, scaledBox(w, h, d, o.tile || TILES[key] || 2, Math.random(), Math.random()), m, o.shadow !== false);
+  if (!o.noDraw) batchAdd(key, scaledBox(w, h, d, o.tile || TILES[key] || 2, Math.random(), Math.random()), m, o.shadow !== false);
   if (!o.noCol) boxes.push(mkBox(x, z, w, d, h, o));
   if (!o.noRay) rayAdd(new THREE.BoxGeometry(w, h, d), m);
 }
@@ -54,25 +54,63 @@ function wall(x0, z0, x1, z1, h, key, o = {}) {
 // stairs going up from y0 to y1, starting at (x, z) (bottom edge, centre) and climbing toward dir: 'n' -z, 's' +z, 'e' +x, 'w' -x
 const DIRV = { n: [0, -1], s: [0, 1], e: [1, 0], w: [-1, 0] };
 function stairs(x, z, dir, w, y0, y1, key = 'concrete', o = {}) {
-  const [dx, dz] = DIRV[dir], n = Math.max(1, Math.ceil((y1 - y0) / 0.27)), rise = (y1 - y0) / n, run = o.run || 0.42;
+  const [dx, dz] = DIRV[dir], n = Math.max(1, Math.ceil((y1 - y0) / 0.27)), rise = (y1 - y0) / n, run = o.run || 0.42, L = n * run;
+  // colliders: one box per step (solid down to y0, or a thin tread for open stairs)
   for (let i = 0; i < n; i++) {
     const c = (i + 0.5) * run, top = y0 + rise * (i + 1), base = o.open ? top - 0.22 : y0;
-    blk(x + dx * c, z + dz * c, dx ? run : w, dx ? w : run, top - base, key, { y: base, walk: true, stair: dir, tile: 1.5 });
+    blk(x + dx * c, z + dz * c, dx ? run : w, dx ? w : run, top - base, key, { y: base, walk: true, stair: dir, noDraw: true });
   }
-  if (o.rails !== false) for (const s of [-1, 1]) {   // side rails
-    const ox = dz ? s * (w / 2 + 0.03) : 0, oz = dx ? s * (w / 2 + 0.03) : 0, L = n * run, len = Math.hypot(L, y1 - y0), ang = Math.atan2(y1 - y0, L);
-    batchAdd('dark', new THREE.BoxGeometry(dx ? len : 0.05, 0.05, dx ? 0.05 : len), mat4(x + dx * L / 2 + ox, (y0 + y1) / 2 + 0.95, z + dz * L / 2 + oz, dz ? -dz * ang : 0, 0, dx ? dx * ang : 0), false);
+  const sx = -dz, sz = dx;   // sideways (to the right of the climb direction)
+  if (o.open) {   // steel stairs: thin treads on two sloped stringers
+    const treads = [];
+    for (let i = 0; i < n; i++) { const c = (i + 0.5) * run, top = y0 + rise * (i + 1); treads.push({ g: new THREE.BoxGeometry(dx ? run - 0.04 : w, 0.05, dx ? w : run - 0.04), m: mat4(x + dx * c, top - 0.025, z + dz * c) }); }
+    batchAdd(key, mergeGeos(treads));
+    for (const s of [-1, 1]) beam(key, x + sx * s * w / 2, y0 - 0.05, z + sz * s * w / 2, x + dx * L + sx * s * w / 2, y1 - 0.05, z + dz * L + sz * s * w / 2, 0.07, 0.3);
+  } else {        // solid flight: one sawtooth piece with proper sides
+    const sh = new THREE.Shape(); sh.moveTo(0, 0);
+    for (let i = 0; i < n; i++) { sh.lineTo(i * run, (i + 1) * rise); sh.lineTo((i + 1) * run, (i + 1) * rise); }
+    sh.lineTo(L, 0); sh.lineTo(0, 0);
+    const g = new THREE.ExtrudeGeometry(sh, { depth: w, bevelEnabled: false, steps: 1 });
+    const uv = g.attributes.uv.array, tl = o.tile || 1.5; for (let k = 0; k < uv.length; k++) uv[k] /= tl;
+    const m = new THREE.Matrix4().makeBasis(new THREE.Vector3(dx, 0, dz), new THREE.Vector3(0, 1, 0), new THREE.Vector3(-dz, 0, dx));
+    m.setPosition(x - (-dz) * w / 2, y0, z - dx * w / 2);
+    batchAdd(key, g, m);
   }
-  return { x: x + dx * n * run, z: z + dz * n * run, len: n * run };
+  if (o.rails !== false) for (const s of [-1, 1]) {   // handrails with a post at each end
+    const ox = sx * s * (w / 2 - 0.04), oz = sz * s * (w / 2 - 0.04), a = run * 0.5, b = L - run * 0.5;
+    beam(o.railKey || 'dark', x + dx * a + ox, y0 + rise + 0.95, z + dz * a + oz, x + dx * b + ox, y1 + 0.95, z + dz * b + oz, 0.05, 0.05, false);
+    for (const [c, hgt] of [[a, y0 + rise], [b, y1]]) batchAdd(o.railKey || 'dark', new THREE.BoxGeometry(0.05, 0.95, 0.05), mat4(x + dx * c + ox, hgt + 0.475, z + dz * c + oz), false);
+    if (L > 3) { const c = L / 2, hgt = y0 + rise * Math.ceil(n / 2); batchAdd(o.railKey || 'dark', new THREE.BoxGeometry(0.05, 0.95, 0.05), mat4(x + dx * c + ox, hgt + 0.475, z + dz * c + oz), false); }
+  }
+  return { x: x + dx * L, z: z + dz * L, len: L };
+}
+// a box stretched between two points (beams, stringers, handrails, pipes); w sideways, h up
+function beamMatrix(ax, ay, az, bx, by, bz) {
+  const f = new THREE.Vector3(bx - ax, by - ay, bz - az), L = f.length(); f.divideScalar(L || 1);
+  const sd = new THREE.Vector3(0, 1, 0).cross(f); if (sd.lengthSq() < 1e-6) sd.set(1, 0, 0); sd.normalize();
+  const up = new THREE.Vector3().crossVectors(f, sd);
+  const m = new THREE.Matrix4().makeBasis(sd, up, f); m.setPosition((ax + bx) / 2, (ay + by) / 2, (az + bz) / 2);
+  return { m, L };
+}
+function beam(key, ax, ay, az, bx, by, bz, w, h, shadow = true, tile) {
+  const { m, L } = beamMatrix(ax, ay, az, bx, by, bz);
+  batchAdd(key, tile ? scaledBox(w, h, L, tile) : new THREE.BoxGeometry(w, h, L), m, shadow);
+  return { m, L };
 }
 // a smooth ramp (drawn as a slope, collides as fine invisible steps)
 function ramp(x, z, dir, w, len, y0, y1, key = 'concrete', o = {}) {
   const [dx, dz] = DIRV[dir], n = Math.max(2, Math.ceil(Math.abs(y1 - y0) / 0.12)), run = len / n, rise = (y1 - y0) / n;
   for (let i = 0; i < n; i++) { const c = (i + 0.5) * run, top = y0 + rise * (i + 1); boxes.push(mkBox(x + dx * c, z + dz * c, dx ? run : w, dx ? w : run, top - (o.base !== undefined ? o.base : 0), { y: o.base || 0, walk: true, stair: dir })); }
-  const sl = Math.hypot(len, y1 - y0), ang = Math.atan2(y1 - y0, len), th = 0.25;
-  const m = mat4(x + dx * len / 2, (y0 + y1) / 2 - th / 2, z + dz * len / 2, dz ? -dz * ang : 0, 0, dx ? dx * ang : 0);
-  const g = scaledBox(dx ? sl : w, th, dx ? w : sl, TILES[key] || 2);
-  batchAdd(key, g, m); rayAdd(new THREE.BoxGeometry(dx ? sl : w, th, dx ? w : sl), m);
+  const th = 0.3, { m, L } = beam(key, x, y0 - th / 2, z, x + dx * len, y1 - th / 2, z + dz * len, w, th, true, TILES[key] || 2);
+  rayAdd(new THREE.BoxGeometry(w, th, L), m);
+  if (o.sides !== false && o.base === undefined) {   // solid side walls under the slope (ramps standing on the ground)
+    const sh = new THREE.Shape(); sh.moveTo(0, 0); sh.lineTo(len, 0); sh.lineTo(len, y1 > y0 ? y1 - th : y0 - th); sh.lineTo(0, y1 > y0 ? y0 - th : y1 - th); sh.lineTo(0, 0);
+    const lo = Math.min(y0, y1); if (Math.max(y0, y1) - th - lo > 0.2) {
+      const g = new THREE.ExtrudeGeometry(sh, { depth: w - 0.02, bevelEnabled: false }); const uv = g.attributes.uv.array; for (let k = 0; k < uv.length; k++) uv[k] /= (TILES[key] || 2);
+      const mm = new THREE.Matrix4().makeBasis(new THREE.Vector3(dx, 0, dz), new THREE.Vector3(0, 1, 0), new THREE.Vector3(-dz, 0, dx)); mm.setPosition(x + dz * (w - 0.02) / 2, 0, z - dx * (w - 0.02) / 2);
+      batchAdd(key, g, mm);
+    }
+  }
 }
 // railing: blocks walking, bullets pass
 function rail(x0, z0, x1, z1, y = 0, o = {}) {
@@ -162,6 +200,7 @@ function buildMapMaterials() {
   MAT.signalCold = new THREE.MeshStandardMaterial({ color: C(0xe6f0ff), emissive: C(0xcfe2ff), emissiveIntensity: 1.4, roughness: 0.6 });
   MAT.train = std(TEX.metal, { color: C(0xb7bcc0), roughness: 0.45, metalness: 0.6 });
   MAT.olive = new THREE.MeshStandardMaterial({ color: C(0x5d6b3a), roughness: 1, flatShading: true });
+  buildPropMaterials();
   try { addFresnelAll({ a: MAT.paintRed, b: MAT.paintBlue, c: MAT.paintGreen, d: MAT.paintOrange, e: MAT.paintYellow, f: MAT.paintWhite, g: MAT.steel, h: MAT.water, i: MAT.train }); } catch (e) {}
 }
 

@@ -23,7 +23,7 @@ function buildNav() {
         const inside = x > b.minx - 0.05 && x < b.maxx + 0.05 && z > b.minz - 0.05 && z < b.maxz + 0.05;
         if (inside) { ok = false; break; }
         if (b.stair && b.top <= h + 1.3) continue;   // the next steps of a stair are not a wall
-        const mg = b.rail ? 0.2 : 0.32;
+        const mg = b.rail ? 0.2 : 0.38;
         if (x > b.minx - mg && x < b.maxx + mg && z > b.minz - mg && z < b.maxz + mg) { ok = false; break; }   // keep off walls
       }
       if (!ok) continue;
@@ -51,6 +51,12 @@ function canStep(ha, sa, hb, sb, kx, kz) {
   if (up <= CLIMB) return true;
   if (up > CLIMB_STAIR) return false;
   const v = SDIR[sb || sa]; return !!v && kx === v[0] && kz === v[1];
+}
+// stepping from height h into cell c you land on the highest floor you can reach (a floor overhead in that cell stops a
+// drop: you can't fall through a ceiling); -1 when what you meet there is a ledge or wall you can't get onto
+function stepTo(c, h, st, kx, kz) {
+  for (let l = lvN[c] - 1; l >= 0; l--) { const hl = lvH[c * NL + l]; if (hl > h + CLIMB_STAIR) continue; return canStep(h, st, hl, lvS[c * NL + l], kx, kz) ? l : -1; }
+  return -1;
 }
 function diagOk(cx, cz, nx, nz, h) {
   for (const c of [cz * NN + nx, nz * NN + cx]) { let ok = false; for (let l = 0; l < lvN[c]; l++) if (Math.abs(lvH[c * NL + l] - h) < 1.0) { ok = true; break; } if (!ok) return false; }
@@ -85,7 +91,7 @@ function flowField(x, z, y) {
       const n = nz * NN + nx;
       for (let m = 0; m < lvN[n]; m++) {
         const nn = n * NL + m; if (d[nn] >= 0) continue;
-        if (!canStep(lvH[nn], lvS[nn], h, st, -NX[k], -NZ[k])) continue;   // a bot standing on nn must be able to move onto our node
+        if (stepTo(c, lvH[nn], lvS[nn], -NX[k], -NZ[k]) !== l) continue;   // a bot standing on nn must land on our node
         if (k >= 4 && !diagOk(cx, cz, nx, nz, Math.max(h, lvH[nn]))) continue;
         d[nn] = d[nd0] + 1; q[tail++] = nn;
       }
@@ -104,12 +110,10 @@ function flowDir(d, x, z, y) {
   for (let k = 0; k < 8; k++) {
     const nx = cx + NX[k], nz = cz + NZ[k]; if (nx < 0 || nz < 0 || nx >= NN || nz >= NN) continue;
     const n = nz * NN + nx;
-    for (let m = 0; m < lvN[n]; m++) {
-      const nn = n * NL + m; if (d[nn] < 0 || d[nn] >= best) continue;
-      if (!canStep(h, st, lvH[nn], lvS[nn], NX[k], NZ[k])) continue;
-      if (k >= 4 && !diagOk(cx, cz, nx, nz, Math.max(h, lvH[nn]))) continue;
-      best = d[nn]; bk = k;
-    }
+    const m = stepTo(n, h, st, NX[k], NZ[k]); if (m < 0) continue;
+    const nn = n * NL + m; if (d[nn] < 0 || d[nn] >= best) continue;
+    if (k >= 4 && !diagOk(cx, cz, nx, nz, Math.max(h, lvH[nn]))) continue;
+    best = d[nn]; bk = k;
   }
   if (bk < 0) return null;
   const tx = cellPos(cx + NX[bk]) - x, tz = cellPos(cz + NZ[bk]) - z, l = Math.hypot(tx, tz) || 1;
@@ -122,10 +126,8 @@ function gridClear(x0, z0, x1, z1, y0 = 0, y1 = 0) {
   let h = lvH[c * NL + l], st = lvS[c * NL + l];
   for (let i = 1; i <= n; i++) {
     const t = i / n, c2 = cellOf(z0 + dz * t) * NN + cellOf(x0 + dx * t); if (c2 === c) continue;
-    let bl = -1, bd = 1e9;
     const kx = Math.sign(c2 % NN - c % NN), kz = Math.sign(((c2 / NN) | 0) - ((c / NN) | 0));
-    for (let m = 0; m < lvN[c2]; m++) { const hm = lvH[c2 * NL + m]; if (!canStep(h, st, hm, lvS[c2 * NL + m], kx, kz)) continue; const dd = Math.abs(hm - h); if (dd < bd) { bd = dd; bl = m; } }
-    if (bl < 0) return false;
+    const bl = stepTo(c2, h, st, kx, kz); if (bl < 0) return false;
     c = c2; h = lvH[c * NL + bl]; st = lvS[c * NL + bl];
   }
   return Math.abs(h - y1) < 1.0;
