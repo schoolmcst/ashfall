@@ -50,7 +50,7 @@ function partyTick() {
     const lead = PARTY.room.peers().find(p => !p.sameTab && p.presence && p.presence.ld), go = lead && lead.presence.go;
     if (go && typeof go.s === 'string' && go.s !== PARTY.lastGo) { PARTY.lastGo = go.s; partyFollow(go); }
   }
-  const key = JSON.stringify(partyMembers()) + PARTY.status;
+  const key = JSON.stringify(partyMembers()) + PARTY.status + JSON.stringify(FRIENDS.map(f => [f.on, f.d])) + [...SOC.incoming.keys()] + FR_PENDING + [...SOC.sending.values()];
   if (key !== PARTY.key) { PARTY.key = key; partyRender(); }
 }
 setInterval(() => { try { partyTick(); } catch (e) {} }, 500);
@@ -66,15 +66,16 @@ function partyHtml() {
   return `<div class="ros-h"><span>PARTY</span><b>${mem.length} / 6</b></div>` +
     `<div class="ros-team"><div class="tn">${partyLeader() ? 'YOUR PARTY · YOU LEAD' : 'IN A PARTY'}</div>${mem.map(m => `<div class="ros-p${m.me ? ' me' : ''}"><span class="lv">${m.lead ? '★' : '·'}</span>${m.name}${m.lead ? '<em>LEADER</em>' : m.me ? '<em>YOU</em>' : '<em>READY</em>'}</div>`).join('')}` +
     (PARTY.room && !PARTY.room.host ? `<div class="ros-p"><button class="lnk" id="partyLeave">LEAVE PARTY</button></div>` : '') + `</div>` +
-    `<div class="ros-team"><div class="tn">FRIENDS · YOUR CODE <b class="fcode">${MYCODE}</b></div>` +
-    (FRIENDS.length ? FRIENDS.map((f, i) => `<div class="ros-p"><span class="lv">♟</span>${f.n}<em>${f.c}</em><button class="mini fr-join" data-fj="${i}" title="Join their party">JOIN</button><button class="mini fr-del" data-fd="${i}" title="Remove">✕</button></div>`).join('') : `<div class="ros-p" style="color:var(--dim)">No friends yet. Swap codes and add them below.</div>`) +
-    `<div class="ros-p fr-add"><input id="frCode" maxlength="6" placeholder="FRIEND CODE" autocomplete="off" spellcheck="false"><input id="frName" maxlength="14" placeholder="NAME" autocomplete="off" spellcheck="false"><button class="mini" id="frAdd" style="width:auto;padding:0 10px">ADD</button></div>` +
+    `<div class="ros-team"><div class="tn">YOUR FRIEND CODE <b class="fcode">${MYCODE}</b></div>` +
+    `<div class="ros-p fr-add"><input id="frCode" maxlength="6" placeholder="FRIEND CODE TO ADD" autocomplete="off" spellcheck="false"><button class="mini" id="frAdd" style="width:auto;padding:0 10px">SEND REQUEST</button></div></div>` +
+    `<div class="ros-team"><div class="tn soc-h">SOCIAL · ${FRIENDS.filter(f => f.on).length} ONLINE<button class="lnk" id="lbOpen">LEADERBOARD ›</button></div>` + socialHtml() +
     (PARTY.status ? `<div class="ros-p" style="color:var(--accent)">${PARTY.status.toUpperCase()}</div>` : '') + `</div>`;
 }
 function partyWire() {
   const add = $('frAdd'); if (!add) return;
-  for (const id of ['frCode', 'frName']) { const i = $(id); i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') add.click(); }; i.onkeyup = e => e.stopPropagation(); }
-  add.onclick = () => { const c = cleanFcode($('frCode').value), n = cleanNick($('frName').value || c); if (c.length !== 6 || c === MYCODE) { $('frCode').focus(); return; } if (!FRIENDS.some(f => f.c === c)) FRIENDS.push({ c, n }); friendsSave(); sfx.ui(); partyRender(); };
+  for (const id of ['frCode']) { const i = $(id); i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') add.click(); }; i.onkeyup = e => e.stopPropagation(); }
+  add.onclick = () => { const c = cleanFcode($('frCode').value); if (c.length !== 6 || c === MYCODE) { $('frCode').focus(); return; } sfx.ui(); socSendRequest(c); };
+  socWire(); const lb = $('lbOpen'); if (lb) lb.onclick = () => { sfx.ui(); openLeaderboard(); };
   for (const b of document.querySelectorAll('[data-fj]')) b.onclick = () => { sfx.ui(); partyJoin(FRIENDS[+b.dataset.fj].c); };
   for (const b of document.querySelectorAll('[data-fd]')) b.onclick = () => { FRIENDS.splice(+b.dataset.fd, 1); friendsSave(); partyRender(); };
   const lv = $('partyLeave'); if (lv) lv.onclick = () => { sfx.ui(); partyLeave(); };

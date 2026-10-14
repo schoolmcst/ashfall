@@ -1,5 +1,5 @@
 /* ================================================================== UI: screens, settings, input, loop, boot */
-const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist', 'classpick'];
+const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist', 'classpick', 'leaderboard'];
 let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
   curScreen = id; if (id === 'menu') try { renderMenuCard(); } catch (e) {}
@@ -187,6 +187,7 @@ function actions(act) {
     case 'pl-start': privStart(); break;
     case 'streaks': openStreaks(curScreen || 'menu'); break;
     case 'cp-edit': openLoadout('classpick'); break;
+    case 'lb-back': renderLobby(); showScreen('lobby'); break;
     case 'pad-binds': curTab = 'BUTTONS'; buildTabs(); renderSettings(); focusFirst('#setBody .bindbtn'); break;
     case 'pad-back': curTab = 'CONTROLLER'; buildTabs(); renderSettings(); focusFirst('#setBody .bindbtn'); break;
     case 'cp-ready': showScreen(null); lockPointer(); break;
@@ -227,6 +228,7 @@ function goBack() {
   else if (curScreen === 'career') actions('stats-back');
   else if (curScreen === 'streaks') actions('stk-back');
   else if (curScreen === 'modes') actions('modes-back');
+  else if (curScreen === 'leaderboard') actions('lb-back');
   else if (curScreen === 'playlist') actions('pl-back');
   else if (curScreen === 'results') toLobby();
   else if (curScreen === 'settings' && curTab === 'BUTTONS') actions('pad-back');
