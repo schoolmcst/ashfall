@@ -266,6 +266,15 @@
   #scope i{position:absolute;background:#000}
   #scope .h{left:calc(50% - 33vmin);right:calc(50% - 33vmin);top:50%;height:1.5px;margin-top:-.75px}
   #scope .v{top:calc(50% + 2vmin);bottom:calc(50% - 33vmin);left:50%;width:1.5px;margin-left:-.75px}
+  #scope .chev,#scope .stem,#scope .tk{display:none}
+  #scope.acog{background:radial-gradient(circle at 50% 50%,transparent 0,transparent 29vmin,rgba(0,0,0,.55) 29.6vmin,#050506 31vmin,#0b0c0e 36vmin,rgba(8,9,11,.92) 37vmin,rgba(8,9,11,.82) 70vmin)}
+  #scope.acog .h,#scope.acog .v,#scope.acog .dot{display:none}
+  #scope.acog .chev{display:block;position:absolute;left:50%;top:50%;width:6.2vmin;height:6.2vmin;margin:-2.2vmin 0 0 -3.1vmin;overflow:visible;filter:drop-shadow(0 0 .5vmin rgba(255,70,40,.85))}
+  #scope.acog .chev path{stroke:#ff4a2a;stroke-width:2.6}
+  #scope.acog .stem{display:block;left:50%;width:1.5px;margin-left:-.75px;top:calc(50% + 2.4vmin);height:12vmin;background:#000}
+  #scope.acog .tk{display:block;height:1.5px;background:#000;top:0}
+  #scope.acog .t1{left:calc(50% - 2.2vmin);width:4.4vmin;top:calc(50% + 5vmin)} #scope.acog .t2{left:calc(50% - 1.7vmin);width:3.4vmin;top:calc(50% + 7.6vmin)}
+  #scope.acog .t3{left:calc(50% - 1.3vmin);width:2.6vmin;top:calc(50% + 10vmin)} #scope.acog .t4{left:calc(50% - .9vmin);width:1.8vmin;top:calc(50% + 12.2vmin)}
   #scope .dot{left:50%;top:50%;width:5px;height:5px;margin:-2.5px 0 0 -2.5px;border-radius:50%;background:#e2332b;box-shadow:0 0 4px #e2332b}
 </style>
 </head>
@@ -414,7 +423,7 @@
 
 <div id="flashW"></div>
 <div id="board" class="hide"></div>
-<div id="scope" class="hide"><i class="h"></i><i class="v"></i><i class="dot"></i></div>
+<div id="scope" class="hide"><i class="h"></i><i class="v"></i><i class="dot"></i><svg class="chev" viewBox="0 0 40 40" aria-hidden="true"><path d="M9 27 L20 14 L31 27" fill="none" stroke-linejoin="miter" stroke-linecap="square"/></svg><i class="stem"></i><i class="tk t1"></i><i class="tk t2"></i><i class="tk t3"></i><i class="tk t4"></i></div>
 
 <div id="killcam" class="hide">
   <div class="kc-bar top"></div><div class="kc-bar bot"></div>
