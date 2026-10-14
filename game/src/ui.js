@@ -14,6 +14,7 @@ const pct = v => v + '%';
 const SCHEMA = {
   ACCOUNT: [
     { t: 'text', name: 'CALLSIGN', hint: 'Your name in online matches and on the scoreboard (14 letters max)' },
+    { t: 'info', name: 'FRIEND CODE', hint: 'Give this to friends: they add it in the lobby and press JOIN to join your party', val: () => MYCODE },
   ],
   VIDEO: [
     { k: 'quality', t: 'seg', name: 'GRAPHICS PRESET', hint: 'AUTO picks ' + AUTO_TIER.toUpperCase() + ' for this graphics card. Texture detail changes apply on next launch', opts: [['auto', 'AUTO'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
@@ -100,7 +101,8 @@ function renderSettings() {
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
     if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
     const ctl = document.createElement('div'); ctl.className = 'ctl';
-    if (it.t === 'text') {
+    if (it.t === 'info') { const v = document.createElement('span'); v.className = 'num'; v.style.letterSpacing = '.3em'; v.style.fontSize = '18px'; v.textContent = it.val(); ctl.appendChild(v); }
+    else if (it.t === 'text') {
       const i = document.createElement('input'); i.className = 'set-text'; i.maxLength = 14; i.value = NET.nick; i.spellcheck = false; i.autocomplete = 'off';
       i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') i.blur(); }; i.onkeyup = e => e.stopPropagation();
       i.oninput = () => { NET.nick = cleanNick(i.value); try { localStorage.setItem(NICK_KEY, NET.nick); } catch (e) {} };

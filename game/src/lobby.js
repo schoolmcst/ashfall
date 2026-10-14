@@ -33,13 +33,13 @@ function renderLobby(focusSel) {
   const goTxt = online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH';
   const m = MAPS[LOBBY.map];
   $('lobSel').innerHTML =
-    `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}><small>PLAYLIST · ${playlist().length} MODE${playlist().length > 1 ? 'S' : ''} · Y / Q TO EDIT</small><b>${NET.app ? 'QUICK PLAY' : 'JOIN ROOM'}</b><span>${playlist().map(k => MODES[k].short.replace(/^ONLINE /, '')).join(' · ')}</span></button>` +
+    `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="lob-start"${online && (!netReady() || (NET.app && partyWaiting())) ? ' disabled' : ''}><small>PLAYLIST · ${playlist().length} MODE${playlist().length > 1 ? 'S' : ''} · Y / Q TO EDIT</small><b>${NET.app ? (partyWaiting() ? 'WAITING FOR LEADER' : 'QUICK PLAY') : 'JOIN ROOM'}</b><span>${playlist().map(k => MODES[k].short.replace(/^ONLINE /, '')).join(' · ')}</span></button>` +
     `<button class="cod-arrow" data-act="playlist" aria-label="Edit playlist" title="Edit playlist (Y / Q)">&#9776;</button></div>` +
     `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${PERKS[c.k].name}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
     (stk ? `<button class="cod-row" data-act="streaks"><small>SCORESTREAKS</small><b>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => stkIcon(id)).join('')}</b><span>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => `${STREAKS[id].name} ${STREAKS[id].cost}`).join(' · ')}</span><i>&rsaquo;</i></button>` : '') +
     (!online && sel !== 'surv' ? `<div class="cod-row"><small>BOT SKILL</small><b>${SKILL[matchCfg(sel).skill].name}</b><span>change it here or in Settings</span><div class="arw"><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div></div>` : '') +
     `<button class="cod-row" data-act="custom"><small>PRIVATE CODE MATCHES &middot; SOLO VS BOTS</small><b>CUSTOM</b><span>host or join with a code, or play any mode and map against bots</span><i>&rsaquo;</i></button>` + (online ? netLobbyHtml() : '');
-  $('lobRoster').innerHTML = rosterHtml(sel);
+  $('lobRoster').innerHTML = rosterHtml(sel); if (online && NET.app) partyWire();
   if (online) netLobbyWire();
   if (focusSel) focusFirst(focusSel);
 }
@@ -48,6 +48,7 @@ function rosterHtml(k) {
   const p = (n, cls = '', tag = '') => `<div class="ros-p ${cls}"><span class="lv">${cls === 'me' ? '★' : 'AI'}</span>${n}${tag ? `<em>${tag}</em>` : ''}</div>`;
   const info = `<div class="ros-info"><b>${d.name}</b>${d.desc}</div>`;
   if (k === 'surv') return `<div class="ros-h"><span>SQUAD</span><b>SOLO</b></div><div class="ros-team"><div class="tn">YOU</div>${p(me, 'me', 'READY')}</div>` + info;
+  if (d.online && NET.app) return `<div id="partyBox">${partyHtml()}</div>` + info;
   if (d.online) return `<div class="ros-h"><span>${NET.app ? 'QUICK PLAY' : 'ROOM'}</span><b>${d.teams ? '6 V 6' : 'FREE-FOR-ALL'}</b></div><div class="ros-team"><div class="tn">YOUR PARTY</div>${p(me, 'me', 'READY')}<div class="ros-p"><span class="lv">+</span>real players join here &middot; bots fill empty spots</div></div>` + info;
   if (d.teams) { const n = clamp(cfg.perTeam, 1, 8);
     return `<div class="ros-h"><span>LOBBY</span><b>${n} V ${n}</b></div>` +

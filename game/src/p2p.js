@@ -217,6 +217,8 @@ const P2P = (() => {
     current: null,
     // can this computer reach the match service? resolves the round-trip in ms, or throws
     async ping() { const t = performance.now(), s = await signal('p' + rid(14)); const ms = Math.round(performance.now() - t); s.close(); return ms; },
+    // a second room alongside the match (the party): does not become P2P.current
+    async aside(kind, mode, code, opts) { const r = makeRoom(kind, mode, code, opts); try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
     async open(kind, mode, code, opts) { const r = makeRoom(kind, mode, code, opts); this.current = r; try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
   };
 })();

@@ -5534,13 +5534,13 @@ function renderLobby(focusSel) {
   const goTxt = online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH';
   const m = MAPS[LOBBY.map];
   $('lobSel').innerHTML =
-    `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}><small>PLAYLIST · ${playlist().length} MODE${playlist().length > 1 ? 'S' : ''} · Y / Q TO EDIT</small><b>${NET.app ? 'QUICK PLAY' : 'JOIN ROOM'}</b><span>${playlist().map(k => MODES[k].short.replace(/^ONLINE /, '')).join(' · ')}</span></button>` +
+    `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="lob-start"${online && (!netReady() || (NET.app && partyWaiting())) ? ' disabled' : ''}><small>PLAYLIST · ${playlist().length} MODE${playlist().length > 1 ? 'S' : ''} · Y / Q TO EDIT</small><b>${NET.app ? (partyWaiting() ? 'WAITING FOR LEADER' : 'QUICK PLAY') : 'JOIN ROOM'}</b><span>${playlist().map(k => MODES[k].short.replace(/^ONLINE /, '')).join(' · ')}</span></button>` +
     `<button class="cod-arrow" data-act="playlist" aria-label="Edit playlist" title="Edit playlist (Y / Q)">&#9776;</button></div>` +
     `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${PERKS[c.k].name}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
     (stk ? `<button class="cod-row" data-act="streaks"><small>SCORESTREAKS</small><b>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => stkIcon(id)).join('')}</b><span>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => `${STREAKS[id].name} ${STREAKS[id].cost}`).join(' · ')}</span><i>&rsaquo;</i></button>` : '') +
     (!online && sel !== 'surv' ? `<div class="cod-row"><small>BOT SKILL</small><b>${SKILL[matchCfg(sel).skill].name}</b><span>change it here or in Settings</span><div class="arw"><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div></div>` : '') +
     `<button class="cod-row" data-act="custom"><small>PRIVATE CODE MATCHES &middot; SOLO VS BOTS</small><b>CUSTOM</b><span>host or join with a code, or play any mode and map against bots</span><i>&rsaquo;</i></button>` + (online ? netLobbyHtml() : '');
-  $('lobRoster').innerHTML = rosterHtml(sel);
+  $('lobRoster').innerHTML = rosterHtml(sel); if (online && NET.app) partyWire();
   if (online) netLobbyWire();
   if (focusSel) focusFirst(focusSel);
 }
@@ -5549,6 +5549,7 @@ function rosterHtml(k) {
   const p = (n, cls = '', tag = '') => `<div class="ros-p ${cls}"><span class="lv">${cls === 'me' ? '★' : 'AI'}</span>${n}${tag ? `<em>${tag}</em>` : ''}</div>`;
   const info = `<div class="ros-info"><b>${d.name}</b>${d.desc}</div>`;
   if (k === 'surv') return `<div class="ros-h"><span>SQUAD</span><b>SOLO</b></div><div class="ros-team"><div class="tn">YOU</div>${p(me, 'me', 'READY')}</div>` + info;
+  if (d.online && NET.app) return `<div id="partyBox">${partyHtml()}</div>` + info;
   if (d.online) return `<div class="ros-h"><span>${NET.app ? 'QUICK PLAY' : 'ROOM'}</span><b>${d.teams ? '6 V 6' : 'FREE-FOR-ALL'}</b></div><div class="ros-team"><div class="tn">YOUR PARTY</div>${p(me, 'me', 'READY')}<div class="ros-p"><span class="lv">+</span>real players join here &middot; bots fill empty spots</div></div>` + info;
   if (d.teams) { const n = clamp(cfg.perTeam, 1, 8);
     return `<div class="ros-h"><span>LOBBY</span><b>${n} V ${n}</b></div>` +
@@ -7053,6 +7054,8 @@ const P2P = (() => {
     current: null,
     // can this computer reach the match service? resolves the round-trip in ms, or throws
     async ping() { const t = performance.now(), s = await signal('p' + rid(14)); const ms = Math.round(performance.now() - t); s.close(); return ms; },
+    // a second room alongside the match (the party): does not become P2P.current
+    async aside(kind, mode, code, opts) { const r = makeRoom(kind, mode, code, opts); try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
     async open(kind, mode, code, opts) { const r = makeRoom(kind, mode, code, opts); this.current = r; try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
   };
 })();
@@ -7660,6 +7663,93 @@ function renderPubLobby() {
 .plp{width:min(1100px,94vw)}.pl-count{padding:0 26px 6px;font-size:11px;letter-spacing:.25em;color:var(--dim);text-align:left}`;
   document.head.appendChild(s);
 })();
+/* ================================================================== friends + party (desktop app)
+   Everyone has a friend code. While you are in the game you host a small party room under your own code; a friend
+   who adds your code can JOIN it from their lobby. The party leader (whoever hosts the party room) presses PLAY and
+   the rest of the party follows them into the same match (quick play, pre-game lobby or a private code match). */
+const FCODE_KEY = 'ashfall.fcode.v1', FRIENDS_KEY = 'ashfall.friends.v1';
+let MYCODE = ''; try { MYCODE = localStorage.getItem(FCODE_KEY) || ''; } catch (e) {}
+if (!/^[A-Z2-9]{6}$/.test(MYCODE)) { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; MYCODE = Array.from({ length: 6 }, () => A[(Math.random() * A.length) | 0]).join(''); try { localStorage.setItem(FCODE_KEY, MYCODE); } catch (e) {} }
+let FRIENDS = []; try { const a = JSON.parse(localStorage.getItem(FRIENDS_KEY) || '[]'); if (Array.isArray(a)) FRIENDS = a.filter(f => f && /^[A-Z2-9]{6}$/.test(f.c)).slice(0, 40); } catch (e) {}
+const friendsSave = () => { try { localStorage.setItem(FRIENDS_KEY, JSON.stringify(FRIENDS)); } catch (e) {} };
+const cleanFcode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
+const PARTY = { room: null, busy: false, status: '', lastGo: '', key: '', retryT: 0 };
+async function partyHostOwn() {
+  if (!NET.app || PARTY.room || PARTY.busy || performance.now() < PARTY.retryT) return;
+  PARTY.busy = true;
+  try { PARTY.room = await P2P.aside('code', 'party', MYCODE.toLowerCase()); PARTY.status = ''; }
+  catch (e) { PARTY.status = 'party service offline'; PARTY.retryT = performance.now() + 15000; }
+  PARTY.busy = false; partyRender();
+}
+async function partyJoin(code) {
+  code = cleanFcode(code); if (code.length !== 6 || code === MYCODE || PARTY.busy) return;
+  PARTY.busy = true; PARTY.status = 'joining ' + code + '…'; partyRender();
+  let r = null;
+  try { r = await P2P.aside('code', 'party', code.toLowerCase(), { noHost: true }); } catch (e) { PARTY.status = (FRIENDS.find(f => f.c === code) || { n: code }).n + ' is not online'; }
+  if (r) { if (PARTY.room) PARTY.room.leave(); PARTY.room = r; PARTY.status = ''; sfx.streak(); }
+  PARTY.busy = false; partyRender();
+}
+function partyLeave() { if (PARTY.room) PARTY.room.leave(); PARTY.room = null; PARTY.lastGo = ''; PARTY.retryT = 0; partyHostOwn(); partyRender(); }
+const partyLeader = () => !PARTY.room || PARTY.room.host;
+function partyMembers() {
+  if (!PARTY.room) return [{ name: NET.nick, me: true, lead: true }];
+  return PARTY.room.peers().map(p => ({ name: p.sameTab ? NET.nick : cleanNick(p.presence && p.presence.n), me: !!p.sameTab, lead: p.sameTab ? !!PARTY.room.host : !!(p.presence && p.presence.ld) })).filter(m => m.me || (m.name && m.name !== 'PLAYER'));
+}
+const partyWaiting = () => !!(PARTY.room && !PARTY.room.host && partyMembers().length > 1);
+// the match the leader is in, for everyone else to follow
+function partyGo() { return M && M.online && NET.on && NET.room && NET.room.slot ? { s: NET.room.slot, m: NET.mode } : null; }
+function partyFollow(go) {
+  if (!go || !MODES[go.m] || !MODES[go.m].online) return;
+  if (M && M.online && NET.room && NET.room.slot === go.s) return;
+  if (G.state !== 'menu') leaveGame();
+  showMsg('JOINING YOUR PARTY LEADER');
+  LOBBY.mode = go.m; NET.kind = 'slot'; NET.slot = go.s; NET.pubNext = !/-priv-c-/.test(go.s);
+  startMatch(go.m); NET.kind = 'quick';
+}
+function partyTick() {
+  if (!NET.app) return;
+  if (!PARTY.room) { partyHostOwn(); return; }
+  if (PARTY.room.closed) { PARTY.room = null; return; }
+  PARTY.room.presence({ n: NET.nick, ld: PARTY.room.host ? 1 : 0, go: PARTY.room.host ? partyGo() : null });
+  if (!PARTY.room.host) {
+    const lead = PARTY.room.peers().find(p => !p.sameTab && p.presence && p.presence.ld), go = lead && lead.presence.go;
+    if (go && typeof go.s === 'string' && go.s !== PARTY.lastGo) { PARTY.lastGo = go.s; partyFollow(go); }
+  }
+  const key = JSON.stringify(partyMembers()) + PARTY.status;
+  if (key !== PARTY.key) { PARTY.key = key; partyRender(); }
+}
+setInterval(() => { try { partyTick(); } catch (e) {} }, 500);
+function partyRender() {
+  if (typeof curScreen === 'undefined' || curScreen !== 'lobby') return;
+  const a = document.activeElement, typing = a && a.tagName === 'INPUT' && a.closest && a.closest('#partyBox');
+  if ($('partyBox') && !typing) { $('partyBox').innerHTML = partyHtml(); partyWire(); }
+  const b = document.querySelector('.cod-go'); if (b && MODES[LOBBY.mode].online) { const w = partyWaiting(); b.disabled = w || !netReady(); const t = b.querySelector('b'); if (t) t.textContent = w ? 'WAITING FOR LEADER' : 'QUICK PLAY'; }
+}
+function partyHtml() {
+  if (!NET.app) return '';
+  const mem = partyMembers();
+  return `<div class="ros-h"><span>PARTY</span><b>${mem.length} / 6</b></div>` +
+    `<div class="ros-team"><div class="tn">${partyLeader() ? 'YOUR PARTY · YOU LEAD' : 'IN A PARTY'}</div>${mem.map(m => `<div class="ros-p${m.me ? ' me' : ''}"><span class="lv">${m.lead ? '★' : '·'}</span>${m.name}${m.lead ? '<em>LEADER</em>' : m.me ? '<em>YOU</em>' : '<em>READY</em>'}</div>`).join('')}` +
+    (PARTY.room && !PARTY.room.host ? `<div class="ros-p"><button class="lnk" id="partyLeave">LEAVE PARTY</button></div>` : '') + `</div>` +
+    `<div class="ros-team"><div class="tn">FRIENDS · YOUR CODE <b class="fcode">${MYCODE}</b></div>` +
+    (FRIENDS.length ? FRIENDS.map((f, i) => `<div class="ros-p"><span class="lv">♟</span>${f.n}<em>${f.c}</em><button class="mini fr-join" data-fj="${i}" title="Join their party">JOIN</button><button class="mini fr-del" data-fd="${i}" title="Remove">✕</button></div>`).join('') : `<div class="ros-p" style="color:var(--dim)">No friends yet. Swap codes and add them below.</div>`) +
+    `<div class="ros-p fr-add"><input id="frCode" maxlength="6" placeholder="FRIEND CODE" autocomplete="off" spellcheck="false"><input id="frName" maxlength="14" placeholder="NAME" autocomplete="off" spellcheck="false"><button class="mini" id="frAdd" style="width:auto;padding:0 10px">ADD</button></div>` +
+    (PARTY.status ? `<div class="ros-p" style="color:var(--accent)">${PARTY.status.toUpperCase()}</div>` : '') + `</div>`;
+}
+function partyWire() {
+  const add = $('frAdd'); if (!add) return;
+  for (const id of ['frCode', 'frName']) { const i = $(id); i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') add.click(); }; i.onkeyup = e => e.stopPropagation(); }
+  add.onclick = () => { const c = cleanFcode($('frCode').value), n = cleanNick($('frName').value || c); if (c.length !== 6 || c === MYCODE) { $('frCode').focus(); return; } if (!FRIENDS.some(f => f.c === c)) FRIENDS.push({ c, n }); friendsSave(); sfx.ui(); partyRender(); };
+  for (const b of document.querySelectorAll('[data-fj]')) b.onclick = () => { sfx.ui(); partyJoin(FRIENDS[+b.dataset.fj].c); };
+  for (const b of document.querySelectorAll('[data-fd]')) b.onclick = () => { FRIENDS.splice(+b.dataset.fd, 1); friendsSave(); partyRender(); };
+  const lv = $('partyLeave'); if (lv) lv.onclick = () => { sfx.ui(); partyLeave(); };
+}
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `.fcode{color:#fff;letter-spacing:.3em;margin-left:6px}.ros-p .mini{width:auto;height:24px;padding:0 8px;font-size:11px;letter-spacing:.12em;margin-left:6px}.ros-p .mini.fr-join{margin-left:auto;border-color:rgba(224,180,74,.6);color:var(--accent)}
+.fr-add{gap:6px}.fr-add input{pointer-events:auto;font:inherit;font-size:12px;letter-spacing:.12em;padding:5px 8px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:#fff;min-width:0;flex:1;text-transform:uppercase}.fr-add input:focus{outline:0;border-color:var(--accent)}`;
+  document.head.appendChild(s);
+})();
 /* ================================================================== UI: screens, settings, input, loop, boot */
 const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist'];
 let curScreen = null, returnScreen = 'menu';
@@ -7676,6 +7766,7 @@ const pct = v => v + '%';
 const SCHEMA = {
   ACCOUNT: [
     { t: 'text', name: 'CALLSIGN', hint: 'Your name in online matches and on the scoreboard (14 letters max)' },
+    { t: 'info', name: 'FRIEND CODE', hint: 'Give this to friends: they add it in the lobby and press JOIN to join your party', val: () => MYCODE },
   ],
   VIDEO: [
     { k: 'quality', t: 'seg', name: 'GRAPHICS PRESET', hint: 'AUTO picks ' + AUTO_TIER.toUpperCase() + ' for this graphics card. Texture detail changes apply on next launch', opts: [['auto', 'AUTO'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
@@ -7762,7 +7853,8 @@ function renderSettings() {
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
     if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
     const ctl = document.createElement('div'); ctl.className = 'ctl';
-    if (it.t === 'text') {
+    if (it.t === 'info') { const v = document.createElement('span'); v.className = 'num'; v.style.letterSpacing = '.3em'; v.style.fontSize = '18px'; v.textContent = it.val(); ctl.appendChild(v); }
+    else if (it.t === 'text') {
       const i = document.createElement('input'); i.className = 'set-text'; i.maxLength = 14; i.value = NET.nick; i.spellcheck = false; i.autocomplete = 'off';
       i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') i.blur(); }; i.onkeyup = e => e.stopPropagation();
       i.oninput = () => { NET.nick = cleanNick(i.value); try { localStorage.setItem(NICK_KEY, NET.nick); } catch (e) {} };
