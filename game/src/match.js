@@ -19,9 +19,12 @@ const MODES = {
 const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'osnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
+// bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
+// behaviour (chase where they last saw you, hear shots, call out targets, flank, retreat and heal, grenades), hs = headshots
 const SKILL = {
-  recruit: { name: 'RECRUIT', acc: 0.3, dmg: 7, aim: 3.5 }, regular: { name: 'REGULAR', acc: 0.4, dmg: 9, aim: 5 },
-  veteran: { name: 'VETERAN', acc: 0.5, dmg: 11, aim: 7 }, hardened: { name: 'HARDENED', acc: 0.58, dmg: 13, aim: 9 },
+  recruit: { name: 'RECRUIT', acc: 0.32, dmg: 8, aim: 4, iq: 0.3, hs: 0.08 }, regular: { name: 'REGULAR', acc: 0.44, dmg: 10, aim: 6, iq: 0.55, hs: 0.12 },
+  veteran: { name: 'VETERAN', acc: 0.53, dmg: 12, aim: 8.5, iq: 0.75, hs: 0.17 }, hardened: { name: 'HARDENED', acc: 0.6, dmg: 13, aim: 11, iq: 0.9, hs: 0.22 },
+  elite: { name: 'ELITE', acc: 0.67, dmg: 14, aim: 14, iq: 1, hs: 0.28 },
 };
 const TEAM_COL = ['#5aaeff', '#ff5a4a'], TEAM_NAME = ['BLUE', 'RED'];
 let M = { mode: 'surv', def: MODES.surv, entries: [] };
@@ -101,7 +104,7 @@ try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
 function matchCfg(mode, custom) {
-  const d = MODES[mode], c = Object.assign({ mode, score: d.score, time: d.time, perTeam: d.perTeam || 0, players: d.players || 0, skill: S.difficulty === 'recruit' ? 'recruit' : S.difficulty === 'veteran' ? 'veteran' : 'regular', hardcore: false, custom: false }, custom || {});
+  const d = MODES[mode], c = Object.assign({ mode, score: d.score, time: d.time, perTeam: d.perTeam || 0, players: d.players || 0, skill: S.difficulty === 'recruit' ? 'regular' : S.difficulty === 'veteran' ? 'hardened' : 'veteran', hardcore: false, custom: false }, custom || {});
   if (mode === 'gun' || mode === 'ogun') c.score = GUN_LADDER.length;
   return c;
 }
@@ -118,7 +121,8 @@ function spawnBot(en, pos) {
   const pvp = M.def.teams, type = !pvp ? ['rifleman', 'scout', 'heavy'][(Math.random() * 3) | 0] : en.team === M.myTeam ? 'scout' : Math.random() < 0.25 ? 'heavy' : 'rifleman';
   const e = makeEnemy(type, pos.x, pos.z), sk = SKILL[M.cfg.skill] || SKILL.regular;
   Object.assign(e, { team: en.team, entry: en, name: en.name, pvp: true, hp: M.maxHp, maxHp: M.maxHp, speed: 3.6 + rnd(-0.2, 0.4) + (type === 'scout' ? 0.25 : 0), dmg: sk.dmg * (M.cfg.hardcore ? 1.4 : 1), acc: sk.acc, aimRate: sk.aim,
-    hold: rnd(9, 20), think: rnd(0, 0.3), tgt: null, goal: null, goalT: 0, role: en.role || 'hunt', act: 0, seenT: -9, lastShotT: -9 });
+    hold: rnd(9, 20), think: rnd(0, 0.3), tgt: null, goal: null, goalT: 0, role: en.role || 'hunt', act: 0, seenT: -9, lastShotT: -9,
+    iq: sk.iq || 0.5, hs: sk.hs || 0.12, lkp: null, lkpT: -99, hitT: -99, nades: Math.random() < (sk.iq || 0.5) ? 2 : 1, nadeT: M.t + rnd(4, 10), flankT: 0 });
   e.group.rotation.y = Math.atan2(-pos.x, -pos.z); e.group.position.y = pos.y || 0; e.spawnProt = 1.5;
   if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
   en.bot = e; en.alive = true; enemies.push(e);
@@ -275,9 +279,55 @@ function botThink(e) {
   cands.sort((a, b) => a[1] - b[1]);
   let tgt = null;
   for (let i = 0; i < Math.min(4, cands.length); i++) { if (cands[i][1] > 60) break; if (losTo(e, cands[i][0])) { tgt = cands[i][0]; break; } }
-  if (tgt !== e.tgt) { e.tgt = tgt; if (tgt) e.aim = Math.min(e.aim, 0.2); }
-  if (tgt) e.seenT = M.t;
+  if (tgt !== e.tgt) { const pre = !!(e.lkp && M.t - e.lkpT < 3 && tgt); e.tgt = tgt; if (tgt) e.aim = Math.min(e.aim, pre ? 0.45 + e.iq * 0.25 : 0.2); }   // pre-aimed where they expected you
+  if (tgt) { e.seenT = M.t; botRemember(e, tgt); if (Math.random() < e.iq) botCallout(e, tgt); }
+  e.retreat = !!(tgt && e.hp < e.maxHp * 0.35 && (e.retreat || Math.random() < e.iq + 0.15));
   e.goal = botGoal(e, cands);
+}
+// memory: where a target was last seen / heard
+function botRemember(e, t) { const p = tpos(t); e.lkp = { x: p.x, z: p.z, y: p.y || 0 }; e.lkpT = M.t; e.lkpWho = t; }
+// tell teammates nearby where the enemy is
+function botCallout(e, t) {
+  const p = tpos(t);
+  for (const o of enemies) if (o !== e && o.entry && !o.net && o.team === e.team && !o.tgt && Math.hypot(o.group.position.x - e.group.position.x, o.group.position.z - e.group.position.z) < 35) { o.lkp = { x: p.x, z: p.z, y: p.y || 0 }; o.lkpT = M.t; o.lkpWho = t; }
+}
+// gunshots carry: bots that hear one go and look (suppressed guns are much quieter)
+function botsHear(x, z, team, r, who) {
+  if (!inMatch()) return;
+  for (const o of enemies) {
+    if (!o.entry || o.net || o.team === team || o.tgt) continue;
+    const d = Math.hypot(o.group.position.x - x, o.group.position.z - z);
+    if (d < r && Math.random() < 0.4 + o.iq * 0.6) { o.lkp = { x: x + rnd(-2, 2), z: z + rnd(-2, 2), y: 0 }; o.lkpT = M.t; o.lkpWho = who || null; }
+  }
+}
+// shot by someone: turn to them straight away
+function botWasHit(e, by) {
+  if (!e.entry || e.net) return;
+  e.hitT = M.t;
+  const t = by === 'player' ? 'P' : by && by.group ? by : null; if (!t) return;
+  const p = tpos(t); e.lkp = { x: p.x, z: p.z, y: p.y || 0 }; e.lkpT = M.t; e.lkpWho = t;
+  if (!e.tgt && losTo(e, t)) { e.tgt = t; e.aim = Math.max(e.aim, 0.35 * e.iq); }
+  e.think = Math.min(e.think, 0.05);
+}
+// a flank point: off to the side of the line between us and them, snapped to a real floor spot
+function botFlank(e, p) {
+  const ex = e.group.position.x, ez = e.group.position.z, dx = p.x - ex, dz = p.z - ez, l = Math.hypot(dx, dz) || 1, side = Math.random() < 0.5 ? 1 : -1;
+  const fx = p.x - dx / l * 6 + (-dz / l) * 13 * side, fz = p.z - dz / l * 6 + (dx / l) * 13 * side;
+  let best = null, bd = 1e9; for (const s of buildSpawns()) { const d = Math.hypot(s.x - fx, s.z - fz); if (d < bd) { bd = d; best = s; } }
+  return best && bd < 10 ? { x: best.x, z: best.z, y: best.y || 0 } : null;
+}
+// grenade at a target hiding behind cover (or camping in one spot)
+function botThrowNade(e, p) {
+  if (e.nades <= 0 || M.t < e.nadeT) return false;
+  const g = e.group.position, dx = p.x - g.x, dz = p.z - g.z, dist = Math.hypot(dx, dz);
+  if (dist < 7 || dist > 30) return false;
+  e.nades--; e.nadeT = M.t + rnd(9, 15);
+  if (!gGeo) { gGeo = mergeGeos([{ g: Sp(0.055, 10, 8), m: mat4(0, 0, 0, 0, 0, 0, 1, 1.25, 1) }, { g: Cy(0.022, 0.022, 0.03, 8), m: mat4(0, 0.075, 0) }]); gMat = new THREE.MeshStandardMaterial({ color: C(0x3a4630), metalness: 0.5, roughness: 0.5 }); }
+  const m = new THREE.Mesh(gGeo, gMat); m.castShadow = true; m.position.set(g.x, g.y + 1.6, g.z); scene.add(m);
+  const t = clamp(dist / 15, 0.7, 1.7), grav = 13, tx = p.x + rnd(-1.2, 1.2), tz = p.z + rnd(-1.2, 1.2);
+  grenadesInFlight.push({ m, grav, vx: (tx - g.x) / t, vy: ((p.y || 0) + 0.3 - (g.y + 1.6) + 0.5 * grav * t * t) / t, vz: (tz - g.z) / t, fuse: t + 0.7, spin: rnd(6, 12), kind: 'frag', by: e });
+  try { sfx.pin(); } catch (err) {}
+  return true;
 }
 function botGoal(e, cands) {
   const ex = e.group.position.x, ez = e.group.position.z;
@@ -303,13 +353,18 @@ function botGoal(e, cands) {
     const s2 = LAYOUT.sites[e.entry.kills % 2 === 0 ? 0 : 1];
     return keep ? e.goal : set(near(s2, 7), rnd(4, 8));
   }
-  // hunt: head for the nearest hostile (with some noise), sometimes patrol
+  // hunt: smart bots go where they last saw or heard someone, and often take a flanking route
+  if (e.lkp && M.t - e.lkpT < 7 && !e.tgt && Math.random() < 0.35 + e.iq * 0.65) {
+    if (Math.random() < e.iq * 0.45 && M.t > e.flankT) { e.flankT = M.t + 8; const f = botFlank(e, e.lkp); if (f) return set(f, rnd(3, 5)); }
+    return set(near(e.lkp, 1.5), 2.5);
+  }
   if (keep) return e.goal;
   if (cands.length && Math.random() < 0.8) { const c = cands[0][0], p = tpos(c); return set(near(p, 5)); }
   const sp = buildSpawns(); return set(sp[(Math.random() * sp.length) | 0], rnd(5, 9));
 }
 function botShoot(e, t, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
+  botsHear(e.group.position.x, e.group.position.z, e.team, 40, e);
   e.lastShotT = M.t; if (e.entry) e.entry.sh = (e.entry.sh || 0) + 1;
   if (t === 'P') { G.killer = e; if (!(G.spawnProt > 0)) enemyShoot(e, dist); return; }
   const chance = clamp(e.acc - dist * 0.008 - (t.crouchK || 0) * 0.06, 0.06, 0.65), hit = Math.random() < chance;
@@ -317,7 +372,7 @@ function botShoot(e, t, dist) {
   addTracer(from, to, 0.05, 0.02);
   e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
   const o = at(e.group.position.x, e.group.position.z, 20); sfx.enemy(o);
-  if (hit) { const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(); damageEnemy(t, e.dmg * (Math.random() < 0.12 ? 2 : 1), false, dir, false, e); }
+  if (hit) { const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(), hd = Math.random() < (e.hs || 0.12); damageEnemy(t, e.dmg * (hd ? 2 : 1), hd, dir, false, e); }
 }
 function updateBots(dt) {
   if (G.holdT > 0) return;
@@ -332,13 +387,23 @@ function updateBots(dt) {
     // objective work (plant / defuse) keeps them still
     const busy = sndBotAct(e, dt);
     if (tp) face = Math.atan2(tp.x - ex, tp.z - ez);
+    else if (e.lkp && M.t - e.lkpT < 5) face = Math.atan2(e.lkp.x - ex, e.lkp.z - ez);   // pre-aim where they expect you
+    // health comes back after 5 s without being hit (like the player)
+    if (M.t - e.hitT > 5 && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + 25 * dt);
+    // grenade: target hiding (seen recently, no line of sight now) or sitting still
+    if (!busy && e.iq > 0.4 && e.lkp && M.t - e.lkpT < 4 && (!e.tgt || (e.tgt && dist > 10 && Math.random() < 0.004 * e.iq)) && M.t - e.seenT > 1.2) botThrowNade(e, e.lkp);
+    const hurt = !!(tp && e.retreat && M.t - e.hitT < 4);
     const goal = e.goal;
     let goalD = goal ? Math.hypot(goal.x - ex, goal.z - ez) : 0;
     if (goal && Math.abs((goal.y || 0) - g.position.y) > 1.2) goalD = Math.max(goalD, 3);   // right above or below it: not there yet
     const objUrgent = goal && goalD > 3 && (M.mode === 'hp' || M.mode === 'ctf' || M.mode === 'snd') && (e.role === 'obj' || (M.ctf && M.ctf.flags[1 - e.team].carrier === e));
     if (busy) holding = true;
+    else if (hurt) {   // back off out of the fight to heal, still shooting
+      const nx = (tp.x - ex) / (dist || 1), nz = (tp.z - ez) / (dist || 1); e.strafeT -= dt; if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = rnd(0.5, 1.2); }
+      mx = -nx * 1 - nz * e.strafe * 0.6; mz = -nz * 1 + nx * e.strafe * 0.6;
+    }
     else if (tp && dist <= e.hold && !objUrgent) {
-      holding = true; e.strafeT -= dt; if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = rnd(0.8, 2.4); }
+      holding = true; e.strafeT -= dt; if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = rnd(0.8, 2.4) * (1 - e.iq * 0.55); }
       const nx = (tp.x - ex) / dist, nz = (tp.z - ez) / dist;
       mx = -nz * e.strafe + (dist < e.hold * 0.45 ? -nx : 0); mz = nx * e.strafe + (dist < e.hold * 0.45 ? -nz : 0);
     } else if (goal && goalD > 0.7) {
@@ -361,6 +426,7 @@ function updateBots(dt) {
     if (e.chk <= 0) { e.chk = 0.8; if (Math.hypot(g.position.x - e.lastX, g.position.z - e.lastZ) < 0.5 && !holding && goal) { e.avoidT = 1.0; e.avoidDir = Math.random() < 0.5 ? 1 : -1; } e.lastX = g.position.x; e.lastZ = g.position.z; }
     e.aim += ((e.tgt && dist < 60 ? 1 : 0) - e.aim) * Math.min(1, dt * e.aimRate * 0.6 * (e.tgt === 'P' ? (WEAPONS[G.cur] ? WEAPONS[G.cur].spot || 1 : 1) * (perk('ghost') ? 0.7 : 1) : 1));
     e.holding = holding && !!tp;
+    if (!tp && e.mag < e.magSize * 0.35 && !(e.reloadT > 0) && M.t - e.seenT > 2) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; }   // reload while it's quiet
     animEnemy(e, dt, sp);
     if (e.tgt && e.aim > 0.6 && !(e.reloadT > 0) && !busy && !(e.stunT > 0)) {
       e.cd -= dt;

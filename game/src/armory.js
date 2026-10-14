@@ -136,8 +136,11 @@ const RANGES = {
   breacher: [12, 0.25], rampart: [11, 0.25], coach: [9, 0.2], mauler: [14, 0.3],
   sidearm: [22, 0.5], magnum: [24, 0.5], stinger: [12, 0.5], deadeye: [26, 0.5],
 };
+// more kick: assault rifles +35%, SMGs +30%, LMGs +80% (they also climb more the longer you hold the trigger)
+const RECOIL_MUL = { ar: 1.35, smg: 1.3, lmg: 1.8 };
 const ARMORY = ARMORY_SRC.map(src => {
   const rg = RANGES[src.id], d = Object.assign({ move: 1, ads: 1 }, CAT_BASE[src.cat], src, BALANCE[src.id] || {}, rg ? { eff: rg[0], fallMin: rg[1] } : {});
+  d.recoil *= RECOIL_MUL[d.cat] || 1;
   d.sfxP = SND[d.snd] || SND.rifle; d.base = d; d.magSize = d.mag;
   return Object.freeze(d);
 });

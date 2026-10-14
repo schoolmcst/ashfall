@@ -200,6 +200,7 @@ function shoot(moving) {
   const rm = w.rum || [0.1, 0.4, 60]; rumble(rm[0], rm[1], rm[2]);
   if (u.cylSpin) u.cylBase = (u.cylBase || 0) + TAU / 6;
   if (w.proj) { launchProjectile(w, u); return; }
+  if (typeof botsHear === 'function') botsHear(P.x, P.z, M.myTeam, w.stealth ? 14 : 55, 'P');
   const fresh = G.time - (G.lastShotTime || -9) > Math.max(0.22, w.interval * 2.4); G.lastShotTime = G.time;
   G.bloom = fresh ? 0 : Math.min(1.6, (G.bloom || 0) + (w.pellets > 1 ? 0 : 0.2));
   let spread = G.adsOn ? (fresh && w.pellets === 1 ? 0 : w.adsSpread * (w.pellets > 1 ? 1 : 0.55 + G.bloom)) : w.spread * (perk('steady') ? 0.75 : 1) * (1 + G.bloom * 0.35);
@@ -233,8 +234,11 @@ function shoot(moving) {
     clearTimeout(hm._t); hm._t = setTimeout(() => (hm.style.opacity = 0), 90);
     sfx.hit(anyHead);
   }
-  const kick = w.recoil * rnd(0.9, 1.1) * (G.adsOn ? 0.62 : 1);
-  P.pitch = clamp(P.pitch + kick, -1.5, 1.5); P.recoilAcc += kick * 0.6; P.yaw += rnd(-1, 1) * w.recoil * (G.adsOn ? 0.3 : 0.5);
+  // holding the trigger climbs: each shot of a spray kicks a bit more (LMGs most), with a steady sideways pull per gun
+  const cat = w.def.cat, sprayN = G.sprayN = G.time - (G.lastKickT || -9) < Math.max(0.25, w.interval * 2.2) ? Math.min(14, (G.sprayN || 0) + 1) : 0; G.lastKickT = G.time;
+  const climb = 1 + sprayN * (cat === 'lmg' ? 0.06 : cat === 'smg' ? 0.035 : cat === 'ar' ? 0.045 : 0);
+  const kick = w.recoil * rnd(0.9, 1.1) * (G.adsOn ? 0.62 : 1) * climb, pull = (w.def.id.charCodeAt(0) % 3 - 1) * 0.45;
+  P.pitch = clamp(P.pitch + kick, -1.5, 1.5); P.recoilAcc += kick * (cat === 'lmg' ? 0.45 : 0.55); P.yaw += (rnd(-1, 1) + pull * Math.min(1, sprayN / 4)) * w.recoil * (G.adsOn ? 0.3 : 0.5) * (cat === 'lmg' ? 1.3 : 1);
   G.kick = clamp(w.recoil / (w.def.recoil || w.recoil || 0.011), 0.5, 2.2); G.shake = Math.max(G.shake, w.pellets > 1 ? 0.01 : 0.003);   // the gun visibly kicks harder or softer with recoil attachments
   // muzzle flash on the weapon, light on the world, smoke and a brass casing
   u.flash.visible = !w.stealth; const fs = rnd(0.22, 0.38) * (w.pellets > 1 ? 1.6 : 1) * (G.ads > 0.5 ? 0.38 : 1); u.flash.scale.set(fs, fs, 1); u.flash.material.rotation = rnd(0, 6.28); G.flashT = 0.045;
@@ -347,10 +351,11 @@ function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
   sfx.explode(at(p.x, p.z, 30)); explosionFx(p, 1);
   for (const e of enemies.slice()) {
     if (by === 'player' && isFriend(e)) continue;
+    if (by && by.group && (e === by ? false : e.team === by.team)) continue;   // a bot's grenade spares its own team
     const d = Math.hypot(e.group.position.x - p.x, 1 - p.y, e.group.position.z - p.z);
-    if (d < R && blastClear(p, e.group.position.x, 1, e.group.position.z)) (e.killedBy = src), damageEnemy(e, (170 * (1 - d / R) + 20) * dmgK, false, _v3.set(e.group.position.x - p.x, 0.3, e.group.position.z - p.z).normalize(), true, by === 'player' ? 'player' : src);
+    if (d < R && blastClear(p, e.group.position.x, 1, e.group.position.z)) (e.killedBy = src), damageEnemy(e, (170 * (1 - d / R) + 20) * dmgK, false, _v3.set(e.group.position.x - p.x, 0.3, e.group.position.z - p.z).normalize(), true, by === 'player' ? 'player' : by && by.group ? by : src);
   }
-  if (dp < R && blastClear(p, P.x, P.y + 1, P.z)) G.killer = src, hurtPlayer(Math.round((110 * (1 - dp / R) + 5) * Math.min(1, dmgK)), p.x, p.z, true);
+  if (dp < R && blastClear(p, P.x, P.y + 1, P.z) && !(by && by.group && M.def && M.def.teams && by.team === M.myTeam)) G.killer = by && by.group ? by : src, hurtPlayer(Math.round((110 * (1 - dp / R) + 5) * Math.min(1, dmgK)), p.x, p.z, true);
   for (const b of barrels) if (b.alive && Math.hypot(b.x - p.x, b.z - p.z) < R * 0.8) damageBarrel(b, 999, true);
   G.shake = Math.max(G.shake, 0.06 * clamp(1 - dp / 30, 0, 1) * (perk('mask') ? 0.3 : 1));
   const rk = clamp(1 - dp / 30, 0, 1); if (rk > 0.05) rumble(rk, rk * 0.8, 120 + 300 * rk);
@@ -385,7 +390,7 @@ function updateGrenades(dt) {
   }
 }
 
-function detonate(g) { if (g.kind === 'stun') stunBlast(g.m.position.clone()); else explode(g.m.position.clone(), 'grenade', g.kind === 'semtex' ? 6.5 : 8, g.kind === 'semtex' ? 0.9 : 1); }
+function detonate(g) { if (g.kind === 'stun') stunBlast(g.m.position.clone()); else explode(g.m.position.clone(), 'grenade', g.kind === 'semtex' ? 6.5 : 8, g.kind === 'semtex' ? 0.9 : 1, g.by || 'player'); }
 const _pr = new THREE.Raycaster();
 function updateProjectile(g, dt) {
   const m = g.m; g.life -= dt; g.armed += dt;

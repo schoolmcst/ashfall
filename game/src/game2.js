@@ -50,7 +50,7 @@ function enemyMuzzle(e, out) {
 }
 function enemyShoot(e, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
-  const chance = clamp(e.acc - dist * 0.009 - (G.adsOn ? 0.05 : 0) - (P.eye < 1.4 ? 0.08 : 0), 0.08, 0.7);
+  const iq = e.iq || 0.5, chance = clamp(e.acc - dist * 0.009 * (1 - iq * 0.35) - (G.adsOn ? 0.05 : 0) - (P.eye < 1.4 ? 0.08 * (1 - iq * 0.5) : 0), 0.08, 0.78);
   const hit = Math.random() < chance;
   const to = new THREE.Vector3(P.x, P.y + P.eye * 0.8, P.z);
   if (!hit) to.add(new THREE.Vector3(rnd(-1.6, 1.6), rnd(-0.8, 1.0), rnd(-1.6, 1.6)));
@@ -58,7 +58,7 @@ function enemyShoot(e, dist) {
   e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
   enemyFlashLight.position.copy(from); enemyFlashLight.intensity = 3.2; enemyFlashLight.userData.t = 0.05;
   const o = at(e.group.position.x, e.group.position.z, 20); sfx.enemy(o);
-  if (hit) { G.killer = e; hurtPlayer(e.dmg, e.group.position.x, e.group.position.z); }
+  if (hit) { G.killer = e; hurtPlayer(e.dmg * (inMatch() && Math.random() < (e.hs || 0) ? 1.7 : 1), e.group.position.x, e.group.position.z); }
   else if (dist > 4) { const f = at(to.x, to.z, 8); f.vol *= 0.8; sfx.flyby(f); }
 }
 
@@ -150,7 +150,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (e.entry) { e.entry.lastBy = by; e.entry.lastHead = head ? 1 : 0; }
   if (e.net) { netHit(e, dmg, head, by, boom); return false; }
   if ((e.spawnProt > 0 || G.holdT > 0) && inMatch() && by !== 'world') return false;   // spawn protection / pre-match hold
-  e.hp -= dmg; e.flinch = 1;
+  e.hp -= dmg; e.flinch = 1; if (typeof botWasHit === 'function' && M && M.def && inMatch()) botWasHit(e, by);
   if (e.hp > 0 && dir) { const pk = boom ? 0.5 : 0.07; e.group.position.x += dir.x * pk; e.group.position.z += dir.z * pk; e.slowT = boom ? 0.8 : 0.3; }
   if (e.hp <= 0) {
     enemies.splice(enemies.indexOf(e), 1);
