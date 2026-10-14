@@ -537,7 +537,7 @@ function renderLoadout(focusSel) {
   for (const b of q('[data-lo-k]')) b.onclick = () => { c.k = b.dataset.loK; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-k="${c.k}"]`); };
   if (focusSel) focusFirst(focusSel);
 }
-function saveRename() { const i = $('loRenameIn'); if (i) { const v = i.value.trim().toUpperCase().slice(0, 16); if (v) activeClass().name = v; saveClasses(); } loRename = false; sfx.ui(); renderLoadout(`#loTabs [data-lo-c="${ACTIVE_CLASS}"]`); }
+function saveRename() { const i = $('loRenameIn'); if (i) { const v = i.value.replace(/[<>&"]/g, '').trim().toUpperCase().slice(0, 16); if (v) activeClass().name = v; saveClasses(); } loRename = false; sfx.ui(); renderLoadout(`#loTabs [data-lo-c="${ACTIVE_CLASS}"]`); }
 function selectClass(i) { ACTIVE_CLASS = (i + CLASSES.length) % CLASSES.length; saveClasses(); loPreview = loPrevW = null; loCat = null; loRename = false; sfx.ui(); renderLoadout(`#loTabs [data-lo-c="${ACTIVE_CLASS}"]`); }
 function focusFirst(sel) { setTimeout(() => { const el = document.querySelector && document.querySelector(sel); if (el && el.focus) try { el.focus(); el.scrollIntoView && el.scrollIntoView({ block: 'nearest' }); } catch (e) {} }, 0); }
 function loShown() { const row = loRow, base = row === 'e' || row === 'k' ? ARM[activeClass().p] : loDef(row); return { base, shown: loPrevW || base }; }

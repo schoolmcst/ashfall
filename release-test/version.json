@@ -1,8 +1,15 @@
 {
- "version": "1.1.9",
+ "version": "1.2.0",
  "notes": [
-  "PRIVATE MATCHES: the host can now pick any mode - Team Deathmatch, Free-for-All, Gun Game, Hardpoint, Capture the Flag or Search & Destroy - with the right limit for each"
+  "SOCIAL: send friend requests with a friend code (accept or decline), see which friends are online in the lobby and join them, and a friends leaderboard of online stats",
+  "PARTIES: party members are always put on the same team",
+  "MATCH START: a 5 second loading screen with a picture of the map, then 15 seconds to pick your class (no moving or shooting, last chance for players to join)",
+  "SPAWNS: every map has two spawn areas per team - two or more enemies in yours moves your team to the other one. 1.5 s spawn protection. Nobody (bots too) can leave the map",
+  "GUNS: every gun rebalanced, attachments now all do what they say, advanced stats shown in the loadout. Perfect first shot when aiming, then a little bloom",
+  "FIXES: muzzle flash and kick on iron sights toned down, stuns only blind people looking at them, more realistic grenade throws, Survival no longer stays frozen at the start",
+  "SETTINGS: ADS sensitivity for every scope zoom (mouse and controller), controller button remapping (Controller > Edit Controller Buttons), rename classes in the Weapons tab",
+  "NEW: lobby music (Music volume in Audio), a Replay tab to rewatch your last match on a tactical map, and Career mode stats now cover every online mode"
  ],
- "sha256": "80af666ebf4c43731929f0d63cb5748be2779e5a11842bfa1a0a4cd3f485d2b1",
+ "sha256": "88aa2d63fc648769066c3b201a4d8c6eaa1876b59b70a75c2dbb033b9c45575f",
  "minApp": "1.0.0"
 }
