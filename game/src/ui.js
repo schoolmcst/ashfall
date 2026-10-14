@@ -53,9 +53,11 @@ const SCHEMA = {
     { a: 'swap', t: 'bind', name: 'SWITCH WEAPON' }, { a: 'prim', t: 'bind', name: 'PRIMARY WEAPON' }, { a: 'sec', t: 'bind', name: 'SECONDARY WEAPON' }, { a: 'inspect', t: 'bind', name: 'INSPECT WEAPON' }, { a: 'board', t: 'bind', name: 'SCOREBOARD' }, { a: 'streak', t: 'bind', name: 'USE SCORESTREAK' },
   ],
   BUTTONS: [
+    { t: 'action', name: '‹ BACK TO CONTROLLER SETTINGS', label: 'BACK', act: 'pad-back' },
     ...['jump:JUMP', 'crouch:CROUCH / SLIDE', 'reload:RELOAD / USE', 'swap:SWITCH WEAPON', 'grenade:THROW GRENADE', 'melee:MELEE', 'sprint:SPRINT', 'streak:USE SCORESTREAK', 'inspect:INSPECT WEAPON', 'board:SCOREBOARD'].map(x => { const [a, n] = x.split(':'); return { a, t: 'padbind', name: n }; }),
   ],
   CONTROLLER: [
+    { t: 'action', name: 'BUTTON LAYOUT', hint: 'Change which controller button does what', label: 'EDIT CONTROLLER BUTTONS', act: 'pad-binds' },
     { k: 'padSens', t: 'range', name: 'LOOK SENSITIVITY', min: 40, max: 250, step: 5, fmt: pct },
     { k: 'padAdsSens', t: 'range', name: 'ADS SENSITIVITY · IRONS / 1×', hint: 'Iron sights, red dots, holos, reflex', min: 10, max: 150, step: 5, fmt: pct },
     { k: 'padAdsSens2', t: 'range', name: 'ADS SENSITIVITY · 2.5× – 3.5×', min: 10, max: 150, step: 5, fmt: pct },
@@ -98,7 +100,8 @@ function applySetting(k) {
 function buildTabs() {
   const t = $('tabs'); t.innerHTML = '';
   for (const name of Object.keys(SCHEMA)) {
-    const b = document.createElement('button'); b.className = 'tab' + (name === curTab ? ' on' : ''); b.textContent = name;
+    if (name === 'BUTTONS') continue;   // opened from the CONTROLLER tab
+    const b = document.createElement('button'); b.className = 'tab' + ((name === curTab || (name === 'CONTROLLER' && curTab === 'BUTTONS')) ? ' on' : ''); b.textContent = name;
     b.onclick = () => { curTab = name; buildTabs(); renderSettings(); sfx.ui(); };
     t.appendChild(b);
   }
@@ -110,7 +113,8 @@ function renderSettings() {
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
     if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
     const ctl = document.createElement('div'); ctl.className = 'ctl';
-    if (it.t === 'padbind') {
+    if (it.t === 'action') { const b = document.createElement('button'); b.className = 'bindbtn'; b.textContent = it.label; b.onclick = () => { sfx.ui(); actions(it.act); }; ctl.appendChild(b); }
+    else if (it.t === 'padbind') {
       const b = document.createElement('button'); b.className = 'bindbtn'; b.textContent = PAD_NAMES[pb(it.a)] || ('BUTTON ' + pb(it.a));
       b.onclick = () => { b.textContent = 'PRESS A CONTROLLER BUTTON…'; b.classList.add('wait'); padCapture = btn => { const cur = pb(it.a), map = Object.assign({}, PAD_DEFAULT, S.padBinds || {}); for (const k in map) if (map[k] === btn && k !== it.a) map[k] = cur; map[it.a] = btn; S.padBinds = map; saveSettings(); renderSettings(); }; };
       ctl.appendChild(b);
@@ -183,6 +187,8 @@ function actions(act) {
     case 'pl-start': privStart(); break;
     case 'streaks': openStreaks(curScreen || 'menu'); break;
     case 'cp-edit': openLoadout('classpick'); break;
+    case 'pad-binds': curTab = 'BUTTONS'; buildTabs(); renderSettings(); focusFirst('#setBody .bindbtn'); break;
+    case 'pad-back': curTab = 'CONTROLLER'; buildTabs(); renderSettings(); focusFirst('#setBody .bindbtn'); break;
     case 'cp-ready': showScreen(null); lockPointer(); break;
     case 'stk-back': if (stkReturn === 'lobby') renderLobby(); showScreen(stkReturn); break;
     case 'pl-leave': QP.busy = false; toLobby(); break;
@@ -223,6 +229,7 @@ function goBack() {
   else if (curScreen === 'modes') actions('modes-back');
   else if (curScreen === 'playlist') actions('pl-back');
   else if (curScreen === 'results') toLobby();
+  else if (curScreen === 'settings' && curTab === 'BUTTONS') actions('pad-back');
   else if (curScreen === 'settings' || curScreen === 'howto' || curScreen === 'credits') showScreen(returnScreen);
   else if (curScreen === 'pause') resumeGame();
 }
@@ -403,7 +410,7 @@ function menuTab(d) {
   if (curScreen === 'loadout') loadoutTab(d);
   else if (curScreen === 'lobby') {}
   else if (curScreen === 'career') statsTab(d);
-  else if (curScreen === 'settings') { const ks = Object.keys(SCHEMA); curTab = ks[(ks.indexOf(curTab) + d + ks.length) % ks.length]; buildTabs(); renderSettings(); sfx.ui(); setTimeout(() => { const t = $('tabs').querySelector('.on'); if (t) t.focus(); }, 0); }
+  else if (curScreen === 'settings') { const ks = Object.keys(SCHEMA).filter(k => k !== 'BUTTONS'); curTab = ks[(ks.indexOf(curTab) + d + ks.length) % ks.length]; buildTabs(); renderSettings(); sfx.ui(); setTimeout(() => { const t = $('tabs').querySelector('.on'); if (t) t.focus(); }, 0); }
   else if (curScreen === 'menu') cycleClass(d);
 }
 function menuMove(d) {
