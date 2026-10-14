@@ -639,6 +639,48 @@ window.addEventListener('error', function (ev) { showErr('Error: ' + ev.message 
 <script>
 window.__ashfallBoot = () => {
 'use strict';
+/* ================================================================== save backup: your stats and setup can't be lost
+   Everything the game saves (career stats, classes, settings, friends, callsign...) lives in localStorage. A second
+   copy is kept in IndexedDB (a separate store, with its own space) and refreshed every few seconds of play. When the
+   game starts and localStorage is missing something, or holds a career with fewer matches than the backup, the backup
+   is put back and the page reloads once. Replays are kept in IndexedDB too, so they never crowd out the stats. */
+const SB = { db: null, ready: null, last: '' };
+const SB_KEEP = k => /^ashfall\./.test(k) || k === 'dz_seen_update';
+SB.ready = new Promise(res => {
+  try {
+    const rq = indexedDB.open('darkzone-save', 1);
+    rq.onupgradeneeded = () => { rq.result.createObjectStore('kv'); };
+    rq.onsuccess = () => { SB.db = rq.result; res(SB.db); };
+    rq.onerror = rq.onblocked = () => res(null);
+  } catch (e) { res(null); }
+});
+function sbGet(key) { return SB.ready.then(db => db ? new Promise(r => { try { const q = db.transaction('kv').objectStore('kv').get(key); q.onsuccess = () => r(q.result); q.onerror = () => r(undefined); } catch (e) { r(undefined); } }) : undefined); }
+function sbPut(key, val) { return SB.ready.then(db => db ? new Promise(r => { try { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(val, key); t.oncomplete = () => r(true); t.onerror = t.onabort = () => r(false); } catch (e) { r(false); } }) : false); }
+function sbSnapshot() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (SB_KEEP(k)) o[k] = localStorage.getItem(k); } } catch (e) {} return o; }
+// merge into the backup: a key that went missing keeps its saved copy, and a career never goes back to fewer matches
+function sbBackup() {
+  const o = Object.assign({}, SB.bak || {}), cur = sbSnapshot();
+  for (const [k, v] of Object.entries(cur)) if (!(/^ashfall\.stats\./.test(k) && o[k] && sbMatches(o[k]) > sbMatches(v))) o[k] = v;
+  const s = JSON.stringify(o); if (s === SB.last || s === '{}') return;
+  SB.last = s; SB.bak = o; sbPut('local', { t: Date.now(), keys: o });
+}
+const sbMatches = raw => { try { const o = JSON.parse(raw || 'null'); return o ? (o.matches | 0) + (o.kills | 0) / 1e6 : -1; } catch (e) { return -1; } };
+// on start: restore anything the backup has that localStorage lost
+const sbRestored = sbGet('local').then(b => {
+  if (!b || !b.keys) return false;
+  SB.bak = Object.assign({}, b.keys);
+  let changed = false;
+  try {
+    for (const [k, v] of Object.entries(b.keys)) {
+      const cur = localStorage.getItem(k);
+      const lost = cur === null || (/^ashfall\.stats\./.test(k) && sbMatches(v) > sbMatches(cur));
+      if (lost && v !== null) { localStorage.setItem(k, v); changed = true; }
+    }
+  } catch (e) { return false; }
+  if (changed) { let again = false; try { again = sessionStorage.getItem('dz_restored') === '1'; sessionStorage.setItem('dz_restored', '1'); } catch (e) {} if (!again) { location.reload(); return true; } }
+  return false;
+});
+sbRestored.then(r => { if (!r) { sbBackup(); setInterval(sbBackup, 5000); addEventListener('pagehide', sbBackup); addEventListener('beforeunload', sbBackup); } });
 /* ================================================================== core: helpers, settings, audio */
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -8233,13 +8275,15 @@ async function musRender(secs) {
 }
 /* ================================================================== replay: rewatch your last match
    While a match runs we record every soldier 5 times a second (position, facing, alive) plus the kill feed and the
-   team score. When it ends we take a top-down picture of the map, and the whole thing is saved (localStorage), so the
+   team score. When it ends we take a top-down picture of the map, and the whole thing is saved (IndexedDB), so the
    REPLAY tab in the main menu can play it back on a tactical map: trails, death markers, kill feed, timeline,
    speed and a camera that can follow you. */
 const RP_HZ = 5, RP_MAX = 15 * 60 * RP_HZ, RP_KEY = 'dz_replay', RP_EXT = 46;
 let REC = null, RPLAST = null;
 const RV = { on: false, t: 0, play: true, speed: 1, follow: false, img: null, lastT: 0, raf: 0 };
-try { RPLAST = JSON.parse(localStorage.getItem(RP_KEY) || 'null'); } catch (e) { RPLAST = null; }
+// the last replay lives in IndexedDB (see savebak.js); older versions kept it in localStorage, moved over once
+sbGet('replay').then(r => { if (r && r.frames && !RPLAST) RPLAST = r; });
+try { const old = localStorage.getItem(RP_KEY); if (old) { const o = JSON.parse(old); localStorage.removeItem(RP_KEY); if (o && o.frames) sbGet('replay').then(r => { if (!r) { sbPut('replay', o); if (!RPLAST) RPLAST = o; } }); } } catch (e) {}
 
 /* ---------- recording */
 function rpStart() {
@@ -8292,8 +8336,7 @@ function rpFinish(won) {
   const out = { v: 1, map: REC.map, mode: REC.mode, name: REC.name, online: REC.online, teams: REC.teams, date: REC.date, len: REC.t, ents: REC.ents, frames: REC.frames, feed: REC.feed, score: REC.score, obj: REC.obj, won: won | 0 };
   try { out.plan = rpPlanShot(); } catch (e) { out.plan = null; }
   RPLAST = out; REC = null; RV.img = null;
-  try { localStorage.setItem(RP_KEY, JSON.stringify(out)); }
-  catch (e) { try { const lite = Object.assign({}, out, { plan: null }); localStorage.setItem(RP_KEY, JSON.stringify(lite)); } catch (e2) {} }
+  sbPut('replay', out);
 }
 
 /* ---------- viewer */

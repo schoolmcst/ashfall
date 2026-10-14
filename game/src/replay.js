@@ -1,12 +1,14 @@
 /* ================================================================== replay: rewatch your last match
    While a match runs we record every soldier 5 times a second (position, facing, alive) plus the kill feed and the
-   team score. When it ends we take a top-down picture of the map, and the whole thing is saved (localStorage), so the
+   team score. When it ends we take a top-down picture of the map, and the whole thing is saved (IndexedDB), so the
    REPLAY tab in the main menu can play it back on a tactical map: trails, death markers, kill feed, timeline,
    speed and a camera that can follow you. */
 const RP_HZ = 5, RP_MAX = 15 * 60 * RP_HZ, RP_KEY = 'dz_replay', RP_EXT = 46;
 let REC = null, RPLAST = null;
 const RV = { on: false, t: 0, play: true, speed: 1, follow: false, img: null, lastT: 0, raf: 0 };
-try { RPLAST = JSON.parse(localStorage.getItem(RP_KEY) || 'null'); } catch (e) { RPLAST = null; }
+// the last replay lives in IndexedDB (see savebak.js); older versions kept it in localStorage, moved over once
+sbGet('replay').then(r => { if (r && r.frames && !RPLAST) RPLAST = r; });
+try { const old = localStorage.getItem(RP_KEY); if (old) { const o = JSON.parse(old); localStorage.removeItem(RP_KEY); if (o && o.frames) sbGet('replay').then(r => { if (!r) { sbPut('replay', o); if (!RPLAST) RPLAST = o; } }); } } catch (e) {}
 
 /* ---------- recording */
 function rpStart() {
@@ -59,8 +61,7 @@ function rpFinish(won) {
   const out = { v: 1, map: REC.map, mode: REC.mode, name: REC.name, online: REC.online, teams: REC.teams, date: REC.date, len: REC.t, ents: REC.ents, frames: REC.frames, feed: REC.feed, score: REC.score, obj: REC.obj, won: won | 0 };
   try { out.plan = rpPlanShot(); } catch (e) { out.plan = null; }
   RPLAST = out; REC = null; RV.img = null;
-  try { localStorage.setItem(RP_KEY, JSON.stringify(out)); }
-  catch (e) { try { const lite = Object.assign({}, out, { plan: null }); localStorage.setItem(RP_KEY, JSON.stringify(lite)); } catch (e2) {} }
+  sbPut('replay', out);
 }
 
 /* ---------- viewer */
