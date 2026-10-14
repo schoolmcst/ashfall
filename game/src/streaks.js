@@ -76,7 +76,7 @@ function updateStreaks(dt) {
   if (STK.uavT > 0) { STK.uavT -= dt; if (STK.uavT <= 0) { STK.uavT = 0; STK.vuav = false; } }
   stkMarks(); stkHud(false);
 }
-const stkSeen = e => STK.uavT > 0 && !isFriend(e);
+const stkSeen = e => STK.uavT > 0 && !isFriend(e) && !e.ghost;   // Shadow players don't show on a UAV
 // on-screen enemy diamonds while a UAV is up (the advanced one adds the way they face)
 const _sv = new THREE.Vector3();
 function stkMarks() {

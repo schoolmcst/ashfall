@@ -11,7 +11,7 @@ const PERKS = {
   scavenger: { t: 1, name: 'SCAVENGER', desc: 'Ammo crates give twice the rounds and always a grenade. Kills top up 1 magazine of reserve ammo.' },
   light: { t: 1, name: 'LIGHTWEIGHT', desc: 'Move 7% faster. No camera jolt on hard landings.' },
   flak: { t: 1, name: 'BLAST VEST', desc: 'Take 35% less damage from grenades, rockets, mortars and barrels.' },
-  ghost: { t: 1, name: 'SHADOW', desc: 'Bots take 30% longer to lock on to you once they see you.' },
+  ghost: { t: 1, name: 'SHADOW', desc: 'Hidden from enemy UAVs and radar. Bots also take 30% longer to lock on to you.' },
   endure: { t: 1, name: 'ENDURANCE', desc: 'Sprint 6% faster and recover from a sprint 40% quicker (shoot sooner after sprinting).' },
   // PERK 2 (red)
   quick: { t: 2, name: 'QUICK HANDS', desc: 'Reload 20% faster.' },

@@ -324,7 +324,11 @@ function launchProjectile(w, u) {
 }
 function stunBlast(p) {
   sfx.stun(at(p.x, p.z, 30)); flashLight(p.x, p.y + 0.5, p.z, 14, 0.15, 30);
-  for (const e of enemies) { const d = Math.hypot(e.group.position.x - p.x, e.group.position.z - p.z); if (d < 11 && blastClear(p, e.group.position.x, 1.4, e.group.position.z)) { const ex = p.x - e.group.position.x, ez = p.z - e.group.position.z, f = (Math.sin(e.group.rotation.y) * ex + Math.cos(e.group.rotation.y) * ez) / (Math.hypot(ex, ez) || 1); e.stunT = 4 * (1 - d / 16) * (f > 0.2 ? 1 : 0.35); e.flinch = 1; } }
+  for (const e of enemies) { const d = Math.hypot(e.group.position.x - p.x, e.group.position.z - p.z); if (d < 11 && blastClear(p, e.group.position.x, 1.4, e.group.position.z)) { const ex = p.x - e.group.position.x, ez = p.z - e.group.position.z, f = (Math.sin(e.group.rotation.y) * ex + Math.cos(e.group.rotation.y) * ez) / (Math.hypot(ex, ez) || 1); e.stunT = 4 * (1 - d / 16) * (f > 0.2 ? 1 : 0.35); e.flinch = 1; if (e.net) netStun(e, p); } }
+  stunPlayerAt(p);
+}
+// a stun going off at p: whites out your screen if you were looking at it (Tactical Mask: 65% weaker)
+function stunPlayerAt(p) {
   const dp = Math.hypot(P.x - p.x, P.z - p.z);
   if (dp < 12 && blastClear(p, P.x, P.y + P.eye, P.z)) {
     _pd.set(p.x - P.x, p.y + 0.2 - (P.y + P.eye), p.z - P.z).normalize(); _fwd.set(0, 0, -1).applyQuaternion(camera.quaternion);

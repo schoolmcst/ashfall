@@ -131,18 +131,25 @@ function netSelf() { for (const p of netPeers()) if (p.sameTab) return p.peer; r
 const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
-  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0,
+  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
     a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { if (NET.on) NET.sh++; }
 // called by damageEnemy() for a remote soldier: record the hit for its owner to apply
-function netHit(e, dmg, head, by) {
+// hit records: [victim, damage, head, seq, kind] - kind 1 = explosion (Blast Vest), 2 = stun at [x, y, z] (Tactical Mask)
+function netHit(e, dmg, head, by, boom) {
   if (!NET.on || !e.net) return;
-  if (by === 'player') { if (isFriend(e)) return; NET.hseq++; NET.hs.push([e.net, Math.round(dmg), head ? 1 : 0, NET.hseq]); if (NET.hs.length > 8) NET.hs.shift(); }
-  else if (by && by.entry && by.entry.botLabel) { const en = by.entry; if (M.def.teams && en.team === e.team) return; en.hseq++; en.hs.push([e.net, Math.round(dmg), head ? 1 : 0, en.hseq]); if (en.hs.length > 8) en.hs.shift(); }
+  if (by === 'player') { if (isFriend(e)) return; NET.hseq++; NET.hs.push([e.net, Math.round(dmg), head ? 1 : 0, NET.hseq, boom ? 1 : 0]); if (NET.hs.length > 8) NET.hs.shift(); }
+  else if (by && by.entry && by.entry.botLabel) { const en = by.entry; if (M.def.teams && en.team === e.team) return; en.hseq++; en.hs.push([e.net, Math.round(dmg), head ? 1 : 0, en.hseq, boom ? 1 : 0]); if (en.hs.length > 8) en.hs.shift(); }
   else return;
   e.flinch = 1;
+}
+
+// my stun grenade went off next to another player: tell their game where, it blinds them if they were looking
+function netStun(e, p) {
+  if (!NET.on || !e.net || isFriend(e)) return;
+  NET.hseq++; NET.hs.push([e.net, 0, 0, NET.hseq, 2, Math.round(p.x * 10) / 10, Math.round(p.y * 10) / 10, Math.round(p.z * 10) / 10]); if (NET.hs.length > 8) NET.hs.shift();
 }
 
 /* ---------- other players in */
@@ -150,7 +157,7 @@ function netNum(v, lo, hi, d = 0) { v = +v; return isFinite(v) ? clamp(v, lo, hi
 function netMakeBot(R, pr) {
   const e = makeEnemy('rifleman', R.x, R.z);
   Object.assign(e, { team: R.entry.team, entry: R.entry, name: R.entry.name, pvp: true, net: R.peer, hp: 1e9, maxHp: 100, aim: 1, crouchy: false, los: true, holding: true, lastShotT: -9 });
-  e.silent = !!R.sl; e.group.position.set(R.x, R.y, R.z); e.group.rotation.y = R.yw + Math.PI;
+  e.silent = !!R.sl; e.ghost = !!R.gh; e.group.position.set(R.x, R.y, R.z); e.group.rotation.y = R.yw + Math.PI;
   if (M.def.teams && R.entry.team === M.myTeam) e.group.add(friendlyMarker());
   enemies.push(e); R.bot = e; R.entry.alive = true; R.entry.bot = e;
 }
@@ -219,7 +226,7 @@ function netTick(dt) {
     R.entry.name = cleanNick(pr.n); R.host = !!pr.ho; R.sa = pr.sa; if (pr.ho && !pr.bot && !isHost && Array.isArray(pr.ob)) NET.ob = pr.ob; if (pr.ho && !pr.bot && NET.priv) privFromHost(pr.pc); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
     if (pr.ho && !pr.bot && !isHost && typeof pr.mp === 'string' && MAPS[pr.mp] && pr.mp !== curMap && !NET.mapBusy) { NET.mapBusy = true; setTimeout(() => { NET.mapBusy = false; if (NET.on) netSwitchMap(pr.mp); }, 0); }
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
-    R.sl = pr.sl ? 1 : 0; R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
+    R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
     R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
     R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;
     // a death since last time: drop them, credit the killer
@@ -230,7 +237,7 @@ function netTick(dt) {
       if (R.kb && R.kb === NET.me) {
         NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill(head); if (!bot) stkAdd(100 + (head ? 50 : 0));
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
-        else statKillAt(R.x, R.z, head);
+        else { statKillAt(R.x, R.z, head); perkOnKill(); }
         if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
       } else if (botBy(R.kb)) { const ke = botBy(R.kb); ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> ${nameHtml(R.entry)}`); }
       else if (R.kb && NET.rem.get(R.kb)) feedLine(`${netFeedName(NET.rem.get(R.kb))} <span class="fw">✦</span> ${nameHtml(R.entry)}${head ? ' <span class="ft">HEADSHOT</span>' : ''}`);
@@ -242,10 +249,13 @@ function netTick(dt) {
       R.seen = +h[3] || 0;
       if (h[0] === NET.me && alive && R.ep === NET.ep && !(M.def.teams && team === M.myTeam)) {
         NET.lastAtk = p.peer; NET.lastAtkT = NOW; NET.lastHead = h[2] ? 1 : 0;
-        G.killer = R.bot || null; hurtPlayer(netNum(h[1], 0, 250), R.x, R.z);
+        G.killer = R.bot || null;
+        if (+h[4] === 2) stunPlayerAt({ x: netNum(h[5], -ARENA, ARENA), y: netNum(h[6], -5, 20), z: netNum(h[7], -ARENA, ARENA) });
+        else hurtPlayer(netNum(h[1], 0, 250), R.x, R.z, +h[4] === 1);
       } else if (isHost && R.ep === NET.ep) {   // a hit on one of my bots
         const be = botBy(h[0]);
-        if (be && be.bot && !(M.def.teams && be.team === team)) { const d = new THREE.Vector3(be.bot.group.position.x - R.x, 0, be.bot.group.position.z - R.z).normalize(); be.lastHead = h[2] ? 1 : 0; damageEnemy(be.bot, netNum(h[1], 0, 250), !!h[2], d, false, R.bot || { net: p.peer, entry: R.entry }); }
+        if (be && be.bot && !(M.def.teams && be.team === team) && +h[4] === 2) be.bot.stunT = 3;
+        else if (be && be.bot && !(M.def.teams && be.team === team)) { const d = new THREE.Vector3(be.bot.group.position.x - R.x, 0, be.bot.group.position.z - R.z).normalize(); be.lastHead = h[2] ? 1 : 0; damageEnemy(be.bot, netNum(h[1], 0, 250), !!h[2], d, +h[4] === 1, R.bot || { net: p.peer, entry: R.entry }); }
       }
     }
     // body
