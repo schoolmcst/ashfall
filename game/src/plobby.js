@@ -37,13 +37,16 @@ function privApply() {
   }
 }
 // what the host sends: [mode, map, bots, time, kills, started, round time]
-const privPack = () => { if (NET.priv.pub) return ['P', Math.ceil(Math.max(0, NET.priv.lt)), NET.priv.started ? 1 : 0, Math.round(M.t)]; const c = NET.priv.cfg; return [c.md, c.mp, c.b, c.tl, c.sc, NET.priv.started ? 1 : 0, Math.round(M.t)]; };
+const privPack = () => { const hl = Math.ceil(Math.max(0, G.holdT || 0)); if (NET.priv.pub) return ['P', Math.ceil(Math.max(0, NET.priv.lt)), NET.priv.started ? 1 : 0, Math.round(M.t), hl]; const c = NET.priv.cfg; return [c.md, c.mp, c.b, c.tl, c.sc, NET.priv.started ? 1 : 0, Math.round(M.t), hl]; };
+// a player who arrives after the start waits only as long as the host still does (but always sees the loading screen)
+function privHoldSync(hh) { if (NET.priv.holdSync || !NET.priv.started || !isFinite(hh)) return; NET.priv.holdSync = true; G.holdT = Math.max(G.loadT || 0, Math.min(G.holdT || 0, hh)); }
 function privFromHost(pc) {
   if (!NET.priv || !Array.isArray(pc) || privHost()) return;
-  if (pc[0] === 'P') { NET.priv.lt = +pc[1] || 0; if (pc[2] && !NET.priv.started) privBegin(); if (NET.priv.started && G.state !== 'over' && Math.abs((+pc[3] || 0) - M.t) > 2) M.t = +pc[3] || 0; return; }
+  if (pc[0] === 'P') { NET.priv.lt = +pc[1] || 0; if (pc[2] && !NET.priv.started) privBegin(); privHoldSync(+pc[4]); if (NET.priv.started && G.state !== 'over' && Math.abs((+pc[3] || 0) - M.t) > 2) M.t = +pc[3] || 0; return; }
   const c = privClean({ md: pc[0], mp: pc[1], b: pc[2], tl: pc[3], sc: pc[4] });
   if (JSON.stringify(c) !== JSON.stringify(NET.priv.cfg)) { NET.priv.cfg = c; privApply(); if (curScreen === 'plobby') renderPlobby(true); }
   if (pc[5] && !NET.priv.started) privBegin();
+  privHoldSync(+pc[7]);
   if (NET.priv.started && G.state !== 'over' && Math.abs((+pc[6] || 0) - M.t) > 2) M.t = +pc[6] || 0;   // keep the round clock in step with the host
 }
 // host pressed START
@@ -61,6 +64,7 @@ function privBegin() {
   commitPartialStats(); startMatchStats();
   G.state = 'respawning'; G.respT = 0.4; showScreen(null); lockPointer(); updateModeHud(true);
   showBanner(M.def.name.replace(/^ONLINE /, ''), `${mapName(curMap)} · ${modeGoalText()}`);
+  matchHold(true); NET.priv.holdSync = false;
 }
 // how many bots each side should have: the host's count, put where they even out the teams
 function privBotWant(humans) {

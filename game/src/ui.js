@@ -1,5 +1,5 @@
 /* ================================================================== UI: screens, settings, input, loop, boot */
-const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist'];
+const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist', 'classpick'];
 let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
   curScreen = id; if (id === 'menu') try { renderMenuCard(); } catch (e) {}
@@ -172,6 +172,8 @@ function actions(act) {
     case 'res-lobby': toLobby(); break;
     case 'pl-start': privStart(); break;
     case 'streaks': openStreaks(curScreen || 'menu'); break;
+    case 'cp-edit': openLoadout('classpick'); break;
+    case 'cp-ready': showScreen(null); lockPointer(); break;
     case 'stk-back': if (stkReturn === 'lobby') renderLobby(); showScreen(stkReturn); break;
     case 'pl-leave': QP.busy = false; toLobby(); break;
     case 'res-stats': statsReturn = 'results'; statOnline = !!(M && M.online); renderStats(); showScreen('career'); break;
@@ -179,7 +181,7 @@ function actions(act) {
     case 'settings-back': showScreen(returnScreen); break;
     case 'bench': startBench(); break;
     case 'loadout': openLoadout(curScreen || 'menu'); break;
-    case 'lo-back': updateClassUI(); if (returnScreen === 'lobby') renderLobby(); showScreen(returnScreen); break;
+    case 'lo-back': updateClassUI(); if (returnScreen === 'lobby') renderLobby(); if (returnScreen === 'classpick') { cpPick(ACTIVE_CLASS); if (!(G.holdT > 0)) { showScreen(null); lockPointer(); break; } openClassPick(); break; } showScreen(returnScreen); break;
     case 'lo-reset': resetLoadoutWeapon(); break;
     case 'howto': returnScreen = curScreen || 'menu'; showScreen('howto'); break;
     case 'howto-back': showScreen(returnScreen); break;
@@ -246,6 +248,7 @@ addEventListener('keydown', e => {
   if ((G.state === 'respawning' || G.state === 'spectate') && e.code === 'Escape') { pauseGame(); return; }
   if (G.state === 'spectate' && (e.code === 'Space' || e.code === 'Enter')) { G.specNext = true; return; }
   if (e.code === 'Tab' || e.code === bind('board')) e.preventDefault();
+  if (curScreen === 'classpick' && /^Digit[1-5]$/.test(e.code)) { cpPick(+e.code.slice(5) - 1); return; }
   if (G.state !== 'playing') {
     if (!curScreen) return;
     if (curScreen === 'lobby' && e.code === 'KeyQ' && !(document.activeElement && document.activeElement.tagName === 'INPUT')) { openPlaylist(); return; }
@@ -274,6 +277,7 @@ addEventListener('mousedown', e => {
   if (G.state === 'deathcam') { if (G.dc && G.dc.t > 0.6) finishDeath(); return; }
   if (G.state === 'spectate') { G.specNext = true; return; }
   if (G.state !== 'playing') return;
+  if (!document.pointerLockElement && !curScreen && !G.look) { lockPointer(); return; }
   if (e.button === 0) { mouseDown = true; clickQueued = true; }
   if (e.button === 2) mouseAds = S.toggleAds ? !mouseAds : true;
 });
@@ -480,6 +484,7 @@ function menuCamera() {
 }
 function tick(dt) {
   pollPad(dt);
+  if (G.holdT > 0 && inMatch() && G.state !== 'over' && G.state !== 'plobby') updateHold(dt);
   skyMat.uniforms.time.value += dt; sky.position.copy(camera.position);
   updateGrain(dt); updateAmbience(NOW); updateFires(dt, NOW);
   fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5) { if (S.showFps) $('fps').textContent = Math.round(fpsN / fpsAcc) + ' FPS' + (S.dynRes && DR.scale < 0.999 ? `  ·  RES ${Math.round(DR.scale * 100)}%` : ''); fpsAcc = 0; fpsN = 0; }
@@ -493,7 +498,7 @@ function tick(dt) {
     G.fireT -= dt; if (G.swapT > 0) G.swapT -= dt;
     const w = WEAPONS[G.cur];
     if (G.reloading) { G.reloadT -= dt; if (G.reloadT <= 0) finishReload(); }
-    const want = w.auto ? isFiring() : clickQueued;
+    const want = (w.auto ? isFiring() : clickQueued) && !(G.holdT > 0);
     if (want && !sprint && !G.reloading && G.swapT <= 0 && G.fireT <= 0 && G.state === 'playing') {
       if (w.ammo > 0) shoot(moving); else { sfx.click(); G.fireT = 0.25; startReload(); }
     }

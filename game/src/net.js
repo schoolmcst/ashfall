@@ -185,7 +185,12 @@ function netTick(dt) {
   // pick a team once the room has answered (the side with fewer players)
   if (!NET.teamSet && performance.now() / 1000 - NET.joinedAt > 1.4) {
     NET.teamSet = true; NET.me = netSelf();
-    if (M.def.teams) { const c = [0, 0]; for (const p of peers) if (!p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot) c[p.presence.tm === 1 ? 1 : 0]++; M.myTeam = M.me.team = c[1] < c[0] ? 1 : 0; }
+    if (M.def.teams) {
+      const c = [0, 0]; for (const p of peers) if (!p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot) c[p.presence.tm === 1 ? 1 : 0]++;
+      M.myTeam = M.me.team = c[1] < c[0] ? 1 : 0;
+      // in a party: join the team a party member is already on
+      try { const names = new Set(partyMembers().filter(m => !m.me).map(m => m.name)); const mate = peers.find(p => !p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot && names.has(cleanNick(p.presence.n))); if (mate) M.myTeam = M.me.team = mate.presence.tm === 1 ? 1 : 0; } catch (e) {}
+    }
     else M.myTeam = M.me.team = 0;
     for (const [, R] of NET.rem) netDropBot(R, false);   // redraw with the right friend markers
   }
@@ -311,6 +316,7 @@ function netNewRound() {
   showBanner('NEW ROUND', mapName(curMap) + ' · scores reset');
   for (const en of M.entries) { en.kills = en.deaths = en.score = 0; en.level = 0; }
   M.t = 0; M.teamScore = [0, 0]; NET.ob = null; objSetup(); if (M.mode === 'gun') equipGunGame(0);
+  if (G.state === 'over') matchHold(true);
   if (G.state !== 'over') return;
   M.over = false; showScreen(null); clearWorldFx();
   if (M.me) M.me.alive = true; respawnPlayer();
@@ -348,7 +354,7 @@ function netBots(dt) {
     const humans = [0, 0]; let hum = 1; humans[M.myTeam]++;
     for (const R of NET.rem.values()) if (!R.isBot) { hum++; if (M.def.teams) humans[R.entry.team]++; }
     const add = wl <= 0 && (NET.addT = (NET.addT || 0) - 0.5) <= 0;   // add one bot every 1.5 s; remove extras at once
-    const pw = NET.priv ? (!NET.priv.started ? (M.def.teams ? [0, 0] : 0) : NET.priv.pub ? null : privBotWant(humans)) : null;
+    const pw = NET.priv ? (!NET.priv.started || G.holdT > 0 ? (M.def.teams ? [0, 0] : 0) : NET.priv.pub ? null : privBotWant(humans)) : null;
     if (M.def.teams) for (let t = 0; t < 2; t++) {
       const mine = bots.filter(b => b.team === t), want = pw ? pw[t] : wl > 0 ? 0 : Math.max(0, BOT_FILL.teams - humans[t]);
       for (let i = mine.length - 1; i >= want; i--) netRemoveBot(mine[i]);

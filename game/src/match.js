@@ -62,10 +62,21 @@ function hostilesOf(team) {
 // pick a spawn: away from enemies, not on top of anyone who just spawned, spread out and a bit random.
 // initial: the start of a match/round, everyone near their own side but spread over the whole spawn area
 const SPAWN_USED = [];
+function spawnZones(side) {
+  const c = LAYOUT.spawn[side], L = Math.hypot(c.x, c.z) || 1, px = c.z / L, pz = -c.x / L;
+  const cl = (x, z) => ({ x: clamp(x, PLAYRECT[0] + 5, PLAYRECT[1] - 5), z: clamp(z, PLAYRECT[2] + 5, PLAYRECT[3] - 5) });
+  return [cl(c.x + px * 13, c.z + pz * 13), cl(c.x - px * 13, c.z - pz * 13)];
+}
 function pickSpawnFor(team, side, initial) {
   const pts = buildSpawns(), hs = hostilesOf(team), now = performance.now();
   while (SPAWN_USED.length && now - SPAWN_USED[0].t > 6000) SPAWN_USED.shift();
-  const home = side !== undefined && side >= 0 ? LAYOUT.spawn[side] : null;
+  let home = side !== undefined && side >= 0 ? LAYOUT.spawn[side] : null;
+  if (home && M.def.teams && M.mode !== 'snd') {
+    const z = spawnZones(side); M.zone = M.zone || [0, 0];
+    let zi = M.zone[side] | 0, inside = 0; for (const h of hs) if (Math.hypot(h.x - z[zi].x, h.z - z[zi].z) < 14) inside++;
+    if (inside >= 2) { zi = 1 - zi; M.zone[side] = zi; if (team === M.myTeam && !initial) showMsg('SPAWN MOVED · ENEMIES IN YOUR SPAWN'); }
+    home = z[zi]; initial = true;   // stay inside the active spawn area
+  }
   let best = null, bs = -1e9;
   for (let i = 0; i < 48; i++) {
     const p = pts[(Math.random() * pts.length) | 0];
@@ -121,7 +132,7 @@ function startMatch(mode, custom) {
   else if (!NET.app) loadMap('ruins');   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
   resetGame();
-  if (mode === 'surv') { if (curMap !== 'ruins') { buildSpawns(); const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z); } G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); return; }
+  if (mode === 'surv') { if (curMap !== 'ruins') { buildSpawns(); const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z); } G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); matchHold(false); return; }
   buildSpawns();
   G.breakT = 1e9; G.waveActive = false; G.maxHp = M.maxHp; G.health = M.maxHp;
   if (def.online) {   // real players over the room: no bots; you drop in once the room has answered
@@ -145,7 +156,7 @@ function startMatch(mode, custom) {
   objSetup();
   if (mode === 'snd') startRound(); else { placeEveryone(); }
   if (mode === 'gun') { M.me.level = 0; equipGunGame(0); }
-  G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
+  G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); matchHold(false);
   showBanner(def.name, def.teams ? `${cfg.perTeam} v ${cfg.perTeam}  ·  ${modeGoalText()}` : modeGoalText());
 }
 // (re)build the hardpoint / flags for the current map: match start, and online on a map change or a new round
@@ -309,6 +320,7 @@ function botShoot(e, t, dist) {
   if (hit) { const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(); damageEnemy(t, e.dmg * (Math.random() < 0.12 ? 2 : 1), false, dir, false, e); }
 }
 function updateBots(dt) {
+  if (G.holdT > 0) return;
   for (let i = 0; i < enemies.length; i++) {
     const e = enemies[i], g = e.group;
     if (!e.entry || e.net) continue;
@@ -533,7 +545,7 @@ function defuseBomb(en) {
 function updateSnd(dt) {
   const sn = M.snd;
   if (M.online && !netHostNow()) { netObjApply(); sndVisual(dt); return; }
-  if (M.online && sn.state === 'wait') { if (NET.teamSet && (!NET.priv || NET.priv.started)) startRoundOnline(); return; }
+  if (M.online && sn.state === 'wait') { if (NET.teamSet && (!NET.priv || NET.priv.started) && !(G.holdT > 0)) startRoundOnline(); return; }
   if (M.online) sndRemoteActions();
   if (sn.state === 'freeze') { sn.freeze -= dt; if (sn.freeze <= 0) { sn.state = 'live'; showMsg('GO GO GO'); } else { for (const e of enemies) { e.cd = Math.max(e.cd, 0.5); } } }
   if (sn.state === 'live') { sn.t -= dt; if (sn.t <= 0) return endRound(1 - sn.att, 'time'); }
@@ -592,6 +604,7 @@ function playerInteract(dt, held) {
 /* ---------- per-frame match update */
 function updateMatch(dt) {
   if (!inMatch() || M.over) return;
+  if (G.holdT > 0) { if (G.state === 'respawning' && !(M.online && !NET.teamSet)) respawnPlayer(); updateModeHud(false); return; }
   M.t += dt;
   if (G.spawnProt > 0) G.spawnProt -= dt;
   for (let i = M.respawnQ.length - 1; i >= 0; i--) { const r = M.respawnQ[i]; r.t -= dt; if (r.t <= 0) { M.respawnQ.splice(i, 1); if (!r.en.isPlayer) spawnBot(r.en, pickSpawnFor(r.en.team, sideOf(r.en.team))); } }

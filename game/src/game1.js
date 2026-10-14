@@ -49,7 +49,7 @@ function rumble(strong, weak, ms) {
 /* ------------------------------------------------------------------ player */
 const vig = $('vignette'), dmgdir = $('dmgdir');
 function hurtPlayer(dmg, fx, fz) {
-  if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0) return;
+  if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0 || G.holdT > 0) return;
   G.health -= dmg; G.lastHit = G.time; G.shake = Math.max(G.shake, 0.012);
   vig.style.opacity = clamp(0.45 + ((G.maxHp || 100) - G.health) / 120 * (100 / (G.maxHp || 100)), 0, 1);
   setTimeout(() => { vig.style.opacity = G.health < 0.35 * (G.maxHp || 100) ? 0.5 : 0; }, 160);
@@ -68,8 +68,9 @@ let wasSprint = false;
 function updatePlayer(dt) {
   const w = WEAPONS[G.cur];
   const crouch = kb('crouch') || pad.crouch;
-  const fwd = clamp((kb('fwd') ? 1 : 0) - (kb('back') ? 1 : 0) - pad.my, -1, 1);
-  const str = clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
+  const hold = typeof holding === 'function' && holding();
+  const fwd = hold ? 0 : clamp((kb('fwd') ? 1 : 0) - (kb('back') ? 1 : 0) - pad.my, -1, 1);
+  const str = hold ? 0 : clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
   const moving = fwd !== 0 || str !== 0;
   const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
   let speed = (sprint ? 8 : crouch ? 2.6 : G.adsOn ? 3.2 : 5.2) * (w.move || 1) * (perk('light') ? 1.08 : 1);
@@ -82,7 +83,7 @@ function updatePlayer(dt) {
   P.x += P.vx * dt; P.z += P.vz * dt;
   resolve(P, 0.4, P.y);
   P.x = clamp(P.x, PLAYRECT[0] + 0.45, PLAYRECT[1] - 0.45); P.z = clamp(P.z, PLAYRECT[2] + 0.45, PLAYRECT[3] - 0.45);
-  if ((kb('jump') || pad.jump) && P.onGround) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); }
+  if ((kb('jump') || pad.jump) && P.onGround && !hold) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); }
   P.vy -= 22 * dt; const py0 = P.y; P.y += P.vy * dt;
   if (P.vy > 0) { const ce = ceilingAt(P.x, P.z, py0); if (P.y + 1.8 > ce) { P.y = Math.max(py0, ce - 1.8); P.vy = 0; } }
   const gy = groundAt(P.x, P.z, P.y);
