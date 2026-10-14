@@ -1,15 +1,12 @@
 {
- "version": "1.1.6",
+ "version": "1.1.8",
  "notes": [
-  "NEW MENUS: new main menu (Multiplayer, Settings, News) and a new lobby with a team roster",
-  "LOBBY: the big PLAY button picks the online mode - left/right or D-pad to change it, A or click to start",
-  "CUSTOM: private code matches and solo games vs bots (any mode, map, bots, time limit) live under CUSTOM",
-  "SCORESTREAKS: pick 3 of 6 (UAV, Supply Drop, Body Armor, Mortar Strike, Advanced UAV, Airstrike); earn them with kills, use them with X or D-pad up",
-  "ACCOUNT: set your callsign in Settings > Account",
-  "NEWS: every patch listed on the main menu",
-  "KILL SOUND: punchier kill confirm, higher pitched on headshots",
-  "SIGHTS: see-through rear apertures and slimmer front posts, open-frame reflex, one dot in red dots, clearer glass on every optic"
+  "ONLINE MODES: Gun Game, Hardpoint, Capture the Flag and Search & Destroy are now online (the host runs the objectives for everyone)",
+  "PLAYLIST: press Y (controller) or Q (keyboard) in the lobby to pick which modes Quick Play can choose from",
+  "PRE-GAME LOBBY: Quick Play searches your playlist, then everyone waits in a lobby with a 30 second countdown and starts together",
+  "FRIENDS & PARTY: share your friend code (lobby or Settings > Account), add friends, JOIN their party; the party follows the leader into matches",
+  "RED DOT: the M4A1 dot sits in the middle of the sight again"
  ],
- "sha256": "e0bf3021e41d6e1fb0b1d72fa8255b7b87c9de457ffda80faaaf0262ba8f6ef7",
+ "sha256": "5910d4bde8722b54b1ec878201af14925b6bc9f0f7adc1e1a32f18ec8dfc8059",
  "minApp": "1.0.0"
 }
