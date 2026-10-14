@@ -176,7 +176,9 @@ function equipGunGame(level) {
   G.grenades = 0;
   G.swapT = Math.max(G.swapT, 0.65); G.fireT = Math.max(G.fireT, 0.65);   // a short delay before the new gun can fire
 }
-const playerAlive = () => G.state === 'playing' && M.me && M.me.alive;
+// online, opening the pause menu does not take you out of the match: you can still be seen and shot
+const pausedOnline = () => G.state === 'paused' && M && M.online && G.pausedFrom === 'playing';
+const playerAlive = () => (G.state === 'playing' || pausedOnline()) && M.me && M.me.alive;
 
 /* ---------- respawning */
 function respawnPlayer() {

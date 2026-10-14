@@ -87,6 +87,8 @@ function relMods(a, def) {
 }
 
 /* ---------- effective stats */
+// handling changes are amplified so attachments are clearly felt in play (the pros/cons text shows the same numbers)
+const ATT_AMP = { recoil: 1.7, spread: 1.6, adsSpread: 1.6, ads: 1.5, move: 1.4, reload: 1.2, range: 1.3, spot: 1.3 };
 function computeStats(def, override, factory) {
   const b = def, m = { dmg: 0, rate: 0, spread: 0, adsSpread: 0, recoil: 0, reload: 0, mag: 0, magAdd: 0, range: 0, ads: 0, move: 0, spot: 0, pellets: 0, head: 0, vsHeavy: 0, len: 0, blast: 0, dmgX: 1 };
   let zoom = null, stealth = !!b.stealth, laser = false, overlay = 0, optic = null;
@@ -94,7 +96,7 @@ function computeStats(def, override, factory) {
     const a = override && override.slot === slot ? override : factory ? stockFor(def, slot) : equipped(def, slot); if (!a) continue;
     const r = relMods(a, def);
     if (slot === 'optic') { optic = a.id; zoom = a.mods.zoom || null; overlay = a.mods.overlay || 0; }
-    for (const k in r) { const v = r[k]; if (k === 'stealth') stealth = true; else if (k === 'laser') laser = true; else if (k === 'zoom' || k === 'overlay') {} else if (k === 'dmgX') m.dmgX *= v; else m[k] += v; }
+    for (const k in r) { const v = r[k]; if (k === 'stealth') stealth = true; else if (k === 'laser') laser = true; else if (k === 'zoom' || k === 'overlay') {} else if (k === 'dmgX') m.dmgX *= v; else m[k] += v * (ATT_AMP[k] || 1); }
   }
   const eff = b.eff * Math.max(0.2, 1 + m.range);
   return {
@@ -173,7 +175,7 @@ function prosCons(a, def) {
   const unit = def.cat === 'sg' ? 'shells' : 'rounds';
   for (const k in r) {
     const v = r[k];
-    if (STAT_TXT[k]) { const [label, good] = STAT_TXT[k]; const s = `${label} ${v > 0 ? '+' : ''}${Math.round(v * 100)}%`; (v * good > 0 ? pros : cons).push(s); }
+    if (STAT_TXT[k]) { const [label, good] = STAT_TXT[k], va = v * (ATT_AMP[k] || 1); const s = `${label} ${va > 0 ? '+' : ''}${Math.round(va * 100)}%`; (v * good > 0 ? pros : cons).push(s); }
     else if (k === 'magAdd') (v > 0 ? pros : cons).push(`Magazine ${v > 0 ? '+' : ''}${v} ${unit}`);
     else if (k === 'pellets') (v > 0 ? pros : cons).push(`Pellets ${b.pellets} → ${b.pellets + v}`);
     else if (k === 'dmgX') (v >= 1 ? pros : cons).push(`Damage per projectile ×${+v.toFixed(2)}`);

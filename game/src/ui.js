@@ -466,6 +466,10 @@ function tick(dt) {
     if (inMatch()) { updateBots(dt); updateMatch(dt); } else { updateNav(P.x, P.z); updateWaves(dt); updateEnemies(dt); }
     updateGrenades(dt); updatePickups(dt); updateHud();
   } else if (G.state === 'menu') { menuCamera(); updateMenuSoldiers(dt); }
+  else if (G.state === 'paused' && M.online) {   // online the match carries on behind the pause menu (bots, rounds, gravity)
+    P.vy -= 22 * dt; P.y += P.vy * dt; const gy = groundAt(P.x, P.z, P.y); if (P.y <= gy) { P.y = gy; P.vy = 0; }
+    updateBots(dt); updateMatch(dt); updateGrenades(dt); updateHud();
+  }
   else if (G.state === 'respawning' || G.state === 'spectate') {
     if (G.state === 'respawning' && G.dc) { G.dc.t += dt; aimDeathCam(dt, Math.min(G.dc.t / G.dc.dur, 1)); }
     updateBots(dt); updateMatch(dt); updateGrenades(dt); updateHud();
@@ -480,6 +484,15 @@ function tick(dt) {
   try { updatePolish(dt); } catch (err) { reportError(err); }
   updateDying(wdt); updateFx(wdt);
 }
+// online, a minimised or hidden window keeps running the match (browsers stop animation frames when hidden,
+// which would freeze the host's bots and rounds): a worker timer drives the game logic at 20 Hz until it is visible
+try {
+  const bgW = new Worker(URL.createObjectURL(new Blob(['let t=null;onmessage=e=>{clearInterval(t);t=null;if(e.data)t=setInterval(()=>postMessage(0),50)}'], { type: 'text/javascript' })));
+  let bgLast = performance.now();
+  bgW.onmessage = () => { if (!document.hidden || !M.online || !ready) return; const now = performance.now(), dt = Math.min(0.1, (now - bgLast) / 1000); bgLast = now; NOW += dt; try { tick(dt); } catch (e) {} };
+  const bgSync = () => { bgLast = performance.now(); bgW.postMessage(document.hidden && M && M.online ? 1 : 0); };
+  document.addEventListener('visibilitychange', bgSync); setInterval(bgSync, 3000);
+} catch (e) {}
 function renderFrame() {
   const showVm = viewmodel && (G.state === 'playing' || G.state === 'paused') && !G.scoped;
   if (viewmodel) viewmodel.visible = !!showVm;

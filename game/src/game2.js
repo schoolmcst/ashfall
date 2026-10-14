@@ -309,6 +309,7 @@ function clearMenuSoldiers() { for (const m of menuSoldiers) scene.remove(m.root
 function updateMenuSoldiers(dt) { for (const m of menuSoldiers) animEnemy(m.e, dt, 0); }
 
 function die() {
+  if (G.state === 'paused') { showScreen(null); G.state = G.pausedFrom || 'playing'; }
   mouseDown = false; mouseAds = false; G.streak = 0; statDeath();
   try { matchPlayerKilled(G.killer); } catch (err) { reportError(err); }
   if (M.over) return;

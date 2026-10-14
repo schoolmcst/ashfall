@@ -130,7 +130,7 @@ function netSelf() { for (const p of netPeers()) if (p.sameTab) return p.peer; r
 /* ---------- my state out */
 const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
 function netPublish() {
-  const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && G.state === 'playing');
+  const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0,
     a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ho: NET.room && NET.room.host ? 1 : 0 }).catch(() => {});
 }
@@ -190,7 +190,7 @@ function netTick(dt) {
     for (const [, R] of NET.rem) netDropBot(R, false);   // redraw with the right friend markers
   }
   // my death: who did it
-  const alive = !!(M.me.alive && G.state === 'playing');
+  const alive = !!(M.me.alive && (G.state === 'playing' || pausedOnline()));
   if (NET.wasAlive && !M.me.alive) {
     const k = G.killer && typeof G.killer === 'object' ? (G.killer.net || (G.killer.entry && G.killer.entry.botLabel) || '') : '';
     NET.d++; NET.ds++; NET.kb = k || (NOW - NET.lastAtkT < 4 ? NET.lastAtk : ''); NET.kh = NET.kb ? NET.lastHead || 0 : 0;

@@ -49,7 +49,7 @@ function rumble(strong, weak, ms) {
 /* ------------------------------------------------------------------ player */
 const vig = $('vignette'), dmgdir = $('dmgdir');
 function hurtPlayer(dmg, fx, fz) {
-  if (G.state !== 'playing' || G.spawnProt > 0) return;
+  if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0) return;
   G.health -= dmg; G.lastHit = G.time; G.shake = Math.max(G.shake, 0.012);
   vig.style.opacity = clamp(0.45 + ((G.maxHp || 100) - G.health) / 120 * (100 / (G.maxHp || 100)), 0, 1);
   setTimeout(() => { vig.style.opacity = G.health < 0.35 * (G.maxHp || 100) ? 0.5 : 0; }, 160);
@@ -97,7 +97,7 @@ function updatePlayer(dt) {
   camera.position.set(P.x + rnd(-shk, shk), P.y + P.eye + Math.sin(P.bob * 2) * 0.025 * (hs / 5) * bobOn + rnd(-shk, shk), P.z + rnd(-shk, shk));
   camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn);
   G.shake = Math.max(0, G.shake - dt * 0.05);
-  G.ads = lerp(G.ads, G.adsOn && G.swapT <= 0 ? 1 : 0, clamp(dt * 12 / (w.adsTime || 1), 0, 1));
+  G.ads = lerp(G.ads, G.adsOn && G.swapT <= 0 ? 1 : 0, clamp(dt * 11 / Math.pow(w.adsTime || 1, 1.4), 0, 1));
   const fov = lerp(baseFov + (sprint ? 5 : 0), w.adsFov * baseFov / 75, G.ads);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   animateViewmodel(dt, hs, sprint, bobOn);
@@ -226,8 +226,8 @@ function shoot(moving) {
     sfx.hit(anyHead);
   }
   const kick = w.recoil * rnd(0.85, 1.15) * (G.adsOn ? 0.7 : 1);
-  P.pitch = clamp(P.pitch + kick, -1.5, 1.5); P.recoilAcc += kick * 0.55; P.yaw += rnd(-1, 1) * w.recoil * 0.35;
-  G.kick = 1; G.shake = Math.max(G.shake, w.pellets > 1 ? 0.01 : 0.003);
+  P.pitch = clamp(P.pitch + kick, -1.5, 1.5); P.recoilAcc += kick * 0.55; P.yaw += rnd(-1, 1) * w.recoil * 0.5;
+  G.kick = clamp(w.recoil / (w.def.recoil || w.recoil || 0.011), 0.5, 2.2); G.shake = Math.max(G.shake, w.pellets > 1 ? 0.01 : 0.003);   // the gun visibly kicks harder or softer with recoil attachments
   // muzzle flash on the weapon, light on the world, smoke and a brass casing
   u.flash.visible = !w.stealth; const fs = rnd(0.22, 0.38) * (w.pellets > 1 ? 1.6 : 1); u.flash.scale.set(fs, fs, 1); u.flash.material.rotation = rnd(0, 6.28); G.flashT = 0.045;
   vmFlashLight.position.set(viewmodel.position.x, viewmodel.position.y + 0.03, viewmodel.position.z - w.len - 0.1); vmFlashLight.intensity = w.stealth ? 0 : 2.2;
