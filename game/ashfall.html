@@ -224,6 +224,7 @@
   .res-sub{font-size:13px;letter-spacing:.3em;color:var(--dim);padding:4px 26px 0;text-align:left}
   .res-body{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:18px;padding:16px 24px;overflow:auto;min-height:0;text-align:left}
   .res-board{display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start}
+  .res-next{padding:4px 24px 0;font-size:13px;letter-spacing:.3em;color:var(--amber,#e0b050);text-align:right;min-height:18px}
   .res-mine{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start}
   .res-mine div,.st-grid div{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
   .res-mine span,.st-grid span{font-size:10px;letter-spacing:.25em;color:var(--dim)} .res-mine b,.st-grid b{font-size:20px;letter-spacing:.06em}
@@ -443,7 +444,8 @@
   <div class="panel res">
     <div class="res-title" id="resTitle">VICTORY</div><div class="res-sub" id="resSub"></div>
     <div class="res-body"><div class="res-board" id="resBoard"></div><div class="res-mine" id="resMine"></div></div>
-    <div class="actions"><button class="btn" data-act="res-stats">CAREER STATS</button><span></span><button class="btn" data-act="res-lobby">LOBBY</button><button class="btn primary" data-act="res-again">PLAY AGAIN</button></div>
+    <div class="res-next" id="resNext"></div>
+    <div class="actions"><button class="btn" data-act="res-stats">CAREER STATS</button><span></span><button class="btn" data-act="res-lobby" id="resLobby">LOBBY</button><button class="btn primary" data-act="res-again" id="resAgain">PLAY AGAIN</button></div>
   </div>
 </div>
 
@@ -4436,6 +4438,7 @@ function clearWorldState() {
   for (const g of grenadesInFlight) scene.remove(g.m); grenadesInFlight.length = 0;
   for (const k of pickups) scene.remove(k.m); pickups.length = 0;
   if (G.bench) endBenchState();
+  for (const d of decals) d.visible = false; for (const c of casings) { c.on = false; c.m.visible = false; }
   navTarget = -1; G.streak = 0; G.multi = 0; restoreBarrels(); G.killer = null; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide');
 }
 function resetGame() {
@@ -4484,7 +4487,7 @@ function pauseGame() {
 }
 function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom || 'playing'; showScreen(null); lockPointer(); }
 function startGame() { startMatch('surv'); }
-function restartMatch() { if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
+function restartMatch() { if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
 // leave whatever is running and go back to the menu scene (soldiers posing behind the menus)
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();
@@ -4697,7 +4700,7 @@ function spawnBot(en, pos) {
 function startMatch(mode, custom) {
   const cfg = matchCfg(mode, custom), def = MODES[mode];
   initAudio(); clearMenuSoldiers();
-  if (!def.online) { cfg.map = pickMapFor(cfg.map || LOBBY.map); loadMap(cfg.map); }
+  if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel); loadMap(cfg.map); }
   else if (!NET.app) loadMap('ruins');   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
   resetGame();
@@ -5132,7 +5135,23 @@ function showResults(winner, won) {
   $('resBoard').innerHTML = scoreboardHtml();
   const kd = MS.deaths ? (MS.kills / MS.deaths).toFixed(2) : MS.kills.toFixed(2), acc = MS.shots ? Math.round(MS.hits / MS.shots * 100) : 0;
   $('resMine').innerHTML = [['KILLS', MS.kills], ['DEATHS', MS.deaths], ['K/D', kd], ['ACCURACY', acc + '%'], ['HEADSHOTS', MS.heads], ['BEST STREAK', MS.bestStreak], ['LONGEST KILL', Math.round(MS.longest) + ' M'], ['SCORE', M.me ? M.me.score : G.score]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+  M.nextT = M.online ? INTERMISSION_ON : INTERMISSION_OFF;
+  $('resAgain').textContent = M.online ? 'READY' : 'PLAY NOW'; $('resAgain').style.display = M.online ? 'none' : '';
+  $('resLobby').textContent = M.online ? 'LEAVE MATCH' : 'LOBBY';
+  updateResNext();
   showScreen('results');
+}
+// time between matches: the scoreboard stays up, then the next match starts by itself
+const INTERMISSION_OFF = 45, INTERMISSION_ON = 40;
+function updateResNext() { const el = $('resNext'); if (!el) return; const t = M.online ? NET.endT : M.nextT; el.textContent = t > 0 ? `NEXT MATCH IN ${Math.ceil(t)}s` : 'STARTING…'; }
+// offline: a fresh match of the same mode and settings (a random map choice picks a new map)
+function nextMatch() {
+  if (M.mode === 'surv') { startMatch('surv', { map: M.cfg.mapSel === 'random' ? 'random' : curMap }); return; }
+  startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: M.cfg.mapSel || curMap, mapSel: M.cfg.mapSel }));
+}
+function tickIntermission(dt) {
+  if (!M.online) { M.nextT -= dt; if (M.nextT <= 0 && $('results') && !$('results').classList.contains('hide')) { nextMatch(); return; } }
+  updateResNext();
 }
 function scoreboardHtml() {
   if (!M.entries || !M.entries.length) return '';
@@ -6804,7 +6823,7 @@ function netTick(dt) {
   if (maxEp > NET.ep) {   // someone else's game moved on first: count the round we were in from the scores we saw
     const lim = M.cfg.score, ts = M.teamScore || [0, 0], played = NET.ep > 0 && !NET.endT && MS.time >= 60;
     if (played && NET.lastNear) finishMatchStats(NET.lastNear); else commitPartialStats();
-    NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; NET.lastNear = 0; startMatchStats();
+    NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; NET.lastNear = 0; startMatchStats(); netNewRound();
   }
   M.me.kills = NET.k; M.me.deaths = NET.d; M.me.score = NET.k * 100; M.me.name = 'YOU';
   if (M.def.teams) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
@@ -6812,20 +6831,37 @@ function netTick(dt) {
   { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
   if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
-  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor('random')); showBanner('NEW ROUND', mapName(curMap) + ' · scores reset'); } }
+  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor('random')); netNewRound(); } }
   else {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
     else for (const en of M.entries) if (en.kills >= lim) win = en.isPlayer ? 'YOU WIN' : en.name + ' WINS';
     if (win) {
-      NET.endT = 8; showBanner(win, 'next round in 8 seconds'); sfx.streak();
+      NET.endT = INTERMISSION_ON; sfx.streak();
       // a round to the score limit counts as a match in your career stats
       const won = M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1);
-      finishMatchStats(won); startMatchStats();
+      finishMatchStats(won); netIntermission(won, win); startMatchStats();
     }
   }
   netPublish();
 }
+
+// round won online: everyone sees the scoreboard for the intermission, nobody can be hurt, then a fresh round
+function netIntermission(won, txt) {
+  if (G.state === 'paused') showScreen(null);
+  G.netPrevState = G.state; G.state = 'over'; mouseDown = false; mouseAds = false;
+  hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
+  hideCenter(); clearWorldFx();
+  showResults(won > 0 ? (M.def.teams ? M.myTeam : M.me) : null, won); $('resSub').textContent += '  ·  ' + txt;
+}
+function netNewRound() {
+  showBanner('NEW ROUND', mapName(curMap) + ' · scores reset');
+  for (const en of M.entries) { en.kills = en.deaths = en.score = 0; }
+  if (G.state !== 'over') return;
+  M.over = false; showScreen(null); clearWorldFx();
+  if (M.me) M.me.alive = true; respawnPlayer();
+}
+function clearWorldFx() { for (const g of grenadesInFlight) scene.remove(g.m); grenadesInFlight.length = 0; for (const d of decals) d.visible = false; }
 
 /* ---------- bots that fill empty spots (the host runs them; everyone else sees them like players) */
 const BOT_FILL = { teams: 6, ffa: 8 }, WARMUP = 30;
@@ -7384,6 +7420,7 @@ function tick(dt) {
     P.vy -= 22 * dt; P.y += P.vy * dt; const gy = groundAt(P.x, P.z, P.y); if (P.y <= gy) { P.y = gy; P.vy = 0; }
     updateBots(dt); updateMatch(dt); updateGrenades(dt); updateHud();
   }
+  else if (G.state === 'over' && inMatch()) { tickIntermission(dt); if (M.online) { P.vy -= 22 * dt; P.y += P.vy * dt; const gy = groundAt(P.x, P.z, P.y); if (P.y <= gy) { P.y = gy; P.vy = 0; } } }
   else if (G.state === 'respawning' || G.state === 'spectate') {
     if (G.state === 'respawning' && G.dc) { G.dc.t += dt; aimDeathCam(dt, Math.min(G.dc.t / G.dc.dur, 1)); }
     updateBots(dt); updateMatch(dt); updateGrenades(dt); updateHud();
@@ -7458,7 +7495,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

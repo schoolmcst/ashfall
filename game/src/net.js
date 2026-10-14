@@ -268,7 +268,7 @@ function netTick(dt) {
   if (maxEp > NET.ep) {   // someone else's game moved on first: count the round we were in from the scores we saw
     const lim = M.cfg.score, ts = M.teamScore || [0, 0], played = NET.ep > 0 && !NET.endT && MS.time >= 60;
     if (played && NET.lastNear) finishMatchStats(NET.lastNear); else commitPartialStats();
-    NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; NET.lastNear = 0; startMatchStats();
+    NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; NET.lastNear = 0; startMatchStats(); netNewRound();
   }
   M.me.kills = NET.k; M.me.deaths = NET.d; M.me.score = NET.k * 100; M.me.name = 'YOU';
   if (M.def.teams) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
@@ -276,20 +276,37 @@ function netTick(dt) {
   { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
   if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
-  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor('random')); showBanner('NEW ROUND', mapName(curMap) + ' · scores reset'); } }
+  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor('random')); netNewRound(); } }
   else {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
     else for (const en of M.entries) if (en.kills >= lim) win = en.isPlayer ? 'YOU WIN' : en.name + ' WINS';
     if (win) {
-      NET.endT = 8; showBanner(win, 'next round in 8 seconds'); sfx.streak();
+      NET.endT = INTERMISSION_ON; sfx.streak();
       // a round to the score limit counts as a match in your career stats
       const won = M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1);
-      finishMatchStats(won); startMatchStats();
+      finishMatchStats(won); netIntermission(won, win); startMatchStats();
     }
   }
   netPublish();
 }
+
+// round won online: everyone sees the scoreboard for the intermission, nobody can be hurt, then a fresh round
+function netIntermission(won, txt) {
+  if (G.state === 'paused') showScreen(null);
+  G.netPrevState = G.state; G.state = 'over'; mouseDown = false; mouseAds = false;
+  hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
+  hideCenter(); clearWorldFx();
+  showResults(won > 0 ? (M.def.teams ? M.myTeam : M.me) : null, won); $('resSub').textContent += '  ·  ' + txt;
+}
+function netNewRound() {
+  showBanner('NEW ROUND', mapName(curMap) + ' · scores reset');
+  for (const en of M.entries) { en.kills = en.deaths = en.score = 0; }
+  if (G.state !== 'over') return;
+  M.over = false; showScreen(null); clearWorldFx();
+  if (M.me) M.me.alive = true; respawnPlayer();
+}
+function clearWorldFx() { for (const g of grenadesInFlight) scene.remove(g.m); grenadesInFlight.length = 0; for (const d of decals) d.visible = false; }
 
 /* ---------- bots that fill empty spots (the host runs them; everyone else sees them like players) */
 const BOT_FILL = { teams: 6, ffa: 8 }, WARMUP = 30;

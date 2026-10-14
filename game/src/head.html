@@ -224,6 +224,7 @@
   .res-sub{font-size:13px;letter-spacing:.3em;color:var(--dim);padding:4px 26px 0;text-align:left}
   .res-body{display:grid;grid-template-columns:minmax(0,2fr) minmax(220px,1fr);gap:18px;padding:16px 24px;overflow:auto;min-height:0;text-align:left}
   .res-board{display:flex;flex-wrap:wrap;gap:14px;align-content:flex-start}
+  .res-next{padding:4px 24px 0;font-size:13px;letter-spacing:.3em;color:var(--amber,#e0b050);text-align:right;min-height:18px}
   .res-mine{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-content:start}
   .res-mine div,.st-grid div{display:flex;flex-direction:column;gap:4px;padding:10px 12px;border:1px solid var(--line);background:rgba(255,255,255,.02)}
   .res-mine span,.st-grid span{font-size:10px;letter-spacing:.25em;color:var(--dim)} .res-mine b,.st-grid b{font-size:20px;letter-spacing:.06em}
@@ -443,7 +444,8 @@
   <div class="panel res">
     <div class="res-title" id="resTitle">VICTORY</div><div class="res-sub" id="resSub"></div>
     <div class="res-body"><div class="res-board" id="resBoard"></div><div class="res-mine" id="resMine"></div></div>
-    <div class="actions"><button class="btn" data-act="res-stats">CAREER STATS</button><span></span><button class="btn" data-act="res-lobby">LOBBY</button><button class="btn primary" data-act="res-again">PLAY AGAIN</button></div>
+    <div class="res-next" id="resNext"></div>
+    <div class="actions"><button class="btn" data-act="res-stats">CAREER STATS</button><span></span><button class="btn" data-act="res-lobby" id="resLobby">LOBBY</button><button class="btn primary" data-act="res-again" id="resAgain">PLAY AGAIN</button></div>
   </div>
 </div>
 

@@ -113,7 +113,7 @@ function spawnBot(en, pos) {
 function startMatch(mode, custom) {
   const cfg = matchCfg(mode, custom), def = MODES[mode];
   initAudio(); clearMenuSoldiers();
-  if (!def.online) { cfg.map = pickMapFor(cfg.map || LOBBY.map); loadMap(cfg.map); }
+  if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel); loadMap(cfg.map); }
   else if (!NET.app) loadMap('ruins');   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
   resetGame();
@@ -548,7 +548,23 @@ function showResults(winner, won) {
   $('resBoard').innerHTML = scoreboardHtml();
   const kd = MS.deaths ? (MS.kills / MS.deaths).toFixed(2) : MS.kills.toFixed(2), acc = MS.shots ? Math.round(MS.hits / MS.shots * 100) : 0;
   $('resMine').innerHTML = [['KILLS', MS.kills], ['DEATHS', MS.deaths], ['K/D', kd], ['ACCURACY', acc + '%'], ['HEADSHOTS', MS.heads], ['BEST STREAK', MS.bestStreak], ['LONGEST KILL', Math.round(MS.longest) + ' M'], ['SCORE', M.me ? M.me.score : G.score]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+  M.nextT = M.online ? INTERMISSION_ON : INTERMISSION_OFF;
+  $('resAgain').textContent = M.online ? 'READY' : 'PLAY NOW'; $('resAgain').style.display = M.online ? 'none' : '';
+  $('resLobby').textContent = M.online ? 'LEAVE MATCH' : 'LOBBY';
+  updateResNext();
   showScreen('results');
+}
+// time between matches: the scoreboard stays up, then the next match starts by itself
+const INTERMISSION_OFF = 45, INTERMISSION_ON = 40;
+function updateResNext() { const el = $('resNext'); if (!el) return; const t = M.online ? NET.endT : M.nextT; el.textContent = t > 0 ? `NEXT MATCH IN ${Math.ceil(t)}s` : 'STARTING…'; }
+// offline: a fresh match of the same mode and settings (a random map choice picks a new map)
+function nextMatch() {
+  if (M.mode === 'surv') { startMatch('surv', { map: M.cfg.mapSel === 'random' ? 'random' : curMap }); return; }
+  startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: M.cfg.mapSel || curMap, mapSel: M.cfg.mapSel }));
+}
+function tickIntermission(dt) {
+  if (!M.online) { M.nextT -= dt; if (M.nextT <= 0 && $('results') && !$('results').classList.contains('hide')) { nextMatch(); return; } }
+  updateResNext();
 }
 function scoreboardHtml() {
   if (!M.entries || !M.entries.length) return '';

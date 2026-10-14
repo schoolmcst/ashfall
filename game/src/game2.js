@@ -289,6 +289,7 @@ function clearWorldState() {
   for (const g of grenadesInFlight) scene.remove(g.m); grenadesInFlight.length = 0;
   for (const k of pickups) scene.remove(k.m); pickups.length = 0;
   if (G.bench) endBenchState();
+  for (const d of decals) d.visible = false; for (const c of casings) { c.on = false; c.m.visible = false; }
   navTarget = -1; G.streak = 0; G.multi = 0; restoreBarrels(); G.killer = null; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide');
 }
 function resetGame() {
@@ -337,7 +338,7 @@ function pauseGame() {
 }
 function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom || 'playing'; showScreen(null); lockPointer(); }
 function startGame() { startMatch('surv'); }
-function restartMatch() { if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
+function restartMatch() { if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
 // leave whatever is running and go back to the menu scene (soldiers posing behind the menus)
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();
