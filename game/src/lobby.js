@@ -2,7 +2,7 @@
 function modeRules(k, cfg) {
   const d = MODES[k], c = cfg || matchCfg(k);
   if (k === 'surv') return 'SOLO · ENDLESS WAVES';
-  if (d.online) return `REAL PLAYERS · ${d.teams ? 'TWO TEAMS' : 'EVERYONE VS EVERYONE'} · ${c.score} KILLS A ROUND`;
+  if (d.online) return `REAL PLAYERS · ${d.teams ? 'TWO TEAMS' : 'EVERYONE VS EVERYONE'} · ${d.base === 'gun' ? GUN_LADDER.length + ' GUNS' : c.score + ' ' + d.unit} A ROUND`;
   const size = d.teams ? `${c.perTeam} V ${c.perTeam}` : `${c.players} PLAYERS`;
   const goal = k === 'gun' ? `${GUN_LADDER.length} GUNS` : k === 'snd' ? `FIRST TO ${c.score} ROUNDS` : `${c.score} ${d.unit}`;
   return `${size} · ${goal}${c.time && k !== 'snd' ? ` · ${c.time} MIN` : ''}`;

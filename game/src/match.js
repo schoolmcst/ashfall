@@ -10,9 +10,12 @@ const MODES = {
   snd: { name: 'SEARCH & DESTROY', short: 'S&D', icon: 'S&D', desc: 'One life per round. Attackers plant the bomb at A or B, defenders stop them. First to 4 rounds.', teams: true, respawn: 0, score: 4, time: 0, perTeam: 5, unit: 'ROUNDS' },
   otdm: { name: 'ONLINE TEAM DEATHMATCH', short: 'ONLINE TDM', icon: 'NET', desc: 'Real people, two teams. Jump into a public match, or play with friends using a private code.', teams: true, respawn: 3, score: 40, time: 0, perTeam: 8, unit: 'KILLS', online: true },
   offa: { name: 'ONLINE FREE-FOR-ALL', short: 'ONLINE FFA', icon: 'NET', desc: 'Real people, every one for themselves. First to the kill limit wins the round, then a new one starts.', teams: false, respawn: 2.5, score: 20, time: 0, players: 12, unit: 'KILLS', online: true },
+  ogun: { name: 'ONLINE GUN GAME', short: 'ONLINE GUN', icon: 'GUN', desc: 'Real people, every kill moves you up the ladder of 20 guns. First to the end wins.', teams: false, respawn: 2.5, score: 20, time: 0, players: 12, unit: 'LEVELS', online: true, base: 'gun' },
+  ohp: { name: 'ONLINE HARDPOINT', short: 'ONLINE HP', icon: 'HP', desc: 'Real people, two teams. Hold the zone to score; it moves every minute.', teams: true, respawn: 4, score: 150, time: 0, perTeam: 6, unit: 'POINTS', online: true, base: 'hp' },
+  octf: { name: 'ONLINE CAPTURE THE FLAG', short: 'ONLINE CTF', icon: 'CTF', desc: 'Real people, two teams. Grab the enemy flag and bring it home.', teams: true, respawn: 5, score: 3, time: 0, perTeam: 6, unit: 'CAPTURES', online: true, base: 'ctf' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 const SKILL = {
@@ -87,7 +90,7 @@ function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
 function matchCfg(mode, custom) {
   const d = MODES[mode], c = Object.assign({ mode, score: d.score, time: d.time, perTeam: d.perTeam || 0, players: d.players || 0, skill: S.difficulty === 'recruit' ? 'recruit' : S.difficulty === 'veteran' ? 'veteran' : 'regular', hardcore: false, custom: false }, custom || {});
-  if (mode === 'gun') c.score = GUN_LADDER.length;
+  if (mode === 'gun' || mode === 'ogun') c.score = GUN_LADDER.length;
   return c;
 }
 function friendlyMarker() {
@@ -121,8 +124,9 @@ function startMatch(mode, custom) {
   buildSpawns();
   G.breakT = 1e9; G.waveActive = false; G.maxHp = M.maxHp; G.health = M.maxHp;
   if (def.online) {   // real players over the room: no bots; you drop in once the room has answered
-    M.online = true; const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false };
-    M.entries.push(me); M.me = me; G.state = 'respawning'; G.respT = 2.2; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
+    M.online = true; if (def.base) M.mode = def.base; const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false };
+    M.entries.push(me); M.me = me; G.state = 'respawning'; G.respT = 2.2; showScreen(null); lockPointer(); startMatchStats(); objSetup(); updateModeHud(true);
+    if (M.mode === 'gun') equipGunGame(0);
     NET.priv = null; if (privWanted()) privEnter();
     netStart(mode); if (NET.priv) return; showBanner(def.name, NET.app ? (NET.kind === 'code' ? 'private match: ' + NET.code.toUpperCase() : NET.kind === 'slot' ? 'joining a game on your Wi-Fi' : 'quick play') : NET.ns ? 'room: ' + NET.code.toUpperCase() : 'offline'); return;
   }
@@ -136,15 +140,20 @@ function startMatch(mode, custom) {
     const n = clamp(cfg.players, 2, 12);
     for (let i = 1; i < n; i++) M.entries.push({ name: names[ni++ % names.length], team: i, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: 'hunt' });
   }
-  if (mode === 'hp') M.hp = { idx: 0, t: 60, owner: -1, status: 'neutral', mesh: null, wait: 5 };
-  if (mode === 'ctf') M.ctf = { flags: LAYOUT.flags.map((h, t) => ({ team: t, home: h, x: h.x, z: h.z, y: h.y || 0, state: 'home', carrier: null, dropT: 0, mesh: null })) };
   if (mode === 'snd') M.snd = { round: 0, wins: [0, 0], att: 0, state: 'freeze', t: 0, bomb: null, site: 0 };
-  buildObjectiveMeshes();
+  objSetup();
   if (mode === 'snd') startRound(); else { placeEveryone(); }
   if (mode === 'gun') { M.me.level = 0; equipGunGame(0); }
   G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
   showBanner(def.name, def.teams ? `${cfg.perTeam} v ${cfg.perTeam}  ·  ${modeGoalText()}` : modeGoalText());
 }
+// (re)build the hardpoint / flags for the current map: match start, and online on a map change or a new round
+function objSetup() {
+  if (M.mode === 'hp') M.hp = { idx: 0, t: 60, owner: -1, status: 'neutral', mesh: null, wait: 5 };
+  if (M.mode === 'ctf') M.ctf = { flags: LAYOUT.flags.map((h, t) => ({ team: t, home: h, x: h.x, z: h.z, y: h.y || 0, state: 'home', carrier: null, dropT: 0, mesh: null })) };
+  if (M.mode === 'hp' || M.mode === 'ctf' || M.mode === 'snd') buildObjectiveMeshes();
+}
+const netHostNow = () => !M.online || !!(NET.room && NET.room.host);
 function modeGoalText() {
   const c = M.cfg;
   if (M.mode === 'snd') return `first to ${c.score} rounds`;
@@ -211,7 +220,7 @@ function matchBotKilled(e, by, head, boom) {
 function creditKill(ke, victim) {
   ke.kills++; ke.score += 100;
   if (M.def.teams && M.mode === 'tdm') M.teamScore[ke.team]++;
-  if (M.mode === 'gun') {
+  if (M.mode === 'gun' && !M.online) {
     ke.level++;
     if (ke.isPlayer) { if (ke.level < GUN_LADDER.length) { equipGunGame(ke.level); popScore(`LEVEL ${ke.level + 1}`, 'big', ARM[GUN_LADDER[ke.level]].name); sfx.streak(); } }
     else if (ke.bot && ke.level < GUN_LADDER.length) botGunProfile(ke.bot, GUN_LADDER[ke.level]);
@@ -368,6 +377,7 @@ function buildObjectiveMeshes() {
 /* ---------- hardpoint */
 function updateHardpoint(dt) {
   const h = M.hp;
+  if (!netHostNow()) { netObjApply(); hpVisual(h); return; }
   if (h.wait) { h.wait -= dt; if (h.wait <= 0) { h.wait = 0; h.t = 60; showMsg('HARDPOINT ONLINE'); } else return; }
   h.t -= dt;
   if (h.t <= 0) { h.idx = (h.idx + 1) % LAYOUT.hp.length; h.t = 60; showBanner('HARDPOINT MOVED', 'find the new zone'); sfx.ui(); for (const e of enemies) e.goalT = 0; }
@@ -377,7 +387,11 @@ function updateHardpoint(dt) {
   for (const e of enemies) if (Math.hypot(e.group.position.x - z.x, e.group.position.z - z.z) < 5 && Math.abs(e.group.position.y - zy) < 2.5) cnt[e.team]++;
   h.status = cnt[0] && cnt[1] ? 'contested' : cnt[0] ? 'team0' : cnt[1] ? 'team1' : 'neutral';
   h.acc = (h.acc || 0) + dt;
-  if (h.acc >= 1) { h.acc -= 1; const t = cnt[0] && !cnt[1] ? 0 : cnt[1] && !cnt[0] ? 1 : -1; if (t >= 0) { M.teamScore[t]++; if (t === M.myTeam && playerAlive() && Math.hypot(P.x - z.x, P.z - z.z) < 5) { M.me.score += 5; M.me.obj++; MS.hpTime++; } for (const e of enemies) if (e.team === t && Math.hypot(e.group.position.x - z.x, e.group.position.z - z.z) < 5) { e.entry.score += 5; e.entry.obj++; } checkScoreLimit(); } }
+  h.cnt = cnt; if (h.acc >= 1) { h.acc -= 1; const t = cnt[0] && !cnt[1] ? 0 : cnt[1] && !cnt[0] ? 1 : -1; if (t >= 0) { M.teamScore[t]++; if (t === M.myTeam && playerAlive() && Math.hypot(P.x - z.x, P.z - z.z) < 5) { M.me.score += 5; M.me.obj++; MS.hpTime++; } for (const e of enemies) if (e.team === t && Math.hypot(e.group.position.x - z.x, e.group.position.z - z.z) < 5) { e.entry.score += 5; e.entry.obj++; } checkScoreLimit(); } }
+  hpVisual(h);
+}
+function hpVisual(h) {
+  const z = LAYOUT.hp[h.idx % LAYOUT.hp.length]; if (!z || !OBJ.ring) return;
   OBJ.ring.position.set(z.x, (z.y || 0) + 0.04, z.z);
   OBJ.ring.material.color.set(h.status === 'contested' ? '#ffd24a' : h.status === 'neutral' ? '#ffffff' : TEAM_COL[h.status === 'team' + M.myTeam ? 0 : 1]);
   OBJ.ring.material.opacity = 0.4 + Math.sin(NOW * 4) * 0.15;
@@ -390,6 +404,8 @@ function dropCtfFlag(who) {
 }
 function updateCtf(dt) {
   const fl = M.ctf.flags;
+  if (!netHostNow()) { netObjApply(); ctfVisual(fl); return; }
+  for (const f of fl) if (f.state === 'carried' && f.carrier !== 'player' && !enemies.includes(f.carrier)) { f.state = 'dropped'; f.carrier = null; f.dropT = 20; showMsg(`${f.team === M.myTeam ? 'YOUR' : 'ENEMY'} FLAG DROPPED`); }
   const actors = []; if (playerAlive()) actors.push({ who: 'player', team: M.myTeam, x: P.x, z: P.z, en: M.me }); for (const e of enemies) actors.push({ who: e, team: e.team, x: e.group.position.x, z: e.group.position.z, en: e.entry });
   for (const f of fl) {
     if (f.state === 'carried') { const p = f.carrier === 'player' ? { x: P.x, z: P.z } : f.carrier.group.position; f.x = p.x; f.z = p.z; }
@@ -411,7 +427,38 @@ function updateCtf(dt) {
       resetFlag(f); checkScoreLimit();
     }
   }
-  for (const f of fl) { f.mesh.position.set(f.x, (f.y || 0) + (f.state === 'carried' ? 0.3 : 0), f.z); f.mesh.visible = !(f.carrier === 'player'); const c = f.mesh.userData.cloth; c.rotation.y = Math.sin(NOW * 3 + f.team) * 0.3; }
+  ctfVisual(fl);
+}
+function ctfVisual(fl) { for (const f of fl) { if (!f.mesh) continue; f.mesh.position.set(f.x, (f.y || 0) + (f.state === 'carried' ? 0.3 : 0), f.z); f.mesh.visible = !(f.carrier === 'player'); const c = f.mesh.userData.cloth; c.rotation.y = Math.sin(NOW * 3 + f.team) * 0.3; } }
+// online: what the host sends about the objective, and how everyone else applies it
+const CTF_ST = ['home', 'carried', 'dropped'];
+function netObjPack() {
+  const ts = M.teamScore || [0, 0];
+  if (M.mode === 'hp' && M.hp) { const h = M.hp; return ['h', h.idx, Math.round(h.t), Math.ceil(h.wait || 0), h.status, ts[0], ts[1]]; }
+  if (M.mode === 'ctf' && M.ctf) return ['c', ts[0], ts[1], ...M.ctf.flags.flatMap(f => [CTF_ST.indexOf(f.state), f.carrier === 'player' ? NET.me : f.carrier ? (f.carrier.net || (f.carrier.entry && f.carrier.entry.botLabel) || '') : '', r2(f.x), r2(f.z)])];
+  return undefined;
+}
+function netObjApply() {
+  const o = NET.ob; if (!Array.isArray(o)) return;
+  if (o[0] === 'h' && M.hp) {
+    const h = M.hp, idx = o[1] | 0;
+    if (idx !== h.idx && !h.wait) { showBanner('HARDPOINT MOVED', 'find the new zone'); for (const e of enemies) e.goalT = 0; }
+    if (h.wait > 0 && !(o[3] > 0)) showMsg('HARDPOINT ONLINE');
+    h.idx = idx; h.t = +o[2] || 0; h.wait = +o[3] || 0; h.status = typeof o[4] === 'string' ? o[4] : 'neutral';
+    if (h.status === 'team0' || h.status === 'team1') { const t = +h.status.slice(4); if (t === M.myTeam && playerAlive()) { const z = LAYOUT.hp[h.idx]; if (z && Math.hypot(P.x - z.x, P.z - z.z) < 5 && (h.myAcc = (h.myAcc || 0) + 1 / 60) >= 1) { h.myAcc = 0; MS.hpTime++; M.me.obj++; } } }
+    M.teamScore = [+o[5] | 0, +o[6] | 0];
+  }
+  if (o[0] === 'c' && M.ctf) {
+    const old = M.teamScore.slice(); M.teamScore = [+o[1] | 0, +o[2] | 0];
+    for (let t = 0; t < 2; t++) if (M.teamScore[t] > old[t]) { showBanner(t === M.myTeam ? 'FLAG CAPTURED' : 'ENEMY CAPTURED YOUR FLAG', `${TEAM_NAME[0]} ${M.teamScore[M.myTeam]} · ${M.teamScore[1 - M.myTeam]} ${TEAM_NAME[1]}`); sfx.streak(); }
+    M.ctf.flags.forEach((f, i) => {
+      const b = 3 + i * 4, st = CTF_ST[o[b] | 0] || 'home', id = typeof o[b + 1] === 'string' ? o[b + 1] : '';
+      const car = !id ? null : id === NET.me ? 'player' : enemies.find(e => e.net === id) || null;
+      if (st === 'carried' && f.state !== 'carried') { const mine = car === 'player'; showBanner(f.team === M.myTeam ? 'YOUR FLAG IS TAKEN' : mine ? 'YOU HAVE THE FLAG' : 'ENEMY FLAG TAKEN', mine ? 'get it home' : ''); sfx.streak(); if (mine) { MS.caps = MS.caps || 0; } }
+      f.state = st; f.carrier = st === 'carried' ? car : null;
+      if (car && car !== 'player') { f.x = car.group.position.x; f.z = car.group.position.z; } else if (car === 'player') { f.x = P.x; f.z = P.z; } else { f.x = netNum(o[b + 2], -ARENA, ARENA, f.x); f.z = netNum(o[b + 3], -ARENA, ARENA, f.z); }
+    });
+  }
 }
 function resetFlag(f) { f.state = 'home'; f.carrier = null; f.x = f.home.x; f.z = f.home.z; }
 

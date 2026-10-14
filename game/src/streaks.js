@@ -23,7 +23,7 @@ let STK_SEL = ['uav', 'mortar', 'air'];
 try { const a = JSON.parse(localStorage.getItem(STK_KEY) || 'null'); if (Array.isArray(a) && a.length && a.every(k => STREAKS[k])) STK_SEL = a.slice(0, 3); } catch (e) {}
 const stkSave = () => { try { localStorage.setItem(STK_KEY, JSON.stringify(STK_SEL)); } catch (e) {} };
 const stkIcon = (id, cls = '') => `<svg class="stk-ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${STK_ICON[id] || ''}</svg>`;
-const stkOn = () => typeof M !== 'undefined' && M && inMatch() && M.mode !== 'gun' && !G.bench;
+const stkOn = () => typeof M !== 'undefined' && M && inMatch() && M.mode !== 'gun' && M.mode !== 'snd' && !G.bench;
 const STK = { pts: 0, got: new Set(), have: [], uavT: 0, vuav: false, jobs: [] };
 function stkReset() { STK.pts = 0; STK.got.clear(); STK.have = []; STK.uavT = 0; STK.vuav = false; STK.jobs = []; stkHud(true); }
 function stkDeath() { STK.pts = 0; STK.got.clear(); stkHud(true); }
