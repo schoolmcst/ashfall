@@ -14,8 +14,9 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
 **The owner tests every change before players get it. Always two steps:**
 1. Make the change in `game/src`, build, run the tests.
 2. `tools/release.sh test <next version> "note" ...` then commit + push. This updates `release-test/`, which only the
-   owner's "ASHFALL TEST" launcher reads (`Documents\ASHFALL Setup\ASHFALL TEST.cmd`; it starts the app with
-   ASHFALL_UPDATE_BASE pointing at release-test/ and a separate profile folder). Tell the owner to open ASHFALL TEST.
+   owner's separate **DARKZONE TEST** app reads (installed from `Documents\DARKZONE TEST Setup`, built with
+   `CHANNEL=test app/pack.sh`; its package.json has `"channel": "test"`, so it reads release-test/, keeps its own saves
+   and shows a TEST APP tag). Tell the owner to open DARKZONE TEST.
 3. Only when the owner says it is good: `tools/release.sh public`, commit + push. Every player gets it on next launch.
 - Online matches only pair players on the same game version (the version is part of the match slot names).
 - Only `app/main.js` / `app/preload.js` changes need a new app download (`app/pack.sh`, then upload the zips to a

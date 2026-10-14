@@ -389,7 +389,8 @@ function netBots(dt) {
 setTimeout(() => {
   try {
     const A = window.ASHFALL_APP; if (!A) return;
-    const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version + ' BETA'; document.body.appendChild(tag);
+    const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version + ' BETA' + (A.channel === 'test' ? ' · TEST APP' : ''); document.body.appendChild(tag);
+    if (A.channel === 'test') { const t = document.createElement('div'); t.className = 'app-testtag'; t.textContent = 'TEST APP · NOT THE LIVE GAME'; document.body.appendChild(t); }
     const u = A.justUpdated; if (!u || (typeof HC_VER !== 'undefined' && String(u.version) === HC_VER)) return;   // the Homecoming splash shows instead
     const m = document.createElement('div'); m.className = 'app-notes';
     const box = document.createElement('div'), h = document.createElement('b'), ul = document.createElement('ul'), ok = document.createElement('button');
@@ -403,6 +404,7 @@ setTimeout(() => {
 (() => {
   const s = document.createElement('style');
   s.textContent = `.beta-tag{display:inline-block;vertical-align:top;margin-left:14px;margin-top:.35em;font-size:.22em;letter-spacing:.2em;padding:.25em .6em;border:2px solid #ffd24a;color:#ffd24a;border-radius:4px;font-style:normal}
+.app-testtag{position:fixed;left:50%;top:6px;transform:translateX(-50%);z-index:60;pointer-events:none;font:700 11px system-ui,sans-serif;letter-spacing:.3em;color:#111;background:#ff6a3d;padding:4px 12px;border-radius:3px}
 .app-ver{position:fixed;right:10px;bottom:6px;font:11px monospace;opacity:.45;z-index:5;pointer-events:none;color:#fff}
 .app-notes{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200}
 .app-notes>div{background:#14171b;border:1px solid rgba(255,210,74,.5);padding:22px 26px;max-width:520px;width:calc(100% - 32px);box-sizing:border-box;color:#e8e2d0}

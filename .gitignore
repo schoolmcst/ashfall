@@ -2,3 +2,4 @@ app/dl/
 app/dist/
 node_modules/
 *.png
+app/dist-test/
