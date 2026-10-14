@@ -647,6 +647,7 @@ function endMatch(winner) {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   hideCenter(); $('ihold').classList.add('hide');
   finishMatchStats(won);
+  try { rpFinish(won); } catch (e) {}
   showResults(winner, won);
 }
 function showResults(winner, won) {

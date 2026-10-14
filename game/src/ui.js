@@ -1,5 +1,5 @@
 /* ================================================================== UI: screens, settings, input, loop, boot */
-const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist', 'classpick', 'leaderboard'];
+const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist', 'classpick', 'leaderboard', 'replay'];
 let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
   curScreen = id; if (id === 'menu') try { renderMenuCard(); } catch (e) {}
@@ -195,6 +195,7 @@ function actions(act) {
     case 'stk-back': if (stkReturn === 'lobby') renderLobby(); showScreen(stkReturn); break;
     case 'pl-leave': QP.busy = false; toLobby(); break;
     case 'res-stats': statsReturn = 'results'; statOnline = !!(M && M.online); renderStats(); showScreen('career'); break;
+    case 'replay': sfx.ui(); openReplay(); break;
     case 'settings': returnScreen = curScreen || 'menu'; showScreen('settings'); break;
     case 'settings-back': showScreen(returnScreen); break;
     case 'bench': startBench(); break;
@@ -230,6 +231,7 @@ function goBack() {
   else if (curScreen === 'streaks') actions('stk-back');
   else if (curScreen === 'modes') actions('modes-back');
   else if (curScreen === 'leaderboard') actions('lb-back');
+  else if (curScreen === 'replay') closeReplay();
   else if (curScreen === 'playlist') actions('pl-back');
   else if (curScreen === 'results') toLobby();
   else if (curScreen === 'settings' && curTab === 'BUTTONS') actions('pad-back');
@@ -272,6 +274,10 @@ addEventListener('keydown', e => {
   if (curScreen === 'classpick' && /^Digit[1-5]$/.test(e.code)) { cpPick(+e.code.slice(5) - 1); return; }
   if (G.state !== 'playing') {
     if (!curScreen) return;
+    if (curScreen === 'replay') {
+      if (e.code === 'Space') { e.preventDefault(); rpToggle(); return; }
+      if (e.code === 'ArrowLeft' || e.code === 'ArrowRight') { e.preventDefault(); rpSeekBy(e.code === 'ArrowLeft' ? -5 : 5); return; }
+    }
     if (curScreen === 'lobby' && e.code === 'KeyQ' && !(document.activeElement && document.activeElement.tagName === 'INPUT')) { openPlaylist(); return; }
     if (e.code === 'ArrowDown') { moveFocus(1); e.preventDefault(); }
     else if (e.code === 'ArrowUp') { moveFocus(-1); e.preventDefault(); }
@@ -403,6 +409,7 @@ function menuPad(dt, mx, my, ry, press, down) {
   if (d !== nav.dir) { nav.dir = d; nav.n = 0; if (d) { menuMove(d); nav.t = 0.34; } }
   else if (d) { nav.t -= dt; if (nav.t <= 0) { menuMove(d); nav.n++; nav.t = Math.max(0.045, 0.1 - nav.n * 0.005); } }
   if (press(3) && curScreen === 'lobby') { openPlaylist(); return; }
+  if (curScreen === 'replay') { if (press(2)) rpToggle(); if (press(4) || press(5)) rpSeekBy(press(4) ? -5 : 5); if (press(1)) goBack(); if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); } return; }
   if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); }
   if (press(1)) goBack();
   if (press(4) || press(5)) menuTab(press(4) ? -1 : 1);
@@ -418,6 +425,7 @@ function menuTab(d) {
 }
 function menuMove(d) {
   const a = document.activeElement, adjustable = a && ((a.classList && a.classList.contains('cod-go')) || a.type === 'range' || (a.classList && a.classList.contains('sw')) || (a.parentElement && a.parentElement.classList.contains('seg')) || /^(diff|class)/.test((a.getAttribute && a.getAttribute('data-act')) || ''));
+  if ((d === 'left' || d === 'right') && curScreen === 'replay' && a && a.id === 'rpSeek') { rpSeekBy(d === 'right' ? 5 : -5); return; }
   if ((d === 'left' || d === 'right') && adjustable && curScreen !== 'loadout') { adjustFocused(d === 'right' ? 1 : -1); return; }
   spatialFocus(d);
 }
@@ -506,6 +514,7 @@ function menuCamera() {
 }
 function tick(dt) {
   pollPad(dt);
+  try { rpTick(dt); } catch (e) {}
   if (G.holdT > 0 && M && !G.bench && G.state !== 'over' && G.state !== 'plobby') updateHold(dt);
   skyMat.uniforms.time.value += dt; sky.position.copy(camera.position);
   updateGrain(dt); updateAmbience(NOW); updateFires(dt, NOW);
@@ -612,7 +621,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

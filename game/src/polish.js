@@ -4,6 +4,7 @@
 /* ---------- kill feed + score popups + streaks */
 const feedEl = $('feed'), popEl = $('pop');
 function feedLine(html, cls) {
+  try { rpFeed(html); } catch (e) {}
   const d = document.createElement('div'); d.innerHTML = html; if (cls) d.className = cls;
   feedEl.prepend(d); while (feedEl.children.length > 5) feedEl.lastChild.remove();
   setTimeout(() => { d.style.opacity = 0; }, 3600); setTimeout(() => d.remove(), 4200);
