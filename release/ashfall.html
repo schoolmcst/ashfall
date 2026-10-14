@@ -77,6 +77,7 @@
   .mc-r{display:flex;align-items:center;gap:10px;padding:6px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.mc-r:last-child{border-bottom:0}.mc-r .mc-n{pointer-events:auto;cursor:text;background:none;border:0;color:#fff;font:700 13px/1 inherit;font-family:inherit;letter-spacing:.18em;padding:4px 0;text-align:left;min-width:150px}.mc-r .mc-n:hover,.mc-r .mc-n:focus{outline:0;color:var(--accent)}.mc-r span{font-size:11px;letter-spacing:.08em;color:var(--dim)}.mc-r.on .mc-n::before{content:'★ ';color:var(--accent)}.mc-r input{pointer-events:auto;font:inherit;font-size:13px;letter-spacing:.16em;padding:3px 6px;background:rgba(0,0,0,.4);border:1px solid var(--accent);color:#fff;width:160px;text-transform:uppercase}
   .cn-body{max-height:230px;overflow:auto;padding:4px 0}.cn-v{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.cn-v:last-child{border-bottom:0}
   .cn-v b{font-size:13px;letter-spacing:.2em;color:#fff}.cn-v b em{font-style:normal;font-size:9px;letter-spacing:.2em;color:#111;background:var(--accent);padding:2px 5px;margin-left:8px;vertical-align:2px}
+  .lo-opt.perk-t1{border-left:3px solid #4ea6ff}.lo-opt.perk-t2{border-left:3px solid #ff5a4a}.lo-opt.perk-t3{border-left:3px solid #6fd06a}
   .cn-name{margin-top:6px;font-size:15px;font-weight:800;letter-spacing:.22em;color:var(--accent)}
   .cn-v small{float:right;font-size:10px;letter-spacing:.15em;color:var(--dim)}.cn-v ul{margin:6px 0 0;padding-left:16px;font-size:12px;line-height:1.45;color:var(--dim)}
   .cus-priv{margin:10px 26px 4px;padding:12px 14px;border:1px solid rgba(224,180,74,.4);background:rgba(224,180,74,.06);text-align:left}.cus-priv .cp-h{font-size:11px;letter-spacing:.3em;color:var(--accent);margin-bottom:4px}
@@ -639,6 +640,48 @@ window.addEventListener('error', function (ev) { showErr('Error: ' + ev.message 
 <script>
 window.__ashfallBoot = () => {
 'use strict';
+/* ================================================================== save backup: your stats and setup can't be lost
+   Everything the game saves (career stats, classes, settings, friends, callsign...) lives in localStorage. A second
+   copy is kept in IndexedDB (a separate store, with its own space) and refreshed every few seconds of play. When the
+   game starts and localStorage is missing something, or holds a career with fewer matches than the backup, the backup
+   is put back and the page reloads once. Replays are kept in IndexedDB too, so they never crowd out the stats. */
+const SB = { db: null, ready: null, last: '' };
+const SB_KEEP = k => /^ashfall\./.test(k) || k === 'dz_seen_update';
+SB.ready = new Promise(res => {
+  try {
+    const rq = indexedDB.open('darkzone-save', 1);
+    rq.onupgradeneeded = () => { rq.result.createObjectStore('kv'); };
+    rq.onsuccess = () => { SB.db = rq.result; res(SB.db); };
+    rq.onerror = rq.onblocked = () => res(null);
+  } catch (e) { res(null); }
+});
+function sbGet(key) { return SB.ready.then(db => db ? new Promise(r => { try { const q = db.transaction('kv').objectStore('kv').get(key); q.onsuccess = () => r(q.result); q.onerror = () => r(undefined); } catch (e) { r(undefined); } }) : undefined); }
+function sbPut(key, val) { return SB.ready.then(db => db ? new Promise(r => { try { const t = db.transaction('kv', 'readwrite'); t.objectStore('kv').put(val, key); t.oncomplete = () => r(true); t.onerror = t.onabort = () => r(false); } catch (e) { r(false); } }) : false); }
+function sbSnapshot() { const o = {}; try { for (let i = 0; i < localStorage.length; i++) { const k = localStorage.key(i); if (SB_KEEP(k)) o[k] = localStorage.getItem(k); } } catch (e) {} return o; }
+// merge into the backup: a key that went missing keeps its saved copy, and a career never goes back to fewer matches
+function sbBackup() {
+  const o = Object.assign({}, SB.bak || {}), cur = sbSnapshot();
+  for (const [k, v] of Object.entries(cur)) if (!(/^ashfall\.stats\./.test(k) && o[k] && sbMatches(o[k]) > sbMatches(v))) o[k] = v;
+  const s = JSON.stringify(o); if (s === SB.last || s === '{}') return;
+  SB.last = s; SB.bak = o; sbPut('local', { t: Date.now(), keys: o });
+}
+const sbMatches = raw => { try { const o = JSON.parse(raw || 'null'); return o ? (o.matches | 0) + (o.kills | 0) / 1e6 : -1; } catch (e) { return -1; } };
+// on start: restore anything the backup has that localStorage lost
+const sbRestored = sbGet('local').then(b => {
+  if (!b || !b.keys) return false;
+  SB.bak = Object.assign({}, b.keys);
+  let changed = false;
+  try {
+    for (const [k, v] of Object.entries(b.keys)) {
+      const cur = localStorage.getItem(k);
+      const lost = cur === null || (/^ashfall\.stats\./.test(k) && sbMatches(v) > sbMatches(cur));
+      if (lost && v !== null) { localStorage.setItem(k, v); changed = true; }
+    }
+  } catch (e) { return false; }
+  if (changed) { let again = false; try { again = sessionStorage.getItem('dz_restored') === '1'; sessionStorage.setItem('dz_restored', '1'); } catch (e) {} if (!again) { location.reload(); return true; } }
+  return false;
+});
+sbRestored.then(r => { if (!r) { sbBackup(); setInterval(sbBackup, 5000); addEventListener('pagehide', sbBackup); addEventListener('beforeunload', sbBackup); } });
 /* ================================================================== core: helpers, settings, audio */
 const $ = id => document.getElementById(id);
 const rnd = (a, b) => a + Math.random() * (b - a);
@@ -2180,7 +2223,7 @@ function buildSoldierTemplates() {
     const root = new THREE.Group(); root.name = 'root';
     const hips = new THREE.Bone(); hips.name = 'hips'; hips.position.y = 1.0; root.add(hips);
     hips.add(solSeg(key, 'pelvis', 'pelvis', mat) || seg1([Pt(Bx(0.34, 0.2, 0.22), v.cloth, 0, 0, 0), Pt(Bx(0.36, 0.05, 0.24), v.vest, 0, 0.08, 0)], 'pelvis', mat));
-    hips.add(hit(Bx(0.4, 0.26, 0.3), 0, 0, 0, { mult: 0.9 }));
+    hips.add(hit(Bx(0.4, 0.26, 0.3), 0, 0, 0, { mult: 0.9, zone: 'hips' }));
     const torso = new THREE.Bone(); torso.name = 'torso'; torso.position.y = 0.08; hips.add(torso);
     const tw = heavy ? 1.12 : 1;
     const tparts = [
@@ -2190,31 +2233,33 @@ function buildSoldierTemplates() {
     ];
     if (heavy) tparts.push(Pt(Bx(0.5, 0.3, 0.06), v.helm, 0, 0.38, 0.17), Pt(Bx(0.18, 0.2, 0.2), v.vest, -0.3, 0.55, 0), Pt(Bx(0.18, 0.2, 0.2), v.vest, 0.3, 0.55, 0));
     torso.add(solSeg(key, 'body', 'body', mat) || seg1(tparts, 'body', mat));
-    torso.add(hit(Bx(0.5 * tw, 0.66, 0.34), 0, 0.3, 0, { mult: 1 }));
+    // hit zones: head (gun's headshot multiplier) > chest 1.15 > stomach 1.0 > hips 0.9 > upper arm / thigh 0.8 > forearm / shin 0.7
+    torso.add(hit(Bx(0.5 * tw, 0.3, 0.34), 0, 0.48, 0, { mult: 1.15, zone: 'chest' }));
+    torso.add(hit(Bx(0.5 * tw, 0.36, 0.34), 0, 0.15, 0, { mult: 1, zone: 'stomach' }));
     const head = new THREE.Bone(); head.name = 'head'; head.position.set(0, 0.7, 0); torso.add(head);
     const hparts = [Pt(Sp(1, 12, 10), v.skin, 0, 0, 0, 0, 0, 0, 0.105, 0.13, 0.12), Pt(Bx(0.17, 0.045, 0.05), v.goggle, 0, 0.025, 0.105)];
     if (!scout) hparts.push(Pt(Sp(1, 14, 8, 0, TAU, 0, HALF), v.helm, 0, 0.035, 0, 0, 0, 0, 0.14, 0.125, 0.16), Pt(Cy(0.145, 0.15, 0.025, 14), v.helm, 0, 0.04, 0.0));
     else hparts.push(Pt(Sp(1, 12, 8, 0, TAU, 0, HALF), v.helm, 0, 0.04, -0.005, 0, 0, 0, 0.12, 0.085, 0.14), Pt(Bx(0.2, 0.02, 0.1), v.helm, 0, 0.045, 0.1));
     if (heavy) hparts.push(Pt(Bx(0.15, 0.1, 0.06), v.helm, 0, -0.07, 0.09));
     head.add(solSeg(key, 'head', 'headmesh', mat) || seg1(hparts, 'headmesh', mat));
-    head.add(hit(Sp(0.16, 8, 6), 0, 0.02, 0, { head: true }));
+    head.add(hit(Sp(0.165, 8, 6), 0, 0.02, 0, { head: true, zone: 'head' }));
     const arm = side => {
       const sx = side === 'L' ? -1 : 1, a = new THREE.Bone(); a.name = 'arm' + side; a.position.set(sx * 0.27 * tw, 0.5, 0); a.rotation.order = 'YXZ';
       a.add(solSeg(key, 'upper', 'upper', mat) || seg1([Pt(Cy(0.055, 0.05, 0.28, 8), v.cloth, 0, -0.14, 0), Pt(Sp(0.068, 8, 6), v.vest, 0, 0, 0)], 'upper', mat));
-      a.add(hit(Bx(0.15, 0.3, 0.15), 0, -0.14, 0, { mult: 0.75 }));
+      a.add(hit(Bx(0.15, 0.3, 0.15), 0, -0.14, 0, { mult: 0.8, zone: 'arm' }));
       const el = new THREE.Bone(); el.name = 'elbow' + side; el.position.y = -0.28; el.rotation.order = 'YXZ'; a.add(el);
       el.add(solSeg(key, 'fore', 'fore', mat) || seg1([Pt(Cy(0.048, 0.04, 0.26, 8), v.cloth, 0, -0.13, 0), Pt(Bx(0.075, 0.09, 0.085), v.glove, 0, -0.3, 0)], 'fore', mat));
-      el.add(hit(Bx(0.12, 0.34, 0.12), 0, -0.16, 0, { mult: 0.75 }));
+      el.add(hit(Bx(0.12, 0.34, 0.12), 0, -0.16, 0, { mult: 0.7, zone: 'arm' }));
       torso.add(a); return a;
     };
     arm('L'); arm('R');
     const leg = side => {
       const sx = side === 'L' ? -1 : 1, l = new THREE.Bone(); l.name = 'leg' + side; l.position.set(sx * 0.1, -0.02, 0);
       l.add(solSeg(key, 'thigh', 'thigh', mat) || seg1([Pt(Cy(0.08, 0.065, 0.46, 9), v.cloth, 0, -0.23, 0), Pt(Bx(0.1, 0.1, 0.05), v.vest, 0, -0.1, 0.09)], 'thigh', mat));
-      l.add(hit(Bx(0.2, 0.48, 0.24), 0, -0.23, 0, { mult: 0.75 }));
+      l.add(hit(Bx(0.2, 0.48, 0.24), 0, -0.23, 0, { mult: 0.8, zone: 'leg' }));
       const k = new THREE.Bone(); k.name = 'knee' + side; k.position.y = -0.46; l.add(k);
       k.add(solSeg(key, 'shin', 'shin', mat) || seg1([Pt(Cy(0.065, 0.05, 0.44, 9), v.cloth, 0, -0.22, 0), Pt(Bx(0.1, 0.1, 0.22), v.boot, 0, -0.47, 0.05), Pt(Cy(0.06, 0.06, 0.13, 8), v.boot, 0, -0.4, 0), Pt(Bx(0.09, 0.07, 0.07), v.vest, 0, -0.04, 0.07)], 'shin', mat));
-      k.add(hit(Bx(0.17, 0.54, 0.24), 0, -0.25, 0.02, { mult: 0.75 }));
+      k.add(hit(Bx(0.17, 0.54, 0.24), 0, -0.25, 0.02, { mult: 0.7, zone: 'leg' }));
       hips.add(l); return l;
     };
     leg('L'); leg('R');
@@ -3392,14 +3437,14 @@ const SND = {
   rocket: { hc: 2400, hg: 0.5, hd: 0.2, bc: 700, bg: 0.9, bd: 0.8, tf: 60, tg: 0.7, td: 0.5, tl: 1.0 },
 };
 const CAT_BASE = {
-  ar: { auto: true, head: 2.2, pellets: 1, range: 160, eff: 45, adsFov: 52, mag: 30, reload: 2.0, spread: 0.014, adsSpread: 0.0025, recoil: 0.011, move: 1, ads: 1, rum: [0.1, 0.4, 60] },
-  smg: { auto: true, head: 1.8, pellets: 1, range: 110, eff: 22, adsFov: 56, mag: 30, reload: 1.8, spread: 0.011, adsSpread: 0.004, recoil: 0.008, move: 1.07, ads: 0.8, rum: [0.05, 0.3, 45] },
-  lmg: { auto: true, head: 2.0, pellets: 1, range: 170, eff: 50, adsFov: 54, mag: 100, reload: 4.2, spread: 0.022, adsSpread: 0.003, recoil: 0.012, move: 0.9, ads: 1.35, rum: [0.2, 0.45, 70] },
-  mr: { auto: false, head: 2.2, pellets: 1, range: 230, eff: 70, adsFov: 30, mag: 20, reload: 2.3, spread: 0.03, adsSpread: 0.0012, recoil: 0.025, move: 0.97, ads: 1.15, rum: [0.35, 0.5, 90] },
-  sr: { auto: false, head: 2.6, pellets: 1, range: 320, eff: 120, adsFov: 12.5, mag: 5, reload: 3.0, spread: 0.06, adsSpread: 0.0004, recoil: 0.06, move: 0.92, ads: 1.4, rum: [0.7, 0.6, 160] },
-  sg: { auto: false, head: 1.5, pellets: 9, range: 40, eff: 14, adsFov: 62, mag: 6, reload: 2.7, spread: 0.055, adsSpread: 0.038, recoil: 0.07, move: 1.0, ads: 0.95, rum: [0.8, 0.9, 160] },
-  pi: { auto: false, head: 2.5, pellets: 1, range: 120, eff: 28, adsFov: 62, mag: 15, reload: 1.5, spread: 0.01, adsSpread: 0.003, recoil: 0.022, move: 1.08, ads: 0.7, rum: [0.1, 0.4, 60] },
-  la: { auto: false, head: 1, pellets: 1, range: 200, eff: 200, adsFov: 58, mag: 1, reload: 3.2, spread: 0.01, adsSpread: 0.002, recoil: 0.05, move: 0.9, ads: 1.3, rum: [0.9, 0.7, 260] },
+  ar: { fallMin: 0.7, auto: true, head: 2.2, pellets: 1, range: 160, eff: 45, adsFov: 52, mag: 30, reload: 2.0, spread: 0.014, adsSpread: 0.0025, recoil: 0.011, move: 1, ads: 1, rum: [0.1, 0.4, 60] },
+  smg: { fallMin: 0.6, auto: true, head: 1.8, pellets: 1, range: 110, eff: 22, adsFov: 56, mag: 30, reload: 1.8, spread: 0.011, adsSpread: 0.004, recoil: 0.008, move: 1.07, ads: 0.8, rum: [0.05, 0.3, 45] },
+  lmg: { fallMin: 0.75, auto: true, head: 2.0, pellets: 1, range: 170, eff: 50, adsFov: 54, mag: 100, reload: 4.2, spread: 0.022, adsSpread: 0.003, recoil: 0.012, move: 0.9, ads: 1.35, rum: [0.2, 0.45, 70] },
+  mr: { fallMin: 0.85, auto: false, head: 2.2, pellets: 1, range: 230, eff: 70, adsFov: 30, mag: 20, reload: 2.3, spread: 0.03, adsSpread: 0.0012, recoil: 0.025, move: 0.97, ads: 1.15, rum: [0.35, 0.5, 90] },
+  sr: { fallMin: 1, auto: false, head: 2.6, pellets: 1, range: 320, eff: 120, adsFov: 12.5, mag: 5, reload: 3.0, spread: 0.06, adsSpread: 0.0004, recoil: 0.06, move: 0.92, ads: 1.4, rum: [0.7, 0.6, 160] },
+  sg: { fallMin: 0.25, auto: false, head: 1.5, pellets: 9, range: 40, eff: 14, adsFov: 62, mag: 6, reload: 2.7, spread: 0.055, adsSpread: 0.038, recoil: 0.07, move: 1.0, ads: 0.95, rum: [0.8, 0.9, 160] },
+  pi: { fallMin: 0.6, auto: false, head: 2.5, pellets: 1, range: 120, eff: 28, adsFov: 62, mag: 15, reload: 1.5, spread: 0.01, adsSpread: 0.003, recoil: 0.022, move: 1.08, ads: 0.7, rum: [0.1, 0.4, 60] },
+  la: { fallMin: 1, auto: false, head: 1, pellets: 1, range: 200, eff: 200, adsFov: 58, mag: 1, reload: 3.2, spread: 0.01, adsSpread: 0.002, recoil: 0.05, move: 0.9, ads: 1.3, rum: [0.9, 0.7, 260] },
 };
 // v: viewmodel recipe (see buildProcGun). blender: use the Blender-modelled body.
 const ARMORY_SRC = [
@@ -3477,10 +3522,14 @@ const ARMORY_SRC = [
 const BALANCE = {
   marc: { dmg: 28, interval: 0.088 }, kv47: { dmg: 33, interval: 0.1 }, vanguard: { dmg: 45, interval: 0.133 }, talon: { dmg: 25, interval: 0.075 },
   striker: { dmg: 26, interval: 0.081 }, spectre: { dmg: 27, interval: 0.086 },
-  viper: { dmg: 25, interval: 0.071 }, wasp: { dmg: 20, interval: 0.055 }, kestrel: { dmg: 25, interval: 0.067 }, bulwark: { dmg: 34, interval: 0.092 }, hornet: { dmg: 25, interval: 0.07 }, whisper: { dmg: 25, interval: 0.08 },
+  // SMGs: 5 body shots up close (Bulwark 4), quick to fall off past their max damage range
+  viper: { dmg: 22, interval: 0.066 }, wasp: { dmg: 18, interval: 0.055 }, kestrel: { dmg: 21, interval: 0.064 }, bulwark: { dmg: 30, interval: 0.092 }, hornet: { dmg: 22, interval: 0.068 }, whisper: { dmg: 21, interval: 0.075 },
   anvil: { dmg: 30, interval: 0.092 }, titan: { dmg: 33, interval: 0.107 }, hailstorm: { dmg: 30, interval: 0.092 },
   sentinel: { dmg: 45, interval: 0.2 }, arbiter: { dmg: 45, interval: 0.16 },
   warden: { dmg: 92 },
+  // pistols are backups: slower to kill than any primary, less of a laser from the hip, only the revolver one-shots a head
+  sidearm: { dmg: 26, head: 2.0, interval: 0.16, spread: 0.016 }, magnum: { dmg: 52, head: 2.0, interval: 0.42, spread: 0.02, eff: 26 },
+  stinger: { dmg: 16, head: 1.6, interval: 0.07, spread: 0.02, adsSpread: 0.007 }, deadeye: { dmg: 50, head: 1.9, interval: 0.36, spread: 0.02, eff: 26, move: 1.02 },
 };
 const ARMORY = ARMORY_SRC.map(src => {
   const d = Object.assign({ move: 1, ads: 1 }, CAT_BASE[src.cat], src, BALANCE[src.id] || {});
@@ -3761,28 +3810,51 @@ const EQUIP = {
   semtex: { name: 'SEMTEX', desc: 'Sticks to walls, floors and enemies. Short 1.6 s fuse, smaller blast.', count: 2, max: 4, fuse: 1.6, sticky: true, color: 0x6b6a3a, glow: 0x30ff40 },
   stun: { name: 'STUN', desc: 'No damage. Enemies in the burst cannot aim or fire for a few seconds. Don’t look at it.', count: 3, max: 5, fuse: 1.4, color: 0x8a8f96 },
 };
+// three perk slots per class, one from each tier (blue / red / yellow, like CoD)
+// three perk slots per class, one from each tier (CoD-style perks, some renamed). Every one is wired into the game.
 const PERKS = {
-  none: { name: 'NONE', desc: 'No perk.' },
-  scavenger: { name: 'SCAVENGER', desc: 'Ammo crates give twice the rounds and always a grenade.' },
-  quick: { name: 'QUICK HANDS', desc: 'Reload 20% faster and swap weapons faster.' },
-  light: { name: 'LIGHTWEIGHT', desc: 'Move 8% faster. No camera jolt on hard landings.' },
-  steady: { name: 'STEADY AIM', desc: 'Hip-fire spread 28% tighter.' },
-  tough: { name: 'TOUGHNESS', desc: 'Health starts regenerating after 3 s instead of 5.' },
+  // PERK 1 (blue)
+  scavenger: { t: 1, name: 'SCAVENGER', desc: 'Ammo crates give twice the rounds and always a grenade. Kills top up 1 magazine of reserve ammo.' },
+  light: { t: 1, name: 'LIGHTWEIGHT', desc: 'Move 7% faster. No camera jolt on hard landings.' },
+  flak: { t: 1, name: 'BLAST VEST', desc: 'Take 35% less damage from grenades, rockets, mortars and barrels.' },
+  ghost: { t: 1, name: 'SHADOW', desc: 'Bots take 30% longer to lock on to you once they see you.' },
+  endure: { t: 1, name: 'ENDURANCE', desc: 'Sprint 6% faster and recover from a sprint 40% quicker (shoot sooner after sprinting).' },
+  // PERK 2 (red)
+  quick: { t: 2, name: 'QUICK HANDS', desc: 'Reload 20% faster.' },
+  amped: { t: 2, name: 'AMPED', desc: 'Swap weapons 35% faster and aim down sights 12% faster.' },
+  hard: { t: 2, name: 'HARDWIRED', desc: 'Scorestreak points come in 20% faster.' },
+  steady: { t: 2, name: 'STEADY AIM', desc: 'Hip-fire spread 25% tighter.' },
+  prowl: { t: 2, name: 'PROWLER', desc: 'Move 35% faster while aiming down sights.' },
+  // PERK 3 (green)
+  tough: { t: 3, name: 'RECOVERY', desc: 'Health starts coming back after 3 s instead of 5.' },
+  dead: { t: 3, name: 'DEAD SILENCE', desc: 'Your footsteps are silent for online players and much quieter for you.' },
+  aware: { t: 3, name: 'AWARENESS', desc: 'Enemy footsteps are louder and heard from 70% further away.' },
+  mask: { t: 3, name: 'TACTICAL MASK', desc: 'Stun flashes are 65% weaker and explosions barely shake your view.' },
+  iron: { t: 3, name: 'IRON SKIN', desc: 'Getting shot knocks your aim 70% less.' },
 };
+const PERK_KEYS = ['k', 'k2', 'k3'], PERK_DEF = { 1: 'scavenger', 2: 'quick', 3: 'tough' };
+const perksOf = c => PERK_KEYS.map(k => c[k]).filter(k => PERKS[k]);
 const DEFAULT_CLASSES = [
-  { name: 'ASSAULT', p: 'marc', s: 'sidearm', e: 'frag', k: 'scavenger' },
-  { name: 'CLOSE QUARTERS', p: 'viper', s: 'stinger', e: 'stun', k: 'light' },
-  { name: 'SUPPORT', p: 'anvil', s: 'hellfire', e: 'frag', k: 'tough' },
-  { name: 'RECON', p: 'hawkeye', s: 'deadeye', e: 'semtex', k: 'steady' },
-  { name: 'BREACHER', p: 'breacher', s: 'magnum', e: 'stun', k: 'quick' },
+  { name: 'ASSAULT', p: 'marc', s: 'sidearm', e: 'frag', k: 'scavenger', k2: 'quick', k3: 'tough' },
+  { name: 'CLOSE QUARTERS', p: 'viper', s: 'stinger', e: 'stun', k: 'light', k2: 'amped', k3: 'dead' },
+  { name: 'SUPPORT', p: 'anvil', s: 'hellfire', e: 'frag', k: 'flak', k2: 'hard', k3: 'iron' },
+  { name: 'RECON', p: 'hawkeye', s: 'deadeye', e: 'semtex', k: 'ghost', k2: 'steady', k3: 'aware' },
+  { name: 'BREACHER', p: 'breacher', s: 'magnum', e: 'stun', k: 'endure', k2: 'prowl', k3: 'mask' },
 ];
+// saves from before 3 slots had one perk in 'k': keep it in its own tier's slot
+function fixPerks(c, d) {
+  const old = c.k;
+  for (let t = 1; t <= 3; t++) { const key = PERK_KEYS[t - 1]; if (!PERKS[c[key]] || PERKS[c[key]].t !== t) c[key] = d[key]; }
+  if (PERKS[old] && PERKS[old].t !== 1) c[PERK_KEYS[PERKS[old].t - 1]] = old;
+  return c;
+}
 const CLASS_KEY = 'ashfall.classes.v1';
 let CLASSES = DEFAULT_CLASSES.map(c => Object.assign({}, c)), ACTIVE_CLASS = 0, ATTS = {};
 function loadClasses() {
   try {
     const o = JSON.parse(localStorage.getItem(CLASS_KEY) || 'null');
     if (o && Array.isArray(o.classes)) {
-      CLASSES = DEFAULT_CLASSES.map((d, i) => { const c = Object.assign({}, d, o.classes[i] || {}); if (!ARM[c.p] || CATS[ARM[c.p].cat].slot !== 'primary') c.p = d.p; if (!ARM[c.s] || CATS[ARM[c.s].cat].slot !== 'secondary') c.s = d.s; if (!EQUIP[c.e]) c.e = d.e; if (!PERKS[c.k]) c.k = d.k; return c; });
+      CLASSES = DEFAULT_CLASSES.map((d, i) => { const c = Object.assign({}, d, o.classes[i] || {}); if (!ARM[c.p] || CATS[ARM[c.p].cat].slot !== 'primary') c.p = d.p; if (!ARM[c.s] || CATS[ARM[c.s].cat].slot !== 'secondary') c.s = d.s; if (!EQUIP[c.e]) c.e = d.e; return fixPerks(c, d); });
       ACTIVE_CLASS = clamp(o.active | 0, 0, CLASSES.length - 1); ATTS = o.atts && typeof o.atts === 'object' ? o.atts : {};
       return;
     }
@@ -3922,6 +3994,7 @@ function updateFires(dt, t) {
     }
   }
 }
+const dmgFall = (w, d) => { const e = w.eff || 1e9, m = w.fallMin === undefined ? 0.6 : w.fallMin; return d <= e ? 1 : Math.max(m, 1 - (d - e) / e * (1 - m)); };
 /* ================================================================== gameplay: state, player, weapons */
 const P = { x: 0, y: 0, z: 10, vx: 0, vz: 0, vy: 0, yaw: 0, pitch: 0, eye: 1.7, onGround: true, bob: 0, recoilAcc: 0, stepK: 0 };
 const G = {
@@ -3955,11 +4028,11 @@ function equipClass(cls) {
   setGunShader(S.gunShader);
   WEAPONS.forEach((w, i) => applyLoadout(i));
   WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = Math.min(w.reserveMax, w.def.reserve); });
-  G.equip = EQUIP[cls.e] ? cls.e : 'frag'; G.perk = PERKS[cls.k] ? cls.k : 'none'; G.equipped = cls;
+  G.equip = EQUIP[cls.e] ? cls.e : 'frag'; G.perks = perksOf(cls); G.equipped = cls;
   G.cur = 0; G.burstLeft = 0;
   try { renderer.compile(vmScene, vmCamera); } catch (e) {}
 }
-const perk = k => G.perk === k;
+const perk = k => !!(G.perks && G.perks.includes(k)) && !(typeof M !== 'undefined' && M && M.mode === 'gun' && false);
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* ------------------------------------------------------------------ rumble */
@@ -3972,8 +4045,10 @@ function rumble(strong, weak, ms) {
 
 /* ------------------------------------------------------------------ player */
 const vig = $('vignette'), dmgdir = $('dmgdir');
-function hurtPlayer(dmg, fx, fz) {
+function hurtPlayer(dmg, fx, fz, boom) {
   if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0 || G.holdT > 0) return;
+  if (boom && perk('flak')) dmg *= 0.65;
+  if (!boom && G.state === 'playing') { const kn = perk('iron') ? 0.3 : 1; P.pitch += rnd(0.004, 0.012) * kn; P.yaw += rnd(-0.008, 0.008) * kn; }   // getting shot knocks your aim
   G.health -= dmg; G.lastHit = G.time; G.shake = Math.max(G.shake, 0.012);
   vig.style.opacity = clamp(0.45 + ((G.maxHp || 100) - G.health) / 120 * (100 / (G.maxHp || 100)), 0, 1);
   setTimeout(() => { vig.style.opacity = G.health < 0.35 * (G.maxHp || 100) ? 0.5 : 0; }, 160);
@@ -3997,7 +4072,8 @@ function updatePlayer(dt) {
   const str = hold ? 0 : clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
   const moving = fwd !== 0 || str !== 0;
   const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
-  let speed = (sprint ? 8 : crouch ? 2.6 : G.adsOn ? 3.2 : 5.2) * (w.move || 1) * (perk('light') ? 1.08 : 1);
+  if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
+  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1);
   if (G.reloading) speed *= 0.85;
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
@@ -4014,7 +4090,7 @@ function updatePlayer(dt) {
   if (P.y <= gy) { if (!P.onGround && P.vy < -2) G.landT = clamp(-P.vy / 11, 0.25, 1); if (!P.onGround && P.vy < -4 && !perk('light')) { G.shake = Math.max(G.shake, 0.01); sfx.thud({ vol: 0.8 }); } P.y = gy; P.vy = 0; P.onGround = true; } else if (P.y > gy + 0.05) P.onGround = false;
   P.eye = lerp(P.eye, crouch ? 1.1 : 1.7, clamp(10 * dt, 0, 1));
   const hs = Math.hypot(P.vx, P.vz);
-  if (P.onGround && hs > 0.5) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2)); }
+  if (P.onGround && hs > 0.5) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
   const rec = Math.min(P.recoilAcc, P.recoilAcc * dt * 4 + 0.0005); P.pitch -= rec; P.recoilAcc -= rec;
   if (G.time - G.lastHit > (perk('tough') ? 3 : 5) && G.health < (G.maxHp || 100)) G.health = Math.min(G.maxHp || 100, G.health + 28 * (inMatch() ? 1 : diff().regen) * (G.maxHp || 100) / 100 * dt);
 
@@ -4022,7 +4098,7 @@ function updatePlayer(dt) {
   camera.position.set(P.x + rnd(-shk, shk), P.y + P.eye + Math.sin(P.bob * 2) * 0.025 * (hs / 5) * bobOn + rnd(-shk, shk), P.z + rnd(-shk, shk));
   camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn);
   G.shake = Math.max(0, G.shake - dt * 0.05);
-  G.ads = lerp(G.ads, G.adsOn && G.swapT <= 0 ? 1 : 0, clamp(dt * 11 / Math.pow(w.adsTime || 1, 1.4), 0, 1));
+  G.ads = lerp(G.ads, G.adsOn && G.swapT <= 0 ? 1 : 0, clamp(dt * 11 * (perk('amped') ? 1.14 : 1) / Math.pow(w.adsTime || 1, 1.4), 0, 1));
   const fov = lerp(baseFov + (sprint ? 5 : 0), w.adsFov * baseFov / 75, G.ads);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   animateViewmodel(dt, hs, sprint, bobOn);
@@ -4122,7 +4198,7 @@ function shoot(moving) {
   if (w.proj) { launchProjectile(w, u); return; }
   const fresh = G.time - (G.lastShotTime || -9) > Math.max(0.22, w.interval * 2.4); G.lastShotTime = G.time;
   G.bloom = fresh ? 0 : Math.min(1.6, (G.bloom || 0) + (w.pellets > 1 ? 0 : 0.2));
-  let spread = G.adsOn ? (fresh && w.pellets === 1 ? 0 : w.adsSpread * (w.pellets > 1 ? 1 : 0.55 + G.bloom)) : w.spread * (perk('steady') ? 0.72 : 1) * (1 + G.bloom * 0.35);
+  let spread = G.adsOn ? (fresh && w.pellets === 1 ? 0 : w.adsSpread * (w.pellets > 1 ? 1 : 0.55 + G.bloom)) : w.spread * (perk('steady') ? 0.75 : 1) * (1 + G.bloom * 0.35);
   if (moving) spread *= 1.7; if (!P.onGround) spread *= 2.2; if (P.eye < 1.4) spread *= 0.75;
   camera.updateMatrixWorld();
   _org.copy(camera.position);
@@ -4138,8 +4214,8 @@ function shoot(moving) {
     const h = hits[0];
     if (!h) { if (!w.stealth && p === 0 && w.pellets === 1 && (G.shots & 1)) addTracer(_muz, _v.copy(_org).addScaledVector(_sdir, 70), 0.05, 0.012); continue; }
     const ud = h.object.userData;
-    // damage falls off past the weapon's effective range (down to 55% at 2.5x range)
-    const fall = h.distance <= (w.eff || 1e9) ? 1 : Math.max(0.55, 1 - (h.distance - w.eff) / (w.eff * 1.5) * 0.45);
+    // full damage up to the gun's MAX DAMAGE RANGE, then down to its floor (fallMin) at twice that distance
+    const fall = dmgFall(w, h.distance);
     if (ud.barrel) damageBarrel(ud.barrel, w.dmg * fall);
     if (ud.enemy) {
       const head = !!ud.head, armour = ud.enemy.type === 'heavy' && !ud.enemy.pvp ? (w.vsHeavy || 1) : 1, killed = damageEnemy(ud.enemy, w.dmg * fall * armour * (head ? w.head : (ud.mult || 1)), head, _sdir);
@@ -4177,7 +4253,7 @@ function finishReload() {
 function switchWeapon(i) {
   if (i === G.cur || i < 0 || i >= WEAPONS.length || G.state !== 'playing') return;
   gunObjs[G.cur].visible = false; gunObjs[G.cur].userData.flash.visible = false;
-  G.cur = i; gunObjs[i].visible = true; G.reloading = false; G.swapT = perk('quick') ? 0.22 : 0.35; G.fireT = G.swapT * 0.6; G.burstLeft = 0; G.inspectT = 0; sfx.click();
+  G.cur = i; gunObjs[i].visible = true; G.reloading = false; G.swapT = perk('amped') ? 0.23 : 0.35; G.fireT = G.swapT * 0.6; G.burstLeft = 0; G.inspectT = 0; sfx.click();
   rumble(0.05, 0.15, 50);
 }
 function cycleWeapon(d) { switchWeapon((G.cur + d + WEAPONS.length) % WEAPONS.length); }
@@ -4249,7 +4325,7 @@ function stunBlast(p) {
   if (dp < 12 && blastClear(p, P.x, P.y + P.eye, P.z)) {
     _pd.set(p.x - P.x, p.y + 0.2 - (P.y + P.eye), p.z - P.z).normalize(); _fwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
     const dot = _fwd.dot(_pd), face = clamp((dot - 0.35) / 0.55, 0, 1);   // 0 outside a ~70 degree cone, 1 looking straight at it
-    const k = clamp((1 - dp / 12) * face * 1.15, 0, 1), fl = $('flashW'); if (fl) { fl.style.transition = 'none'; fl.style.opacity = k; setTimeout(() => { fl.style.transition = `opacity ${1 + 2.5 * k}s ease-out`; fl.style.opacity = 0; }, 60); }
+    const k = clamp((1 - dp / 12) * face * 1.15, 0, 1) * (perk('mask') ? 0.35 : 1), fl = $('flashW'); if (fl) { fl.style.transition = 'none'; fl.style.opacity = k; setTimeout(() => { fl.style.transition = `opacity ${1 + 2.5 * k}s ease-out`; fl.style.opacity = 0; }, 60); }
     rumble(k, k, 300);
   }
 }
@@ -4266,9 +4342,9 @@ function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
     const d = Math.hypot(e.group.position.x - p.x, 1 - p.y, e.group.position.z - p.z);
     if (d < R && blastClear(p, e.group.position.x, 1, e.group.position.z)) (e.killedBy = src), damageEnemy(e, (170 * (1 - d / R) + 20) * dmgK, false, _v3.set(e.group.position.x - p.x, 0.3, e.group.position.z - p.z).normalize(), true, by === 'player' ? 'player' : src);
   }
-  if (dp < R && blastClear(p, P.x, P.y + 1, P.z)) G.killer = src, hurtPlayer(Math.round((110 * (1 - dp / R) + 5) * Math.min(1, dmgK)), p.x, p.z);
+  if (dp < R && blastClear(p, P.x, P.y + 1, P.z)) G.killer = src, hurtPlayer(Math.round((110 * (1 - dp / R) + 5) * Math.min(1, dmgK)), p.x, p.z, true);
   for (const b of barrels) if (b.alive && Math.hypot(b.x - p.x, b.z - p.z) < R * 0.8) damageBarrel(b, 999, true);
-  G.shake = Math.max(G.shake, 0.06 * clamp(1 - dp / 30, 0, 1));
+  G.shake = Math.max(G.shake, 0.06 * clamp(1 - dp / 30, 0, 1) * (perk('mask') ? 0.3 : 1));
   const rk = clamp(1 - dp / 30, 0, 1); if (rk > 0.05) rumble(rk, rk * 0.8, 120 + 300 * rk);
 }
 function updateGrenades(dt) {
@@ -4765,6 +4841,19 @@ function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
 {
+"v": "1.2.2",
+"d": "2026-10-14",
+"n": [
+"PERKS: every class now has 3 perk slots - one from each tier (blue, red, green), 5 perks per tier including the new Endurance, Prowler and Iron Skin. Every perk now really does what it says",
+"HITBOXES: headshots do the most damage, then chest, then stomach, then arms and legs (lower arms and legs least). Getting shot knocks your aim a little",
+"DAMAGE RANGE: every gun does full damage up to its MAX DAMAGE RANGE, then less further away (SMGs and pistols drop off the most, snipers not at all)",
+"BALANCE: SMGs do less damage, pistols toned down (only the revolver one-shots a head), short delay before you can shoot after sprinting",
+"CONTROLLER: every button in menus and the lobby can be reached, popups and friend requests too, an on-screen keyboard for typing, and a clear gold ring shows where you are",
+"SAVES: your stats, classes and settings now have a backup, so an update can never wipe them",
+"MATCH START: the wait when you first join a game is now 15 seconds instead of 30"
+]
+},
+{
 "v": "1.2.0",
 "d": "2026-10-14",
 "n": [
@@ -5257,7 +5346,7 @@ function updateBots(dt) {
     if (face !== null) { let dy = face - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 8); }
     e.chk -= dt;
     if (e.chk <= 0) { e.chk = 0.8; if (Math.hypot(g.position.x - e.lastX, g.position.z - e.lastZ) < 0.5 && !holding && goal) { e.avoidT = 1.0; e.avoidDir = Math.random() < 0.5 ? 1 : -1; } e.lastX = g.position.x; e.lastZ = g.position.z; }
-    e.aim += ((e.tgt && dist < 60 ? 1 : 0) - e.aim) * Math.min(1, dt * e.aimRate * 0.6 * (e.tgt === 'P' ? (WEAPONS[G.cur] ? WEAPONS[G.cur].spot || 1 : 1) : 1));
+    e.aim += ((e.tgt && dist < 60 ? 1 : 0) - e.aim) * Math.min(1, dt * e.aimRate * 0.6 * (e.tgt === 'P' ? (WEAPONS[G.cur] ? WEAPONS[G.cur].spot || 1 : 1) * (perk('ghost') ? 0.7 : 1) : 1));
     e.holding = holding && !!tp;
     animEnemy(e, dt, sp);
     if (e.tgt && e.aim > 0.6 && !(e.reloadT > 0) && !busy && !(e.stunT > 0)) {
@@ -5698,7 +5787,7 @@ function renderLobby(focusSel) {
   $('lobSel').innerHTML =
     `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="lob-start"${online && (!netReady() || (NET.app && partyWaiting())) ? ' disabled' : ''}><small>PLAYLIST · ${playlist().length} MODE${playlist().length > 1 ? 'S' : ''} · Y / Q TO EDIT</small><b>${NET.app ? (partyWaiting() ? 'WAITING FOR LEADER' : 'QUICK PLAY') : 'JOIN ROOM'}</b><span>${playlist().map(k => MODES[k].short.replace(/^ONLINE /, '')).join(' · ')}</span></button>` +
     `<button class="cod-arrow" data-act="playlist" aria-label="Edit playlist" title="Edit playlist (Y / Q)">&#9776;</button></div>` +
-    `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${PERKS[c.k].name}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
+    `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${perksOf(c).map(k => PERKS[k].name).join(" · ")}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
     (stk ? `<button class="cod-row" data-act="streaks"><small>SCORESTREAKS</small><b>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => stkIcon(id)).join('')}</b><span>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => `${STREAKS[id].name} ${STREAKS[id].cost}`).join(' · ')}</span><i>&rsaquo;</i></button>` : '') +
     (!online && sel !== 'surv' ? `<div class="cod-row"><small>BOT SKILL</small><b>${SKILL[matchCfg(sel).skill].name}</b><span>change it here or in Settings</span><div class="arw"><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div></div>` : '') +
     `<button class="cod-row" data-act="custom"><small>PRIVATE CODE MATCHES &middot; SOLO VS BOTS</small><b>CUSTOM</b><span>host or join with a code, or play any mode and map against bots</span><i>&rsaquo;</i></button>` + (online ? netLobbyHtml() : '');
@@ -6098,7 +6187,7 @@ function updateEnemyFootsteps() {
     const x = e.group.position.x, z = e.group.position.z;
     if (e.fsX === undefined) { e.fsX = x; e.fsZ = z; e.fsD = Math.random(); continue; }
     e.fsD += Math.hypot(x - e.fsX, z - e.fsZ); e.fsX = x; e.fsZ = z;
-    if (e.fsD > 0.8) { e.fsD = 0; const d = Math.hypot(x - P.x, z - P.z); if (d < 22) sfx.estep(at(x, z, 6)); }
+    if (e.fsD > 0.8) { e.fsD = 0; if (e.silent) continue; const d = Math.hypot(x - P.x, z - P.z), aw = perk('aware'); if (d < (aw ? 38 : 22)) sfx.estep(at(x, z, aw ? 11 : 6)); }
   }
 }
 
@@ -6149,7 +6238,7 @@ function stkReset() { STK.pts = 0; STK.got.clear(); STK.have = []; STK.uavT = 0;
 function stkDeath() { STK.pts = 0; STK.got.clear(); stkHud(true); }
 function stkAdd(pts) {
   if (!stkOn()) return;
-  STK.pts += pts;
+  STK.pts += pts * (perk('hard') ? 1.2 : 1);
   const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
   for (const id of list) if (STK.pts >= STREAKS[id].cost && !STK.got.has(id)) {
     STK.got.add(id); STK.have.push(id);
@@ -6527,7 +6616,7 @@ function computeStats(def, override, factory) {
     dmg: b.dmg * Math.max(0.2, 1 + m.dmg) * m.dmgX, pellets: Math.max(1, b.pellets + m.pellets), head: b.head * (1 + m.head),
     interval: b.interval / Math.max(0.2, 1 + m.rate), spread: b.spread * Math.max(0.05, 1 + m.spread), adsSpread: b.adsSpread * Math.max(0.05, 1 + m.adsSpread),
     recoil: b.recoil * Math.max(0.2, 1 + m.recoil), reload: b.reload * Math.max(0.3, 1 + m.reload),
-    magSize: Math.max(1, Math.round(b.mag * (1 + m.mag)) + m.magAdd), eff, range: Math.max(b.range, eff * 3.2),
+    magSize: Math.max(1, Math.round(b.mag * (1 + m.mag)) + m.magAdd), eff, fallMin: b.fallMin === undefined ? 0.6 : b.fallMin, range: Math.max(b.range, eff * 3.2),
     adsTime: b.ads * Math.max(0.4, 1 + m.ads), move: b.move * Math.max(0.7, 1 + m.move), spot: (b.spot || 1) * Math.max(0.3, 1 + m.spot), vsHeavy: (b.vsHeavy || 1) * Math.max(0.3, 1 + m.vsHeavy),
     blast: (b.blast || 0) * Math.max(0.3, 1 + m.blast), adsFov: zoom || b.adsFov, stealth, laser, overlay, optic, lenAdd: m.len, burst: b.burst || 0, burstGap: b.burstGap || 0,
   };
@@ -6591,7 +6680,7 @@ function applyLoadout(wi) {
   const w = WEAPONS[wi]; if (!w) return;
   const def = w.def, u = gunObjs[wi] ? gunObjs[wi].userData : null, s = computeStats(def, null, w.factory), oldMag = w.magSize;
   Object.assign(w, { dmg: s.dmg, pellets: s.pellets, head: s.head, interval: s.interval, spread: s.spread, adsSpread: s.adsSpread, recoil: s.recoil, reload: s.reload, blast: s.blast,
-    magSize: s.magSize, eff: s.eff, range: s.range, adsTime: s.adsTime, move: s.move, spot: s.spot, vsHeavy: s.vsHeavy, adsFov: s.adsFov, stealth: s.stealth, laser: s.laser, overlay: s.overlay, optic: s.optic });
+    magSize: s.magSize, eff: s.eff, fallMin: s.fallMin, range: s.range, adsTime: s.adsTime, move: s.move, spot: s.spot, vsHeavy: s.vsHeavy, adsFov: s.adsFov, stealth: s.stealth, laser: s.laser, overlay: s.overlay, optic: s.optic });
   if (u) { sightInfo(gunObjs[wi]); w.sightY = sightFor(def, u, s.optic); w.adsZ = u.adsZ; w.len = u.len + s.lenAdd; buildAttachmentVisuals(wi); }
   if (w.magSize !== oldMag) { const extra = Math.max(0, w.ammo - w.magSize); w.ammo = Math.min(w.ammo, w.magSize); w.reserve = Math.min(w.reserveMax, w.reserve + extra); }
 }
@@ -6852,7 +6941,7 @@ let loRow = 'p', loSlot = 'optic', loPreview = null, loPrevW = null, loCat = nul
 const STAT_BARS = [
   ['DAMAGE', s => s.dmg * s.pellets, 0, 160, s => s.pellets > 1 ? `${Math.round(s.dmg)} × ${s.pellets}` : `${Math.round(s.dmg)}`],
   ['FIRE RATE', s => 60 / (s.burst ? (s.interval + s.burstGap * (s.burst - 1)) / s.burst : s.interval), 0, 1100, s => s.burst ? `${Math.round(60 / s.interval)} BURSTS/MIN` : `${Math.round(60 / s.interval)} RPM`],
-  ['RANGE', s => s.eff, 0, 130, s => s.blast ? `${s.blast.toFixed(1)} M BLAST` : `${Math.round(s.eff)} M`],
+  ['MAX DAMAGE RANGE', s => s.eff, 0, 130, s => s.blast ? `${s.blast.toFixed(1)} M BLAST` : `${Math.round(s.eff)} M`],
   ['ACCURACY (AIMING)', s => 1 / s.adsSpread, 0, 500, s => `${Math.round(clamp(1 / s.adsSpread / 5, 0, 100))}`],
   ['ACCURACY (HIP)', s => 1 / s.spread, 0, 110, s => `${Math.round(clamp(1 / s.spread / 1.1, 0, 100))}`],
   ['CONTROL', s => 1 / s.recoil, 0, 130, s => `${Math.round(clamp(1 / s.recoil / 1.3, 0, 100))}`],
@@ -6862,12 +6951,15 @@ const STAT_BARS = [
 ];
 // ADVANCED STATS under the bars: the real numbers the game uses (and the preview's, green/red when they change)
 const ADV = [
-  ['BODY DAMAGE', s => s.dmg * s.pellets, 1, v => Math.round(v)],
-  ['HEADSHOT DAMAGE', s => s.dmg * s.head * (s.pellets > 1 ? 1 : 1), 1, v => Math.round(v)],
+  ['HEAD DAMAGE', s => s.dmg * s.head, 1, v => Math.round(v)],
+  ['CHEST DAMAGE', s => s.dmg * 1.15, 1, v => Math.round(v)],
+  ['STOMACH DAMAGE', s => s.dmg, 1, v => Math.round(v)],
+  ['ARM / LEG DAMAGE', s => s.dmg * 0.7, 1, v => Math.round(v) + '–' + Math.round(v / 0.7 * 0.8)],
   ['SHOTS TO KILL', s => Math.ceil(100 / (s.dmg * (s.pellets > 1 ? s.pellets * 0.6 : 1))), -1, v => v],
   ['TIME TO KILL', s => (Math.ceil(100 / (s.dmg * (s.pellets > 1 ? s.pellets * 0.6 : 1))) - 1) * s.interval * 1000, -1, v => Math.round(v) + ' MS'],
   ['FIRE RATE', s => 60 / s.interval, 1, v => Math.round(v) + ' RPM'],
-  ['EFFECTIVE RANGE', s => s.eff, 1, v => Math.round(v) + ' M'],
+  ['MAX DAMAGE RANGE', s => s.eff, 1, v => Math.round(v) + ' M'],
+  ['DAMAGE FAR AWAY (2× RANGE)', s => (s.fallMin === undefined ? 0.6 : s.fallMin) * 100, 1, v => Math.round(v) + '%'],
   ['MAX RANGE', s => s.range, 1, v => Math.round(v) + ' M'],
   ['AIM DOWN SIGHTS', s => s.adsTime * 180, -1, v => Math.round(v) + ' MS'],
   ['HIP SPREAD', s => s.spread * 57.3, -1, v => v.toFixed(2) + '°'],
@@ -6885,14 +6977,16 @@ function advStatsHtml(cur, pv) {
     return `<div><span>${label}</span><b class="${good ? 'up' : bad ? 'down' : ''}">${fmt(pv ? b : a)}</b></div>`;
   }).join('') + `</div>`;
 }
-const LO_ROWS = [['p', 'PRIMARY WEAPON'], ['pa', 'PRIMARY ATTACHMENTS'], ['s', 'SECONDARY WEAPON'], ['sa', 'SECONDARY ATTACHMENTS'], ['e', 'EQUIPMENT'], ['k', 'PERK']];
+const LO_ROWS = [['p', 'PRIMARY WEAPON'], ['pa', 'PRIMARY ATTACHMENTS'], ['s', 'SECONDARY WEAPON'], ['sa', 'SECONDARY ATTACHMENTS'], ['e', 'EQUIPMENT'], ['k', 'PERK 1'], ['k2', 'PERK 2'], ['k3', 'PERK 3']];
 const LO_HELP = {
   p: 'Pick the main gun for this class. Use the tabs to switch weapon type. Bars on the right compare it with the gun you have now: green is better, red is worse.',
   s: 'Pick a backup: a pistol to switch to when your main gun runs dry, or a launcher for explosives.',
   pa: 'Choose a part slot along the top, then a part. Every part has a plus and a minus, listed under it and shown on the bars.',
   sa: 'Choose a part slot along the top, then a part. Every part has a plus and a minus, listed under it and shown on the bars.',
   e: 'Thrown with G (keyboard) or RB (controller). You get a few per life and more from ammo crates.',
-  k: 'A passive bonus that is always on while you play this class.',
+  k: 'PERK 1 (blue): a passive bonus that is always on while you play this class. One perk from each of the three tiers.',
+  k2: 'PERK 2 (red): a passive bonus that is always on while you play this class. One perk from each of the three tiers.',
+  k3: 'PERK 3 (green): a passive bonus that is always on while you play this class. One perk from each of the three tiers.',
 };
 const roleOf = d => d.cat === 'la' ? 'EXPLOSIVE' : d.eff < 21 ? 'CLOSE RANGE' : d.eff < 50 ? 'MID RANGE' : 'LONG RANGE';
 const inGame = () => G.state === 'paused' || G.state === 'playing';
@@ -6904,14 +6998,14 @@ function loRowValue(r) {
   if (r === 'p' || r === 's') { const d = loDef(r); return `${d.name}<small>${CATS[d.cat].short}</small>`; }
   if (r === 'pa' || r === 'sa') { const d = loDef(r), n = fittedCount(d); return n ? `${n} OF ${slotsFor(d).length} FITTED` : 'FACTORY PARTS'; }
   if (r === 'e') return `${EQUIP[c.e].name}<small>×${EQUIP[c.e].count}</small>`;
-  return PERKS[c.k].name;
+  return (PERKS[c[r]] || PERKS[PERK_DEF[PERK_KEYS.indexOf(r) + 1]]).name;
 }
 const miniBar = (v, lo, hi) => `<i style="width:${(clamp((v - lo) / (hi - lo), 0.04, 1) * 100).toFixed(0)}%"></i>`;
 function renderLoadout(focusSel) {
   const c = activeClass();
   $('loTabs').innerHTML = CLASSES.map((k, i) => (loRename && i === ACTIVE_CLASS ? `<input class="lo-rename" id="loRenameIn" maxlength="16" value="${k.name.replace(/"/g, '')}">` : `<button class="tab${i === ACTIVE_CLASS ? ' on' : ''}" data-lo-c="${i}">${k.name}</button><button class="tab lo-pen1" data-lo-ren1="${i}" title="Rename ${k.name.replace(/"/g, '')}" aria-label="Rename ${k.name.replace(/"/g, '')}">&#9998;</button>`)).join('') + (loRename ? `<button class="tab lo-pen" data-lo-ren="1">SAVE NAME</button>` : '');
-  $('loSlots').innerHTML = LO_ROWS.map(([r, label]) => `<button class="lo-slot${r === loRow ? ' on' : ''}${r.length === 2 ? ' sub' : ''}" data-lo-r="${r}"><span>${label}</span><b>${loRowValue(r)}</b></button>`).join('');
-  const note = $('loNote'); if (note) note.textContent = inGame() && G.equipped && (G.equipped.p !== c.p || G.equipped.s !== c.s || G.equipped.e !== c.e || G.equipped.k !== c.k) ? 'CLASS CHANGES APPLY WHEN YOU NEXT SPAWN' : '';
+  $('loSlots').innerHTML = LO_ROWS.map(([r, label]) => `<button class="lo-slot${r === loRow ? ' on' : ''}${r === 'pa' || r === 'sa' ? ' sub' : ''}" data-lo-r="${r}"><span>${label}</span><b>${loRowValue(r)}</b></button>`).join('');
+  const note = $('loNote'); if (note) note.textContent = inGame() && G.equipped && (G.equipped.p !== c.p || G.equipped.s !== c.s || G.equipped.e !== c.e || PERK_KEYS.some(k => G.equipped[k] !== c[k])) ? 'CLASS CHANGES APPLY WHEN YOU NEXT SPAWN' : '';
   const help = $('loHelp'); if (help) help.textContent = LO_HELP[loRow];
   let html = '';
   if (loRow === 'p' || loRow === 's') {
@@ -6933,7 +7027,7 @@ function renderLoadout(focusSel) {
         (pc.pros.length || pc.cons.length ? `<div class="lo-pc">${pc.pros.map(p => `<span class="pro">+ ${p}</span>`).join('')}${pc.cons.map(x => `<span class="con">− ${x}</span>`).join('')}</div>` : '') + '</button>';
     }).join('');
   } else if (loRow === 'e') html = Object.keys(EQUIP).map(k => `<button class="lo-opt${k === c.e ? ' on' : ''}" data-lo-e="${k}"><div class="lo-name">${EQUIP[k].name} <small>×${EQUIP[k].count}</small>${k === c.e ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${EQUIP[k].desc}</div></button>`).join('');
-  else html = Object.keys(PERKS).map(k => `<button class="lo-opt${k === c.k ? ' on' : ''}" data-lo-k="${k}"><div class="lo-name">${PERKS[k].name}${k === c.k ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${PERKS[k].desc}</div></button>`).join('');
+  else { const tier = PERK_KEYS.indexOf(loRow) + 1; html = Object.keys(PERKS).filter(k => PERKS[k].t === tier).map(k => `<button class="lo-opt perk-t${tier}${k === c[loRow] ? ' on' : ''}" data-lo-k="${k}"><div class="lo-name">${PERKS[k].name}${k === c[loRow] ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${PERKS[k].desc}</div></button>`).join(''); }
   $('loOpts').innerHTML = html;
   renderLoStats();
   const q = sel => $('loadout').querySelectorAll(sel);
@@ -6958,13 +7052,13 @@ function renderLoadout(focusSel) {
     b.onblur = b.onmouseleave = () => { loPreview = null; renderLoStats(); };
   }
   for (const b of q('[data-lo-e]')) b.onclick = () => { c.e = b.dataset.loE; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-e="${c.e}"]`); };
-  for (const b of q('[data-lo-k]')) b.onclick = () => { c.k = b.dataset.loK; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-k="${c.k}"]`); };
+  for (const b of q('[data-lo-k]')) b.onclick = () => { const key = PERK_KEYS[PERKS[b.dataset.loK].t - 1]; c[key] = b.dataset.loK; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-k="${c[key]}"]`); };
   if (focusSel) focusFirst(focusSel);
 }
 function saveRename() { const i = $('loRenameIn'); if (i) { const v = i.value.replace(/[<>&"]/g, '').trim().toUpperCase().slice(0, 16); if (v) activeClass().name = v; saveClasses(); } loRename = false; sfx.ui(); renderLoadout(`#loTabs [data-lo-c="${ACTIVE_CLASS}"]`); }
 function selectClass(i) { ACTIVE_CLASS = (i + CLASSES.length) % CLASSES.length; saveClasses(); loPreview = loPrevW = null; loCat = null; loRename = false; sfx.ui(); renderLoadout(`#loTabs [data-lo-c="${ACTIVE_CLASS}"]`); }
 function focusFirst(sel) { setTimeout(() => { const el = document.querySelector && document.querySelector(sel); if (el && el.focus) try { el.focus(); el.scrollIntoView && el.scrollIntoView({ block: 'nearest' }); } catch (e) {} }, 0); }
-function loShown() { const row = loRow, base = row === 'e' || row === 'k' ? ARM[activeClass().p] : loDef(row); return { base, shown: loPrevW || base }; }
+function loShown() { const row = loRow, base = row === 'e' || PERK_KEYS.includes(row) ? ARM[activeClass().p] : loDef(row); return { base, shown: loPrevW || base }; }
 function renderLoStats() {
   const row = loRow, { base, shown } = loShown();
   const cur = computeStats(base), pv = loPrevW ? computeStats(loPrevW) : loPreview && (row === 'pa' || row === 'sa') ? computeStats(base, loPreview) : null;
@@ -7381,7 +7475,7 @@ function netSelf() { for (const p of netPeers()) if (p.sameTab) return p.peer; r
 const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
-  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0,
+  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0,
     a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
@@ -7400,7 +7494,7 @@ function netNum(v, lo, hi, d = 0) { v = +v; return isFinite(v) ? clamp(v, lo, hi
 function netMakeBot(R, pr) {
   const e = makeEnemy('rifleman', R.x, R.z);
   Object.assign(e, { team: R.entry.team, entry: R.entry, name: R.entry.name, pvp: true, net: R.peer, hp: 1e9, maxHp: 100, aim: 1, crouchy: false, los: true, holding: true, lastShotT: -9 });
-  e.group.position.set(R.x, R.y, R.z); e.group.rotation.y = R.yw + Math.PI;
+  e.silent = !!R.sl; e.group.position.set(R.x, R.y, R.z); e.group.rotation.y = R.yw + Math.PI;
   if (M.def.teams && R.entry.team === M.myTeam) e.group.add(friendlyMarker());
   enemies.push(e); R.bot = e; R.entry.alive = true; R.entry.bot = e;
 }
@@ -7469,7 +7563,7 @@ function netTick(dt) {
     R.entry.name = cleanNick(pr.n); R.host = !!pr.ho; R.sa = pr.sa; if (pr.ho && !pr.bot && !isHost && Array.isArray(pr.ob)) NET.ob = pr.ob; if (pr.ho && !pr.bot && NET.priv) privFromHost(pr.pc); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
     if (pr.ho && !pr.bot && !isHost && typeof pr.mp === 'string' && MAPS[pr.mp] && pr.mp !== curMap && !NET.mapBusy) { NET.mapBusy = true; setTimeout(() => { NET.mapBusy = false; if (NET.on) netSwitchMap(pr.mp); }, 0); }
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
-    R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
+    R.sl = pr.sl ? 1 : 0; R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
     R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
     R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;
     // a death since last time: drop them, credit the killer
@@ -7574,7 +7668,7 @@ function netNewRound() {
 function clearWorldFx() { for (const g of grenadesInFlight) scene.remove(g.m); grenadesInFlight.length = 0; for (const d of decals) d.visible = false; }
 
 /* ---------- bots that fill empty spots (the host runs them; everyone else sees them like players) */
-const BOT_FILL = { teams: 6, ffa: 8 }, WARMUP = 30;
+const BOT_FILL = { teams: 6, ffa: 8 }, WARMUP = 15;
 const warmLeft = () => Math.max(0, (NET.warmEnd || 0) - performance.now() / 1000);
 function netNewBot(team) {
   const names = BOT_NAMES.filter(n => !M.entries.some(e => e.name === n.toUpperCase() + ' BOT'));
@@ -7639,7 +7733,8 @@ function netBots(dt) {
 setTimeout(() => {
   try {
     const A = window.ASHFALL_APP; if (!A) return;
-    const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version + ' BETA'; document.body.appendChild(tag);
+    const tag = document.createElement('div'); tag.className = 'app-ver'; tag.textContent = 'v' + A.version + ' BETA' + (A.channel === 'test' ? ' · TEST APP' : ''); document.body.appendChild(tag);
+    if (A.channel === 'test') { const t = document.createElement('div'); t.className = 'app-testtag'; t.textContent = 'TEST APP · NOT THE LIVE GAME'; document.body.appendChild(t); }
     const u = A.justUpdated; if (!u || (typeof HC_VER !== 'undefined' && String(u.version) === HC_VER)) return;   // the Homecoming splash shows instead
     const m = document.createElement('div'); m.className = 'app-notes';
     const box = document.createElement('div'), h = document.createElement('b'), ul = document.createElement('ul'), ok = document.createElement('button');
@@ -7653,6 +7748,7 @@ setTimeout(() => {
 (() => {
   const s = document.createElement('style');
   s.textContent = `.beta-tag{display:inline-block;vertical-align:top;margin-left:14px;margin-top:.35em;font-size:.22em;letter-spacing:.2em;padding:.25em .6em;border:2px solid #ffd24a;color:#ffd24a;border-radius:4px;font-style:normal}
+.app-testtag{position:fixed;left:50%;top:6px;transform:translateX(-50%);z-index:60;pointer-events:none;font:700 11px system-ui,sans-serif;letter-spacing:.3em;color:#111;background:#ff6a3d;padding:4px 12px;border-radius:3px}
 .app-ver{position:fixed;right:10px;bottom:6px;font:11px monospace;opacity:.45;z-index:5;pointer-events:none;color:#fff}
 .app-notes{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:200}
 .app-notes>div{background:#14171b;border:1px solid rgba(255,210,74,.5);padding:22px 26px;max-width:520px;width:calc(100% - 32px);box-sizing:border-box;color:#e8e2d0}
@@ -7791,7 +7887,7 @@ function renderPlobby(full) {
 /* ================================================================== quick play: playlist + pre-game lobby (desktop app)
    PLAY in the multiplayer lobby searches every mode on your playlist (Y / Q edits it) for a match someone is already
    hosting; if none, you host one in a random mode from the list. Everyone waits in a pre-game lobby with the player
-   list while a 30 second countdown runs (the host's clock), then the match starts for everyone at once. Players who
+   list while a 15 second countdown runs (the host's clock), then the match starts for everyone at once. Players who
    find the match after it started drop straight in. */
 const ONLINE_MODES = () => MODE_ORDER.filter(k => MODES[k].online);
 function playlist() {
@@ -7820,7 +7916,7 @@ const QP = { busy: false, status: '' };
 async function quickPlay() {
   if (QP.busy) return; QP.busy = true;
   const L = playlist().slice().sort(() => Math.random() - 0.5);
-  NET.kind = 'quick'; NET.priv = { pub: true, searching: true, started: false, key: '', lt: 30 };
+  NET.kind = 'quick'; NET.priv = { pub: true, searching: true, started: false, key: '', lt: 15 };
   QP.status = 'SEARCHING FOR A MATCH'; renderPubLobby(); showScreen('plobby'); G.state = 'plobby';
   let room = null, mode = null;
   for (const k of L) {
@@ -7834,7 +7930,7 @@ async function quickPlay() {
   startMatch(mode);
 }
 function privEnterPublic() {
-  NET.priv = { pub: true, searching: false, started: false, key: '', lt: 30, kind: 'quick' };
+  NET.priv = { pub: true, searching: false, started: false, key: '', lt: 15, kind: 'quick' };
   G.state = 'plobby'; mouseDown = false; mouseAds = false;
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   renderPubLobby(); showScreen('plobby');
@@ -8116,7 +8212,7 @@ const holding = () => G.holdT > 0;
 function openClassPick() {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   const gun = M && M.mode === 'gun';
-  $('cpList').innerHTML = gun ? `<div class="cp-gun">GUN GAME · everyone starts on the ${ARM[GUN_LADDER[0]].name}</div>` : CLASSES.map((c, i) => `<button class="cp-c${i === ACTIVE_CLASS ? ' on' : ''}" data-cp="${i}"><small>${i + 1}</small><b>${c.name}</b><span>${ARM[c.p].name} · ${ARM[c.s].name}</span><span>${EQUIP[c.e].name} · ${PERKS[c.k].name}</span></button>`).join('');
+  $('cpList').innerHTML = gun ? `<div class="cp-gun">GUN GAME · everyone starts on the ${ARM[GUN_LADDER[0]].name}</div>` : CLASSES.map((c, i) => `<button class="cp-c${i === ACTIVE_CLASS ? ' on' : ''}" data-cp="${i}"><small>${i + 1}</small><b>${c.name}</b><span>${ARM[c.p].name} · ${ARM[c.s].name}</span><span>${EQUIP[c.e].name}</span><span class="cp-perks">${perksOf(c).map(k => PERKS[k].name).join(" · ")}</span></button>`).join('');
   for (const b of $('cpList').querySelectorAll('[data-cp]')) b.onclick = () => cpPick(+b.dataset.cp);
   showScreen('classpick'); focusFirst(gun ? '#classpick .btn' : '#cpList .on');
 }
@@ -8136,7 +8232,7 @@ function cpPick(i) {
 .cp-c{pointer-events:auto;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink);padding:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);display:flex;flex-direction:column;gap:4px;position:relative}
 .cp-c small{position:absolute;right:10px;top:8px;font-size:11px;color:var(--dim)}.cp-c b{font-size:15px;letter-spacing:.18em}.cp-c span{font-size:11px;letter-spacing:.08em;color:var(--dim)}.cp-c:hover,.cp-c:focus{outline:0;border-color:rgba(224,180,74,.6)}.cp-c.on{border-color:var(--accent);background:rgba(224,180,74,.12)}
 .cp-t{display:flex;align-items:baseline;gap:12px;padding:18px 26px 0}.cp-t b{font-size:15px;letter-spacing:.4em;color:var(--accent)}.cp-t span{margin-left:auto;font-size:12px;letter-spacing:.3em;color:var(--dim)}.cp-t em{font-style:normal;font-size:30px;color:#fff;margin-left:6px}
-.cp-gun{grid-column:1/-1;padding:20px;text-align:center;letter-spacing:.2em;color:var(--dim)}`;
+.cp-c .cp-perks{color:var(--accent);opacity:.85}.cp-gun{grid-column:1/-1;padding:20px;text-align:center;letter-spacing:.2em;color:var(--dim)}`;
   document.head.appendChild(s);
 })();
 /* ================================================================== lobby music
@@ -8233,13 +8329,15 @@ async function musRender(secs) {
 }
 /* ================================================================== replay: rewatch your last match
    While a match runs we record every soldier 5 times a second (position, facing, alive) plus the kill feed and the
-   team score. When it ends we take a top-down picture of the map, and the whole thing is saved (localStorage), so the
+   team score. When it ends we take a top-down picture of the map, and the whole thing is saved (IndexedDB), so the
    REPLAY tab in the main menu can play it back on a tactical map: trails, death markers, kill feed, timeline,
    speed and a camera that can follow you. */
 const RP_HZ = 5, RP_MAX = 15 * 60 * RP_HZ, RP_KEY = 'dz_replay', RP_EXT = 46;
 let REC = null, RPLAST = null;
 const RV = { on: false, t: 0, play: true, speed: 1, follow: false, img: null, lastT: 0, raf: 0 };
-try { RPLAST = JSON.parse(localStorage.getItem(RP_KEY) || 'null'); } catch (e) { RPLAST = null; }
+// the last replay lives in IndexedDB (see savebak.js); older versions kept it in localStorage, moved over once
+sbGet('replay').then(r => { if (r && r.frames && !RPLAST) RPLAST = r; });
+try { const old = localStorage.getItem(RP_KEY); if (old) { const o = JSON.parse(old); localStorage.removeItem(RP_KEY); if (o && o.frames) sbGet('replay').then(r => { if (!r) { sbPut('replay', o); if (!RPLAST) RPLAST = o; } }); } } catch (e) {}
 
 /* ---------- recording */
 function rpStart() {
@@ -8292,8 +8390,7 @@ function rpFinish(won) {
   const out = { v: 1, map: REC.map, mode: REC.mode, name: REC.name, online: REC.online, teams: REC.teams, date: REC.date, len: REC.t, ents: REC.ents, frames: REC.frames, feed: REC.feed, score: REC.score, obj: REC.obj, won: won | 0 };
   try { out.plan = rpPlanShot(); } catch (e) { out.plan = null; }
   RPLAST = out; REC = null; RV.img = null;
-  try { localStorage.setItem(RP_KEY, JSON.stringify(out)); }
-  catch (e) { try { const lite = Object.assign({}, out, { plan: null }); localStorage.setItem(RP_KEY, JSON.stringify(lite)); } catch (e2) {} }
+  sbPut('replay', out);
 }
 
 /* ---------- viewer */
@@ -8477,6 +8574,63 @@ const hcWait = setInterval(() => { if (typeof G !== 'undefined' && G.state === '
 .hc-go{display:inline-block;width:auto;min-width:0;text-align:center;font-size:18px;letter-spacing:.4em;padding:14px 48px;animation:hcUp .6s .9s both}.hc-hint{margin-top:12px;font-size:11px;letter-spacing:.25em;color:var(--dim);animation:hcUp .6s 1s both}
 @keyframes hcIn{from{opacity:0}}@keyframes hcUp{from{opacity:0;transform:translateY(18px)}}@keyframes hcZoom{from{transform:scale(1.12)}}`;
   document.head.appendChild(s);
+})();
+/* ================================================================== on-screen keyboard (controller)
+   Pressing A on a text box (friend code, callsign, private match code) opens this. D-pad / stick moves, A types the
+   key, X deletes, Y adds a space, B or START finishes. A mouse or a real keyboard works on it too. */
+const OSK = { el: null, input: null, prevFocus: null };
+const OSK_ROWS = ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL-', 'ZXCVBNM_.'];
+const oskIsOpen = () => !!OSK.el;
+function oskOpen(input) {
+  if (OSK.el) oskClose();
+  OSK.input = input; OSK.prevFocus = input;
+  const b = document.createElement('div'); b.id = 'oskBox';
+  b.innerHTML = `<div class="osk-p"><div class="osk-h">${(input.placeholder || input.getAttribute('aria-label') || 'TYPE').toUpperCase()}</div><div class="osk-val" id="oskVal"></div>` +
+    OSK_ROWS.map(r => `<div class="osk-r">${[...r].map(c => `<button class="osk-k" data-k="${c}">${c}</button>`).join('')}</div>`).join('') +
+    `<div class="osk-r"><button class="osk-k wide" data-k="space">SPACE <small>Y</small></button><button class="osk-k wide" data-k="back">⌫ DELETE <small>X</small></button><button class="osk-k wide done" data-k="done">DONE <small>B</small></button></div></div>`;
+  document.body.appendChild(b); OSK.el = b;
+  for (const k of b.querySelectorAll('[data-k]')) k.onclick = () => oskKey(k.dataset.k);
+  b.onclick = e => { if (e.target === b) oskClose(); };
+  oskShow(); setTimeout(() => { const f = b.querySelector('[data-k="1"]'); if (f) f.focus(); }, 0);
+}
+function oskShow() { const v = $('oskVal'); if (v && OSK.input) v.textContent = OSK.input.value || ' '; }
+function oskKey(k) {
+  const i = OSK.input; if (!i) return;
+  const max = i.maxLength > 0 ? i.maxLength : 32;
+  if (k === 'done') { oskClose(); return; }
+  if (k === 'back') i.value = i.value.slice(0, -1);
+  else if (i.value.length < max) i.value += k === 'space' ? ' ' : k;
+  i.dispatchEvent(new Event('input', { bubbles: true })); oskShow(); try { sfx.ui(); } catch (e) {}
+}
+function oskClose() {
+  if (!OSK.el) return;
+  const i = OSK.input; OSK.el.remove(); OSK.el = null; OSK.input = null;
+  if (i) { i.dispatchEvent(new Event('change', { bubbles: true })); try { i.focus(); } catch (e) {} }
+}
+// called from the controller poll; returns true while the keyboard is open (it takes the buttons)
+function oskPad(press) {
+  if (!OSK.el) return false;
+  if (press(0)) { const a = document.activeElement; if (a && OSK.el.contains(a)) a.click(); }
+  if (press(2)) oskKey('back');
+  if (press(3)) oskKey('space');
+  if (press(1) || press(9)) oskClose();
+  return true;
+}
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `#oskBox{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6vh}
+.osk-p{background:#121518;border:1px solid rgba(224,180,74,.45);padding:16px 18px;box-shadow:0 20px 60px rgba(0,0,0,.6)}.osk-h{font-size:11px;letter-spacing:.35em;color:var(--accent)}
+.osk-val{font-size:26px;letter-spacing:.2em;color:#fff;padding:8px 10px;margin:8px 0 12px;background:rgba(255,255,255,.05);border-bottom:2px solid var(--accent);min-height:34px;white-space:pre}
+.osk-r{display:flex;gap:6px;margin-top:6px;justify-content:center}.osk-k{pointer-events:auto;cursor:pointer;font:700 16px system-ui,sans-serif;color:#e6e8ea;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);width:46px;height:44px}
+.osk-k.wide{width:auto;flex:1;padding:0 14px;font-size:12px;letter-spacing:.2em}.osk-k small{opacity:.55;margin-left:6px}.osk-k.done{color:#111;background:var(--accent)}
+.osk-k:hover,.osk-k:focus{outline:0;border-color:var(--accent);background:rgba(224,180,74,.25);color:#fff}`;
+  document.head.appendChild(s);
+  // a clear gold ring on whatever the controller / arrow keys are on; the mouse turns it off again
+  const r = document.createElement('style');
+  r.textContent = `body.padnav button:focus,body.padnav .sw:focus,body.padnav input:focus{outline:2px solid var(--accent)!important;outline-offset:2px;box-shadow:0 0 0 4px rgba(224,180,74,.18),0 0 18px rgba(224,180,74,.25)}`;
+  document.head.appendChild(r);
+  addEventListener('mousemove', e => { if (Math.abs(e.movementX) + Math.abs(e.movementY) > 3) document.body.classList.remove('padnav'); });
+  addEventListener('keydown', e => { if (/^Arrow|^Tab$/.test(e.code)) document.body.classList.add('padnav'); });
 })();
 /* ================================================================== UI: screens, settings, input, loop, boot */
 const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist', 'classpick', 'leaderboard', 'replay'];
@@ -8704,6 +8858,7 @@ document.addEventListener('click', e => {
   if (b) { sfx.ui(); actions(b.getAttribute('data-act')); }
 });
 function goBack() {
+  if (typeof oskIsOpen === 'function' && oskIsOpen()) { oskClose(); return; }
   if (curScreen === 'loadout') { updateClassUI(); if (returnScreen === 'lobby') renderLobby(); showScreen(returnScreen); }
   else if (curScreen === 'lobby') showScreen('menu');
   else if (curScreen === 'custom') actions('cus-back');
@@ -8720,9 +8875,17 @@ function goBack() {
 }
 
 /* ------------------------------------------------------------------ keyboard / pointer focus navigation in menus */
+// everything the controller / arrow keys can move between: the open popup if there is one (update notes, on-screen
+// keyboard, Homecoming splash), else the current screen, plus a friend-request toast if one is showing
+const NAV_SEL = 'button, .sw, input[type=range], input[type=text], input:not([type])';
+function navModal() { return document.querySelector('#oskBox, #hcSplash:not(.out), .app-notes'); }
 function focusables() {
+  const vis = x => !x.disabled && x.tabIndex !== -1 && x.getClientRects().length > 0 && getComputedStyle(x).visibility !== 'hidden';
+  const modal = navModal(); if (modal) return [...modal.querySelectorAll(NAV_SEL)].filter(vis);
   const root = curScreen ? $(curScreen) : null; if (!root) return [];
-  return [...root.querySelectorAll('button, .sw, input[type=range]')].filter(x => x.offsetParent !== null);
+  const list = [...root.querySelectorAll(NAV_SEL)];
+  for (const t of document.querySelectorAll('.fr-toast')) list.push(...t.querySelectorAll('button'));
+  return list.filter(vis);
 }
 function moveFocus(d) {
   const f = focusables(); if (!f.length) return;
@@ -8878,7 +9041,7 @@ function pollPad(dt) {
     if (pad.sprint && (pad.crouch && press(pb('crouch')))) pad.sprint = false;
   } else {
     pad.crouch = false;
-    if (curScreen) menuPad(dt, mx, my, ly, press, down);
+    if (curScreen || navModal()) menuPad(dt, mx, my, ly, press, down);
   }
   if (!playing || (S.padSprint !== 'hold' && Math.hypot(mx, my) < 0.3)) pad.sprint = false;
   prevBtn = gp.buttons.map(b => b.pressed);
@@ -8886,11 +9049,19 @@ function pollPad(dt) {
 // menus: hold a direction to repeat (accelerating), bumpers change tabs, right stick scrolls, Y resets
 function menuPad(dt, mx, my, ry, press, down) {
   const d = padNavDir(mx, my, down);
+  if (d || press(0) || press(1)) document.body.classList.add('padnav');
+  if (typeof oskPad === 'function' && oskPad(press)) { if (d !== nav.dir) { nav.dir = d; if (d) spatialFocus(d); } return; }
+  const modal = navModal();
+  if (modal && modal.id !== 'hcSplash') {   // update notes: A on OK, B closes
+    if (d !== nav.dir) { nav.dir = d; if (d) spatialFocus(d); }
+    if (press(0) || press(1)) { const a = document.activeElement, f = focusables(); (f.includes(a) ? a : f[0] || { click() {} }).click(); }
+    return;
+  }
   if (d !== nav.dir) { nav.dir = d; nav.n = 0; if (d) { menuMove(d); nav.t = 0.34; } }
   else if (d) { nav.t -= dt; if (nav.t <= 0) { menuMove(d); nav.n++; nav.t = Math.max(0.045, 0.1 - nav.n * 0.005); } }
   if (press(3) && curScreen === 'lobby') { openPlaylist(); return; }
   if (curScreen === 'replay') { if (press(2)) rpToggle(); if (press(4) || press(5)) rpSeekBy(press(4) ? -5 : 5); if (press(1)) goBack(); if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); } return; }
-  if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); }
+  if (press(0)) { const a = document.activeElement; if (a && focusables().includes(a)) { if (a.tagName === 'INPUT' && a.type !== 'range') oskOpen(a); else if (a.click) a.click(); } else { const f = focusables(); if (f[0]) f[0].focus(); } }
   if (press(1)) goBack();
   if (press(4) || press(5)) menuTab(press(4) ? -1 : 1);
   if (press(3)) { if (curScreen === 'loadout') actions('lo-reset'); else if (curScreen === 'settings') actions('reset-settings'); }
@@ -9010,7 +9181,7 @@ function tick(dt) {
     const w = WEAPONS[G.cur];
     if (G.reloading) { G.reloadT -= dt; if (G.reloadT <= 0) finishReload(); }
     const want = (w.auto ? isFiring() : clickQueued) && !(G.holdT > 0);
-    if (want && !sprint && !G.reloading && G.swapT <= 0 && G.fireT <= 0 && G.state === 'playing') {
+    if (want && !sprint && !G.reloading && G.swapT <= 0 && G.fireT <= 0 && G.state === 'playing' && G.time - (G.sprintEnd || -9) > (perk('endure') ? 0.09 : 0.15)) {
       if (w.ammo > 0) shoot(moving); else { sfx.click(); G.fireT = 0.25; startReload(); }
     }
     else if (G.burstLeft > 0 && G.fireT <= 0 && !G.reloading && G.swapT <= 0 && w.ammo > 0 && G.state === 'playing') shoot(moving);
@@ -9101,7 +9272,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, hcShow, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, hcShow, oskOpen, oskKey, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
