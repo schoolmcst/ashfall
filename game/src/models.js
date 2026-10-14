@@ -172,7 +172,7 @@ function buildSoldierTemplates() {
     const root = new THREE.Group(); root.name = 'root';
     const hips = new THREE.Bone(); hips.name = 'hips'; hips.position.y = 1.0; root.add(hips);
     hips.add(solSeg(key, 'pelvis', 'pelvis', mat) || seg1([Pt(Bx(0.34, 0.2, 0.22), v.cloth, 0, 0, 0), Pt(Bx(0.36, 0.05, 0.24), v.vest, 0, 0.08, 0)], 'pelvis', mat));
-    hips.add(hit(Bx(0.4, 0.26, 0.3), 0, 0, 0, { mult: 0.9 }));
+    hips.add(hit(Bx(0.4, 0.26, 0.3), 0, 0, 0, { mult: 0.9, zone: 'hips' }));
     const torso = new THREE.Bone(); torso.name = 'torso'; torso.position.y = 0.08; hips.add(torso);
     const tw = heavy ? 1.12 : 1;
     const tparts = [
@@ -182,31 +182,33 @@ function buildSoldierTemplates() {
     ];
     if (heavy) tparts.push(Pt(Bx(0.5, 0.3, 0.06), v.helm, 0, 0.38, 0.17), Pt(Bx(0.18, 0.2, 0.2), v.vest, -0.3, 0.55, 0), Pt(Bx(0.18, 0.2, 0.2), v.vest, 0.3, 0.55, 0));
     torso.add(solSeg(key, 'body', 'body', mat) || seg1(tparts, 'body', mat));
-    torso.add(hit(Bx(0.5 * tw, 0.66, 0.34), 0, 0.3, 0, { mult: 1 }));
+    // hit zones: head (gun's headshot multiplier) > chest 1.15 > stomach 1.0 > hips 0.9 > upper arm / thigh 0.8 > forearm / shin 0.7
+    torso.add(hit(Bx(0.5 * tw, 0.3, 0.34), 0, 0.48, 0, { mult: 1.15, zone: 'chest' }));
+    torso.add(hit(Bx(0.5 * tw, 0.36, 0.34), 0, 0.15, 0, { mult: 1, zone: 'stomach' }));
     const head = new THREE.Bone(); head.name = 'head'; head.position.set(0, 0.7, 0); torso.add(head);
     const hparts = [Pt(Sp(1, 12, 10), v.skin, 0, 0, 0, 0, 0, 0, 0.105, 0.13, 0.12), Pt(Bx(0.17, 0.045, 0.05), v.goggle, 0, 0.025, 0.105)];
     if (!scout) hparts.push(Pt(Sp(1, 14, 8, 0, TAU, 0, HALF), v.helm, 0, 0.035, 0, 0, 0, 0, 0.14, 0.125, 0.16), Pt(Cy(0.145, 0.15, 0.025, 14), v.helm, 0, 0.04, 0.0));
     else hparts.push(Pt(Sp(1, 12, 8, 0, TAU, 0, HALF), v.helm, 0, 0.04, -0.005, 0, 0, 0, 0.12, 0.085, 0.14), Pt(Bx(0.2, 0.02, 0.1), v.helm, 0, 0.045, 0.1));
     if (heavy) hparts.push(Pt(Bx(0.15, 0.1, 0.06), v.helm, 0, -0.07, 0.09));
     head.add(solSeg(key, 'head', 'headmesh', mat) || seg1(hparts, 'headmesh', mat));
-    head.add(hit(Sp(0.16, 8, 6), 0, 0.02, 0, { head: true }));
+    head.add(hit(Sp(0.165, 8, 6), 0, 0.02, 0, { head: true, zone: 'head' }));
     const arm = side => {
       const sx = side === 'L' ? -1 : 1, a = new THREE.Bone(); a.name = 'arm' + side; a.position.set(sx * 0.27 * tw, 0.5, 0); a.rotation.order = 'YXZ';
       a.add(solSeg(key, 'upper', 'upper', mat) || seg1([Pt(Cy(0.055, 0.05, 0.28, 8), v.cloth, 0, -0.14, 0), Pt(Sp(0.068, 8, 6), v.vest, 0, 0, 0)], 'upper', mat));
-      a.add(hit(Bx(0.15, 0.3, 0.15), 0, -0.14, 0, { mult: 0.75 }));
+      a.add(hit(Bx(0.15, 0.3, 0.15), 0, -0.14, 0, { mult: 0.8, zone: 'arm' }));
       const el = new THREE.Bone(); el.name = 'elbow' + side; el.position.y = -0.28; el.rotation.order = 'YXZ'; a.add(el);
       el.add(solSeg(key, 'fore', 'fore', mat) || seg1([Pt(Cy(0.048, 0.04, 0.26, 8), v.cloth, 0, -0.13, 0), Pt(Bx(0.075, 0.09, 0.085), v.glove, 0, -0.3, 0)], 'fore', mat));
-      el.add(hit(Bx(0.12, 0.34, 0.12), 0, -0.16, 0, { mult: 0.75 }));
+      el.add(hit(Bx(0.12, 0.34, 0.12), 0, -0.16, 0, { mult: 0.7, zone: 'arm' }));
       torso.add(a); return a;
     };
     arm('L'); arm('R');
     const leg = side => {
       const sx = side === 'L' ? -1 : 1, l = new THREE.Bone(); l.name = 'leg' + side; l.position.set(sx * 0.1, -0.02, 0);
       l.add(solSeg(key, 'thigh', 'thigh', mat) || seg1([Pt(Cy(0.08, 0.065, 0.46, 9), v.cloth, 0, -0.23, 0), Pt(Bx(0.1, 0.1, 0.05), v.vest, 0, -0.1, 0.09)], 'thigh', mat));
-      l.add(hit(Bx(0.2, 0.48, 0.24), 0, -0.23, 0, { mult: 0.75 }));
+      l.add(hit(Bx(0.2, 0.48, 0.24), 0, -0.23, 0, { mult: 0.8, zone: 'leg' }));
       const k = new THREE.Bone(); k.name = 'knee' + side; k.position.y = -0.46; l.add(k);
       k.add(solSeg(key, 'shin', 'shin', mat) || seg1([Pt(Cy(0.065, 0.05, 0.44, 9), v.cloth, 0, -0.22, 0), Pt(Bx(0.1, 0.1, 0.22), v.boot, 0, -0.47, 0.05), Pt(Cy(0.06, 0.06, 0.13, 8), v.boot, 0, -0.4, 0), Pt(Bx(0.09, 0.07, 0.07), v.vest, 0, -0.04, 0.07)], 'shin', mat));
-      k.add(hit(Bx(0.17, 0.54, 0.24), 0, -0.25, 0.02, { mult: 0.75 }));
+      k.add(hit(Bx(0.17, 0.54, 0.24), 0, -0.25, 0.02, { mult: 0.7, zone: 'leg' }));
       hips.add(l); return l;
     };
     leg('L'); leg('R');

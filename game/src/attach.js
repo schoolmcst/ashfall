@@ -103,7 +103,7 @@ function computeStats(def, override, factory) {
     dmg: b.dmg * Math.max(0.2, 1 + m.dmg) * m.dmgX, pellets: Math.max(1, b.pellets + m.pellets), head: b.head * (1 + m.head),
     interval: b.interval / Math.max(0.2, 1 + m.rate), spread: b.spread * Math.max(0.05, 1 + m.spread), adsSpread: b.adsSpread * Math.max(0.05, 1 + m.adsSpread),
     recoil: b.recoil * Math.max(0.2, 1 + m.recoil), reload: b.reload * Math.max(0.3, 1 + m.reload),
-    magSize: Math.max(1, Math.round(b.mag * (1 + m.mag)) + m.magAdd), eff, range: Math.max(b.range, eff * 3.2),
+    magSize: Math.max(1, Math.round(b.mag * (1 + m.mag)) + m.magAdd), eff, fallMin: b.fallMin === undefined ? 0.6 : b.fallMin, range: Math.max(b.range, eff * 3.2),
     adsTime: b.ads * Math.max(0.4, 1 + m.ads), move: b.move * Math.max(0.7, 1 + m.move), spot: (b.spot || 1) * Math.max(0.3, 1 + m.spot), vsHeavy: (b.vsHeavy || 1) * Math.max(0.3, 1 + m.vsHeavy),
     blast: (b.blast || 0) * Math.max(0.3, 1 + m.blast), adsFov: zoom || b.adsFov, stealth, laser, overlay, optic, lenAdd: m.len, burst: b.burst || 0, burstGap: b.burstGap || 0,
   };
@@ -167,7 +167,7 @@ function applyLoadout(wi) {
   const w = WEAPONS[wi]; if (!w) return;
   const def = w.def, u = gunObjs[wi] ? gunObjs[wi].userData : null, s = computeStats(def, null, w.factory), oldMag = w.magSize;
   Object.assign(w, { dmg: s.dmg, pellets: s.pellets, head: s.head, interval: s.interval, spread: s.spread, adsSpread: s.adsSpread, recoil: s.recoil, reload: s.reload, blast: s.blast,
-    magSize: s.magSize, eff: s.eff, range: s.range, adsTime: s.adsTime, move: s.move, spot: s.spot, vsHeavy: s.vsHeavy, adsFov: s.adsFov, stealth: s.stealth, laser: s.laser, overlay: s.overlay, optic: s.optic });
+    magSize: s.magSize, eff: s.eff, fallMin: s.fallMin, range: s.range, adsTime: s.adsTime, move: s.move, spot: s.spot, vsHeavy: s.vsHeavy, adsFov: s.adsFov, stealth: s.stealth, laser: s.laser, overlay: s.overlay, optic: s.optic });
   if (u) { sightInfo(gunObjs[wi]); w.sightY = sightFor(def, u, s.optic); w.adsZ = u.adsZ; w.len = u.len + s.lenAdd; buildAttachmentVisuals(wi); }
   if (w.magSize !== oldMag) { const extra = Math.max(0, w.ammo - w.magSize); w.ammo = Math.min(w.ammo, w.magSize); w.reserve = Math.min(w.reserveMax, w.reserve + extra); }
 }
@@ -428,7 +428,7 @@ let loRow = 'p', loSlot = 'optic', loPreview = null, loPrevW = null, loCat = nul
 const STAT_BARS = [
   ['DAMAGE', s => s.dmg * s.pellets, 0, 160, s => s.pellets > 1 ? `${Math.round(s.dmg)} × ${s.pellets}` : `${Math.round(s.dmg)}`],
   ['FIRE RATE', s => 60 / (s.burst ? (s.interval + s.burstGap * (s.burst - 1)) / s.burst : s.interval), 0, 1100, s => s.burst ? `${Math.round(60 / s.interval)} BURSTS/MIN` : `${Math.round(60 / s.interval)} RPM`],
-  ['RANGE', s => s.eff, 0, 130, s => s.blast ? `${s.blast.toFixed(1)} M BLAST` : `${Math.round(s.eff)} M`],
+  ['MAX DAMAGE RANGE', s => s.eff, 0, 130, s => s.blast ? `${s.blast.toFixed(1)} M BLAST` : `${Math.round(s.eff)} M`],
   ['ACCURACY (AIMING)', s => 1 / s.adsSpread, 0, 500, s => `${Math.round(clamp(1 / s.adsSpread / 5, 0, 100))}`],
   ['ACCURACY (HIP)', s => 1 / s.spread, 0, 110, s => `${Math.round(clamp(1 / s.spread / 1.1, 0, 100))}`],
   ['CONTROL', s => 1 / s.recoil, 0, 130, s => `${Math.round(clamp(1 / s.recoil / 1.3, 0, 100))}`],
@@ -438,12 +438,15 @@ const STAT_BARS = [
 ];
 // ADVANCED STATS under the bars: the real numbers the game uses (and the preview's, green/red when they change)
 const ADV = [
-  ['BODY DAMAGE', s => s.dmg * s.pellets, 1, v => Math.round(v)],
-  ['HEADSHOT DAMAGE', s => s.dmg * s.head * (s.pellets > 1 ? 1 : 1), 1, v => Math.round(v)],
+  ['HEAD DAMAGE', s => s.dmg * s.head, 1, v => Math.round(v)],
+  ['CHEST DAMAGE', s => s.dmg * 1.15, 1, v => Math.round(v)],
+  ['STOMACH DAMAGE', s => s.dmg, 1, v => Math.round(v)],
+  ['ARM / LEG DAMAGE', s => s.dmg * 0.7, 1, v => Math.round(v) + '–' + Math.round(v / 0.7 * 0.8)],
   ['SHOTS TO KILL', s => Math.ceil(100 / (s.dmg * (s.pellets > 1 ? s.pellets * 0.6 : 1))), -1, v => v],
   ['TIME TO KILL', s => (Math.ceil(100 / (s.dmg * (s.pellets > 1 ? s.pellets * 0.6 : 1))) - 1) * s.interval * 1000, -1, v => Math.round(v) + ' MS'],
   ['FIRE RATE', s => 60 / s.interval, 1, v => Math.round(v) + ' RPM'],
-  ['EFFECTIVE RANGE', s => s.eff, 1, v => Math.round(v) + ' M'],
+  ['MAX DAMAGE RANGE', s => s.eff, 1, v => Math.round(v) + ' M'],
+  ['DAMAGE FAR AWAY (2× RANGE)', s => (s.fallMin === undefined ? 0.6 : s.fallMin) * 100, 1, v => Math.round(v) + '%'],
   ['MAX RANGE', s => s.range, 1, v => Math.round(v) + ' M'],
   ['AIM DOWN SIGHTS', s => s.adsTime * 180, -1, v => Math.round(v) + ' MS'],
   ['HIP SPREAD', s => s.spread * 57.3, -1, v => v.toFixed(2) + '°'],

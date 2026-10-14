@@ -1,3 +1,4 @@
+const dmgFall = (w, d) => { const e = w.eff || 1e9, m = w.fallMin === undefined ? 0.6 : w.fallMin; return d <= e ? 1 : Math.max(m, 1 - (d - e) / e * (1 - m)); };
 /* ================================================================== gameplay: state, player, weapons */
 const P = { x: 0, y: 0, z: 10, vx: 0, vz: 0, vy: 0, yaw: 0, pitch: 0, eye: 1.7, onGround: true, bob: 0, recoilAcc: 0, stepK: 0 };
 const G = {
@@ -214,8 +215,8 @@ function shoot(moving) {
     const h = hits[0];
     if (!h) { if (!w.stealth && p === 0 && w.pellets === 1 && (G.shots & 1)) addTracer(_muz, _v.copy(_org).addScaledVector(_sdir, 70), 0.05, 0.012); continue; }
     const ud = h.object.userData;
-    // damage falls off past the weapon's effective range (down to 55% at 2.5x range)
-    const fall = h.distance <= (w.eff || 1e9) ? 1 : Math.max(0.55, 1 - (h.distance - w.eff) / (w.eff * 1.5) * 0.45);
+    // full damage up to the gun's MAX DAMAGE RANGE, then down to its floor (fallMin) at twice that distance
+    const fall = dmgFall(w, h.distance);
     if (ud.barrel) damageBarrel(ud.barrel, w.dmg * fall);
     if (ud.enemy) {
       const head = !!ud.head, armour = ud.enemy.type === 'heavy' && !ud.enemy.pvp ? (w.vsHeavy || 1) : 1, killed = damageEnemy(ud.enemy, w.dmg * fall * armour * (head ? w.head : (ud.mult || 1)), head, _sdir);

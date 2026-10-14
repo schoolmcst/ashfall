@@ -27,14 +27,14 @@ const SND = {
   rocket: { hc: 2400, hg: 0.5, hd: 0.2, bc: 700, bg: 0.9, bd: 0.8, tf: 60, tg: 0.7, td: 0.5, tl: 1.0 },
 };
 const CAT_BASE = {
-  ar: { auto: true, head: 2.2, pellets: 1, range: 160, eff: 45, adsFov: 52, mag: 30, reload: 2.0, spread: 0.014, adsSpread: 0.0025, recoil: 0.011, move: 1, ads: 1, rum: [0.1, 0.4, 60] },
-  smg: { auto: true, head: 1.8, pellets: 1, range: 110, eff: 22, adsFov: 56, mag: 30, reload: 1.8, spread: 0.011, adsSpread: 0.004, recoil: 0.008, move: 1.07, ads: 0.8, rum: [0.05, 0.3, 45] },
-  lmg: { auto: true, head: 2.0, pellets: 1, range: 170, eff: 50, adsFov: 54, mag: 100, reload: 4.2, spread: 0.022, adsSpread: 0.003, recoil: 0.012, move: 0.9, ads: 1.35, rum: [0.2, 0.45, 70] },
-  mr: { auto: false, head: 2.2, pellets: 1, range: 230, eff: 70, adsFov: 30, mag: 20, reload: 2.3, spread: 0.03, adsSpread: 0.0012, recoil: 0.025, move: 0.97, ads: 1.15, rum: [0.35, 0.5, 90] },
-  sr: { auto: false, head: 2.6, pellets: 1, range: 320, eff: 120, adsFov: 12.5, mag: 5, reload: 3.0, spread: 0.06, adsSpread: 0.0004, recoil: 0.06, move: 0.92, ads: 1.4, rum: [0.7, 0.6, 160] },
-  sg: { auto: false, head: 1.5, pellets: 9, range: 40, eff: 14, adsFov: 62, mag: 6, reload: 2.7, spread: 0.055, adsSpread: 0.038, recoil: 0.07, move: 1.0, ads: 0.95, rum: [0.8, 0.9, 160] },
-  pi: { auto: false, head: 2.5, pellets: 1, range: 120, eff: 28, adsFov: 62, mag: 15, reload: 1.5, spread: 0.01, adsSpread: 0.003, recoil: 0.022, move: 1.08, ads: 0.7, rum: [0.1, 0.4, 60] },
-  la: { auto: false, head: 1, pellets: 1, range: 200, eff: 200, adsFov: 58, mag: 1, reload: 3.2, spread: 0.01, adsSpread: 0.002, recoil: 0.05, move: 0.9, ads: 1.3, rum: [0.9, 0.7, 260] },
+  ar: { fallMin: 0.7, auto: true, head: 2.2, pellets: 1, range: 160, eff: 45, adsFov: 52, mag: 30, reload: 2.0, spread: 0.014, adsSpread: 0.0025, recoil: 0.011, move: 1, ads: 1, rum: [0.1, 0.4, 60] },
+  smg: { fallMin: 0.6, auto: true, head: 1.8, pellets: 1, range: 110, eff: 22, adsFov: 56, mag: 30, reload: 1.8, spread: 0.011, adsSpread: 0.004, recoil: 0.008, move: 1.07, ads: 0.8, rum: [0.05, 0.3, 45] },
+  lmg: { fallMin: 0.75, auto: true, head: 2.0, pellets: 1, range: 170, eff: 50, adsFov: 54, mag: 100, reload: 4.2, spread: 0.022, adsSpread: 0.003, recoil: 0.012, move: 0.9, ads: 1.35, rum: [0.2, 0.45, 70] },
+  mr: { fallMin: 0.85, auto: false, head: 2.2, pellets: 1, range: 230, eff: 70, adsFov: 30, mag: 20, reload: 2.3, spread: 0.03, adsSpread: 0.0012, recoil: 0.025, move: 0.97, ads: 1.15, rum: [0.35, 0.5, 90] },
+  sr: { fallMin: 1, auto: false, head: 2.6, pellets: 1, range: 320, eff: 120, adsFov: 12.5, mag: 5, reload: 3.0, spread: 0.06, adsSpread: 0.0004, recoil: 0.06, move: 0.92, ads: 1.4, rum: [0.7, 0.6, 160] },
+  sg: { fallMin: 0.25, auto: false, head: 1.5, pellets: 9, range: 40, eff: 14, adsFov: 62, mag: 6, reload: 2.7, spread: 0.055, adsSpread: 0.038, recoil: 0.07, move: 1.0, ads: 0.95, rum: [0.8, 0.9, 160] },
+  pi: { fallMin: 0.6, auto: false, head: 2.5, pellets: 1, range: 120, eff: 28, adsFov: 62, mag: 15, reload: 1.5, spread: 0.01, adsSpread: 0.003, recoil: 0.022, move: 1.08, ads: 0.7, rum: [0.1, 0.4, 60] },
+  la: { fallMin: 1, auto: false, head: 1, pellets: 1, range: 200, eff: 200, adsFov: 58, mag: 1, reload: 3.2, spread: 0.01, adsSpread: 0.002, recoil: 0.05, move: 0.9, ads: 1.3, rum: [0.9, 0.7, 260] },
 };
 // v: viewmodel recipe (see buildProcGun). blender: use the Blender-modelled body.
 const ARMORY_SRC = [
@@ -112,10 +112,14 @@ const ARMORY_SRC = [
 const BALANCE = {
   marc: { dmg: 28, interval: 0.088 }, kv47: { dmg: 33, interval: 0.1 }, vanguard: { dmg: 45, interval: 0.133 }, talon: { dmg: 25, interval: 0.075 },
   striker: { dmg: 26, interval: 0.081 }, spectre: { dmg: 27, interval: 0.086 },
-  viper: { dmg: 25, interval: 0.071 }, wasp: { dmg: 20, interval: 0.055 }, kestrel: { dmg: 25, interval: 0.067 }, bulwark: { dmg: 34, interval: 0.092 }, hornet: { dmg: 25, interval: 0.07 }, whisper: { dmg: 25, interval: 0.08 },
+  // SMGs: 5 body shots up close (Bulwark 4), quick to fall off past their max damage range
+  viper: { dmg: 22, interval: 0.066 }, wasp: { dmg: 18, interval: 0.055 }, kestrel: { dmg: 21, interval: 0.064 }, bulwark: { dmg: 30, interval: 0.092 }, hornet: { dmg: 22, interval: 0.068 }, whisper: { dmg: 21, interval: 0.075 },
   anvil: { dmg: 30, interval: 0.092 }, titan: { dmg: 33, interval: 0.107 }, hailstorm: { dmg: 30, interval: 0.092 },
   sentinel: { dmg: 45, interval: 0.2 }, arbiter: { dmg: 45, interval: 0.16 },
   warden: { dmg: 92 },
+  // pistols are backups: slower to kill than any primary, less of a laser from the hip, only the revolver one-shots a head
+  sidearm: { dmg: 26, head: 2.0, interval: 0.16, spread: 0.016 }, magnum: { dmg: 52, head: 2.0, interval: 0.42, spread: 0.02, eff: 26 },
+  stinger: { dmg: 16, head: 1.6, interval: 0.07, spread: 0.02, adsSpread: 0.007 }, deadeye: { dmg: 50, head: 1.9, interval: 0.36, spread: 0.02, eff: 26, move: 1.02 },
 };
 const ARMORY = ARMORY_SRC.map(src => {
   const d = Object.assign({ move: 1, ads: 1 }, CAT_BASE[src.cat], src, BALANCE[src.id] || {});
