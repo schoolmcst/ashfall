@@ -52,9 +52,15 @@ const SCHEMA = {
     { a: 'reload', t: 'bind', name: 'RELOAD' }, { a: 'melee', t: 'bind', name: 'MELEE' }, { a: 'grenade', t: 'bind', name: 'THROW EQUIPMENT' }, { a: 'use', t: 'bind', name: 'USE (PLANT / DEFUSE)' },
     { a: 'swap', t: 'bind', name: 'SWITCH WEAPON' }, { a: 'prim', t: 'bind', name: 'PRIMARY WEAPON' }, { a: 'sec', t: 'bind', name: 'SECONDARY WEAPON' }, { a: 'inspect', t: 'bind', name: 'INSPECT WEAPON' }, { a: 'board', t: 'bind', name: 'SCOREBOARD' }, { a: 'streak', t: 'bind', name: 'USE SCORESTREAK' },
   ],
+  BUTTONS: [
+    ...['jump:JUMP', 'crouch:CROUCH / SLIDE', 'reload:RELOAD / USE', 'swap:SWITCH WEAPON', 'grenade:THROW GRENADE', 'melee:MELEE', 'sprint:SPRINT', 'streak:USE SCORESTREAK', 'inspect:INSPECT WEAPON', 'board:SCOREBOARD'].map(x => { const [a, n] = x.split(':'); return { a, t: 'padbind', name: n }; }),
+  ],
   CONTROLLER: [
     { k: 'padSens', t: 'range', name: 'LOOK SENSITIVITY', min: 40, max: 250, step: 5, fmt: pct },
-    { k: 'padAdsSens', t: 'range', name: 'AIM DOWN SIGHTS SENSITIVITY', hint: 'Multiplier while aiming', min: 30, max: 150, step: 5, fmt: pct },
+    { k: 'padAdsSens', t: 'range', name: 'ADS SENSITIVITY · IRONS / 1×', hint: 'Iron sights, red dots, holos, reflex', min: 10, max: 150, step: 5, fmt: pct },
+    { k: 'padAdsSens2', t: 'range', name: 'ADS SENSITIVITY · 2.5× – 3.5×', min: 10, max: 150, step: 5, fmt: pct },
+    { k: 'padAdsSens4', t: 'range', name: 'ADS SENSITIVITY · 4×', min: 10, max: 150, step: 5, fmt: pct },
+    { k: 'padAdsSens6', t: 'range', name: 'ADS SENSITIVITY · 6× – 10×', min: 10, max: 150, step: 5, fmt: pct },
     { k: 'padCurve', t: 'seg', name: 'RESPONSE CURVE', hint: 'Dynamic: precise near the centre, fast at full tilt. Linear: stick position = turn speed', opts: [['dynamic', 'DYNAMIC'], ['standard', 'STANDARD'], ['linear', 'LINEAR']] },
     { k: 'padAccel', t: 'range', name: 'TURN BOOST', hint: 'Extra turn speed when the stick is held at full tilt', min: 0, max: 100, step: 5, fmt: pct },
     { k: 'padSmooth', t: 'range', name: 'LOOK SMOOTHING', hint: 'Evens out jittery input. Higher feels heavier', min: 0, max: 100, step: 5, fmt: pct },
@@ -104,7 +110,11 @@ function renderSettings() {
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
     if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
     const ctl = document.createElement('div'); ctl.className = 'ctl';
-    if (it.t === 'info') { const v = document.createElement('span'); v.className = 'num'; v.style.letterSpacing = '.3em'; v.style.fontSize = '18px'; v.textContent = it.val(); ctl.appendChild(v); }
+    if (it.t === 'padbind') {
+      const b = document.createElement('button'); b.className = 'bindbtn'; b.textContent = PAD_NAMES[pb(it.a)] || ('BUTTON ' + pb(it.a));
+      b.onclick = () => { b.textContent = 'PRESS A CONTROLLER BUTTON…'; b.classList.add('wait'); padCapture = btn => { const cur = pb(it.a), map = Object.assign({}, PAD_DEFAULT, S.padBinds || {}); for (const k in map) if (map[k] === btn && k !== it.a) map[k] = cur; map[it.a] = btn; S.padBinds = map; saveSettings(); renderSettings(); }; };
+      ctl.appendChild(b);
+    } else if (it.t === 'info') { const v = document.createElement('span'); v.className = 'num'; v.style.letterSpacing = '.3em'; v.style.fontSize = '18px'; v.textContent = it.val(); ctl.appendChild(v); }
     else if (it.t === 'text') {
       const i = document.createElement('input'); i.className = 'set-text'; i.maxLength = 14; i.value = NET.nick; i.spellcheck = false; i.autocomplete = 'off';
       i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') i.blur(); }; i.onkeyup = e => e.stopPropagation();
@@ -187,7 +197,7 @@ function actions(act) {
     case 'howto-back': showScreen(returnScreen); break;
     case 'credits': returnScreen = curScreen || 'menu'; showScreen('credits'); break;
     case 'credits-back': showScreen(returnScreen); break;
-    case 'reset-settings': if (curTab === 'KEYBINDS') S.binds = {}; for (const it of SCHEMA[curTab]) if (it.k) S[it.k] = DEFAULTS[it.k]; applyVideoSettings(); applyAudioSettings(); updateDiffUI(); saveSettings(); renderSettings(); break;
+    case 'reset-settings': if (curTab === 'KEYBINDS') S.binds = {}; if (curTab === 'BUTTONS') S.padBinds = null; for (const it of SCHEMA[curTab]) if (it.k) S[it.k] = DEFAULTS[it.k]; applyVideoSettings(); applyAudioSettings(); updateDiffUI(); saveSettings(); renderSettings(); break;
     case 'resume': resumeGame(); break;
     case 'restart': restartMatch(); break;
     case 'tomenu': toMenu(); break;
@@ -239,8 +249,9 @@ function adjustFocused(d) {
 
 /* ------------------------------------------------------------------ input */
 // aiming sensitivity follows the magnification of the sight in use
+function padAdsMul() { const w = WEAPONS[G.cur], o = (w && w.overlay) || 0; return (o >= 6 ? S.padAdsSens6 : o >= 4 ? S.padAdsSens4 : o >= 2 ? S.padAdsSens2 : S.padAdsSens) / 100; }
 function adsSensMul() { const w = WEAPONS[G.cur], o = (w && w.overlay) || 0; return (o >= 6 ? S.adsSens6 : o >= 4 ? S.adsSens4 : o >= 2 ? S.adsSens2 : S.adsSens) / 100; }
-let bindCapture = null;   // Settings > KEYBINDS: waiting for the key to assign
+let bindCapture = null, padCapture = null;   // Settings > KEYBINDS: waiting for the key to assign
 addEventListener('keydown', e => {
   if (bindCapture) { e.preventDefault(); const f = bindCapture; bindCapture = null; if (e.code !== 'Escape') f(e.code); else renderSettings(); return; }
   keys[e.code] = true;
@@ -341,10 +352,11 @@ function pollPad(dt) {
   if (S.padDrift) { learnCentre(rawL, padCal.l, padCal.lq, dt); learnCentre(rawR, padCal.r, padCal.rq, dt); }
   const [mx, my, mm] = stick(rawL[0], rawL[1], padCal.l), [lx, ly, lm] = stick(rawR[0], rawR[1], padCal.r);
   pad.mx = mx; pad.my = my; pad.mm = mm; pad.lx = lx; pad.ly = ly; pad.lm = lm;
+  if (padCapture) { for (let i = 0; i < gp.buttons.length; i++) if (press(i) && i !== 9) { const f = padCapture; padCapture = null; f(i); break; } prevBtn = gp.buttons.map(b => b.pressed); return; }
   const playing = G.state === 'playing';
   if (G.state === 'deathcam') { if ((press(0) || press(9)) && G.dc && G.dc.t > 0.6) finishDeath(); prevBtn = gp.buttons.map(b => b.pressed); return; }
   if (press(9)) { if (playing || G.state === 'respawning' || G.state === 'spectate') pauseGame(); else if (G.state === 'paused') resumeGame(); else if (curScreen === 'lobby') actions('lob-start'); else if (curScreen === 'menu') toLobby(); else if (G.state === 'dead') restartMatch(); }
-  pad.board = down(8); pad.use = playing && down(2);
+  pad.board = down(pb('board')); pad.use = playing && down(pb('reload'));
   if (G.state === 'spectate' && press(0)) G.specNext = true;
   // analog triggers with a little hysteresis so a half-pull doesn't chatter
   const thr = S.padTrigger / 100, rt = Math.max(val(7), down(7) && !gp.buttons[7].value ? 1 : 0), lt = Math.max(val(6), down(6) && !gp.buttons[6].value ? 1 : 0);
@@ -353,21 +365,21 @@ function pollPad(dt) {
   pad.fire = fireNow;
   const adsNow = playing && (pad.ads ? lt > thr - 0.06 : lt > thr);
   if (adsNow && !pad.ads) startAdsSnap();
-  pad.ads = adsNow; pad.jump = playing && down(0);
+  pad.ads = adsNow; pad.jump = playing && down(pb('jump'));
   if (playing) {
-    if (S.padCrouch === 'hold') pad.crouch = down(1); else if (press(1)) pad.crouch = !pad.crouch;
-    if (press(2) && !G.interactTxt) startReload();
-    if (press(3) || press(15) || press(4)) cycleWeapon(1);
-    if (press(14)) cycleWeapon(-1);
-    if (press(5)) throwGrenade();
-    if (press(13) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
-    if (press(11)) melee();
-    if (press(12)) stkUse();
+    if (S.padCrouch === 'hold') pad.crouch = down(pb('crouch')); else if (press(pb('crouch'))) pad.crouch = !pad.crouch;
+    if (press(pb('reload')) && !G.interactTxt) startReload();
+    if (press(pb('swap'))) cycleWeapon(1);
+    if (press(pb('grenade'))) throwGrenade();
+    if (press(pb('inspect')) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
+    if (press(pb('melee'))) melee();
+    if (press(pb('streak'))) stkUse();
     const fwdPush = -my;
-    if (S.padSprint === 'hold') pad.sprint = down(10);
-    else if (S.padSprint === 'auto') { pad.autoT = fwdPush > 0.85 && mm > 0.92 ? (pad.autoT || 0) + dt : 0; pad.sprint = pad.autoT > 0.22 || (pad.sprint && fwdPush > 0.6) || press(10) || (pad.sprint && down(10)); }
-    else if (press(10)) pad.sprint = !pad.sprint;
-    if (pad.sprint && (pad.crouch && press(1))) pad.sprint = false;
+    const sb = pb('sprint');
+    if (S.padSprint === 'hold') pad.sprint = down(sb);
+    else if (S.padSprint === 'auto') { pad.autoT = fwdPush > 0.85 && mm > 0.92 ? (pad.autoT || 0) + dt : 0; pad.sprint = pad.autoT > 0.22 || (pad.sprint && fwdPush > 0.6) || press(sb) || (pad.sprint && down(sb)); }
+    else if (press(sb)) pad.sprint = !pad.sprint;
+    if (pad.sprint && (pad.crouch && press(pb('crouch')))) pad.sprint = false;
   } else {
     pad.crouch = false;
     if (curScreen) menuPad(dt, mx, my, ly, press, down);
@@ -452,7 +464,7 @@ function applyPadLook(dt) {
   const m = pad.lm || 0, out = m > 0 ? lookCurve(m) / m : 0;
   if (m > 0.93) pad.turnT = (pad.turnT || 0) + dt; else pad.turnT = Math.max(0, (pad.turnT || 0) - dt * 5);
   const boost = 1 + (S.padAccel / 100) * 0.9 * smooth(0.12, 0.45, pad.turnT) * (1 - G.ads);
-  let k = lerp(1, S.padAdsSens / 100 * adsSensMul() / Math.max(0.1, S.adsSens / 100), G.ads) * S.padSens / 100;
+  let k = lerp(1, padAdsMul(), G.ads) * S.padSens / 100;
   if (target) k *= lerp(L.fr, 1, clamp(Math.acos(clamp(_toE.copy(aimPoint(target, _toE)).sub(camera.position).normalize().dot(_fw.set(0, 0, -1).applyQuaternion(camera.quaternion)), -1, 1)) / L.cone, 0, 1) * 0.6);
   const tvx = -pad.lx * out * 3.6 * k * boost, tvy = -pad.ly * out * 2.7 * k * (S.padInvertY ? -1 : 1);
   const tau = S.padSmooth / 100 * 0.07, a = tau > 0 ? 1 - Math.exp(-dt / tau) : 1;

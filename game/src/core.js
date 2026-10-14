@@ -17,7 +17,7 @@ const QUALITY = {
 const DEFAULTS = {
   quality: 'auto', cfgVer: 4, dynRes: true, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
   master: 80, sfx: 100, ambience: 60,
-  sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, invertY: false, toggleAds: false,
+  sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,
   crosshair: 'cross', crosshairColor: 'white', hitMarkers: true, ragdoll: true, deathCam: true, dmgIndicator: true, radar: true, difficulty: 'regular',
@@ -39,6 +39,9 @@ function loadSettings() {
 }
 // keyboard bindings (Settings > KEYBINDS); mouse stays fire / aim
 const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab', streak: 'KeyX' };
+const PAD_DEFAULT = { jump: 0, crouch: 1, reload: 2, swap: 3, grenade: 5, melee: 11, sprint: 10, streak: 12, inspect: 13, board: 8 };
+const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', 'L3', 'R3', 'D-PAD UP', 'D-PAD DOWN', 'D-PAD LEFT', 'D-PAD RIGHT'];
+const pb = a => (S.padBinds && S.padBinds[a] !== undefined ? S.padBinds[a] : PAD_DEFAULT[a]);
 const bind = a => (S.binds && S.binds[a]) || DEFAULT_BINDS[a];
 const kb = a => !!keys[bind(a)] || (a === 'sprint' && bind(a) === 'ShiftLeft' && !!keys.ShiftRight);
 function keyName(c) { if (!c) return '—'; return c.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'NUM ').replace('ShiftLeft', 'LEFT SHIFT').replace('ShiftRight', 'RIGHT SHIFT').replace('ControlLeft', 'LEFT CTRL').replace('ControlRight', 'RIGHT CTRL').replace('AltLeft', 'LEFT ALT').replace('AltRight', 'RIGHT ALT').replace('Space', 'SPACE').replace('Arrow', '').toUpperCase(); }
