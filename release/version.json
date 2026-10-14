@@ -1,20 +1,15 @@
 {
- "version": "1.1.5",
+ "version": "1.1.6",
  "notes": [
-  "IRON SIGHTS: rebuilt on every gun - rifles, SMGs and snipers get a see-through rear ring and a guarded front post with a glowing tip; pistols get 3-dot sights; shotguns get a bright bead; all line up exactly with where you shoot",
-  "NEW SCOPE: 4x Battle Scope (ACOG-style) with a lit chevron reticle and bullet-drop marks, for assault rifles, SMGs, LMGs and marksman rifles",
-  "HOLO: rebuilt at real EOTech size (the Rainbow Six style holo) with a clear window and 68 MOA ring; red dots sit just above the front post",
-  "STATS: separate ONLINE and OFFLINE career pages; online kills, deaths and rounds now count properly",
-  "PRIVATE MATCHES: a lobby before the match - the host picks mode, map, number of bots, time limit and kill limit, friends join by code or on your Wi-Fi, host presses START",
-  "END OF MATCH: full scoreboard after every game, then the next match starts by itself (45 s offline, 40 s online) with a full reset",
-  "ONLINE: pausing no longer freezes the match for anyone, and a minimised host keeps the game running",
-  "KEYBINDS: new Settings tab to rebind every key; new MELEE key (V by default)",
-  "GUN GAME: bots play gun game too, and there is a short delay before you can fire each new gun",
-  "SPAWNS: many more spawn points on every floor, randomised and spread out so bots no longer spawn clumped",
-  "WINDOWS: glass you can see through but not shoot through",
-  "Grenades throw much farther; soldiers hold their rifles properly in their hands",
-  "ATTACHMENTS: pros and cons are stronger and actually change how the gun handles"
+  "NEW MENUS: new main menu (Multiplayer, Settings, News) and a new lobby with a team roster",
+  "LOBBY: the big PLAY button picks the online mode - left/right or D-pad to change it, A or click to start",
+  "CUSTOM: private code matches and solo games vs bots (any mode, map, bots, time limit) live under CUSTOM",
+  "SCORESTREAKS: pick 3 of 6 (UAV, Supply Drop, Body Armor, Mortar Strike, Advanced UAV, Airstrike); earn them with kills, use them with X or D-pad up",
+  "ACCOUNT: set your callsign in Settings > Account",
+  "NEWS: every patch listed on the main menu",
+  "KILL SOUND: punchier kill confirm, higher pitched on headshots",
+  "SIGHTS: see-through rear apertures and slimmer front posts, open-frame reflex, one dot in red dots, clearer glass on every optic"
  ],
- "sha256": "70cc65d974ad1fb8ea5b1371c0e771987357bc1f88135e093ea13d39318b779b",
+ "sha256": "e0bf3021e41d6e1fb0b1d72fa8255b7b87c9de457ffda80faaaf0262ba8f6ef7",
  "minApp": "1.0.0"
 }
