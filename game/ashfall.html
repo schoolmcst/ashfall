@@ -59,7 +59,7 @@
   .logo.cod-logo{font-size:30px;letter-spacing:.14em;padding-bottom:14px;line-height:1}.cod-logo .beta-tag{font-size:9px;margin-top:4px}
   .cod-title{padding-bottom:12px}.cod-title small{display:block;font-size:11px;letter-spacing:.4em;color:var(--accent)}.cod-title b{font-size:26px;letter-spacing:.24em}
   .cod-nav{display:flex;gap:4px;flex:1;align-self:flex-end}
-  .cod-tab{pointer-events:auto;cursor:pointer;background:none;border:0;border-bottom:3px solid transparent;color:var(--dim);font:700 14px/1 inherit;font-family:inherit;letter-spacing:.28em;padding:14px 16px 16px}
+  .cod-tab{white-space:nowrap;pointer-events:auto;cursor:pointer;background:none;border:0;border-bottom:3px solid transparent;color:var(--dim);font:700 14px/1 inherit;font-family:inherit;letter-spacing:.28em;padding:14px 16px 16px}
   .cod-tab:hover,.cod-tab:focus,.cod-tab.on{outline:0;color:#fff;border-bottom-color:var(--accent)}.cod-tab.on{color:var(--accent)}
   .cod-card{align-self:center;display:flex;gap:14px;align-items:center;padding:8px 14px;margin-bottom:12px;border:1px solid var(--line);background:rgba(0,0,0,.45);font-size:11px;letter-spacing:.18em;color:var(--dim)}
   .cod-card .cs{font-size:15px;font-weight:700;color:#fff;letter-spacing:.14em}.cod-card .em{width:34px;height:34px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#7a5a1a);color:#111;font-weight:800;font-size:14px}
@@ -72,6 +72,13 @@
   .cod-tile:hover,.cod-tile:focus{outline:0;background:linear-gradient(90deg,rgba(224,180,74,.28),rgba(224,180,74,.04));border-color:rgba(224,180,74,.5);transform:translateX(6px)}.cod-tile:hover::before,.cod-tile:focus::before,.cod-tile.primary::before{background:var(--accent)}
   .cod-tile.primary b{color:var(--accent)}
   .cod-opts .row-opt{margin:6px 0}
+  .cod-main{gap:14px}.cod-tile.exit{padding:12px 22px 12px 26px}.cod-tile.exit b{font-size:16px;margin:0;color:var(--dim)}
+  .cod-news{border:1px solid var(--line);background:rgba(0,0,0,.5)}.cn-h{padding:10px 16px;font-size:11px;letter-spacing:.35em;color:var(--accent);border-bottom:1px solid var(--line)}
+  .cn-body{max-height:230px;overflow:auto;padding:4px 0}.cn-v{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.cn-v:last-child{border-bottom:0}
+  .cn-v b{font-size:13px;letter-spacing:.2em;color:#fff}.cn-v b em{font-style:normal;font-size:9px;letter-spacing:.2em;color:#111;background:var(--accent);padding:2px 5px;margin-left:8px;vertical-align:2px}
+  .cn-v small{float:right;font-size:10px;letter-spacing:.15em;color:var(--dim)}.cn-v ul{margin:6px 0 0;padding-left:16px;font-size:12px;line-height:1.45;color:var(--dim)}
+  .cus-priv{margin:10px 26px 4px;padding:12px 14px;border:1px solid rgba(224,180,74,.4);background:rgba(224,180,74,.06);text-align:left}.cus-priv .cp-h{font-size:11px;letter-spacing:.3em;color:var(--accent);margin-bottom:4px}
+  .cus-sub{margin:10px 26px 0;font-size:11px;letter-spacing:.3em;color:var(--accent);text-align:left}
   .cod-foot{display:flex;align-items:center;gap:20px;padding:12px 3vw;border-top:1px solid var(--line);background:rgba(0,0,0,.4);font-size:11px;letter-spacing:.2em;color:var(--dim)}.cod-foot span{margin-left:auto}
   .lnk{pointer-events:auto;cursor:pointer;background:none;border:0;color:var(--dim);font:600 12px/1 inherit;font-family:inherit;letter-spacing:.25em;padding:6px 0}.lnk:hover,.lnk:focus{outline:0;color:var(--accent)}
   .cod-lob{flex:1;display:grid;grid-template-columns:minmax(360px,520px) 1fr;gap:3vw;padding:22px 3vw;min-height:0}
@@ -86,6 +93,11 @@
   .cod-go{width:100%!important;max-width:none!important;text-align:center!important;font-size:22px!important;padding:18px!important;margin:8px 0 0!important;background:linear-gradient(90deg,var(--accent),#b8892c)!important;color:#141414!important;border:0!important;letter-spacing:.32em!important;font-weight:800!important}
   .cod-go:hover,.cod-go:focus{filter:brightness(1.12);padding-left:18px!important}.cod-go[disabled]{opacity:.45;filter:grayscale(1)}
   .cod-small{display:flex;gap:18px;margin-top:4px}
+  .set-text{pointer-events:auto;font:inherit;font-size:15px;letter-spacing:.12em;padding:8px 10px;width:240px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:#fff;text-transform:uppercase}.set-text:focus{outline:0;border-color:var(--accent)}
+  .cod-play{display:flex;align-items:stretch;gap:0;margin-bottom:2px}.cod-play .cod-go{flex:1;margin:0!important;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px!important}
+  .cod-go small{font-size:10px!important;letter-spacing:.25em;opacity:.75;font-weight:700}.cod-go b{font-size:26px;letter-spacing:.2em}.cod-go span{font-size:12px;letter-spacing:.4em;opacity:.85}
+  .cod-arrow{pointer-events:auto;cursor:pointer;width:54px;border:0;background:rgba(0,0,0,.55);color:var(--accent);font-size:34px;font-family:inherit}.cod-arrow:hover{background:rgba(224,180,74,.25);color:#fff}
+  .cod-hint{font-size:10px;letter-spacing:.25em;color:var(--dim);text-align:center;margin-bottom:6px}
   .cod-roster{align-self:start;justify-self:end;width:min(520px,100%);display:flex;flex-direction:column;gap:12px}
   .ros-h{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.3em;color:var(--dim);padding:0 4px}.ros-h b{color:var(--ink)}
   .ros-team{border:1px solid var(--line);background:rgba(0,0,0,.45)}.ros-team .tn{padding:8px 12px;font-size:11px;letter-spacing:.3em;border-bottom:1px solid var(--line);color:var(--tc,var(--accent))}
@@ -368,13 +380,12 @@
   </div>
   <div class="cod-main">
     <div class="cod-tiles">
-      <button class="cod-tile primary" data-act="go-on"><small>ONLINE &middot; REAL PLAYERS</small><b>MULTIPLAYER</b><span id="tileMp">QUICK PLAY &middot; PRIVATE MATCHES</span></button>
-      <button class="cod-tile" data-act="custom"><small>SOLO &middot; VS BOTS</small><b>CUSTOM GAME</b><span>ANY MODE &middot; MAP &middot; BOTS &middot; TIME &middot; SURVIVAL BEST WAVE <i id="bestWave">0</i> <i id="bestScore" style="display:none">0</i></span></button>
+      <button class="cod-tile primary" data-act="go-on"><small>ONLINE &middot; REAL PLAYERS</small><b>MULTIPLAYER</b><span>QUICK PLAY &middot; CUSTOM &amp; PRIVATE MATCHES IN THE LOBBY</span></button>
+      <button class="cod-tile" data-act="settings"><small>VIDEO &middot; AUDIO &middot; CONTROLS &middot; KEYBINDS</small><b>SETTINGS</b><span>MAKE IT YOURS</span></button>
     </div>
-    <div class="cod-opts">
-      <div class="row-opt"><span>CLASS</span><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><span class="val" id="classVal">ASSAULT</span><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div>
-      <div class="row-opt"><span>BOT SKILL</span><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><span class="val" id="diffVal">REGULAR</span><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div>
-    </div>
+    <div class="cod-news"><div class="cn-h">NEWS &middot; PATCH NOTES</div><div class="cn-body" id="newsBody"></div></div>
+    <div class="cod-tiles"><button class="cod-tile exit" data-act="quit" id="quitBtn"><b>EXIT GAME</b></button></div>
+    <span id="bestWave" hidden>0</span><span id="bestScore" hidden>0</span><span id="classVal" hidden></span><span id="diffVal" hidden></span>
   </div>
   <div class="cod-foot"><button class="lnk" data-act="howto">HOW TO PLAY</button><button class="lnk" data-act="bench">BENCHMARK</button><button class="lnk" data-act="credits">CREDITS</button><span>ORIGINAL WORK OF FICTION &middot; BUILT WITH THREE.JS</span></div>
 </div>
@@ -528,7 +539,6 @@
     <div class="cod-title"><small id="lobKind">MULTIPLAYER</small><b>LOBBY</b></div>
     <nav class="cod-nav">
       <button class="cod-tab" data-act="lobby-back">&lsaquo; BACK</button>
-      <button class="cod-tab" data-act="custom">CUSTOM</button>
       <button class="cod-tab" data-act="loadout">WEAPONS</button>
       <button class="cod-tab" data-act="streaks">SCORESTREAKS</button>
       <button class="cod-tab" data-act="stats">CAREER</button>
@@ -563,9 +573,11 @@
 
 <div id="custom" class="screen center hide">
   <div class="panel">
-    <h2>CUSTOM GAME</h2>
+    <h2>CUSTOM</h2>
+    <div id="cusPriv"></div>
+    <div class="cus-sub">SOLO &middot; VS BOTS</div>
     <div class="body" id="cusBody"></div>
-    <div class="actions"><button class="btn" data-act="cus-back">BACK</button><button class="btn primary" data-act="cus-start">START CUSTOM GAME</button></div>
+    <div class="actions"><button class="btn" data-act="cus-back">BACK</button><button class="btn primary" data-act="cus-start">START SOLO GAME</button></div>
   </div>
 </div>
 
@@ -4689,6 +4701,107 @@ function renderStats() {
   for (const b of $('stTabs').querySelectorAll('[data-which]')) b.onclick = () => { statOnline = b.dataset.which === '1'; sfx.ui(); renderStats(); };
 }
 function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(t.indexOf(statTab) + d + 3) % 3]; sfx.ui(); renderStats(); }
+/* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
+const NEWS = [
+{
+"v": "1.1.6",
+"d": "2026-10-14",
+"n": [
+"NEW MENUS: new main menu (Multiplayer, Settings, News) and a new lobby with a team roster",
+"LOBBY: the big PLAY button picks the online mode - left/right or D-pad to change it, A or click to start",
+"CUSTOM: private code matches and solo games vs bots (any mode, map, bots, time limit) live under CUSTOM",
+"SCORESTREAKS: pick 3 of 6 (UAV, Supply Drop, Body Armor, Mortar Strike, Advanced UAV, Airstrike); earn them with kills, use them with X or D-pad up",
+"ACCOUNT: set your callsign in Settings > Account",
+"NEWS: every patch listed on the main menu",
+"KILL SOUND: punchier kill confirm, higher pitched on headshots",
+"SIGHTS: see-through rear apertures and slimmer front posts, open-frame reflex, one dot in red dots, clearer glass on every optic"
+]
+},
+{
+"v": "1.1.5",
+"d": "2026-10-14",
+"n": [
+"IRON SIGHTS: rebuilt on every gun - rifles, SMGs and snipers get a see-through rear ring and a guarded front post with a glowing tip; pistols get 3-dot sights; shotguns get a bright bead; all line up exactly with where you shoot",
+"NEW SCOPE: 4x Battle Scope (ACOG-style) with a lit chevron reticle and bullet-drop marks, for assault rifles, SMGs, LMGs and marksman rifles",
+"HOLO: rebuilt at real EOTech size (the Rainbow Six style holo) with a clear window and 68 MOA ring; red dots sit just above the front post",
+"STATS: separate ONLINE and OFFLINE career pages; online kills, deaths and rounds now count properly",
+"PRIVATE MATCHES: a lobby before the match - the host picks mode, map, number of bots, time limit and kill limit, friends join by code or on your Wi-Fi, host presses START",
+"END OF MATCH: full scoreboard after every game, then the next match starts by itself (45 s offline, 40 s online) with a full reset",
+"ONLINE: pausing no longer freezes the match for anyone, and a minimised host keeps the game running",
+"KEYBINDS: new Settings tab to rebind every key; new MELEE key (V by default)",
+"GUN GAME: bots play gun game too, and there is a short delay before you can fire each new gun",
+"SPAWNS: many more spawn points on every floor, randomised and spread out so bots no longer spawn clumped",
+"WINDOWS: glass you can see through but not shoot through",
+"Grenades throw much farther; soldiers hold their rifles properly in their hands",
+"ATTACHMENTS: pros and cons are stronger and actually change how the gun handles"
+]
+},
+{
+"v": "1.1.1",
+"d": "2026-10-14",
+"n": [
+"MAPS: rebuilt staircases (solid flights, steel stairs with stringers, proper handrails) and smoother ramps",
+"MAPS: lots more props - forklifts, pallets, floodlights, lamps, benches, bins, vending machines, signs, laundry lines, parasols, market produce, cones, puddles and more",
+"MAPS: lights in the warehouse, station and car park; office furniture; a better statue on Vernon Square",
+"BOTS: smarter about floors above and below them (no more trying to walk through ceilings), and they fit through gaps better"
+]
+},
+{
+"v": "1.1.0",
+"d": "2026-10-13",
+"n": [
+"NEW: three new maps - KESSEL DOCKS (container port), CASTELLMARE (hill town) and VERNON SQUARE (street over a metro station) - each with three lanes and several floors",
+"NEW: pick a map in the lobby or custom games (or RANDOM); online, the host's map is used and it changes every round",
+"NEW: bots can now climb stairs and ramps, use upper floors and drop off ledges",
+"NEW: the game is now called DARKZONE; weapons have new names; CREDITS screen added",
+"NEW: recorded gun sounds and photo-scanned textures (from the last test build)"
+]
+},
+{
+"v": "1.0.8",
+"d": "2026-10-13",
+"n": [
+"FIX: joining another player's match now works (the matchmaking service was rejecting join requests)",
+"ASHFALL is now in BETA: the title screen, version tag and patch notes show it",
+"New matches wait 30 seconds for players before bots join",
+"Lobby shows match service status and warns when a newer version is out"
+]
+},
+{
+"v": "1.0.6",
+"d": "2026-10-13",
+"n": [
+"New matches wait 30 seconds for players before bots join",
+"Real players always take priority: a bot leaves the moment a player joins",
+"The lobby warns you in red when a newer version is out"
+]
+},
+{
+"v": "1.0.5",
+"d": "2026-10-13",
+"n": [
+"Lobby shows whether the match service can be reached (green = online, red = blocked)",
+"In a match, the top of the screen shows which Quick Play match you are in, whether you are hosting, and how many real players are in it"
+]
+},
+{
+"v": "1.0.4",
+"d": "2026-10-13",
+"n": [
+"Quick Play: players always land in the same match",
+"Relay fallback when a network blocks direct connections",
+"Clear messages while finding or joining a match",
+"Quick Play button always visible at the bottom of the lobby"
+]
+},
+{
+"v": "1.0.0",
+"d": "2026-10-13",
+"n": [
+"First release of the ASHFALL app"
+]
+}
+];
 /* ================================================================== matches: game modes, teams, bots, objectives, scoreboard */
 // Every mode except Survival is a bot match: the player and AI soldiers on teams (or every man for himself),
 // with respawns, objectives and a score limit. Survival keeps the original wave defence.
@@ -5344,7 +5457,16 @@ function playerCard(st) {
   const kd = kdS(st.kills, st.deaths), nick = (typeof NET !== 'undefined' && NET.nick) || 'PLAYER';
   return `<div class="em">${nick.slice(0, 1)}</div><div><div class="cs">${nick}</div><span>K/D<b>${kd}</b></span> &nbsp; <span>WINS<b>${st.wins}</b></span> &nbsp; <span>MATCHES<b>${st.matches}</b></span></div>`;
 }
-function renderMenuCard() { const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true)); }
+function renderMenuCard() {
+  const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true));
+  const nb = $('newsBody'); if (nb && typeof NEWS !== 'undefined' && !nb._done) { nb._done = 1; nb.innerHTML = NEWS.map((v, i) => `<div class="cn-v"><b>${v.v} BETA${i === 0 ? '<em>NEW</em>' : ''}</b><small>${v.d}</small><ul>${v.n.map(n => `<li>${String(n).replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}</li>`).join('')}</ul></div>`).join(''); }
+  const q = $('quitBtn'); if (q) q.style.display = window.ASHFALL_APP ? '' : 'none';
+}
+function privCodeHtml() {
+  if (!NET.app) return `<div class="cus-priv"><div class="cp-h">PRIVATE MATCH &middot; ONLINE</div><div class="net-hint">Private code matches run in the desktop app.</div></div>`;
+  return `<div class="cus-priv"><div class="cp-h">PRIVATE MATCH &middot; ONLINE</div><div class="net-hint">Type a code and press HOST / JOIN. Friends type the same code. You get a lobby where the host picks the mode, map, bots and time limit.</div>` +
+    `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div><div class="net-lan" id="netLan"></div></div>`;
+}
 const modeGroup = k => MODES[k].online ? 'on' : 'off';
 function renderLobby(focusSel) {
   if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm';
@@ -5356,14 +5478,13 @@ function renderLobby(focusSel) {
   const goTxt = online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH';
   const m = MAPS[LOBBY.map];
   $('lobSel').innerHTML =
-    `<button class="cod-row big" data-act="modes"><small>GAME MODE</small><b>${d.name}</b><span>${modeRules(sel)}</span><i>&rsaquo;</i></button>` +
-    `<div class="cod-row"><small>MAP</small><b>ROTATING</b><span>every round is on a new map · pick your own in CUSTOM or a private match</span></div>` +
+    `<div class="cod-play"><button class="cod-arrow" data-act="mode-" aria-label="Previous mode" tabindex="-1">&lsaquo;</button>` +
+    `<button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}><small>${modeRules(sel)}</small><b>${d.name.replace(/^ONLINE /, '')}</b><span>${goTxt}</span></button>` +
+    `<button class="cod-arrow" data-act="mode+" aria-label="Next mode" tabindex="-1">&rsaquo;</button></div>` +
     `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${PERKS[c.k].name}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
     (stk ? `<button class="cod-row" data-act="streaks"><small>SCORESTREAKS</small><b>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => stkIcon(id)).join('')}</b><span>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => `${STREAKS[id].name} ${STREAKS[id].cost}`).join(' · ')}</span><i>&rsaquo;</i></button>` : '') +
     (!online && sel !== 'surv' ? `<div class="cod-row"><small>BOT SKILL</small><b>${SKILL[matchCfg(sel).skill].name}</b><span>change it here or in Settings</span><div class="arw"><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div></div>` : '') +
-    `<button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}>${goTxt}</button>` +
-    (online ? netLobbyHtml() : '') +
-    `<div class="cod-small"><button class="lnk" data-act="custom">CUSTOM GAME (SOLO VS BOTS)</button><button class="lnk" data-act="stats">CAREER STATS</button></div>`;
+    `<button class="cod-row" data-act="custom"><small>PRIVATE CODE MATCHES &middot; SOLO VS BOTS</small><b>CUSTOM</b><span>host or join with a code, or play any mode and map against bots</span><i>&rsaquo;</i></button>` + (online ? netLobbyHtml() : '');
   $('lobRoster').innerHTML = rosterHtml(sel);
   if (online) netLobbyWire();
   if (focusSel) focusFirst(focusSel);
@@ -5396,7 +5517,7 @@ function lobbyMapRow(d) {
   return `<div class="lob-map"><span>MAP${d.online && NET.app ? ' (IF YOU HOST)' : ''}</span><div class="lob-cpick"><button class="mini" data-act="map-" aria-label="Previous map">&lsaquo;</button><b>${name}</b><button class="mini" data-act="map+" aria-label="Next map">&rsaquo;</button></div><small>${sub}</small></div>`;
 }
 function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
-function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-row.big'); }
+function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-go'); }
 
 /* ---------- custom game */
 const CUS_KEY = 'ashfall.custom.v1';
@@ -5417,6 +5538,7 @@ function renderCustom() {
   else if (k !== 'surv') rows.push({ name: 'PLAYERS', hint: 'You plus bots', t: 'range', min: 2, max: 12, step: 1, get: () => CUS.players, set: v => { CUS.players = v; }, fmt: v => v });
   if (k !== 'surv') rows.push({ name: 'BOT SKILL', t: 'seg', opts: Object.keys(SKILL).map(s => [s, SKILL[s].name]), get: () => CUS.skill, set: v => { CUS.skill = v; } });
   if (k !== 'surv') rows.push({ name: 'HARDCORE', hint: '30 health for everyone: one or two hits kill', t: 'toggle', get: () => CUS.hardcore, set: v => { CUS.hardcore = v; } });
+  const cp = $('cusPriv'); if (cp) { cp.innerHTML = privCodeHtml(); if (NET.app) { netLobbyWire(); const g = $('netCodeGo'); if (g) g.onclick = () => { sfx.ui(); if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm'; netGo('code'); }; } }
   const body = $('cusBody'); body.innerHTML = `<div class="cus-desc">${d.desc}</div>`;
   for (const it of rows) {
     const row = document.createElement('div'); row.className = 'setrow';
@@ -6902,12 +7024,10 @@ const netReady = () => NET.app || !!NET.ns;
 
 /* ---------- lobby panel for the online modes */
 function netLobbyHtml() {
-  if (NET.app) return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label></div>` +
-    `<div class="net-hint">Quick Play finds a public match; bots fill empty spots. A private code opens a lobby where the host picks the mode, map, bots and time limit, then starts when everyone is in.</div>` +
-    `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div>` +
+  if (NET.app) return     `<div class="net-hint">Quick Play finds a public match; bots fill empty spots. Private code matches are under CUSTOM.</div>` +
     `<div class="net-lan" id="netLan"></div><div class="net-svc" id="netSvc">MATCH SERVICE: CHECKING…</div><div class="net-count" id="netCount"></div>`;
   if (!NET.ns) return `<div class="net-off">Online play runs when this game is open on claude.ai. Share the page with friends (they need a Claude account), then everyone picks the same room code.</div>`;
-  return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label>` +
+  return `<div class="net-form">` +
     `<label>ROOM CODE<input id="netCode" maxlength="20" value="${NET.code}" autocomplete="off" spellcheck="false"></label></div><div class="net-count" id="netCount"></div>`;
 }
 function netLobbyWire() {
@@ -6924,6 +7044,7 @@ function netLobbyWire() {
 }
 // start a match a particular way (the big lobby button is Quick Play)
 function netGo(kind, slot) {
+  if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm';
   if (kind === 'code' && (!NET.code || NET.code === 'public')) { const i = $('netCode'); if (i) { i.focus(); i.placeholder = 'type a code first'; } return; }
   NET.kind = kind; NET.slot = slot || ''; startMatch(LOBBY.mode); NET.kind = 'quick';
 }
@@ -7410,6 +7531,9 @@ function lockPointer() { try { const r = renderer.domElement.requestPointerLock 
 /* ------------------------------------------------------------------ settings UI */
 const pct = v => v + '%';
 const SCHEMA = {
+  ACCOUNT: [
+    { t: 'text', name: 'CALLSIGN', hint: 'Your name in online matches and on the scoreboard (14 letters max)' },
+  ],
   VIDEO: [
     { k: 'quality', t: 'seg', name: 'GRAPHICS PRESET', hint: 'AUTO picks ' + AUTO_TIER.toUpperCase() + ' for this graphics card. Texture detail changes apply on next launch', opts: [['auto', 'AUTO'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
     { k: 'renderScale', t: 'range', name: 'RENDER SCALE', hint: 'Lower this if the game runs slowly', min: 50, max: 100, step: 5, fmt: pct },
@@ -7495,7 +7619,13 @@ function renderSettings() {
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
     if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
     const ctl = document.createElement('div'); ctl.className = 'ctl';
-    if (it.t === 'range') {
+    if (it.t === 'text') {
+      const i = document.createElement('input'); i.className = 'set-text'; i.maxLength = 14; i.value = NET.nick; i.spellcheck = false; i.autocomplete = 'off';
+      i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') i.blur(); }; i.onkeyup = e => e.stopPropagation();
+      i.oninput = () => { NET.nick = cleanNick(i.value); try { localStorage.setItem(NICK_KEY, NET.nick); } catch (e) {} };
+      i.onblur = () => { i.value = NET.nick; };
+      ctl.appendChild(i);
+    } else if (it.t === 'range') {
       const r = document.createElement('input'); r.type = 'range'; r.min = it.min; r.max = it.max; r.step = it.step; r.value = S[it.k];
       const n = document.createElement('span'); n.className = 'num'; n.textContent = it.fmt(S[it.k]);
       r.oninput = () => { S[it.k] = +r.value; n.textContent = it.fmt(S[it.k]); applySetting(it.k); };
@@ -7535,11 +7665,14 @@ function actions(act) {
   switch (act) {
     case 'deploy': case 'play': toLobby(); break;
     case 'nav-play': showScreen('menu'); break;
+    case 'quit': try { window.close(); } catch (e) {} break;
     case 'go-mp': if (MODES[LOBBY.mode].online || LOBBY.mode === 'surv') LOBBY.mode = LOBBY.lastOff && LOBBY.lastOff !== 'surv' ? LOBBY.lastOff : 'tdm'; saveLobby(); toLobby(); focusFirst('.cod-go'); break;
     case 'go-on': if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm'; saveLobby(); toLobby(); focusFirst('.cod-go'); break;
     case 'go-surv': LOBBY.mode = 'surv'; saveLobby(); startMatch('surv', { map: LOBBY.map }); break;
     case 'modes': openModes(); break;
-    case 'modes-back': renderLobby(); showScreen('lobby'); focusFirst('.cod-row.big'); break;
+    case 'mode-': lobbyTab(-1); break;
+    case 'mode+': lobbyTab(1); break;
+    case 'modes-back': renderLobby(); showScreen('lobby'); focusFirst('.cod-go'); break;
     case 'lob-start': startMatch(LOBBY.mode); break;
     case 'lobby-back': showScreen('menu'); break;
     case 'custom': cusReturn = curScreen === 'lobby' ? 'lobby' : 'menu'; renderCustom(); showScreen('custom'); break;
@@ -7611,6 +7744,7 @@ function adjustFocused(d) {
   else if (a.getAttribute && a.getAttribute('data-act') === 'diff-') { cycleDiff(d); }
   else if (a.getAttribute && /^diff/.test(a.getAttribute('data-act') || '')) cycleDiff(d);
   else if (a.getAttribute && /^class/.test(a.getAttribute('data-act') || '')) cycleClass(d);
+  else if (a.classList && a.classList.contains('cod-go')) lobbyTab(d);
 }
 
 /* ------------------------------------------------------------------ input */
@@ -7626,8 +7760,8 @@ addEventListener('keydown', e => {
     if (!curScreen) return;
     if (e.code === 'ArrowDown') { moveFocus(1); e.preventDefault(); }
     else if (e.code === 'ArrowUp') { moveFocus(-1); e.preventDefault(); }
-    else if (e.code === 'ArrowRight' && document.activeElement && (document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(1); e.preventDefault(); }
-    else if (e.code === 'ArrowLeft' && document.activeElement && (document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(-1); e.preventDefault(); }
+    else if (e.code === 'ArrowRight' && document.activeElement && (document.activeElement.classList.contains('cod-go') || document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(1); e.preventDefault(); }
+    else if (e.code === 'ArrowLeft' && document.activeElement && (document.activeElement.classList.contains('cod-go') || document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(-1); e.preventDefault(); }
     else if (e.code === 'Escape') goBack();
     return;
   }
@@ -7733,7 +7867,7 @@ function pollPad(dt) {
     if (press(5)) throwGrenade();
     if (press(13) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
     if (press(11)) melee();
-    if (press(15)) stkUse();
+    if (press(12)) stkUse();
     const fwdPush = -my;
     if (S.padSprint === 'hold') pad.sprint = down(10);
     else if (S.padSprint === 'auto') { pad.autoT = fwdPush > 0.85 && mm > 0.92 ? (pad.autoT || 0) + dt : 0; pad.sprint = pad.autoT > 0.22 || (pad.sprint && fwdPush > 0.6) || press(10) || (pad.sprint && down(10)); }
@@ -7765,7 +7899,7 @@ function menuTab(d) {
   else if (curScreen === 'menu') cycleClass(d);
 }
 function menuMove(d) {
-  const a = document.activeElement, adjustable = a && (a.type === 'range' || (a.classList && a.classList.contains('sw')) || (a.parentElement && a.parentElement.classList.contains('seg')) || /^(diff|class)/.test((a.getAttribute && a.getAttribute('data-act')) || ''));
+  const a = document.activeElement, adjustable = a && ((a.classList && a.classList.contains('cod-go')) || a.type === 'range' || (a.classList && a.classList.contains('sw')) || (a.parentElement && a.parentElement.classList.contains('seg')) || /^(diff|class)/.test((a.getAttribute && a.getAttribute('data-act')) || ''));
   if ((d === 'left' || d === 'right') && adjustable && curScreen !== 'loadout') { adjustFocused(d === 'right' ? 1 : -1); return; }
   spatialFocus(d);
 }

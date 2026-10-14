@@ -19,7 +19,7 @@ const fs = require('fs');
   const [A, B, C] = pages, ev = (p, f, a) => p.evaluate(f, a);
   const unpause = p => ev(p, () => { const G = window.__A.G; if (G.state === 'paused') G.state = G.pausedFrom || 'playing'; });
   await ev(A, () => { window.__A.LOBBY.mode = 'otdm'; window.__A.toLobby(); });
-  const lob = await ev(A, () => ({ btn: document.querySelector('#lobSel .lob-go').textContent, code: !!document.getElementById('netCodeGo'), count: document.getElementById('netCount').textContent }));
+  const lob = await ev(A, () => ({ btn: document.querySelector('#lobSel .lob-go').textContent, code: !!document.querySelector('.lob-go'), count: document.getElementById('netCount').textContent }));
   await A.screenshot({ path: 'mp2_lobby.png' });
   const st = p => ev(p, () => { const { NET, G } = window.__A, M = window.__A.M; return { host: !!(NET.room && NET.room.host), status: NET.room && NET.room.status, team: M.myTeam, state: G.state, rem: [...NET.rem.values()].map(R => R.entry.name + (R.isBot ? '' : '*') + ':' + R.entry.team + (R.bot ? '+' : '')).join(' '), bots: M.entries.filter(e => e.botLabel).length, enemies: window.__A.enemies.length, map: window.__A.curMap, k: NET.k, d: NET.d, hp: Math.round(G.health) }; });
   for (const [p, n] of [[A, 'ALPHA'], [B, 'BRAVO']]) { await ev(p, n => { window.__A.NET.nick = n; window.__A.G.noRender = true; window.__A.startMatch('otdm'); }, n); await A.waitForTimeout(n === 'ALPHA' ? 9000 : 1000); }
@@ -44,7 +44,7 @@ const fs = require('fs');
   console.log('PIN', JSON.stringify(await pin)); await A.waitForTimeout(2500);
   const s2 = [await st(A), await st(B)];
   // C joins with a private code that does not exist yet: hosts its own match
-  await ev(C, () => { window.__A.NET.nick = 'CHARLIE'; window.__A.NET.code = 'squad7'; window.__A.G.noRender = true; window.__A.LOBBY.mode = 'otdm'; window.__A.toLobby(); document.getElementById('netCodeGo').click(); });
+  await ev(C, () => { window.__A.NET.nick = 'CHARLIE'; window.__A.NET.code = 'squad7'; window.__A.G.noRender = true; window.__A.LOBBY.mode = 'otdm'; window.__A.toLobby(); window.__A.actions('custom'); document.getElementById('netCodeGo').click(); });
   await A.waitForTimeout(8000);
   const s3c = await st(C);
   // host A leaves: B should take over the quick play slot

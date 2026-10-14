@@ -52,6 +52,64 @@
   #msg{position:absolute;left:0;right:0;bottom:22%;text-align:center;font-size:15px;letter-spacing:3px;opacity:0;transition:opacity .3s;text-shadow:0 0 6px #000}
   #err{position:fixed;left:0;right:0;top:0;z-index:50;display:none;background:rgba(150,20,20,.94);color:#fff;font:13px/1.5 Consolas,"Courier New",monospace;padding:10px 14px;white-space:pre-wrap;user-select:text}
 
+
+  /* ---------- CoD-style front end ---------- */
+  .screen.cod{flex-direction:column;align-items:stretch;justify-content:flex-start;background:linear-gradient(90deg,rgba(5,7,8,.92) 0%,rgba(5,7,8,.62) 42%,rgba(5,7,8,.08) 75%),linear-gradient(0deg,rgba(5,7,8,.7),rgba(5,7,8,0) 30%)}
+  .cod-top{display:flex;align-items:center;gap:28px;padding:18px 3vw 0;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(0,0,0,.65),rgba(0,0,0,.15))}
+  .logo.cod-logo{font-size:30px;letter-spacing:.14em;padding-bottom:14px;line-height:1}.cod-logo .beta-tag{font-size:9px;margin-top:4px}
+  .cod-title{padding-bottom:12px}.cod-title small{display:block;font-size:11px;letter-spacing:.4em;color:var(--accent)}.cod-title b{font-size:26px;letter-spacing:.24em}
+  .cod-nav{display:flex;gap:4px;flex:1;align-self:flex-end}
+  .cod-tab{white-space:nowrap;pointer-events:auto;cursor:pointer;background:none;border:0;border-bottom:3px solid transparent;color:var(--dim);font:700 14px/1 inherit;font-family:inherit;letter-spacing:.28em;padding:14px 16px 16px}
+  .cod-tab:hover,.cod-tab:focus,.cod-tab.on{outline:0;color:#fff;border-bottom-color:var(--accent)}.cod-tab.on{color:var(--accent)}
+  .cod-card{align-self:center;display:flex;gap:14px;align-items:center;padding:8px 14px;margin-bottom:12px;border:1px solid var(--line);background:rgba(0,0,0,.45);font-size:11px;letter-spacing:.18em;color:var(--dim)}
+  .cod-card .cs{font-size:15px;font-weight:700;color:#fff;letter-spacing:.14em}.cod-card .em{width:34px;height:34px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#7a5a1a);color:#111;font-weight:800;font-size:14px}
+  .cod-card span b{color:var(--accent);font-size:13px;margin-left:4px}
+  .cod-main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:26px;padding:0 3vw;max-width:560px}
+  .cod-tiles{display:flex;flex-direction:column;gap:10px}
+  .cod-tile{pointer-events:auto;cursor:pointer;position:relative;text-align:left;font-family:inherit;color:var(--ink);padding:16px 22px 16px 26px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,.02));transition:all .12s;clip-path:polygon(0 0,100% 0,100% 70%,96% 100%,0 100%)}
+  .cod-tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(255,255,255,.15)}
+  .cod-tile small{display:block;font-size:10px;letter-spacing:.35em;color:var(--dim)}.cod-tile b{display:block;font-size:26px;letter-spacing:.2em;margin:4px 0}.cod-tile span{font-size:11px;letter-spacing:.22em;color:var(--dim)}.cod-tile span i{font-style:normal;color:var(--accent)}
+  .cod-tile:hover,.cod-tile:focus{outline:0;background:linear-gradient(90deg,rgba(224,180,74,.28),rgba(224,180,74,.04));border-color:rgba(224,180,74,.5);transform:translateX(6px)}.cod-tile:hover::before,.cod-tile:focus::before,.cod-tile.primary::before{background:var(--accent)}
+  .cod-tile.primary b{color:var(--accent)}
+  .cod-opts .row-opt{margin:6px 0}
+  .cod-main{gap:14px}.cod-tile.exit{padding:12px 22px 12px 26px}.cod-tile.exit b{font-size:16px;margin:0;color:var(--dim)}
+  .cod-news{border:1px solid var(--line);background:rgba(0,0,0,.5)}.cn-h{padding:10px 16px;font-size:11px;letter-spacing:.35em;color:var(--accent);border-bottom:1px solid var(--line)}
+  .cn-body{max-height:230px;overflow:auto;padding:4px 0}.cn-v{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.cn-v:last-child{border-bottom:0}
+  .cn-v b{font-size:13px;letter-spacing:.2em;color:#fff}.cn-v b em{font-style:normal;font-size:9px;letter-spacing:.2em;color:#111;background:var(--accent);padding:2px 5px;margin-left:8px;vertical-align:2px}
+  .cn-v small{float:right;font-size:10px;letter-spacing:.15em;color:var(--dim)}.cn-v ul{margin:6px 0 0;padding-left:16px;font-size:12px;line-height:1.45;color:var(--dim)}
+  .cus-priv{margin:10px 26px 4px;padding:12px 14px;border:1px solid rgba(224,180,74,.4);background:rgba(224,180,74,.06);text-align:left}.cus-priv .cp-h{font-size:11px;letter-spacing:.3em;color:var(--accent);margin-bottom:4px}
+  .cus-sub{margin:10px 26px 0;font-size:11px;letter-spacing:.3em;color:var(--accent);text-align:left}
+  .cod-foot{display:flex;align-items:center;gap:20px;padding:12px 3vw;border-top:1px solid var(--line);background:rgba(0,0,0,.4);font-size:11px;letter-spacing:.2em;color:var(--dim)}.cod-foot span{margin-left:auto}
+  .lnk{pointer-events:auto;cursor:pointer;background:none;border:0;color:var(--dim);font:600 12px/1 inherit;font-family:inherit;letter-spacing:.25em;padding:6px 0}.lnk:hover,.lnk:focus{outline:0;color:var(--accent)}
+  .cod-lob{flex:1;display:grid;grid-template-columns:minmax(360px,520px) 1fr;gap:3vw;padding:22px 3vw;min-height:0}
+  .cod-lcol{display:flex;flex-direction:column;gap:8px;overflow:auto;padding-right:6px}
+  .cod-row{pointer-events:auto;cursor:pointer;position:relative;display:block;width:100%;box-sizing:border-box;margin:0;text-align:left;font-family:inherit;color:var(--ink);padding:12px 44px 12px 18px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.42);border-left:4px solid rgba(255,255,255,.15);transition:all .12s}
+  .cod-row small{display:block;font-size:10px;letter-spacing:.35em;color:var(--dim)}.cod-row b{display:flex;align-items:center;gap:8px;font-size:19px;letter-spacing:.16em;margin:5px 0 4px}.cod-row span{display:block;font-size:11px;letter-spacing:.12em;color:var(--dim)}
+  .cod-row>i{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-style:normal;font-size:26px;color:var(--dim)}
+  .cod-row:hover,.cod-row:focus,.cod-row:focus-within{outline:0;border-left-color:var(--accent);background:linear-gradient(90deg,rgba(224,180,74,.18),rgba(0,0,0,.4))}.cod-row:hover>i,.cod-row:focus>i{color:var(--accent)}
+  .cod-row.big b{font-size:24px;color:var(--accent)}
+  .cod-row .arw{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;gap:6px}
+  .cod-row .stk-ic{width:22px;height:22px}
+  .cod-go{width:100%!important;max-width:none!important;text-align:center!important;font-size:22px!important;padding:18px!important;margin:8px 0 0!important;background:linear-gradient(90deg,var(--accent),#b8892c)!important;color:#141414!important;border:0!important;letter-spacing:.32em!important;font-weight:800!important}
+  .cod-go:hover,.cod-go:focus{filter:brightness(1.12);padding-left:18px!important}.cod-go[disabled]{opacity:.45;filter:grayscale(1)}
+  .cod-small{display:flex;gap:18px;margin-top:4px}
+  .set-text{pointer-events:auto;font:inherit;font-size:15px;letter-spacing:.12em;padding:8px 10px;width:240px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:#fff;text-transform:uppercase}.set-text:focus{outline:0;border-color:var(--accent)}
+  .cod-play{display:flex;align-items:stretch;gap:0;margin-bottom:2px}.cod-play .cod-go{flex:1;margin:0!important;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px!important}
+  .cod-go small{font-size:10px!important;letter-spacing:.25em;opacity:.75;font-weight:700}.cod-go b{font-size:26px;letter-spacing:.2em}.cod-go span{font-size:12px;letter-spacing:.4em;opacity:.85}
+  .cod-arrow{pointer-events:auto;cursor:pointer;width:54px;border:0;background:rgba(0,0,0,.55);color:var(--accent);font-size:34px;font-family:inherit}.cod-arrow:hover{background:rgba(224,180,74,.25);color:#fff}
+  .cod-hint{font-size:10px;letter-spacing:.25em;color:var(--dim);text-align:center;margin-bottom:6px}
+  .cod-roster{align-self:start;justify-self:end;width:min(520px,100%);display:flex;flex-direction:column;gap:12px}
+  .ros-h{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.3em;color:var(--dim);padding:0 4px}.ros-h b{color:var(--ink)}
+  .ros-team{border:1px solid var(--line);background:rgba(0,0,0,.45)}.ros-team .tn{padding:8px 12px;font-size:11px;letter-spacing:.3em;border-bottom:1px solid var(--line);color:var(--tc,var(--accent))}
+  .ros-p{display:flex;align-items:center;gap:10px;padding:7px 12px;font-size:13px;letter-spacing:.12em;border-bottom:1px solid rgba(255,255,255,.05)}.ros-p:last-child{border-bottom:0}.ros-p.me{background:rgba(224,180,74,.12);color:#fff}.ros-p em{font-style:normal;margin-left:auto;font-size:10px;letter-spacing:.2em;color:var(--dim)}
+  .ros-p .lv{width:24px;height:18px;display:grid;place-items:center;font-size:10px;background:rgba(255,255,255,.08);color:var(--dim)}
+  .ros-info{border:1px solid var(--line);background:rgba(0,0,0,.45);padding:14px;font-size:13px;line-height:1.5;color:var(--dim)}.ros-info b{display:block;color:var(--ink);letter-spacing:.2em;font-size:12px;margin-bottom:4px}
+  .modep{width:min(1100px,94vw)}#modeGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;padding:16px 26px;overflow:auto}
+  .mode-card{pointer-events:auto;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink);padding:16px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(0,0,0,.2));min-height:150px;display:flex;flex-direction:column;gap:6px;position:relative}
+  .mode-card i{font-style:normal;font-size:12px;letter-spacing:.2em;color:var(--accent);border:1px solid rgba(224,180,74,.5);align-self:flex-start;padding:3px 7px}.mode-card b{font-size:16px;letter-spacing:.18em}.mode-card p{margin:0;font-size:12px;line-height:1.4;color:var(--dim)}.mode-card span{margin-top:auto;font-size:10px;letter-spacing:.18em;color:var(--dim)}
+  .mode-card:hover,.mode-card:focus{outline:0;border-color:rgba(224,180,74,.6)}.mode-card.on{border-color:var(--accent);background:linear-gradient(160deg,rgba(224,180,74,.2),rgba(0,0,0,.2))}
+  @media (max-width:900px){.cod-lob{grid-template-columns:1fr}.cod-roster{justify-self:stretch}.cod-nav{overflow:auto}.cod-card{display:none}}
+
   /* ---------- menus ---------- */
   .screen{position:fixed;inset:0;z-index:5;display:flex;align-items:center;background:linear-gradient(90deg,rgba(6,8,9,.88) 0%,rgba(6,8,9,.55) 45%,rgba(6,8,9,.1) 100%);backdrop-filter:blur(2px)}
   .screen.center{justify-content:center;text-align:center;background:rgba(6,8,9,.72);flex-direction:column}
@@ -204,7 +262,7 @@
   #mhud .ts.a{border-color:#5aaeff;color:#cfe6ff} #mhud .ts.b{border-color:#ff5a4a;color:#ffd7d2}
   #mhud .tm{display:flex;flex-direction:column;min-width:76px} #mhud .tm b{font-size:18px;letter-spacing:2px} #mhud .tm small{font-size:10px;letter-spacing:3px;opacity:.75}
   #mhud .minfo{margin-top:6px;font-size:12px;letter-spacing:3px;opacity:.9}
-  #marks{position:absolute;inset:0;overflow:hidden}
+  #marks{position:absolute;inset:0;overflow:hidden}#uavMarks{position:absolute;inset:0;overflow:hidden;pointer-events:none}
   #marks .mk{position:absolute;left:0;top:0;margin:-14px 0 0 -40px;width:80px;text-align:center;font-weight:700;text-shadow:0 0 4px #000,0 0 2px #000}
   #marks .mk b{display:inline-block;min-width:26px;padding:2px 6px;font-size:13px;letter-spacing:2px;border:2px solid currentColor;background:rgba(0,0,0,.35)} #marks .mk small{display:block;font-size:10px;letter-spacing:2px;margin-top:2px}
   #center{position:absolute;left:0;right:0;top:36%;text-align:center;text-shadow:0 0 10px #000} #center b{display:block;font-size:30px;letter-spacing:8px} #center small{display:block;font-size:14px;letter-spacing:4px;opacity:.85;margin-top:6px}
@@ -300,27 +358,36 @@
   <div id="feed"></div>
   <div id="mhud" class="hide"></div>
   <div id="marks"></div>
+  <div id="uavMarks"></div>
+  <div id="stkHud" class="hide"></div>
   <div id="center" class="hide"></div>
   <div id="ihold" class="hide"><span></span><div><i></i></div></div>
 </div>
 
 <div id="loading"><div class="logo" style="font-size:44px">DARK<em>ZONE</em></div><div class="bar"><div id="ldbar"></div></div><div class="ld" id="ldtxt">BUILDING WORLD</div></div>
 
-<div id="menu" class="screen hide">
-  <div class="col">
-    <div class="logo">DARK<em>ZONE</em><span class="beta-tag">BETA</span></div>
-    <div class="tag">HOLD THE LINE &middot; SURVIVE THE WAVES</div>
-    <button class="btn primary" data-act="play">PLAY</button>
-    <button class="btn" data-act="loadout">LOADOUT</button>
-    <button class="btn" data-act="settings">SETTINGS</button>
-    <button class="btn" data-act="howto">HOW TO PLAY</button>
-    <button class="btn" data-act="bench">BENCHMARK</button>
-    <button class="btn" data-act="credits">CREDITS</button>
-    <div class="row-opt"><span>CLASS</span><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><span class="val" id="classVal">ASSAULT</span><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div>
-    <div class="row-opt"><span>DIFFICULTY</span><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><span class="val" id="diffVal">REGULAR</span><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div>
-    <div class="best">BEST &middot; WAVE <b id="bestWave">0</b> &middot; SCORE <b id="bestScore">0</b></div>
+<div id="menu" class="screen cod hide">
+  <div class="cod-top">
+    <div class="logo cod-logo">DARK<em>ZONE</em><span class="beta-tag">BETA</span></div>
+    <nav class="cod-nav">
+      <button class="cod-tab on" data-act="nav-play">PLAY</button>
+      <button class="cod-tab" data-act="loadout">WEAPONS</button>
+      <button class="cod-tab" data-act="streaks">SCORESTREAKS</button>
+      <button class="cod-tab" data-act="stats">CAREER</button>
+      <button class="cod-tab" data-act="settings">SETTINGS</button>
+    </nav>
+    <div class="cod-card" id="menuCard"></div>
   </div>
-  <div class="foot">ORIGINAL WORK OF FICTION &middot; BUILT WITH THREE.JS</div>
+  <div class="cod-main">
+    <div class="cod-tiles">
+      <button class="cod-tile primary" data-act="go-on"><small>ONLINE &middot; REAL PLAYERS</small><b>MULTIPLAYER</b><span>QUICK PLAY &middot; CUSTOM &amp; PRIVATE MATCHES IN THE LOBBY</span></button>
+      <button class="cod-tile" data-act="settings"><small>VIDEO &middot; AUDIO &middot; CONTROLS &middot; KEYBINDS</small><b>SETTINGS</b><span>MAKE IT YOURS</span></button>
+    </div>
+    <div class="cod-news"><div class="cn-h">NEWS &middot; PATCH NOTES</div><div class="cn-body" id="newsBody"></div></div>
+    <div class="cod-tiles"><button class="cod-tile exit" data-act="quit" id="quitBtn"><b>EXIT GAME</b></button></div>
+    <span id="bestWave" hidden>0</span><span id="bestScore" hidden>0</span><span id="classVal" hidden></span><span id="diffVal" hidden></span>
+  </div>
+  <div class="cod-foot"><button class="lnk" data-act="howto">HOW TO PLAY</button><button class="lnk" data-act="bench">BENCHMARK</button><button class="lnk" data-act="credits">CREDITS</button><span>ORIGINAL WORK OF FICTION &middot; BUILT WITH THREE.JS</span></div>
 </div>
 
 <div id="settings" class="screen center hide">
@@ -467,26 +534,50 @@
   </div>
 </div>
 
-<div id="lobby" class="screen center hide">
-  <div class="panel lob">
-    <div class="lob-head"><div class="ttl">LOBBY</div><div class="lob-player" id="lobPlayer"></div></div>
-    <div class="lob-body">
-      <div class="lob-col"><div class="lob-label">CHOOSE A MODE</div><div class="lob-modes" id="lobModes"></div></div>
-      <div class="lob-col">
-        <div class="lob-card lob-sel" id="lobSel"></div>
-        <div class="lob-card lob-class" id="lobClass"></div>
-        <div class="lob-btns"><button class="btn" data-act="custom">CUSTOM GAME</button><button class="btn" data-act="stats">CAREER STATS</button></div>
-      </div>
-    </div>
-    <div class="actions"><button class="btn" data-act="lobby-back">BACK</button><span class="padhint">LB / RB  CHANGE MODE · START  PLAY</span><button class="btn primary" id="lobGoFoot" data-act="lob-start" style="margin-left:auto">START MATCH</button></div>
+<div id="lobby" class="screen cod hide">
+  <div class="cod-top">
+    <div class="cod-title"><small id="lobKind">MULTIPLAYER</small><b>LOBBY</b></div>
+    <nav class="cod-nav">
+      <button class="cod-tab" data-act="lobby-back">&lsaquo; BACK</button>
+      <button class="cod-tab" data-act="loadout">WEAPONS</button>
+      <button class="cod-tab" data-act="streaks">SCORESTREAKS</button>
+      <button class="cod-tab" data-act="stats">CAREER</button>
+      <button class="cod-tab" data-act="settings">SETTINGS</button>
+    </nav>
+    <div class="cod-card" id="lobPlayer"></div>
+  </div>
+  <div class="cod-lob">
+    <div class="cod-lcol" id="lobSel"></div>
+    <div class="cod-roster" id="lobRoster"></div>
+  </div>
+  <div class="cod-foot"><span class="padhint">LB / RB  CHANGE MODE &middot; START  PLAY</span></div>
+</div>
+
+<div id="modes" class="screen center hide">
+  <div class="panel modep">
+    <h2 id="modesTtl">GAME MODE</h2>
+    <div id="modeGrid"></div>
+    <div class="actions"><button class="btn" data-act="modes-back">BACK</button></div>
+  </div>
+</div>
+
+<div id="streaks" class="screen center hide">
+  <div class="panel stkp">
+    <h2>SCORESTREAKS</h2>
+    <div class="stk-top" id="stkSel"></div>
+    <div class="net-hint" style="padding:0 26px 10px">Pick three. Earn points from kills without dying; each streak unlocks at its cost and waits until you press the SCORESTREAK key (X by default). Dying resets your points, not what you already earned.</div>
+    <div id="stkGrid"></div>
+    <div class="actions"><button class="btn primary" data-act="stk-back">DONE</button></div>
   </div>
 </div>
 
 <div id="custom" class="screen center hide">
   <div class="panel">
-    <h2>CUSTOM GAME</h2>
+    <h2>CUSTOM</h2>
+    <div id="cusPriv"></div>
+    <div class="cus-sub">SOLO &middot; VS BOTS</div>
     <div class="body" id="cusBody"></div>
-    <div class="actions"><button class="btn" data-act="cus-back">BACK</button><button class="btn primary" data-act="cus-start">START CUSTOM GAME</button></div>
+    <div class="actions"><button class="btn" data-act="cus-back">BACK</button><button class="btn primary" data-act="cus-start">START SOLO GAME</button></div>
   </div>
 </div>
 
@@ -552,7 +643,7 @@ function loadSettings() {
   } catch (e) { NEED_AUTO_DERIVE = true; }
 }
 // keyboard bindings (Settings > KEYBINDS); mouse stays fire / aim
-const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab' };
+const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab', streak: 'KeyX' };
 const bind = a => (S.binds && S.binds[a]) || DEFAULT_BINDS[a];
 const kb = a => !!keys[bind(a)] || (a === 'sprint' && bind(a) === 'ShiftLeft' && !!keys.ShiftRight);
 function keyName(c) { if (!c) return '—'; return c.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'NUM ').replace('ShiftLeft', 'LEFT SHIFT').replace('ShiftRight', 'RIGHT SHIFT').replace('ControlLeft', 'LEFT CTRL').replace('ControlRight', 'RIGHT CTRL').replace('AltLeft', 'LEFT ALT').replace('AltRight', 'RIGHT ALT').replace('Space', 'SPACE').replace('Arrow', '').toUpperCase(); }
@@ -642,7 +733,13 @@ const sfx = {
   stun: o => { burst(0.5, 5200, 0.8, 'highpass', o); burst(0.8, 900, 0.6, 'lowpass', o); tone(2600, 1.6, 0.12, 'sine', 2400, o); },
   enemy: o => { burst(0.04, 4600, 0.3, 'highpass', o); burst(0.16, 1500, 0.35, 'lowpass', o); },
   hit: head => tone(head ? 1700 : 1000, 0.05, 0.1, 'square'),
-  kill: () => { tone(520, 0.12, 0.12, 'square', 260); },
+  kill: head => {
+    burst(0.025, 7000, 0.32, 'highpass');                       // crisp snap
+    tone(95, 0.16, 0.42, 'sine', 42);                           // body thump
+    tone(head ? 1480 : 1180, 0.16, 0.16, 'triangle');            // confirm chime
+    tone(head ? 2220 : 1770, 0.22, 0.09, 'sine', undefined, { delay: 0.045 });
+    tone(head ? 2960 : 2360, 0.3, 0.05, 'sine', undefined, { delay: 0.09 });
+  },
   thud: o => { burst(0.09, 600, 0.35, 'lowpass', o); },
   explode: o => { burst(1.4, 420, 1.1, 'lowpass', o); burst(0.25, 3000, 0.5, 'highpass', o); tone(55, 0.9, 0.9, 'sine', 22, o); },
   reload: () => { burst(0.05, 3500, 0.3, 'highpass'); tone(300, 0.05, 0.1, 'square'); setTimeout(() => { burst(0.06, 2500, 0.4, 'highpass'); tone(220, 0.06, 0.12, 'square'); }, 750); },
@@ -655,6 +752,7 @@ const sfx = {
   ui: () => tone(880, 0.04, 0.06, 'square'),
   heart: k => { tone(58, 0.11, 0.55 * k, 'sine', 38); tone(52, 0.12, 0.42 * k, 'sine', 34, { delay: 0.16 }); },
   multi: n => { for (let i = 0; i < Math.min(n, 4); i++) tone(660 + i * 180, 0.07, 0.1, 'square', null, { delay: i * 0.06 }); },
+  streakReady: () => { tone(523, 0.1, 0.13, 'square'); tone(784, 0.1, 0.13, 'square', null, { delay: 0.09 }); tone(1046, 0.28, 0.14, 'triangle', null, { delay: 0.18 }); burst(0.2, 3000, 0.12, 'highpass', { delay: 0.18 }); },
   streak: () => { tone(440, 0.12, 0.12, 'triangle'); tone(660, 0.14, 0.12, 'triangle', null, { delay: 0.1 }); tone(880, 0.22, 0.12, 'triangle', null, { delay: 0.2 }); },
   estep: o => burst(0.05, 380 + Math.random() * 260, 0.32, 'lowpass', o),
   suppressed: big => { burst(0.05, big ? 1400 : 1900, big ? 0.32 : 0.22, 'lowpass'); burst(0.03, 4200, 0.06, 'highpass'); tone(110, 0.06, 0.12, 'sine', 60); },
@@ -1916,7 +2014,7 @@ function buildViewmodelMaterials() {
   VM.skin = std({ color: C(0x9c7355), roughness: 0.8 });
   VM.sleeve = std({ color: C(0x4b5240), roughness: 0.95, map: TEX.concrete.map, bumpMap: TEX.concrete.bump, bumpScale: 0.003 });
   VM.dot = new THREE.MeshBasicMaterial({ color: 0xff2a2a });
-  VM.lens = std({ color: C(0x5a7a88), metalness: 0.5, roughness: 0.05, transparent: true, opacity: 0.22, depthWrite: false });
+  VM.lens = std({ color: C(0xbfdbe6), metalness: 0.1, roughness: 0.02, transparent: true, opacity: 0.1, depthWrite: false, envMapIntensity: 0.35 });
   VM.brass = std({ color: C(0xc9a24a), metalness: 0.9, roughness: 0.28, envMapIntensity: 1.3 });
 }
 
@@ -4327,7 +4425,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
     if (by === 'player') {
       G.kills++; G.score += 100 + (head ? 50 : 0); statKill(e, head);
       try { onKill(e, head, !!boom); } catch (err) { reportError(err); }
-      sfx.kill();
+      sfx.kill(head);
     }
     try { matchBotKilled(e, by, head, boom); } catch (err) { reportError(err); }
     if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(e.group.position.x, e.group.position.z, groundAt(e.group.position.x, e.group.position.z, e.group.position.y + 0.3));
@@ -4413,7 +4511,7 @@ function drawRadar() {
   const cs = Math.cos(P.yaw), sn = Math.sin(P.yaw);
   const dot = (x, z) => { const dx = x - P.x, dz = z - P.z; let px = (dx * cs - dz * sn) * scale, py = (dx * sn + dz * cs) * scale; const l = Math.hypot(px, py); if (l > R) { px *= R / l; py *= R / l; } c.fillRect(W / 2 + px - 2, W / 2 + py - 2, 4, 4); };
   const pvp = inMatch();
-  for (const e of enemies) { const fr = isFriend(e); if (pvp && !fr && !(M.t - (e.lastShotT || -9) < 2.5 && !e.stealth)) continue; c.fillStyle = fr ? '#5aaeff' : '#e04a3a'; dot(e.group.position.x, e.group.position.z); }
+  for (const e of enemies) { const fr = isFriend(e); if (pvp && !fr && !stkSeen(e) && !(M.t - (e.lastShotT || -9) < 2.5 && !e.stealth)) continue; c.fillStyle = fr ? '#5aaeff' : '#e04a3a'; dot(e.group.position.x, e.group.position.z); }
   if (pvp) { c.fillStyle = '#ffd24a'; for (const m of markerList()) dot(m.x, m.z); }
   c.fillStyle = '#6fcf5a'; for (const k of pickups) dot(k.x, k.z);
 }
@@ -4457,7 +4555,7 @@ function clearWorldState() {
   for (const k of pickups) scene.remove(k.m); pickups.length = 0;
   if (G.bench) endBenchState();
   for (const d of decals) d.visible = false; for (const c of casings) { c.on = false; c.m.visible = false; }
-  navTarget = -1; G.streak = 0; G.multi = 0; restoreBarrels(); G.killer = null; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide');
+  navTarget = -1; G.streak = 0; if (typeof stkReset === 'function') stkReset(); G.multi = 0; restoreBarrels(); G.killer = null; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide');
 }
 function resetGame() {
   clearWorldState();
@@ -4478,7 +4576,7 @@ function updateMenuSoldiers(dt) { for (const m of menuSoldiers) animEnemy(m.e, d
 
 function die() {
   if (G.state === 'paused') { showScreen(null); G.state = G.pausedFrom || 'playing'; }
-  mouseDown = false; mouseAds = false; G.streak = 0; statDeath();
+  mouseDown = false; mouseAds = false; G.streak = 0; statDeath(); stkDeath();
   try { matchPlayerKilled(G.killer); } catch (err) { reportError(err); }
   if (M.over) return;
   if (inMatch() && !S.deathCam) { G.state = 'deathcam'; afterDeathInMatch(); return; }
@@ -4603,6 +4701,107 @@ function renderStats() {
   for (const b of $('stTabs').querySelectorAll('[data-which]')) b.onclick = () => { statOnline = b.dataset.which === '1'; sfx.ui(); renderStats(); };
 }
 function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(t.indexOf(statTab) + d + 3) % 3]; sfx.ui(); renderStats(); }
+/* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
+const NEWS = [
+{
+"v": "1.1.6",
+"d": "2026-10-14",
+"n": [
+"NEW MENUS: new main menu (Multiplayer, Settings, News) and a new lobby with a team roster",
+"LOBBY: the big PLAY button picks the online mode - left/right or D-pad to change it, A or click to start",
+"CUSTOM: private code matches and solo games vs bots (any mode, map, bots, time limit) live under CUSTOM",
+"SCORESTREAKS: pick 3 of 6 (UAV, Supply Drop, Body Armor, Mortar Strike, Advanced UAV, Airstrike); earn them with kills, use them with X or D-pad up",
+"ACCOUNT: set your callsign in Settings > Account",
+"NEWS: every patch listed on the main menu",
+"KILL SOUND: punchier kill confirm, higher pitched on headshots",
+"SIGHTS: see-through rear apertures and slimmer front posts, open-frame reflex, one dot in red dots, clearer glass on every optic"
+]
+},
+{
+"v": "1.1.5",
+"d": "2026-10-14",
+"n": [
+"IRON SIGHTS: rebuilt on every gun - rifles, SMGs and snipers get a see-through rear ring and a guarded front post with a glowing tip; pistols get 3-dot sights; shotguns get a bright bead; all line up exactly with where you shoot",
+"NEW SCOPE: 4x Battle Scope (ACOG-style) with a lit chevron reticle and bullet-drop marks, for assault rifles, SMGs, LMGs and marksman rifles",
+"HOLO: rebuilt at real EOTech size (the Rainbow Six style holo) with a clear window and 68 MOA ring; red dots sit just above the front post",
+"STATS: separate ONLINE and OFFLINE career pages; online kills, deaths and rounds now count properly",
+"PRIVATE MATCHES: a lobby before the match - the host picks mode, map, number of bots, time limit and kill limit, friends join by code or on your Wi-Fi, host presses START",
+"END OF MATCH: full scoreboard after every game, then the next match starts by itself (45 s offline, 40 s online) with a full reset",
+"ONLINE: pausing no longer freezes the match for anyone, and a minimised host keeps the game running",
+"KEYBINDS: new Settings tab to rebind every key; new MELEE key (V by default)",
+"GUN GAME: bots play gun game too, and there is a short delay before you can fire each new gun",
+"SPAWNS: many more spawn points on every floor, randomised and spread out so bots no longer spawn clumped",
+"WINDOWS: glass you can see through but not shoot through",
+"Grenades throw much farther; soldiers hold their rifles properly in their hands",
+"ATTACHMENTS: pros and cons are stronger and actually change how the gun handles"
+]
+},
+{
+"v": "1.1.1",
+"d": "2026-10-14",
+"n": [
+"MAPS: rebuilt staircases (solid flights, steel stairs with stringers, proper handrails) and smoother ramps",
+"MAPS: lots more props - forklifts, pallets, floodlights, lamps, benches, bins, vending machines, signs, laundry lines, parasols, market produce, cones, puddles and more",
+"MAPS: lights in the warehouse, station and car park; office furniture; a better statue on Vernon Square",
+"BOTS: smarter about floors above and below them (no more trying to walk through ceilings), and they fit through gaps better"
+]
+},
+{
+"v": "1.1.0",
+"d": "2026-10-13",
+"n": [
+"NEW: three new maps - KESSEL DOCKS (container port), CASTELLMARE (hill town) and VERNON SQUARE (street over a metro station) - each with three lanes and several floors",
+"NEW: pick a map in the lobby or custom games (or RANDOM); online, the host's map is used and it changes every round",
+"NEW: bots can now climb stairs and ramps, use upper floors and drop off ledges",
+"NEW: the game is now called DARKZONE; weapons have new names; CREDITS screen added",
+"NEW: recorded gun sounds and photo-scanned textures (from the last test build)"
+]
+},
+{
+"v": "1.0.8",
+"d": "2026-10-13",
+"n": [
+"FIX: joining another player's match now works (the matchmaking service was rejecting join requests)",
+"ASHFALL is now in BETA: the title screen, version tag and patch notes show it",
+"New matches wait 30 seconds for players before bots join",
+"Lobby shows match service status and warns when a newer version is out"
+]
+},
+{
+"v": "1.0.6",
+"d": "2026-10-13",
+"n": [
+"New matches wait 30 seconds for players before bots join",
+"Real players always take priority: a bot leaves the moment a player joins",
+"The lobby warns you in red when a newer version is out"
+]
+},
+{
+"v": "1.0.5",
+"d": "2026-10-13",
+"n": [
+"Lobby shows whether the match service can be reached (green = online, red = blocked)",
+"In a match, the top of the screen shows which Quick Play match you are in, whether you are hosting, and how many real players are in it"
+]
+},
+{
+"v": "1.0.4",
+"d": "2026-10-13",
+"n": [
+"Quick Play: players always land in the same match",
+"Relay fallback when a network blocks direct connections",
+"Clear messages while finding or joining a match",
+"Quick Play button always visible at the bottom of the lobby"
+]
+},
+{
+"v": "1.0.0",
+"d": "2026-10-13",
+"n": [
+"First release of the ASHFALL app"
+]
+}
+];
 /* ================================================================== matches: game modes, teams, bots, objectives, scoreboard */
 // Every mode except Survival is a bot match: the player and AI soldiers on teams (or every man for himself),
 // with respawns, objectives and a score limit. Survival keeps the original wave defence.
@@ -4687,7 +4886,7 @@ const MATCH_CFG_KEY = 'ashfall.match.v1';
 let LOBBY = { mode: 'tdm', map: 'random' };
 // 'random' picks any map except the one you just played
 function pickMapFor(sel) { if (sel && MAPS[sel]) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : 'ruins'; }
-try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || MAPS[o.map])) LOBBY.map = o.map; } catch (e) {}
+try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || MAPS[o.map])) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; } catch (e) {}
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
 function matchCfg(mode, custom) {
@@ -5254,18 +5453,61 @@ function modeRules(k, cfg) {
   return `${size} · ${goal}${c.time && k !== 'snd' ? ` · ${c.time} MIN` : ''}`;
 }
 function openLobby() { G.state = G.state === 'over' ? 'menu' : G.state; renderLobby(); showScreen('lobby'); }
+function playerCard(st) {
+  const kd = kdS(st.kills, st.deaths), nick = (typeof NET !== 'undefined' && NET.nick) || 'PLAYER';
+  return `<div class="em">${nick.slice(0, 1)}</div><div><div class="cs">${nick}</div><span>K/D<b>${kd}</b></span> &nbsp; <span>WINS<b>${st.wins}</b></span> &nbsp; <span>MATCHES<b>${st.matches}</b></span></div>`;
+}
+function renderMenuCard() {
+  const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true));
+  const nb = $('newsBody'); if (nb && typeof NEWS !== 'undefined' && !nb._done) { nb._done = 1; nb.innerHTML = NEWS.map((v, i) => `<div class="cn-v"><b>${v.v} BETA${i === 0 ? '<em>NEW</em>' : ''}</b><small>${v.d}</small><ul>${v.n.map(n => `<li>${String(n).replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}</li>`).join('')}</ul></div>`).join(''); }
+  const q = $('quitBtn'); if (q) q.style.display = window.ASHFALL_APP ? '' : 'none';
+}
+function privCodeHtml() {
+  if (!NET.app) return `<div class="cus-priv"><div class="cp-h">PRIVATE MATCH &middot; ONLINE</div><div class="net-hint">Private code matches run in the desktop app.</div></div>`;
+  return `<div class="cus-priv"><div class="cp-h">PRIVATE MATCH &middot; ONLINE</div><div class="net-hint">Type a code and press HOST / JOIN. Friends type the same code. You get a lobby where the host picks the mode, map, bots and time limit.</div>` +
+    `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div><div class="net-lan" id="netLan"></div></div>`;
+}
+const modeGroup = k => MODES[k].online ? 'on' : 'off';
 function renderLobby(focusSel) {
-  const sel = LOBBY.mode, d = MODES[sel], st = careerOf(!!d.online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
-  $('lobPlayer').innerHTML = `<span>K/D <b>${kdS(st.kills, st.deaths)}</b></span><span>WINS <b>${st.wins}</b></span><span>MATCHES <b>${st.matches}</b></span>`;
-  $('lobModes').innerHTML = MODE_ORDER.map(k => `<button class="lob-mode${k === sel ? ' on' : ''}" data-mode="${k}"><i>${MODES[k].icon}</i><div><b>${MODES[k].name}</b><small>${modeRules(k)}</small></div></button>`).join('');
-  $('lobSel').innerHTML = `<div class="lob-mname">${d.name}</div><div class="lob-mdesc">${d.desc}</div><div class="lob-rules">${modeRules(sel)}${sel !== 'surv' && !d.online ? ` · BOTS ${SKILL[matchCfg(sel).skill].name}` : ''}</div>${lobbyMapRow(d)}<button class="btn primary lob-go" data-act="lob-start"${d.online && !netReady() ? ' disabled' : ''}>${d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'}</button>${d.online ? netLobbyHtml() : ''}`;
-  $('lobClass').innerHTML = `<div class="lob-ctop"><span>YOUR CLASS</span><div class="lob-cpick"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><b id="lobClassName">${c.name}</b><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div></div>` +
-    `<div class="lob-kit"><div><span>PRIMARY</span><b>${sel === 'gun' ? 'GUN GAME LADDER' : p.name}</b></div><div><span>SECONDARY</span><b>${sel === 'gun' ? '—' : s.name}</b></div><div><span>EQUIPMENT</span><b>${EQUIP[c.e].name}</b></div><div><span>PERK</span><b>${PERKS[c.k].name}</b></div></div>` +
-    `<button class="btn" data-act="loadout">EDIT LOADOUT</button>`;
-  for (const b of $('lobModes').children) { b.onclick = () => { LOBBY.mode = b.dataset.mode; saveLobby(); sfx.ui(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); }; b.onfocus = () => { if (LOBBY.mode !== b.dataset.mode) { LOBBY.mode = b.dataset.mode; saveLobby(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); } }; }
-  const foot = $('lobGoFoot'); if (foot) { foot.textContent = d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'; foot.disabled = !!(d.online && !netReady()); }
-  if (d.online) netLobbyWire();
+  if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm';
+  const sel = LOBBY.mode, d = MODES[sel], online = !!d.online, st = careerOf(online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
+  if (online) LOBBY.lastOn = sel; else LOBBY.lastOff = sel;
+  $('lobKind').textContent = 'MULTIPLAYER';
+  $('lobPlayer').innerHTML = playerCard(st);
+  const gun = sel === 'gun', stk = sel !== 'surv' && !gun;
+  const goTxt = online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH';
+  const m = MAPS[LOBBY.map];
+  $('lobSel').innerHTML =
+    `<div class="cod-play"><button class="cod-arrow" data-act="mode-" aria-label="Previous mode" tabindex="-1">&lsaquo;</button>` +
+    `<button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}><small>${modeRules(sel)}</small><b>${d.name.replace(/^ONLINE /, '')}</b><span>${goTxt}</span></button>` +
+    `<button class="cod-arrow" data-act="mode+" aria-label="Next mode" tabindex="-1">&rsaquo;</button></div>` +
+    `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${PERKS[c.k].name}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
+    (stk ? `<button class="cod-row" data-act="streaks"><small>SCORESTREAKS</small><b>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => stkIcon(id)).join('')}</b><span>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => `${STREAKS[id].name} ${STREAKS[id].cost}`).join(' · ')}</span><i>&rsaquo;</i></button>` : '') +
+    (!online && sel !== 'surv' ? `<div class="cod-row"><small>BOT SKILL</small><b>${SKILL[matchCfg(sel).skill].name}</b><span>change it here or in Settings</span><div class="arw"><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div></div>` : '') +
+    `<button class="cod-row" data-act="custom"><small>PRIVATE CODE MATCHES &middot; SOLO VS BOTS</small><b>CUSTOM</b><span>host or join with a code, or play any mode and map against bots</span><i>&rsaquo;</i></button>` + (online ? netLobbyHtml() : '');
+  $('lobRoster').innerHTML = rosterHtml(sel);
+  if (online) netLobbyWire();
   if (focusSel) focusFirst(focusSel);
+}
+function rosterHtml(k) {
+  const d = MODES[k], cfg = matchCfg(k), names = BOT_NAMES.slice(0, 16), me = (NET.nick || 'YOU');
+  const p = (n, cls = '', tag = '') => `<div class="ros-p ${cls}"><span class="lv">${cls === 'me' ? '★' : 'AI'}</span>${n}${tag ? `<em>${tag}</em>` : ''}</div>`;
+  const info = `<div class="ros-info"><b>${d.name}</b>${d.desc}</div>`;
+  if (k === 'surv') return `<div class="ros-h"><span>SQUAD</span><b>SOLO</b></div><div class="ros-team"><div class="tn">YOU</div>${p(me, 'me', 'READY')}</div>` + info;
+  if (d.online) return `<div class="ros-h"><span>${NET.app ? 'QUICK PLAY' : 'ROOM'}</span><b>${d.teams ? '6 V 6' : 'FREE-FOR-ALL'}</b></div><div class="ros-team"><div class="tn">YOUR PARTY</div>${p(me, 'me', 'READY')}<div class="ros-p"><span class="lv">+</span>real players join here &middot; bots fill empty spots</div></div>` + info;
+  if (d.teams) { const n = clamp(cfg.perTeam, 1, 8);
+    return `<div class="ros-h"><span>LOBBY</span><b>${n} V ${n}</b></div>` +
+      `<div class="ros-team" style="--tc:${TEAM_COL[0]}"><div class="tn">YOUR TEAM</div>${p(me, 'me', 'READY')}${names.slice(0, n - 1).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` +
+      `<div class="ros-team" style="--tc:${TEAM_COL[1]}"><div class="tn">ENEMY TEAM</div>${names.slice(8, 8 + n).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` + info; }
+  const n = clamp(cfg.players, 2, 12);
+  return `<div class="ros-h"><span>LOBBY</span><b>${n} PLAYERS</b></div><div class="ros-team"><div class="tn">FREE-FOR-ALL</div>${p(me, 'me', 'READY')}${names.slice(0, n - 1).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` + info;
+}
+function openModes() {
+  const g = modeGroup(LOBBY.mode), list = MODE_ORDER.filter(k => modeGroup(k) === g);
+  $('modesTtl').textContent = g === 'on' ? 'ONLINE · GAME MODE' : 'GAME MODE';
+  $('modeGrid').innerHTML = list.map(k => `<button class="mode-card${k === LOBBY.mode ? ' on' : ''}" data-mode="${k}"><i>${MODES[k].icon}</i><b>${MODES[k].name}</b><p>${MODES[k].desc}</p><span>${modeRules(k)}</span></button>`).join('');
+  for (const b of $('modeGrid').children) b.onclick = () => { LOBBY.mode = b.dataset.mode; saveLobby(); sfx.ui(); renderLobby('.cod-go'); showScreen('lobby'); focusFirst('.cod-go'); };
+  showScreen('modes'); focusFirst('#modeGrid .on');
 }
 // MAP: random or a fixed map (online: used when you end up hosting)
 const MAP_CHOICES = () => ['random', ...MAP_ORDER.filter(id => !MAPS[id].hidden)];
@@ -5274,8 +5516,8 @@ function lobbyMapRow(d) {
   const name = m ? m.name : 'RANDOM', sub = m ? m.place : d.online && NET.app ? 'the host picks; you pick when you host' : 'a different map each match';
   return `<div class="lob-map"><span>MAP${d.online && NET.app ? ' (IF YOU HOST)' : ''}</span><div class="lob-cpick"><button class="mini" data-act="map-" aria-label="Previous map">&lsaquo;</button><b>${name}</b><button class="mini" data-act="map+" aria-label="Next map">&rsaquo;</button></div><small>${sub}</small></div>`;
 }
-function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.lob-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
-function lobbyTab(d) { const i = MODE_ORDER.indexOf(LOBBY.mode); LOBBY.mode = MODE_ORDER[(i + d + MODE_ORDER.length) % MODE_ORDER.length]; saveLobby(); sfx.ui(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); }
+function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
+function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-go'); }
 
 /* ---------- custom game */
 const CUS_KEY = 'ashfall.custom.v1';
@@ -5296,6 +5538,7 @@ function renderCustom() {
   else if (k !== 'surv') rows.push({ name: 'PLAYERS', hint: 'You plus bots', t: 'range', min: 2, max: 12, step: 1, get: () => CUS.players, set: v => { CUS.players = v; }, fmt: v => v });
   if (k !== 'surv') rows.push({ name: 'BOT SKILL', t: 'seg', opts: Object.keys(SKILL).map(s => [s, SKILL[s].name]), get: () => CUS.skill, set: v => { CUS.skill = v; } });
   if (k !== 'surv') rows.push({ name: 'HARDCORE', hint: '30 health for everyone: one or two hits kill', t: 'toggle', get: () => CUS.hardcore, set: v => { CUS.hardcore = v; } });
+  const cp = $('cusPriv'); if (cp) { cp.innerHTML = privCodeHtml(); if (NET.app) { netLobbyWire(); const g = $('netCodeGo'); if (g) g.onclick = () => { sfx.ui(); if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm'; netGo('code'); }; } }
   const body = $('cusBody'); body.innerHTML = `<div class="cus-desc">${d.desc}</div>`;
   for (const it of rows) {
     const row = document.createElement('div'); row.className = 'setrow';
@@ -5557,7 +5800,7 @@ function onKill(e, head, boom, bonusOnly) {
   if (G.multi >= 2) { const b = 50 * G.multi; extra += b; multiTxt = MULTI[Math.min(G.multi, 5)]; sfx.multi(G.multi); }
   G.streak = (G.streak || 0) + 1;
   if (G.streak % 5 === 0) { const b = G.streak * 20; extra += b; showBanner(`${G.streak} KILL STREAK`, `+${b} bonus`); sfx.streak(); }
-  G.score += extra;
+  G.score += extra; stkAdd(pts + extra);
   popScore('+' + (pts + extra), multiTxt ? 'big' : head ? 'head' : '', [multiTxt, ...tags].filter(Boolean).join(' · '));
   feedLine(`<b>YOU</b> <span class="fw">${boom ? '✹' : WEAPONS[G.cur].name}</span> ${e.name ? `<span style="color:${isFriend(e) ? '#5aaeff' : '#ff5a4a'}">${e.name}</span>` : e.type.toUpperCase()}${tags.length ? ` <span class="ft">${tags.join(' · ')}</span>` : ''} <span class="fp">+${pts + extra}</span>`);
 }
@@ -5656,6 +5899,153 @@ function updatePolish(dt) {
   else if (G.state === 'deathcam') updateBarrels(dt * 0.32);
 }
 
+/* ================================================================== scorestreaks
+   Points from kills since your last death earn the streaks you picked (three, in the SCORESTREAKS tab). Earned streaks
+   wait in the bottom-right until you use them with the SCORESTREAK key (X by default); dying resets the points but
+   keeps what you already earned. UAVs show enemies on the radar and on screen; strikes drop shells / bombs on them. */
+const STK_ICON = {
+  uav: '<path d="M4 13 L20 13 M12 5 L12 21 M7 9 L17 9" stroke-width="2.2"/><circle cx="12" cy="13" r="2.4"/>',
+  supply: '<rect x="4" y="7" width="16" height="13" rx="1"/><path d="M4 11 H20 M12 7 V20 M8 4 L12 7 L16 4"/>',
+  armor: '<path d="M12 3 L20 6 V12 C20 17 16 20 12 21 C8 20 4 17 4 12 V6 Z"/><path d="M12 7 V17 M8 11 H16"/>',
+  mortar: '<path d="M12 3 V9 M12 9 L8 21 M12 9 L16 21 M6 14 H18"/><circle cx="12" cy="3.5" r="1.6"/>',
+  vuav: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2 V6 M12 18 V22 M2 12 H6 M18 12 H22"/>',
+  air: '<path d="M2 13 L22 9 L22 11 L14 13 L16 20 L13 20 L10 14 L4 15 Z"/>',
+};
+const STREAKS = {
+  uav:    { name: 'UAV', cost: 400, desc: 'A spy plane shows every enemy on your radar and screen for 30 seconds.' },
+  supply: { name: 'SUPPLY DROP', cost: 500, desc: 'Refills all your ammo and grenades and heals you to full.' },
+  armor:  { name: 'BODY ARMOR', cost: 600, desc: '+60 health until you die.' },
+  mortar: { name: 'MORTAR STRIKE', cost: 750, desc: 'Three mortar shells land on enemy positions.' },
+  vuav:   { name: 'ADVANCED UAV', cost: 1000, desc: 'Shows every enemy and the way they are facing for 45 seconds.' },
+  air:    { name: 'AIRSTRIKE', cost: 1200, desc: 'A jet carpet-bombs a line straight through the enemy.' },
+};
+const STK_KEY = 'ashfall.streaks.v1';
+let STK_SEL = ['uav', 'mortar', 'air'];
+try { const a = JSON.parse(localStorage.getItem(STK_KEY) || 'null'); if (Array.isArray(a) && a.length && a.every(k => STREAKS[k])) STK_SEL = a.slice(0, 3); } catch (e) {}
+const stkSave = () => { try { localStorage.setItem(STK_KEY, JSON.stringify(STK_SEL)); } catch (e) {} };
+const stkIcon = (id, cls = '') => `<svg class="stk-ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${STK_ICON[id] || ''}</svg>`;
+const stkOn = () => typeof M !== 'undefined' && M && inMatch() && M.mode !== 'gun' && !G.bench;
+const STK = { pts: 0, got: new Set(), have: [], uavT: 0, vuav: false, jobs: [] };
+function stkReset() { STK.pts = 0; STK.got.clear(); STK.have = []; STK.uavT = 0; STK.vuav = false; STK.jobs = []; stkHud(true); }
+function stkDeath() { STK.pts = 0; STK.got.clear(); stkHud(true); }
+function stkAdd(pts) {
+  if (!stkOn()) return;
+  STK.pts += pts;
+  const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
+  for (const id of list) if (STK.pts >= STREAKS[id].cost && !STK.got.has(id)) {
+    STK.got.add(id); STK.have.push(id);
+    showBanner(STREAKS[id].name + ' READY', `press ${keyName(bind('streak'))} to use it`); try { sfx.streakReady(); } catch (e) { sfx.streak(); }
+  }
+  if (list.every(id => STK.got.has(id))) { STK.pts = 0; STK.got.clear(); }   // the whole set earned: start again
+  stkHud(true);
+}
+function stkUse() {
+  if (!stkOn() || !STK.have.length || !(G.state === 'playing')) return;
+  const id = STK.have.pop(), en = () => enemies.filter(e => !isFriend(e) && (!e.entry || e.entry.alive !== false));
+  sfx.ui();
+  if (id === 'uav' || id === 'vuav') { STK.uavT = Math.max(STK.uavT, id === 'vuav' ? 45 : 30); STK.vuav = STK.vuav || id === 'vuav'; showBanner(STREAKS[id].name + ' ONLINE', 'enemies revealed'); stkRadio(); }
+  else if (id === 'supply') { for (const w of WEAPONS) if (w) { w.ammo = w.magSize; w.reserve = w.reserveMax; } G.grenades = EQUIP[G.equip].count; G.health = G.maxHp; showBanner('SUPPLY DROP', 'ammo, grenades and health refilled'); sfx.pickup(); }
+  else if (id === 'armor') { G.maxHp += 60; G.health = Math.min(G.maxHp, G.health + 60); showBanner('BODY ARMOR', '+60 health until you die'); sfx.pickup(); }
+  else if (id === 'mortar') {
+    const t = stkTargets(en(), 3); showBanner('MORTAR STRIKE', 'shells inbound'); stkRadio();
+    t.forEach((p, i) => STK.jobs.push({ t: 1.4 + i * 0.6, whistle: true, fn: () => stkBoom(p.x + rnd(-1.5, 1.5), p.z + rnd(-1.5, 1.5), 7, 1.4) }));
+  }
+  else if (id === 'air') {
+    const t = stkTargets(en(), 1)[0] || { x: P.x + 25 * -Math.sin(P.yaw), z: P.z + 25 * -Math.cos(P.yaw) };
+    const a = Math.random() * TAU, dx = Math.cos(a), dz = Math.sin(a); showBanner('AIRSTRIKE', 'jet inbound'); stkRadio();
+    STK.jobs.push({ t: 1.6, fn: () => stkJet(t.x, t.z, dx, dz) });
+    for (let k = -3; k <= 3; k++) { const x = t.x + dx * k * 3.6, z = t.z + dz * k * 3.6; if (Math.hypot(x - P.x, z - P.z) > 6) STK.jobs.push({ t: 2.3 + (k + 3) * 0.13, fn: () => stkBoom(x, z, 6.5, 1.25) }); }
+  }
+  stkHud(true);
+}
+// up to n enemy spots, away from you (strikes never land on top of you)
+function stkTargets(list, n) {
+  const ok = list.filter(e => Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) > 9).sort(() => Math.random() - 0.5);
+  const out = ok.slice(0, n).map(e => ({ x: e.group.position.x, z: e.group.position.z }));
+  while (out.length < n && out.length) out.push(Object.assign({}, out[out.length - 1]));
+  return out;
+}
+function stkBoom(x, z, R, k) { const y = groundAt(x, z, 20) + 0.3; explode({ x, y, z }, 'strike', R, k, 'player'); }
+function stkRadio() { tone(880, 0.07, 0.07, 'square'); tone(660, 0.07, 0.07, 'square', undefined, { delay: 0.09 }); }
+function stkJet(x, z, dx, dz) { const o = at(x, z, 40); burst(1.8, 900, 0.7, 'lowpass', o); tone(260, 1.6, 0.25, 'sawtooth', 90, o); }
+function updateStreaks(dt) {
+  if (STK.jobs.length) for (let i = STK.jobs.length - 1; i >= 0; i--) {
+    const j = STK.jobs[i]; j.t -= dt;
+    if (j.whistle && !j.ws && j.t < 1.0) { j.ws = true; tone(1500, 1.0, 0.08, 'sine', 380); }
+    if (j.t <= 0) { STK.jobs.splice(i, 1); try { j.fn(); } catch (e) { reportError(e); } }
+  }
+  if (STK.uavT > 0) { STK.uavT -= dt; if (STK.uavT <= 0) { STK.uavT = 0; STK.vuav = false; } }
+  stkMarks(); stkHud(false);
+}
+const stkSeen = e => STK.uavT > 0 && !isFriend(e);
+// on-screen enemy diamonds while a UAV is up (the advanced one adds the way they face)
+const _sv = new THREE.Vector3();
+function stkMarks() {
+  const lay = $('uavMarks'); if (!lay) return;
+  const on = STK.uavT > 0 && (G.state === 'playing' || G.state === 'paused');
+  if (!on) { if (lay._n) { lay.innerHTML = ''; lay._n = 0; } return; }
+  const list = enemies.filter(e => !isFriend(e)), W = innerWidth, H = innerHeight;
+  while (lay.children.length < list.length) { const d = document.createElement('i'); lay.appendChild(d); }
+  lay._n = list.length;
+  for (let i = 0; i < lay.children.length; i++) {
+    const d = lay.children[i], e = list[i];
+    if (!e) { d.style.display = 'none'; continue; }
+    _sv.set(e.group.position.x, e.group.position.y + 1.95, e.group.position.z).project(camera);
+    if (_sv.z > 1) { d.style.display = 'none'; continue; }
+    d.style.display = ''; d.style.transform = `translate(${((_sv.x + 1) / 2 * W).toFixed(0)}px,${((1 - _sv.y) / 2 * H).toFixed(0)}px) rotate(45deg)`;
+    d.className = STK.vuav ? 'adv' : '';
+  }
+}
+function stkHud(force) {
+  const box = $('stkHud'); if (!box) return;
+  const on = stkOn() && (G.state === 'playing' || G.state === 'paused' || G.state === 'respawning' || G.state === 'deathcam');
+  if (box._on !== on) { box._on = on; box.classList.toggle('hide', !on); }
+  if (!on) return;
+  const key = STK_SEL.join() + '|' + STK.pts + '|' + STK.have.join() + '|' + Math.ceil(STK.uavT);
+  if (!force && box._k === key) return; box._k = key;
+  const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
+  box.innerHTML = list.map(id => {
+    const s = STREAKS[id], have = STK.have.includes(id), p = have ? 1 : STK.got.has(id) ? 0 : clamp(STK.pts / s.cost, 0, 1);
+    return `<div class="stk${have ? ' ready' : ''}"><div class="stk-fill" style="height:${(p * 100).toFixed(0)}%"></div>${stkIcon(id)}<span>${have ? keyName(bind('streak')) : s.cost}</span></div>`;
+  }).join('') + (STK.uavT > 0 ? `<div class="stk-uav">${STK.vuav ? 'ADV UAV' : 'UAV'} ${Math.ceil(STK.uavT)}</div>` : '') + `<div class="stk-pts">${STK.pts}</div>`;
+}
+
+/* ---------- SCORESTREAKS tab: pick three */
+let stkReturn = 'menu';
+function openStreaks(from) { stkReturn = from || curScreen || 'menu'; renderStreaks(); showScreen('streaks'); }
+function renderStreaks() {
+  const ids = Object.keys(STREAKS);
+  $('stkSel').innerHTML = [0, 1, 2].map(i => { const id = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost)[i]; return `<div class="stk-slot${id ? ' on' : ''}">${id ? stkIcon(id) + `<b>${STREAKS[id].name}</b><small>${STREAKS[id].cost}</small>` : '<b>EMPTY</b><small>pick a streak</small>'}</div>`; }).join('');
+  $('stkGrid').innerHTML = ids.map(id => { const s = STREAKS[id], on = STK_SEL.includes(id);
+    return `<button class="stk-card${on ? ' on' : ''}" data-stk="${id}">${stkIcon(id)}<div><b>${s.name}</b><span class="stk-cost">${s.cost} PTS</span><p>${s.desc}</p></div><em>${on ? 'EQUIPPED' : 'EQUIP'}</em></button>`; }).join('');
+  for (const b of $('stkGrid').querySelectorAll('[data-stk]')) b.onclick = () => {
+    const id = b.dataset.stk, i = STK_SEL.indexOf(id); sfx.ui();
+    if (i >= 0) { if (STK_SEL.length > 1) STK_SEL.splice(i, 1); }
+    else { if (STK_SEL.length >= 3) STK_SEL.shift(); STK_SEL.push(id); }
+    stkSave(); renderStreaks(); focusFirst(`#stkGrid [data-stk="${id}"]`);
+  };
+}
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `#stkHud{position:absolute;right:28px;bottom:150px;display:flex;flex-direction:column;align-items:flex-end;gap:6px}
+#stkHud .stk{position:relative;width:46px;height:46px;border:1px solid rgba(255,255,255,.25);background:rgba(0,0,0,.45);overflow:hidden;display:flex;align-items:center;justify-content:center}
+#stkHud .stk-fill{position:absolute;left:0;right:0;bottom:0;background:rgba(224,180,74,.28)}
+#stkHud .stk.ready{border-color:var(--accent);box-shadow:0 0 12px rgba(224,180,74,.55);animation:stkp 1.2s infinite}#stkHud .stk.ready .stk-fill{background:rgba(224,180,74,.45)}
+@keyframes stkp{50%{box-shadow:0 0 2px rgba(224,180,74,.2)}}
+#stkHud .stk span{position:absolute;right:2px;bottom:1px;font-size:9px;letter-spacing:.05em;color:#fff;text-shadow:0 0 3px #000}
+#stkHud .stk-uav,#stkHud .stk-pts{font-size:11px;letter-spacing:.2em;color:var(--accent);text-shadow:0 0 4px #000}#stkHud .stk-pts{color:rgba(255,255,255,.6)}
+.stk-ic{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;color:#e9e6d8;position:relative}
+#uavMarks i{position:absolute;left:-6px;top:-6px;width:10px;height:10px;border:2px solid #ff4a3a;background:rgba(255,74,58,.35);box-shadow:0 0 6px rgba(255,60,40,.8)}
+#uavMarks i.adv{background:#ff4a3a}
+.stkp{width:min(1100px,94vw)}.stk-top{display:flex;gap:10px;padding:16px 26px}.stk-slot{flex:1;display:flex;align-items:center;gap:10px;padding:12px 14px;border:1px dashed var(--line);color:var(--dim)}
+.stk-slot.on{border:1px solid var(--accent);color:var(--ink);background:rgba(224,180,74,.08)}.stk-slot b{letter-spacing:.18em;font-size:13px}.stk-slot small{margin-left:auto;color:var(--accent);letter-spacing:.1em}
+#stkGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px;padding:0 26px 16px;overflow:auto}
+.stk-card{pointer-events:auto;cursor:pointer;display:flex;gap:14px;align-items:flex-start;text-align:left;padding:14px;border:1px solid var(--line);background:rgba(255,255,255,.03);color:var(--ink);font-family:inherit;position:relative}
+.stk-card .stk-ic{width:40px;height:40px;flex:0 0 auto;margin-top:2px}.stk-card b{display:block;letter-spacing:.2em;font-size:14px}.stk-card .stk-cost{font-size:11px;letter-spacing:.2em;color:var(--accent)}
+.stk-card p{margin:6px 0 0;font-size:12px;line-height:1.4;color:var(--dim);letter-spacing:.02em}.stk-card em{position:absolute;right:10px;top:10px;font-style:normal;font-size:10px;letter-spacing:.2em;color:var(--dim)}
+.stk-card:hover,.stk-card:focus{outline:0;border-color:rgba(224,180,74,.6)}.stk-card.on{border-color:var(--accent);background:rgba(224,180,74,.1)}.stk-card.on em{color:var(--accent)}`;
+  document.head.appendChild(s);
+})();
 /* ================================================================== performance helpers */
 // dynamic resolution: drop the render scale when the frame rate sags, creep back up when there is headroom.
 // If lowering the resolution does not actually speed things up (frame-capped display, battery saver), it backs off.
@@ -6038,7 +6428,7 @@ const ATT_HQ = {};
 function hqAtt(name) {
   if (typeof HQDATA === 'undefined' || !HQDATA['att_' + name]) return null;
   if (!ATT_HQ[name]) { armoryMats(); const H = HQDATA['att_' + name], grp = new THREE.Group(); for (const p in H.parts) grp.add(hqPart(H.parts[p])); ATT_HQ[name] = grp; }
-  const c = ATT_HQ[name].clone(); c.name = 'att_' + name; return c;
+  const c = ATT_HQ[name].clone(); c.name = 'att_' + name; c.traverse(o => { if (o.isMesh && o.material === VM.dot) o.visible = false; }); return c;
 }
 function buildAttachmentVisuals(wi) { const w = WEAPONS[wi]; attachVisuals(gunObjs[wi], w.def, w.factory, w.len, null); }
 // ovr: an attachment shown in place of the equipped one in its slot (loadout preview)
@@ -6057,9 +6447,9 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   // red dots / holos / reflexes ride on a riser so the dot lines up just above the front post
   const coEye = COWITNESS.has(op) && u.sightInfo ? ironEye(u, 'irons') + 0.0028 : null;
   const ry = coEye !== null ? Math.max(u.railY, coEye - OPTIC_H[op]) : u.railY;
-  if (coEye !== null && op !== 'holo' && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
+  if (coEye !== null && op !== 'holo' && op !== 'reflex' && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
   u.dots = [];
-  if (u.stockOptic) u.stockOptic.forEach(o => { o.visible = op === 'reddot'; });
+  if (u.stockOptic) u.stockOptic.forEach(o => { o.visible = op === 'reddot' && o.material !== VM.dot; });
   // factory irons: the bead / pistol sights stay as they are; rifle irons lose the solid rear sight (see-through aperture below)
   const rifleIrons = (op === 'irons' || op === 'sirons' || op === 'irons_p') && !u.pistol;
   if (u.irons) u.irons.visible = false;
@@ -6083,15 +6473,15 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   if (mz === 'spreader') add(new THREE.BoxGeometry(0.05, 0.016, 0.05), M.dark, 0, my, tip - 0.02);
   }
   // optics: everything sits on the rail at (railY, opticZ)
-  const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); add(new THREE.CircleGeometry(0.0022, 8), M.dot, 0, y, z + 0.0005); };
+  const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); };
   const notStock = !(def.blender && !hasHQ(def) && op === def.optic);
   const OPT_DZ = { reddot: 0.02, scope25: 0.005, scope6: 0.015, scope10: 0.017, scope35: 0.011 };
-  const hqOpt = OPTIC_H[op] !== undefined && op !== 'holo' && (op !== 'reddot' || notStock) && HQ(op, 0, ry, oz + (OPT_DZ[op] || 0));
+  const hqOpt = OPTIC_H[op] !== undefined && op !== 'holo' && op !== 'reflex' && (op !== 'reddot' || notStock) && HQ(op, 0, ry, oz + (OPT_DZ[op] || 0));
   if (op === 'acog4') add(new THREE.BoxGeometry(0.0045, 0.0045, 0.075), M.fiberR, 0, ry + (hqOpt ? 0.0762 : 0.0715), oz - 0.01);   // the lit fibre on top
   if (!hqOpt) {
   if (notStock && op === 'reddot') {
     add(new THREE.BoxGeometry(0.034, 0.012, 0.07), M.dark, 0, ry + 0.006, oz); tubeZ(0.02, 0.07, M.dark, 0, ry + 0.034, oz + 0.035, 16);
-    const l = new THREE.Mesh(new THREE.CircleGeometry(0.0165, 16), M.lens); l.position.set(0, ry + 0.034, oz + 0.036); grp.add(l); add(new THREE.CircleGeometry(0.0022, 8), M.dot, 0, ry + 0.034, oz + 0.0365);
+    const l = new THREE.Mesh(new THREE.CircleGeometry(0.0165, 16), M.lens); l.position.set(0, ry + 0.034, oz + 0.036); grp.add(l);
   }
   if (op === 'holo') {   // EOTech EXPS3-size holo (the kind Rainbow Six uses): 96 mm long, 30 x 23 mm window in a 70 mm hood tunnel, 4 mm walls
     const cy = coEye !== null ? coEye : ry + 0.035, wW = 0.030, wH = 0.023, t = 0.004, L = 0.096, hl = 0.07, hz = oz - L / 2 + hl / 2, bot = cy - wH / 2 - 0.003;
@@ -6103,10 +6493,12 @@ function attachVisuals(g, def, factory, wlen, ovr) {
     add(new THREE.PlaneGeometry(wW, wH), M.lens, 0, cy, hz - hl / 2 + 0.003);                                           // front glass
     for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.004, 0.008, 0.012), M.dark, s * 0.009, bot + 0.004, oz + L / 2 - 0.008);   // rear buttons
   }
-  if (op === 'reflex') {
-    add(new THREE.BoxGeometry(0.03, 0.01, 0.04), M.dark, 0, ry + 0.005, oz);
-    add(new THREE.BoxGeometry(0.03, 0.032, 0.006), M.dark, 0, ry + 0.02, oz - 0.018);
-    lensAt(ry + 0.024, oz - 0.0145, 0.022, 0.018);
+  if (op === 'reflex') {   // open mini reflex: slim base, thin frame, clear window around the dot
+    const cy = coEye !== null ? coEye : ry + 0.024, wW = 0.022, wH = 0.017, t = 0.0025, wz = oz - 0.012, bot = cy - wH / 2 - t;
+    add(new THREE.BoxGeometry(0.022, bot - u.railY, 0.04), M.dark, 0, u.railY + (bot - u.railY) / 2, oz);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(t, wH + t, 0.006), M.dark, sx * (wW + t) / 2, cy, wz);
+    add(new THREE.BoxGeometry(wW + 2 * t, t, 0.006), M.dark, 0, cy + wH / 2 + t / 2, wz);
+    add(new THREE.PlaneGeometry(wW, wH), M.lens, 0, cy, wz - 0.002);
   }
   if (op === 'scope25' || op === 'acog4') {
     const big = op === 'acog4', y = ry + 0.044;
@@ -6131,18 +6523,18 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   // iron sights, built the same way on every gun so they line up exactly with where the bullets go
   function frontSight(top, fz) {   // protected front post: a tower off the barrel, two ears, a thin post with a fibre insert
     const foot = Math.min((u.muzzleY || 0) + (u.barrelR || 0.01) * 0.6, top - 0.02), h = top - foot;
-    add(new THREE.BoxGeometry(0.011, Math.max(0.002, h - 0.012), 0.012), M.dark, 0, foot + (h - 0.012) / 2, fz);
-    add(new THREE.BoxGeometry(0.017, 0.004, 0.012), M.dark, 0, top - 0.012, fz);
-    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0022, 0.0135, 0.009), M.dark, sx * 0.0075, top - 0.0055, fz);
-    add(new THREE.BoxGeometry(0.0019, 0.011, 0.0025), M.dark, 0, top - 0.0055, fz);
+    add(new THREE.BoxGeometry(0.006, Math.max(0.002, h - 0.02), 0.012), M.dark, 0, foot + (h - 0.02) / 2, fz);
+    add(new THREE.BoxGeometry(0.018, 0.003, 0.01), M.dark, 0, top - 0.02, fz);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0018, 0.021, 0.008), M.dark, sx * 0.0078, top - 0.0095, fz);
+    add(new THREE.BoxGeometry(0.0017, 0.019, 0.0022), M.dark, 0, top - 0.0095, fz);
     add(new THREE.BoxGeometry(0.0011, 0.0016, 0.0005), M.fiber, 0, top - 0.0012, fz + 0.0014);
   }
   function rearSight(eye, rz) {   // flip-up aperture: base on the rail, guard ears, a thin ring to look through
     const base = Math.min(u.railY, eye - 0.016);
     add(new THREE.BoxGeometry(0.026, 0.006, 0.022), M.dark, 0, base + 0.003, rz);
-    add(new THREE.BoxGeometry(0.012, Math.max(0.002, eye - 0.0062 - base - 0.006), 0.003), M.dark, 0, base + 0.006 + (eye - 0.0062 - base - 0.006) / 2, rz);
-    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.003, eye + 0.004 - base - 0.006, 0.012), M.dark, sx * 0.0105, base + 0.006 + (eye + 0.004 - base - 0.006) / 2, rz);
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.0034, 0.0062, 36), M.darkDS); ring.position.set(0, eye, rz); grp.add(ring);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0018, Math.max(0.002, eye - base - 0.006), 0.003), M.dark, sx * 0.0055, base + 0.006 + (eye - base - 0.006) / 2, rz);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0025, eye + 0.0015 - base - 0.006, 0.01), M.dark, sx * 0.0115, base + 0.006 + (eye + 0.0015 - base - 0.006) / 2, rz);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.0038, 0.0058, 36), M.darkDS); ring.position.set(0, eye, rz); grp.add(ring);
   }
   const si = u.sightInfo;
   if (rifleIrons && si) {
@@ -6632,12 +7024,10 @@ const netReady = () => NET.app || !!NET.ns;
 
 /* ---------- lobby panel for the online modes */
 function netLobbyHtml() {
-  if (NET.app) return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label></div>` +
-    `<div class="net-hint">Quick Play finds a public match; bots fill empty spots. A private code opens a lobby where the host picks the mode, map, bots and time limit, then starts when everyone is in.</div>` +
-    `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div>` +
+  if (NET.app) return     `<div class="net-hint">Quick Play finds a public match; bots fill empty spots. Private code matches are under CUSTOM.</div>` +
     `<div class="net-lan" id="netLan"></div><div class="net-svc" id="netSvc">MATCH SERVICE: CHECKING…</div><div class="net-count" id="netCount"></div>`;
   if (!NET.ns) return `<div class="net-off">Online play runs when this game is open on claude.ai. Share the page with friends (they need a Claude account), then everyone picks the same room code.</div>`;
-  return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label>` +
+  return `<div class="net-form">` +
     `<label>ROOM CODE<input id="netCode" maxlength="20" value="${NET.code}" autocomplete="off" spellcheck="false"></label></div><div class="net-count" id="netCount"></div>`;
 }
 function netLobbyWire() {
@@ -6654,6 +7044,7 @@ function netLobbyWire() {
 }
 // start a match a particular way (the big lobby button is Quick Play)
 function netGo(kind, slot) {
+  if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm';
   if (kind === 'code' && (!NET.code || NET.code === 'public')) { const i = $('netCode'); if (i) { i.focus(); i.placeholder = 'type a code first'; } return; }
   NET.kind = kind; NET.slot = slot || ''; startMatch(LOBBY.mode); NET.kind = 'quick';
 }
@@ -6708,7 +7099,7 @@ async function netStart(mode) {
     room.extras = () => NET.botPres;
     NET.room = room; NET.joinedAt = performance.now() / 1000; NET.botT = 2;
     NET.warmEnd = room.host && !NET.priv ? performance.now() / 1000 + WARMUP : 0;   // a new match waits for people before bots come in (private: the lobby does that)
-    if (room.host) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : LOBBY.map));   // the host picks the map; everyone else follows it
+    if (room.host) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : 'random'));   // the host picks the map; everyone else follows it
     return;
   }
   if (!NET.ns) { NET.on = false; showMsg('OFFLINE: ONLINE PLAY NEEDS CLAUDE.AI'); return; }
@@ -6831,7 +7222,7 @@ function netTick(dt) {
       R.ds = ds; R.kb = typeof pr.kb === 'string' ? pr.kb : ''; const head = !!pr.kh;
       const bot = R.bot;
       if (R.kb && R.kb === NET.me) {
-        NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill();
+        NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill(head); if (!bot) stkAdd(100 + (head ? 50 : 0));
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
         else statKillAt(R.x, R.z, head);
         if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
@@ -7127,10 +7518,10 @@ function renderPlobby(full) {
   document.head.appendChild(s);
 })();
 /* ================================================================== UI: screens, settings, input, loop, boot */
-const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby'];
+const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes'];
 let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
-  curScreen = id;
+  curScreen = id; if (id === 'menu') try { renderMenuCard(); } catch (e) {}
   for (const s of SCREENS) $(s).classList.toggle('hide', s !== id);
   $('hud').classList.toggle('hide', !(G.state === 'playing' || G.state === 'paused' || G.state === 'dead' || G.state === 'respawning' || G.state === 'spectate' || G.state === 'deathcam'));
   if (id) setTimeout(() => { const f = focusables(); if (f.length && !f.includes(document.activeElement)) { try { f[0].focus(); } catch (e) {} } }, 0);
@@ -7140,6 +7531,9 @@ function lockPointer() { try { const r = renderer.domElement.requestPointerLock 
 /* ------------------------------------------------------------------ settings UI */
 const pct = v => v + '%';
 const SCHEMA = {
+  ACCOUNT: [
+    { t: 'text', name: 'CALLSIGN', hint: 'Your name in online matches and on the scoreboard (14 letters max)' },
+  ],
   VIDEO: [
     { k: 'quality', t: 'seg', name: 'GRAPHICS PRESET', hint: 'AUTO picks ' + AUTO_TIER.toUpperCase() + ' for this graphics card. Texture detail changes apply on next launch', opts: [['auto', 'AUTO'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
     { k: 'renderScale', t: 'range', name: 'RENDER SCALE', hint: 'Lower this if the game runs slowly', min: 50, max: 100, step: 5, fmt: pct },
@@ -7171,7 +7565,7 @@ const SCHEMA = {
     { a: 'fwd', t: 'bind', name: 'MOVE FORWARD' }, { a: 'back', t: 'bind', name: 'MOVE BACK' }, { a: 'left', t: 'bind', name: 'MOVE LEFT' }, { a: 'right', t: 'bind', name: 'MOVE RIGHT' },
     { a: 'jump', t: 'bind', name: 'JUMP' }, { a: 'crouch', t: 'bind', name: 'CROUCH' }, { a: 'sprint', t: 'bind', name: 'SPRINT' },
     { a: 'reload', t: 'bind', name: 'RELOAD' }, { a: 'melee', t: 'bind', name: 'MELEE' }, { a: 'grenade', t: 'bind', name: 'THROW EQUIPMENT' }, { a: 'use', t: 'bind', name: 'USE (PLANT / DEFUSE)' },
-    { a: 'swap', t: 'bind', name: 'SWITCH WEAPON' }, { a: 'prim', t: 'bind', name: 'PRIMARY WEAPON' }, { a: 'sec', t: 'bind', name: 'SECONDARY WEAPON' }, { a: 'inspect', t: 'bind', name: 'INSPECT WEAPON' }, { a: 'board', t: 'bind', name: 'SCOREBOARD' },
+    { a: 'swap', t: 'bind', name: 'SWITCH WEAPON' }, { a: 'prim', t: 'bind', name: 'PRIMARY WEAPON' }, { a: 'sec', t: 'bind', name: 'SECONDARY WEAPON' }, { a: 'inspect', t: 'bind', name: 'INSPECT WEAPON' }, { a: 'board', t: 'bind', name: 'SCOREBOARD' }, { a: 'streak', t: 'bind', name: 'USE SCORESTREAK' },
   ],
   CONTROLLER: [
     { k: 'padSens', t: 'range', name: 'LOOK SENSITIVITY', min: 40, max: 250, step: 5, fmt: pct },
@@ -7225,7 +7619,13 @@ function renderSettings() {
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
     if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
     const ctl = document.createElement('div'); ctl.className = 'ctl';
-    if (it.t === 'range') {
+    if (it.t === 'text') {
+      const i = document.createElement('input'); i.className = 'set-text'; i.maxLength = 14; i.value = NET.nick; i.spellcheck = false; i.autocomplete = 'off';
+      i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') i.blur(); }; i.onkeyup = e => e.stopPropagation();
+      i.oninput = () => { NET.nick = cleanNick(i.value); try { localStorage.setItem(NICK_KEY, NET.nick); } catch (e) {} };
+      i.onblur = () => { i.value = NET.nick; };
+      ctl.appendChild(i);
+    } else if (it.t === 'range') {
       const r = document.createElement('input'); r.type = 'range'; r.min = it.min; r.max = it.max; r.step = it.step; r.value = S[it.k];
       const n = document.createElement('span'); n.className = 'num'; n.textContent = it.fmt(S[it.k]);
       r.oninput = () => { S[it.k] = +r.value; n.textContent = it.fmt(S[it.k]); applySetting(it.k); };
@@ -7256,24 +7656,35 @@ function renderSettings() {
   }
 }
 function updateClassUI() { const v = $('classVal'); if (v) v.textContent = activeClass().name; }
-function cycleClass(d) { ACTIVE_CLASS = (ACTIVE_CLASS + d + CLASSES.length) % CLASSES.length; saveClasses(); updateClassUI(); sfx.ui(); if (curScreen === 'lobby') { renderLobby(); focusFirst('#lobClass [data-act="class' + (d > 0 ? '+' : '-') + '"]'); } }
-let statsReturn = 'lobby';
+function cycleClass(d) { ACTIVE_CLASS = (ACTIVE_CLASS + d + CLASSES.length) % CLASSES.length; saveClasses(); updateClassUI(); sfx.ui(); if (curScreen === 'lobby') { renderLobby(); focusFirst('.cod-class [data-act="class' + (d > 0 ? '+' : '-') + '"]'); } }
+let statsReturn = 'lobby', cusReturn = 'menu';
 function updateDiffUI() { $('diffVal').textContent = diff().name; }
-function cycleDiff(d) { const ks = Object.keys(DIFFS); S.difficulty = ks[(ks.indexOf(S.difficulty) + d + ks.length) % ks.length]; updateDiffUI(); saveSettings(); sfx.ui(); if (curTab === 'GAMEPLAY') renderSettings(); }
+function cycleDiff(d) { const ks = Object.keys(DIFFS); S.difficulty = ks[(ks.indexOf(S.difficulty) + d + ks.length) % ks.length]; updateDiffUI(); saveSettings(); sfx.ui(); if (curTab === 'GAMEPLAY') renderSettings(); if (curScreen === 'lobby') renderLobby('.cod-row [data-act="diff' + (d > 0 ? '+' : '-') + '"]'); }
 
 function actions(act) {
   switch (act) {
     case 'deploy': case 'play': toLobby(); break;
+    case 'nav-play': showScreen('menu'); break;
+    case 'quit': try { window.close(); } catch (e) {} break;
+    case 'go-mp': if (MODES[LOBBY.mode].online || LOBBY.mode === 'surv') LOBBY.mode = LOBBY.lastOff && LOBBY.lastOff !== 'surv' ? LOBBY.lastOff : 'tdm'; saveLobby(); toLobby(); focusFirst('.cod-go'); break;
+    case 'go-on': if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm'; saveLobby(); toLobby(); focusFirst('.cod-go'); break;
+    case 'go-surv': LOBBY.mode = 'surv'; saveLobby(); startMatch('surv', { map: LOBBY.map }); break;
+    case 'modes': openModes(); break;
+    case 'mode-': lobbyTab(-1); break;
+    case 'mode+': lobbyTab(1); break;
+    case 'modes-back': renderLobby(); showScreen('lobby'); focusFirst('.cod-go'); break;
     case 'lob-start': startMatch(LOBBY.mode); break;
     case 'lobby-back': showScreen('menu'); break;
-    case 'custom': renderCustom(); showScreen('custom'); break;
-    case 'cus-back': renderLobby(); showScreen('lobby'); break;
+    case 'custom': cusReturn = curScreen === 'lobby' ? 'lobby' : 'menu'; renderCustom(); showScreen('custom'); break;
+    case 'cus-back': if (cusReturn === 'lobby') renderLobby(); showScreen(cusReturn); break;
     case 'cus-start': startCustom(); break;
     case 'stats': statsReturn = curScreen || 'lobby'; statOnline = !!(MODES[LOBBY.mode] && MODES[LOBBY.mode].online); renderStats(); showScreen('career'); break;
     case 'stats-back': if (statsReturn === 'lobby') renderLobby(); showScreen(statsReturn); break;
     case 'res-again': restartMatch(); break;
     case 'res-lobby': toLobby(); break;
     case 'pl-start': privStart(); break;
+    case 'streaks': openStreaks(curScreen || 'menu'); break;
+    case 'stk-back': if (stkReturn === 'lobby') renderLobby(); showScreen(stkReturn); break;
     case 'pl-leave': toLobby(); break;
     case 'res-stats': statsReturn = 'results'; statOnline = !!(M && M.online); renderStats(); showScreen('career'); break;
     case 'settings': returnScreen = curScreen || 'menu'; showScreen('settings'); break;
@@ -7306,8 +7717,10 @@ document.addEventListener('click', e => {
 function goBack() {
   if (curScreen === 'loadout') { updateClassUI(); if (returnScreen === 'lobby') renderLobby(); showScreen(returnScreen); }
   else if (curScreen === 'lobby') showScreen('menu');
-  else if (curScreen === 'custom') { renderLobby(); showScreen('lobby'); }
+  else if (curScreen === 'custom') actions('cus-back');
   else if (curScreen === 'career') actions('stats-back');
+  else if (curScreen === 'streaks') actions('stk-back');
+  else if (curScreen === 'modes') actions('modes-back');
   else if (curScreen === 'results') toLobby();
   else if (curScreen === 'settings' || curScreen === 'howto' || curScreen === 'credits') showScreen(returnScreen);
   else if (curScreen === 'pause') resumeGame();
@@ -7331,6 +7744,7 @@ function adjustFocused(d) {
   else if (a.getAttribute && a.getAttribute('data-act') === 'diff-') { cycleDiff(d); }
   else if (a.getAttribute && /^diff/.test(a.getAttribute('data-act') || '')) cycleDiff(d);
   else if (a.getAttribute && /^class/.test(a.getAttribute('data-act') || '')) cycleClass(d);
+  else if (a.classList && a.classList.contains('cod-go')) lobbyTab(d);
 }
 
 /* ------------------------------------------------------------------ input */
@@ -7346,8 +7760,8 @@ addEventListener('keydown', e => {
     if (!curScreen) return;
     if (e.code === 'ArrowDown') { moveFocus(1); e.preventDefault(); }
     else if (e.code === 'ArrowUp') { moveFocus(-1); e.preventDefault(); }
-    else if (e.code === 'ArrowRight' && document.activeElement && (document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(1); e.preventDefault(); }
-    else if (e.code === 'ArrowLeft' && document.activeElement && (document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(-1); e.preventDefault(); }
+    else if (e.code === 'ArrowRight' && document.activeElement && (document.activeElement.classList.contains('cod-go') || document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(1); e.preventDefault(); }
+    else if (e.code === 'ArrowLeft' && document.activeElement && (document.activeElement.classList.contains('cod-go') || document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(-1); e.preventDefault(); }
     else if (e.code === 'Escape') goBack();
     return;
   }
@@ -7357,6 +7771,7 @@ addEventListener('keydown', e => {
   if (c === bind('inspect') && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
   if (c === bind('grenade')) throwGrenade();
   if (c === bind('melee')) melee();
+  if (c === bind('streak')) stkUse();
   if (c === bind('prim')) switchWeapon(0);
   if (c === bind('sec')) switchWeapon(1);
   if (c === bind('swap')) cycleWeapon(1);
@@ -7452,6 +7867,7 @@ function pollPad(dt) {
     if (press(5)) throwGrenade();
     if (press(13) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
     if (press(11)) melee();
+    if (press(12)) stkUse();
     const fwdPush = -my;
     if (S.padSprint === 'hold') pad.sprint = down(10);
     else if (S.padSprint === 'auto') { pad.autoT = fwdPush > 0.85 && mm > 0.92 ? (pad.autoT || 0) + dt : 0; pad.sprint = pad.autoT > 0.22 || (pad.sprint && fwdPush > 0.6) || press(10) || (pad.sprint && down(10)); }
@@ -7483,7 +7899,7 @@ function menuTab(d) {
   else if (curScreen === 'menu') cycleClass(d);
 }
 function menuMove(d) {
-  const a = document.activeElement, adjustable = a && (a.type === 'range' || (a.classList && a.classList.contains('sw')) || (a.parentElement && a.parentElement.classList.contains('seg')) || /^(diff|class)/.test((a.getAttribute && a.getAttribute('data-act')) || ''));
+  const a = document.activeElement, adjustable = a && ((a.classList && a.classList.contains('cod-go')) || a.type === 'range' || (a.classList && a.classList.contains('sw')) || (a.parentElement && a.parentElement.classList.contains('seg')) || /^(diff|class)/.test((a.getAttribute && a.getAttribute('data-act')) || ''));
   if ((d === 'left' || d === 'right') && adjustable && curScreen !== 'loadout') { adjustFocused(d === 'right' ? 1 : -1); return; }
   spatialFocus(d);
 }
@@ -7611,6 +8027,7 @@ function tick(dt) {
   else if (G.state === 'dead') { P.pitch = lerp(P.pitch, -0.35, dt * 2); camera.rotation.set(P.pitch, P.yaw, lerp(camera.rotation.z, 0.5, dt * 2)); camera.position.y = lerp(camera.position.y, 0.5, dt * 3); }
   else if (G.state === 'deathcam') { const w = dt * 0.32; updateDeathCam(dt); updateEnemies(w); updateGrenades(w); }
   if (M.online) { try { netTick(dt); } catch (err) { reportError(err); } }
+  if (inMatch() && G.state !== 'over' && G.state !== 'menu' && G.state !== 'plobby') { try { updateStreaks(dt); } catch (err) { reportError(err); } }
   const wdt = G.state === 'deathcam' && !inMatch() ? dt * 0.32 : dt;
   tickStats(dt); setScoreboard(kb('board') || pad.board);
   try { updatePolish(dt); } catch (err) { reportError(err); }
@@ -7676,7 +8093,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

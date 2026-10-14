@@ -5,11 +5,11 @@ module.exports = async p => {
   const shot = n => p.screenshot({ path: path.join(out, n + '.png') });
   const ev = (f, a) => p.evaluate(f, a), act = a => ev(a => window.__A.actions(a), a);
   await p.waitForTimeout(800); await shot('m1_menu');
-  await act('go-mp'); await p.waitForTimeout(600); await shot('m2_lobby_tdm');
+  await act('go-on'); await p.waitForTimeout(600); await shot('m2_lobby');
   await act('modes'); await p.waitForTimeout(400); await shot('m3_modes');
-  await ev(() => document.querySelector('#modeGrid [data-mode="ffa"]').click()); await p.waitForTimeout(400); await shot('m4_lobby_ffa');
+  await ev(() => document.querySelector('#modeGrid [data-mode="offa"]').click()); await p.waitForTimeout(400); await act('custom'); await p.waitForTimeout(400); await shot('m4_custom');  await act('cus-back');
   await act('streaks'); await p.waitForTimeout(400); await shot('m5_streaks');
-  await act('stk-back'); await act('lobby-back'); await act('go-on'); await p.waitForTimeout(500); await shot('m6_lobby_online');
+  await act('stk-back'); await p.waitForTimeout(400); await shot('m6_lobby_ffa');
   // in game: earn streaks, call a UAV and a mortar
   const r = await ev(async () => {
     const A = window.__A; A.LOBBY.mode = 'tdm'; A.startMatch('tdm', { score: 999, time: 0, perTeam: 6, custom: true, map: 'docks' }); A.G.spawnProt = 1e9; A.G.health = 1e9;

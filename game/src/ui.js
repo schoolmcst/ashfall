@@ -12,6 +12,9 @@ function lockPointer() { try { const r = renderer.domElement.requestPointerLock 
 /* ------------------------------------------------------------------ settings UI */
 const pct = v => v + '%';
 const SCHEMA = {
+  ACCOUNT: [
+    { t: 'text', name: 'CALLSIGN', hint: 'Your name in online matches and on the scoreboard (14 letters max)' },
+  ],
   VIDEO: [
     { k: 'quality', t: 'seg', name: 'GRAPHICS PRESET', hint: 'AUTO picks ' + AUTO_TIER.toUpperCase() + ' for this graphics card. Texture detail changes apply on next launch', opts: [['auto', 'AUTO'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
     { k: 'renderScale', t: 'range', name: 'RENDER SCALE', hint: 'Lower this if the game runs slowly', min: 50, max: 100, step: 5, fmt: pct },
@@ -97,7 +100,13 @@ function renderSettings() {
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
     if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
     const ctl = document.createElement('div'); ctl.className = 'ctl';
-    if (it.t === 'range') {
+    if (it.t === 'text') {
+      const i = document.createElement('input'); i.className = 'set-text'; i.maxLength = 14; i.value = NET.nick; i.spellcheck = false; i.autocomplete = 'off';
+      i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') i.blur(); }; i.onkeyup = e => e.stopPropagation();
+      i.oninput = () => { NET.nick = cleanNick(i.value); try { localStorage.setItem(NICK_KEY, NET.nick); } catch (e) {} };
+      i.onblur = () => { i.value = NET.nick; };
+      ctl.appendChild(i);
+    } else if (it.t === 'range') {
       const r = document.createElement('input'); r.type = 'range'; r.min = it.min; r.max = it.max; r.step = it.step; r.value = S[it.k];
       const n = document.createElement('span'); n.className = 'num'; n.textContent = it.fmt(S[it.k]);
       r.oninput = () => { S[it.k] = +r.value; n.textContent = it.fmt(S[it.k]); applySetting(it.k); };
@@ -137,11 +146,14 @@ function actions(act) {
   switch (act) {
     case 'deploy': case 'play': toLobby(); break;
     case 'nav-play': showScreen('menu'); break;
+    case 'quit': try { window.close(); } catch (e) {} break;
     case 'go-mp': if (MODES[LOBBY.mode].online || LOBBY.mode === 'surv') LOBBY.mode = LOBBY.lastOff && LOBBY.lastOff !== 'surv' ? LOBBY.lastOff : 'tdm'; saveLobby(); toLobby(); focusFirst('.cod-go'); break;
     case 'go-on': if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm'; saveLobby(); toLobby(); focusFirst('.cod-go'); break;
     case 'go-surv': LOBBY.mode = 'surv'; saveLobby(); startMatch('surv', { map: LOBBY.map }); break;
     case 'modes': openModes(); break;
-    case 'modes-back': renderLobby(); showScreen('lobby'); focusFirst('.cod-row.big'); break;
+    case 'mode-': lobbyTab(-1); break;
+    case 'mode+': lobbyTab(1); break;
+    case 'modes-back': renderLobby(); showScreen('lobby'); focusFirst('.cod-go'); break;
     case 'lob-start': startMatch(LOBBY.mode); break;
     case 'lobby-back': showScreen('menu'); break;
     case 'custom': cusReturn = curScreen === 'lobby' ? 'lobby' : 'menu'; renderCustom(); showScreen('custom'); break;
@@ -213,6 +225,7 @@ function adjustFocused(d) {
   else if (a.getAttribute && a.getAttribute('data-act') === 'diff-') { cycleDiff(d); }
   else if (a.getAttribute && /^diff/.test(a.getAttribute('data-act') || '')) cycleDiff(d);
   else if (a.getAttribute && /^class/.test(a.getAttribute('data-act') || '')) cycleClass(d);
+  else if (a.classList && a.classList.contains('cod-go')) lobbyTab(d);
 }
 
 /* ------------------------------------------------------------------ input */
@@ -228,8 +241,8 @@ addEventListener('keydown', e => {
     if (!curScreen) return;
     if (e.code === 'ArrowDown') { moveFocus(1); e.preventDefault(); }
     else if (e.code === 'ArrowUp') { moveFocus(-1); e.preventDefault(); }
-    else if (e.code === 'ArrowRight' && document.activeElement && (document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(1); e.preventDefault(); }
-    else if (e.code === 'ArrowLeft' && document.activeElement && (document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(-1); e.preventDefault(); }
+    else if (e.code === 'ArrowRight' && document.activeElement && (document.activeElement.classList.contains('cod-go') || document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(1); e.preventDefault(); }
+    else if (e.code === 'ArrowLeft' && document.activeElement && (document.activeElement.classList.contains('cod-go') || document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(-1); e.preventDefault(); }
     else if (e.code === 'Escape') goBack();
     return;
   }
@@ -335,7 +348,7 @@ function pollPad(dt) {
     if (press(5)) throwGrenade();
     if (press(13) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
     if (press(11)) melee();
-    if (press(15)) stkUse();
+    if (press(12)) stkUse();
     const fwdPush = -my;
     if (S.padSprint === 'hold') pad.sprint = down(10);
     else if (S.padSprint === 'auto') { pad.autoT = fwdPush > 0.85 && mm > 0.92 ? (pad.autoT || 0) + dt : 0; pad.sprint = pad.autoT > 0.22 || (pad.sprint && fwdPush > 0.6) || press(10) || (pad.sprint && down(10)); }
@@ -367,7 +380,7 @@ function menuTab(d) {
   else if (curScreen === 'menu') cycleClass(d);
 }
 function menuMove(d) {
-  const a = document.activeElement, adjustable = a && (a.type === 'range' || (a.classList && a.classList.contains('sw')) || (a.parentElement && a.parentElement.classList.contains('seg')) || /^(diff|class)/.test((a.getAttribute && a.getAttribute('data-act')) || ''));
+  const a = document.activeElement, adjustable = a && ((a.classList && a.classList.contains('cod-go')) || a.type === 'range' || (a.classList && a.classList.contains('sw')) || (a.parentElement && a.parentElement.classList.contains('seg')) || /^(diff|class)/.test((a.getAttribute && a.getAttribute('data-act')) || ''));
   if ((d === 'left' || d === 'right') && adjustable && curScreen !== 'loadout') { adjustFocused(d === 'right' ? 1 : -1); return; }
   spatialFocus(d);
 }

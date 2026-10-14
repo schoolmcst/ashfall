@@ -59,7 +59,7 @@
   .logo.cod-logo{font-size:30px;letter-spacing:.14em;padding-bottom:14px;line-height:1}.cod-logo .beta-tag{font-size:9px;margin-top:4px}
   .cod-title{padding-bottom:12px}.cod-title small{display:block;font-size:11px;letter-spacing:.4em;color:var(--accent)}.cod-title b{font-size:26px;letter-spacing:.24em}
   .cod-nav{display:flex;gap:4px;flex:1;align-self:flex-end}
-  .cod-tab{pointer-events:auto;cursor:pointer;background:none;border:0;border-bottom:3px solid transparent;color:var(--dim);font:700 14px/1 inherit;font-family:inherit;letter-spacing:.28em;padding:14px 16px 16px}
+  .cod-tab{white-space:nowrap;pointer-events:auto;cursor:pointer;background:none;border:0;border-bottom:3px solid transparent;color:var(--dim);font:700 14px/1 inherit;font-family:inherit;letter-spacing:.28em;padding:14px 16px 16px}
   .cod-tab:hover,.cod-tab:focus,.cod-tab.on{outline:0;color:#fff;border-bottom-color:var(--accent)}.cod-tab.on{color:var(--accent)}
   .cod-card{align-self:center;display:flex;gap:14px;align-items:center;padding:8px 14px;margin-bottom:12px;border:1px solid var(--line);background:rgba(0,0,0,.45);font-size:11px;letter-spacing:.18em;color:var(--dim)}
   .cod-card .cs{font-size:15px;font-weight:700;color:#fff;letter-spacing:.14em}.cod-card .em{width:34px;height:34px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#7a5a1a);color:#111;font-weight:800;font-size:14px}
@@ -72,6 +72,13 @@
   .cod-tile:hover,.cod-tile:focus{outline:0;background:linear-gradient(90deg,rgba(224,180,74,.28),rgba(224,180,74,.04));border-color:rgba(224,180,74,.5);transform:translateX(6px)}.cod-tile:hover::before,.cod-tile:focus::before,.cod-tile.primary::before{background:var(--accent)}
   .cod-tile.primary b{color:var(--accent)}
   .cod-opts .row-opt{margin:6px 0}
+  .cod-main{gap:14px}.cod-tile.exit{padding:12px 22px 12px 26px}.cod-tile.exit b{font-size:16px;margin:0;color:var(--dim)}
+  .cod-news{border:1px solid var(--line);background:rgba(0,0,0,.5)}.cn-h{padding:10px 16px;font-size:11px;letter-spacing:.35em;color:var(--accent);border-bottom:1px solid var(--line)}
+  .cn-body{max-height:230px;overflow:auto;padding:4px 0}.cn-v{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.cn-v:last-child{border-bottom:0}
+  .cn-v b{font-size:13px;letter-spacing:.2em;color:#fff}.cn-v b em{font-style:normal;font-size:9px;letter-spacing:.2em;color:#111;background:var(--accent);padding:2px 5px;margin-left:8px;vertical-align:2px}
+  .cn-v small{float:right;font-size:10px;letter-spacing:.15em;color:var(--dim)}.cn-v ul{margin:6px 0 0;padding-left:16px;font-size:12px;line-height:1.45;color:var(--dim)}
+  .cus-priv{margin:10px 26px 4px;padding:12px 14px;border:1px solid rgba(224,180,74,.4);background:rgba(224,180,74,.06);text-align:left}.cus-priv .cp-h{font-size:11px;letter-spacing:.3em;color:var(--accent);margin-bottom:4px}
+  .cus-sub{margin:10px 26px 0;font-size:11px;letter-spacing:.3em;color:var(--accent);text-align:left}
   .cod-foot{display:flex;align-items:center;gap:20px;padding:12px 3vw;border-top:1px solid var(--line);background:rgba(0,0,0,.4);font-size:11px;letter-spacing:.2em;color:var(--dim)}.cod-foot span{margin-left:auto}
   .lnk{pointer-events:auto;cursor:pointer;background:none;border:0;color:var(--dim);font:600 12px/1 inherit;font-family:inherit;letter-spacing:.25em;padding:6px 0}.lnk:hover,.lnk:focus{outline:0;color:var(--accent)}
   .cod-lob{flex:1;display:grid;grid-template-columns:minmax(360px,520px) 1fr;gap:3vw;padding:22px 3vw;min-height:0}
@@ -86,6 +93,11 @@
   .cod-go{width:100%!important;max-width:none!important;text-align:center!important;font-size:22px!important;padding:18px!important;margin:8px 0 0!important;background:linear-gradient(90deg,var(--accent),#b8892c)!important;color:#141414!important;border:0!important;letter-spacing:.32em!important;font-weight:800!important}
   .cod-go:hover,.cod-go:focus{filter:brightness(1.12);padding-left:18px!important}.cod-go[disabled]{opacity:.45;filter:grayscale(1)}
   .cod-small{display:flex;gap:18px;margin-top:4px}
+  .set-text{pointer-events:auto;font:inherit;font-size:15px;letter-spacing:.12em;padding:8px 10px;width:240px;background:rgba(0,0,0,.35);border:1px solid var(--line);color:#fff;text-transform:uppercase}.set-text:focus{outline:0;border-color:var(--accent)}
+  .cod-play{display:flex;align-items:stretch;gap:0;margin-bottom:2px}.cod-play .cod-go{flex:1;margin:0!important;display:flex;flex-direction:column;align-items:center;gap:4px;padding:14px 10px!important}
+  .cod-go small{font-size:10px!important;letter-spacing:.25em;opacity:.75;font-weight:700}.cod-go b{font-size:26px;letter-spacing:.2em}.cod-go span{font-size:12px;letter-spacing:.4em;opacity:.85}
+  .cod-arrow{pointer-events:auto;cursor:pointer;width:54px;border:0;background:rgba(0,0,0,.55);color:var(--accent);font-size:34px;font-family:inherit}.cod-arrow:hover{background:rgba(224,180,74,.25);color:#fff}
+  .cod-hint{font-size:10px;letter-spacing:.25em;color:var(--dim);text-align:center;margin-bottom:6px}
   .cod-roster{align-self:start;justify-self:end;width:min(520px,100%);display:flex;flex-direction:column;gap:12px}
   .ros-h{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.3em;color:var(--dim);padding:0 4px}.ros-h b{color:var(--ink)}
   .ros-team{border:1px solid var(--line);background:rgba(0,0,0,.45)}.ros-team .tn{padding:8px 12px;font-size:11px;letter-spacing:.3em;border-bottom:1px solid var(--line);color:var(--tc,var(--accent))}
@@ -368,13 +380,12 @@
   </div>
   <div class="cod-main">
     <div class="cod-tiles">
-      <button class="cod-tile primary" data-act="go-on"><small>ONLINE &middot; REAL PLAYERS</small><b>MULTIPLAYER</b><span id="tileMp">QUICK PLAY &middot; PRIVATE MATCHES</span></button>
-      <button class="cod-tile" data-act="custom"><small>SOLO &middot; VS BOTS</small><b>CUSTOM GAME</b><span>ANY MODE &middot; MAP &middot; BOTS &middot; TIME &middot; SURVIVAL BEST WAVE <i id="bestWave">0</i> <i id="bestScore" style="display:none">0</i></span></button>
+      <button class="cod-tile primary" data-act="go-on"><small>ONLINE &middot; REAL PLAYERS</small><b>MULTIPLAYER</b><span>QUICK PLAY &middot; CUSTOM &amp; PRIVATE MATCHES IN THE LOBBY</span></button>
+      <button class="cod-tile" data-act="settings"><small>VIDEO &middot; AUDIO &middot; CONTROLS &middot; KEYBINDS</small><b>SETTINGS</b><span>MAKE IT YOURS</span></button>
     </div>
-    <div class="cod-opts">
-      <div class="row-opt"><span>CLASS</span><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><span class="val" id="classVal">ASSAULT</span><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div>
-      <div class="row-opt"><span>BOT SKILL</span><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><span class="val" id="diffVal">REGULAR</span><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div>
-    </div>
+    <div class="cod-news"><div class="cn-h">NEWS &middot; PATCH NOTES</div><div class="cn-body" id="newsBody"></div></div>
+    <div class="cod-tiles"><button class="cod-tile exit" data-act="quit" id="quitBtn"><b>EXIT GAME</b></button></div>
+    <span id="bestWave" hidden>0</span><span id="bestScore" hidden>0</span><span id="classVal" hidden></span><span id="diffVal" hidden></span>
   </div>
   <div class="cod-foot"><button class="lnk" data-act="howto">HOW TO PLAY</button><button class="lnk" data-act="bench">BENCHMARK</button><button class="lnk" data-act="credits">CREDITS</button><span>ORIGINAL WORK OF FICTION &middot; BUILT WITH THREE.JS</span></div>
 </div>
@@ -528,7 +539,6 @@
     <div class="cod-title"><small id="lobKind">MULTIPLAYER</small><b>LOBBY</b></div>
     <nav class="cod-nav">
       <button class="cod-tab" data-act="lobby-back">&lsaquo; BACK</button>
-      <button class="cod-tab" data-act="custom">CUSTOM</button>
       <button class="cod-tab" data-act="loadout">WEAPONS</button>
       <button class="cod-tab" data-act="streaks">SCORESTREAKS</button>
       <button class="cod-tab" data-act="stats">CAREER</button>
@@ -563,9 +573,11 @@
 
 <div id="custom" class="screen center hide">
   <div class="panel">
-    <h2>CUSTOM GAME</h2>
+    <h2>CUSTOM</h2>
+    <div id="cusPriv"></div>
+    <div class="cus-sub">SOLO &middot; VS BOTS</div>
     <div class="body" id="cusBody"></div>
-    <div class="actions"><button class="btn" data-act="cus-back">BACK</button><button class="btn primary" data-act="cus-start">START CUSTOM GAME</button></div>
+    <div class="actions"><button class="btn" data-act="cus-back">BACK</button><button class="btn primary" data-act="cus-start">START SOLO GAME</button></div>
   </div>
 </div>
 

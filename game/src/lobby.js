@@ -12,7 +12,16 @@ function playerCard(st) {
   const kd = kdS(st.kills, st.deaths), nick = (typeof NET !== 'undefined' && NET.nick) || 'PLAYER';
   return `<div class="em">${nick.slice(0, 1)}</div><div><div class="cs">${nick}</div><span>K/D<b>${kd}</b></span> &nbsp; <span>WINS<b>${st.wins}</b></span> &nbsp; <span>MATCHES<b>${st.matches}</b></span></div>`;
 }
-function renderMenuCard() { const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true)); }
+function renderMenuCard() {
+  const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true));
+  const nb = $('newsBody'); if (nb && typeof NEWS !== 'undefined' && !nb._done) { nb._done = 1; nb.innerHTML = NEWS.map((v, i) => `<div class="cn-v"><b>${v.v} BETA${i === 0 ? '<em>NEW</em>' : ''}</b><small>${v.d}</small><ul>${v.n.map(n => `<li>${String(n).replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}</li>`).join('')}</ul></div>`).join(''); }
+  const q = $('quitBtn'); if (q) q.style.display = window.ASHFALL_APP ? '' : 'none';
+}
+function privCodeHtml() {
+  if (!NET.app) return `<div class="cus-priv"><div class="cp-h">PRIVATE MATCH &middot; ONLINE</div><div class="net-hint">Private code matches run in the desktop app.</div></div>`;
+  return `<div class="cus-priv"><div class="cp-h">PRIVATE MATCH &middot; ONLINE</div><div class="net-hint">Type a code and press HOST / JOIN. Friends type the same code. You get a lobby where the host picks the mode, map, bots and time limit.</div>` +
+    `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div><div class="net-lan" id="netLan"></div></div>`;
+}
 const modeGroup = k => MODES[k].online ? 'on' : 'off';
 function renderLobby(focusSel) {
   if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm';
@@ -24,14 +33,13 @@ function renderLobby(focusSel) {
   const goTxt = online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH';
   const m = MAPS[LOBBY.map];
   $('lobSel').innerHTML =
-    `<button class="cod-row big" data-act="modes"><small>GAME MODE</small><b>${d.name}</b><span>${modeRules(sel)}</span><i>&rsaquo;</i></button>` +
-    `<div class="cod-row"><small>MAP</small><b>ROTATING</b><span>every round is on a new map · pick your own in CUSTOM or a private match</span></div>` +
+    `<div class="cod-play"><button class="cod-arrow" data-act="mode-" aria-label="Previous mode" tabindex="-1">&lsaquo;</button>` +
+    `<button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}><small>${modeRules(sel)}</small><b>${d.name.replace(/^ONLINE /, '')}</b><span>${goTxt}</span></button>` +
+    `<button class="cod-arrow" data-act="mode+" aria-label="Next mode" tabindex="-1">&rsaquo;</button></div>` +
     `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${PERKS[c.k].name}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
     (stk ? `<button class="cod-row" data-act="streaks"><small>SCORESTREAKS</small><b>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => stkIcon(id)).join('')}</b><span>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => `${STREAKS[id].name} ${STREAKS[id].cost}`).join(' · ')}</span><i>&rsaquo;</i></button>` : '') +
     (!online && sel !== 'surv' ? `<div class="cod-row"><small>BOT SKILL</small><b>${SKILL[matchCfg(sel).skill].name}</b><span>change it here or in Settings</span><div class="arw"><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div></div>` : '') +
-    `<button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}>${goTxt}</button>` +
-    (online ? netLobbyHtml() : '') +
-    `<div class="cod-small"><button class="lnk" data-act="custom">CUSTOM GAME (SOLO VS BOTS)</button><button class="lnk" data-act="stats">CAREER STATS</button></div>`;
+    `<button class="cod-row" data-act="custom"><small>PRIVATE CODE MATCHES &middot; SOLO VS BOTS</small><b>CUSTOM</b><span>host or join with a code, or play any mode and map against bots</span><i>&rsaquo;</i></button>` + (online ? netLobbyHtml() : '');
   $('lobRoster').innerHTML = rosterHtml(sel);
   if (online) netLobbyWire();
   if (focusSel) focusFirst(focusSel);
@@ -64,7 +72,7 @@ function lobbyMapRow(d) {
   return `<div class="lob-map"><span>MAP${d.online && NET.app ? ' (IF YOU HOST)' : ''}</span><div class="lob-cpick"><button class="mini" data-act="map-" aria-label="Previous map">&lsaquo;</button><b>${name}</b><button class="mini" data-act="map+" aria-label="Next map">&rsaquo;</button></div><small>${sub}</small></div>`;
 }
 function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
-function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-row.big'); }
+function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-go'); }
 
 /* ---------- custom game */
 const CUS_KEY = 'ashfall.custom.v1';
@@ -85,6 +93,7 @@ function renderCustom() {
   else if (k !== 'surv') rows.push({ name: 'PLAYERS', hint: 'You plus bots', t: 'range', min: 2, max: 12, step: 1, get: () => CUS.players, set: v => { CUS.players = v; }, fmt: v => v });
   if (k !== 'surv') rows.push({ name: 'BOT SKILL', t: 'seg', opts: Object.keys(SKILL).map(s => [s, SKILL[s].name]), get: () => CUS.skill, set: v => { CUS.skill = v; } });
   if (k !== 'surv') rows.push({ name: 'HARDCORE', hint: '30 health for everyone: one or two hits kill', t: 'toggle', get: () => CUS.hardcore, set: v => { CUS.hardcore = v; } });
+  const cp = $('cusPriv'); if (cp) { cp.innerHTML = privCodeHtml(); if (NET.app) { netLobbyWire(); const g = $('netCodeGo'); if (g) g.onclick = () => { sfx.ui(); if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm'; netGo('code'); }; } }
   const body = $('cusBody'); body.innerHTML = `<div class="cus-desc">${d.desc}</div>`;
   for (const it of rows) {
     const row = document.createElement('div'); row.className = 'setrow';

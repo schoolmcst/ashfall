@@ -24,12 +24,10 @@ const netReady = () => NET.app || !!NET.ns;
 
 /* ---------- lobby panel for the online modes */
 function netLobbyHtml() {
-  if (NET.app) return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label></div>` +
-    `<div class="net-hint">Quick Play finds a public match; bots fill empty spots. A private code opens a lobby where the host picks the mode, map, bots and time limit, then starts when everyone is in.</div>` +
-    `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div>` +
+  if (NET.app) return     `<div class="net-hint">Quick Play finds a public match; bots fill empty spots. Private code matches are under CUSTOM.</div>` +
     `<div class="net-lan" id="netLan"></div><div class="net-svc" id="netSvc">MATCH SERVICE: CHECKING…</div><div class="net-count" id="netCount"></div>`;
   if (!NET.ns) return `<div class="net-off">Online play runs when this game is open on claude.ai. Share the page with friends (they need a Claude account), then everyone picks the same room code.</div>`;
-  return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label>` +
+  return `<div class="net-form">` +
     `<label>ROOM CODE<input id="netCode" maxlength="20" value="${NET.code}" autocomplete="off" spellcheck="false"></label></div><div class="net-count" id="netCount"></div>`;
 }
 function netLobbyWire() {
@@ -46,6 +44,7 @@ function netLobbyWire() {
 }
 // start a match a particular way (the big lobby button is Quick Play)
 function netGo(kind, slot) {
+  if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm';
   if (kind === 'code' && (!NET.code || NET.code === 'public')) { const i = $('netCode'); if (i) { i.focus(); i.placeholder = 'type a code first'; } return; }
   NET.kind = kind; NET.slot = slot || ''; startMatch(LOBBY.mode); NET.kind = 'quick';
 }
