@@ -547,7 +547,7 @@ function tick(dt) {
     const w = WEAPONS[G.cur];
     if (G.reloading) { G.reloadT -= dt; if (G.reloadT <= 0) finishReload(); }
     const want = (w.auto ? isFiring() : clickQueued) && !(G.holdT > 0);
-    if (want && !sprint && !G.reloading && G.swapT <= 0 && G.fireT <= 0 && G.state === 'playing') {
+    if (want && !sprint && !G.reloading && G.swapT <= 0 && G.fireT <= 0 && G.state === 'playing' && G.time - (G.sprintEnd || -9) > (perk('endure') ? 0.09 : 0.15)) {
       if (w.ammo > 0) shoot(moving); else { sfx.click(); G.fireT = 0.25; startReload(); }
     }
     else if (G.burstLeft > 0 && G.fireT <= 0 && !G.reloading && G.swapT <= 0 && w.ammo > 0 && G.state === 'playing') shoot(moving);

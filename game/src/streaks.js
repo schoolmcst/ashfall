@@ -29,7 +29,7 @@ function stkReset() { STK.pts = 0; STK.got.clear(); STK.have = []; STK.uavT = 0;
 function stkDeath() { STK.pts = 0; STK.got.clear(); stkHud(true); }
 function stkAdd(pts) {
   if (!stkOn()) return;
-  STK.pts += pts;
+  STK.pts += pts * (perk('hard') ? 1.2 : 1);
   const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
   for (const id of list) if (STK.pts >= STREAKS[id].cost && !STK.got.has(id)) {
     STK.got.add(id); STK.have.push(id);

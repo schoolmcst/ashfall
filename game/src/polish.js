@@ -108,7 +108,7 @@ function updateEnemyFootsteps() {
     const x = e.group.position.x, z = e.group.position.z;
     if (e.fsX === undefined) { e.fsX = x; e.fsZ = z; e.fsD = Math.random(); continue; }
     e.fsD += Math.hypot(x - e.fsX, z - e.fsZ); e.fsX = x; e.fsZ = z;
-    if (e.fsD > 0.8) { e.fsD = 0; const d = Math.hypot(x - P.x, z - P.z); if (d < 22) sfx.estep(at(x, z, 6)); }
+    if (e.fsD > 0.8) { e.fsD = 0; if (e.silent) continue; const d = Math.hypot(x - P.x, z - P.z), aw = perk('aware'); if (d < (aw ? 38 : 22)) sfx.estep(at(x, z, aw ? 11 : 6)); }
   }
 }
 

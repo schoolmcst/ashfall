@@ -464,14 +464,16 @@ function advStatsHtml(cur, pv) {
     return `<div><span>${label}</span><b class="${good ? 'up' : bad ? 'down' : ''}">${fmt(pv ? b : a)}</b></div>`;
   }).join('') + `</div>`;
 }
-const LO_ROWS = [['p', 'PRIMARY WEAPON'], ['pa', 'PRIMARY ATTACHMENTS'], ['s', 'SECONDARY WEAPON'], ['sa', 'SECONDARY ATTACHMENTS'], ['e', 'EQUIPMENT'], ['k', 'PERK']];
+const LO_ROWS = [['p', 'PRIMARY WEAPON'], ['pa', 'PRIMARY ATTACHMENTS'], ['s', 'SECONDARY WEAPON'], ['sa', 'SECONDARY ATTACHMENTS'], ['e', 'EQUIPMENT'], ['k', 'PERK 1'], ['k2', 'PERK 2'], ['k3', 'PERK 3']];
 const LO_HELP = {
   p: 'Pick the main gun for this class. Use the tabs to switch weapon type. Bars on the right compare it with the gun you have now: green is better, red is worse.',
   s: 'Pick a backup: a pistol to switch to when your main gun runs dry, or a launcher for explosives.',
   pa: 'Choose a part slot along the top, then a part. Every part has a plus and a minus, listed under it and shown on the bars.',
   sa: 'Choose a part slot along the top, then a part. Every part has a plus and a minus, listed under it and shown on the bars.',
   e: 'Thrown with G (keyboard) or RB (controller). You get a few per life and more from ammo crates.',
-  k: 'A passive bonus that is always on while you play this class.',
+  k: 'PERK 1 (blue): a passive bonus that is always on while you play this class. One perk from each of the three tiers.',
+  k2: 'PERK 2 (red): a passive bonus that is always on while you play this class. One perk from each of the three tiers.',
+  k3: 'PERK 3 (green): a passive bonus that is always on while you play this class. One perk from each of the three tiers.',
 };
 const roleOf = d => d.cat === 'la' ? 'EXPLOSIVE' : d.eff < 21 ? 'CLOSE RANGE' : d.eff < 50 ? 'MID RANGE' : 'LONG RANGE';
 const inGame = () => G.state === 'paused' || G.state === 'playing';
@@ -483,14 +485,14 @@ function loRowValue(r) {
   if (r === 'p' || r === 's') { const d = loDef(r); return `${d.name}<small>${CATS[d.cat].short}</small>`; }
   if (r === 'pa' || r === 'sa') { const d = loDef(r), n = fittedCount(d); return n ? `${n} OF ${slotsFor(d).length} FITTED` : 'FACTORY PARTS'; }
   if (r === 'e') return `${EQUIP[c.e].name}<small>×${EQUIP[c.e].count}</small>`;
-  return PERKS[c.k].name;
+  return (PERKS[c[r]] || PERKS[PERK_DEF[PERK_KEYS.indexOf(r) + 1]]).name;
 }
 const miniBar = (v, lo, hi) => `<i style="width:${(clamp((v - lo) / (hi - lo), 0.04, 1) * 100).toFixed(0)}%"></i>`;
 function renderLoadout(focusSel) {
   const c = activeClass();
   $('loTabs').innerHTML = CLASSES.map((k, i) => (loRename && i === ACTIVE_CLASS ? `<input class="lo-rename" id="loRenameIn" maxlength="16" value="${k.name.replace(/"/g, '')}">` : `<button class="tab${i === ACTIVE_CLASS ? ' on' : ''}" data-lo-c="${i}">${k.name}</button><button class="tab lo-pen1" data-lo-ren1="${i}" title="Rename ${k.name.replace(/"/g, '')}" aria-label="Rename ${k.name.replace(/"/g, '')}">&#9998;</button>`)).join('') + (loRename ? `<button class="tab lo-pen" data-lo-ren="1">SAVE NAME</button>` : '');
-  $('loSlots').innerHTML = LO_ROWS.map(([r, label]) => `<button class="lo-slot${r === loRow ? ' on' : ''}${r.length === 2 ? ' sub' : ''}" data-lo-r="${r}"><span>${label}</span><b>${loRowValue(r)}</b></button>`).join('');
-  const note = $('loNote'); if (note) note.textContent = inGame() && G.equipped && (G.equipped.p !== c.p || G.equipped.s !== c.s || G.equipped.e !== c.e || G.equipped.k !== c.k) ? 'CLASS CHANGES APPLY WHEN YOU NEXT SPAWN' : '';
+  $('loSlots').innerHTML = LO_ROWS.map(([r, label]) => `<button class="lo-slot${r === loRow ? ' on' : ''}${r === 'pa' || r === 'sa' ? ' sub' : ''}" data-lo-r="${r}"><span>${label}</span><b>${loRowValue(r)}</b></button>`).join('');
+  const note = $('loNote'); if (note) note.textContent = inGame() && G.equipped && (G.equipped.p !== c.p || G.equipped.s !== c.s || G.equipped.e !== c.e || PERK_KEYS.some(k => G.equipped[k] !== c[k])) ? 'CLASS CHANGES APPLY WHEN YOU NEXT SPAWN' : '';
   const help = $('loHelp'); if (help) help.textContent = LO_HELP[loRow];
   let html = '';
   if (loRow === 'p' || loRow === 's') {
@@ -512,7 +514,7 @@ function renderLoadout(focusSel) {
         (pc.pros.length || pc.cons.length ? `<div class="lo-pc">${pc.pros.map(p => `<span class="pro">+ ${p}</span>`).join('')}${pc.cons.map(x => `<span class="con">− ${x}</span>`).join('')}</div>` : '') + '</button>';
     }).join('');
   } else if (loRow === 'e') html = Object.keys(EQUIP).map(k => `<button class="lo-opt${k === c.e ? ' on' : ''}" data-lo-e="${k}"><div class="lo-name">${EQUIP[k].name} <small>×${EQUIP[k].count}</small>${k === c.e ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${EQUIP[k].desc}</div></button>`).join('');
-  else html = Object.keys(PERKS).map(k => `<button class="lo-opt${k === c.k ? ' on' : ''}" data-lo-k="${k}"><div class="lo-name">${PERKS[k].name}${k === c.k ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${PERKS[k].desc}</div></button>`).join('');
+  else { const tier = PERK_KEYS.indexOf(loRow) + 1; html = Object.keys(PERKS).filter(k => PERKS[k].t === tier).map(k => `<button class="lo-opt perk-t${tier}${k === c[loRow] ? ' on' : ''}" data-lo-k="${k}"><div class="lo-name">${PERKS[k].name}${k === c[loRow] ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${PERKS[k].desc}</div></button>`).join(''); }
   $('loOpts').innerHTML = html;
   renderLoStats();
   const q = sel => $('loadout').querySelectorAll(sel);
@@ -537,13 +539,13 @@ function renderLoadout(focusSel) {
     b.onblur = b.onmouseleave = () => { loPreview = null; renderLoStats(); };
   }
   for (const b of q('[data-lo-e]')) b.onclick = () => { c.e = b.dataset.loE; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-e="${c.e}"]`); };
-  for (const b of q('[data-lo-k]')) b.onclick = () => { c.k = b.dataset.loK; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-k="${c.k}"]`); };
+  for (const b of q('[data-lo-k]')) b.onclick = () => { const key = PERK_KEYS[PERKS[b.dataset.loK].t - 1]; c[key] = b.dataset.loK; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-k="${c[key]}"]`); };
   if (focusSel) focusFirst(focusSel);
 }
 function saveRename() { const i = $('loRenameIn'); if (i) { const v = i.value.replace(/[<>&"]/g, '').trim().toUpperCase().slice(0, 16); if (v) activeClass().name = v; saveClasses(); } loRename = false; sfx.ui(); renderLoadout(`#loTabs [data-lo-c="${ACTIVE_CLASS}"]`); }
 function selectClass(i) { ACTIVE_CLASS = (i + CLASSES.length) % CLASSES.length; saveClasses(); loPreview = loPrevW = null; loCat = null; loRename = false; sfx.ui(); renderLoadout(`#loTabs [data-lo-c="${ACTIVE_CLASS}"]`); }
 function focusFirst(sel) { setTimeout(() => { const el = document.querySelector && document.querySelector(sel); if (el && el.focus) try { el.focus(); el.scrollIntoView && el.scrollIntoView({ block: 'nearest' }); } catch (e) {} }, 0); }
-function loShown() { const row = loRow, base = row === 'e' || row === 'k' ? ARM[activeClass().p] : loDef(row); return { base, shown: loPrevW || base }; }
+function loShown() { const row = loRow, base = row === 'e' || PERK_KEYS.includes(row) ? ARM[activeClass().p] : loDef(row); return { base, shown: loPrevW || base }; }
 function renderLoStats() {
   const row = loRow, { base, shown } = loShown();
   const cur = computeStats(base), pv = loPrevW ? computeStats(loPrevW) : loPreview && (row === 'pa' || row === 'sa') ? computeStats(base, loPreview) : null;

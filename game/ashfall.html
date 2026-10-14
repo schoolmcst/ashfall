@@ -77,6 +77,7 @@
   .mc-r{display:flex;align-items:center;gap:10px;padding:6px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.mc-r:last-child{border-bottom:0}.mc-r .mc-n{pointer-events:auto;cursor:text;background:none;border:0;color:#fff;font:700 13px/1 inherit;font-family:inherit;letter-spacing:.18em;padding:4px 0;text-align:left;min-width:150px}.mc-r .mc-n:hover,.mc-r .mc-n:focus{outline:0;color:var(--accent)}.mc-r span{font-size:11px;letter-spacing:.08em;color:var(--dim)}.mc-r.on .mc-n::before{content:'★ ';color:var(--accent)}.mc-r input{pointer-events:auto;font:inherit;font-size:13px;letter-spacing:.16em;padding:3px 6px;background:rgba(0,0,0,.4);border:1px solid var(--accent);color:#fff;width:160px;text-transform:uppercase}
   .cn-body{max-height:230px;overflow:auto;padding:4px 0}.cn-v{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.cn-v:last-child{border-bottom:0}
   .cn-v b{font-size:13px;letter-spacing:.2em;color:#fff}.cn-v b em{font-style:normal;font-size:9px;letter-spacing:.2em;color:#111;background:var(--accent);padding:2px 5px;margin-left:8px;vertical-align:2px}
+  .lo-opt.perk-t1{border-left:3px solid #4ea6ff}.lo-opt.perk-t2{border-left:3px solid #ff5a4a}.lo-opt.perk-t3{border-left:3px solid #6fd06a}
   .cn-name{margin-top:6px;font-size:15px;font-weight:800;letter-spacing:.22em;color:var(--accent)}
   .cn-v small{float:right;font-size:10px;letter-spacing:.15em;color:var(--dim)}.cn-v ul{margin:6px 0 0;padding-left:16px;font-size:12px;line-height:1.45;color:var(--dim)}
   .cus-priv{margin:10px 26px 4px;padding:12px 14px;border:1px solid rgba(224,180,74,.4);background:rgba(224,180,74,.06);text-align:left}.cus-priv .cp-h{font-size:11px;letter-spacing:.3em;color:var(--accent);margin-bottom:4px}
@@ -3809,28 +3810,51 @@ const EQUIP = {
   semtex: { name: 'SEMTEX', desc: 'Sticks to walls, floors and enemies. Short 1.6 s fuse, smaller blast.', count: 2, max: 4, fuse: 1.6, sticky: true, color: 0x6b6a3a, glow: 0x30ff40 },
   stun: { name: 'STUN', desc: 'No damage. Enemies in the burst cannot aim or fire for a few seconds. Don’t look at it.', count: 3, max: 5, fuse: 1.4, color: 0x8a8f96 },
 };
+// three perk slots per class, one from each tier (blue / red / yellow, like CoD)
+// three perk slots per class, one from each tier (CoD-style perks, some renamed). Every one is wired into the game.
 const PERKS = {
-  none: { name: 'NONE', desc: 'No perk.' },
-  scavenger: { name: 'SCAVENGER', desc: 'Ammo crates give twice the rounds and always a grenade.' },
-  quick: { name: 'QUICK HANDS', desc: 'Reload 20% faster and swap weapons faster.' },
-  light: { name: 'LIGHTWEIGHT', desc: 'Move 8% faster. No camera jolt on hard landings.' },
-  steady: { name: 'STEADY AIM', desc: 'Hip-fire spread 28% tighter.' },
-  tough: { name: 'TOUGHNESS', desc: 'Health starts regenerating after 3 s instead of 5.' },
+  // PERK 1 (blue)
+  scavenger: { t: 1, name: 'SCAVENGER', desc: 'Ammo crates give twice the rounds and always a grenade. Kills top up 1 magazine of reserve ammo.' },
+  light: { t: 1, name: 'LIGHTWEIGHT', desc: 'Move 7% faster. No camera jolt on hard landings.' },
+  flak: { t: 1, name: 'BLAST VEST', desc: 'Take 35% less damage from grenades, rockets, mortars and barrels.' },
+  ghost: { t: 1, name: 'SHADOW', desc: 'Bots take 30% longer to lock on to you once they see you.' },
+  endure: { t: 1, name: 'ENDURANCE', desc: 'Sprint 6% faster and recover from a sprint 40% quicker (shoot sooner after sprinting).' },
+  // PERK 2 (red)
+  quick: { t: 2, name: 'QUICK HANDS', desc: 'Reload 20% faster.' },
+  amped: { t: 2, name: 'AMPED', desc: 'Swap weapons 35% faster and aim down sights 12% faster.' },
+  hard: { t: 2, name: 'HARDWIRED', desc: 'Scorestreak points come in 20% faster.' },
+  steady: { t: 2, name: 'STEADY AIM', desc: 'Hip-fire spread 25% tighter.' },
+  prowl: { t: 2, name: 'PROWLER', desc: 'Move 35% faster while aiming down sights.' },
+  // PERK 3 (green)
+  tough: { t: 3, name: 'RECOVERY', desc: 'Health starts coming back after 3 s instead of 5.' },
+  dead: { t: 3, name: 'DEAD SILENCE', desc: 'Your footsteps are silent for online players and much quieter for you.' },
+  aware: { t: 3, name: 'AWARENESS', desc: 'Enemy footsteps are louder and heard from 70% further away.' },
+  mask: { t: 3, name: 'TACTICAL MASK', desc: 'Stun flashes are 65% weaker and explosions barely shake your view.' },
+  iron: { t: 3, name: 'IRON SKIN', desc: 'Getting shot knocks your aim 70% less.' },
 };
+const PERK_KEYS = ['k', 'k2', 'k3'], PERK_DEF = { 1: 'scavenger', 2: 'quick', 3: 'tough' };
+const perksOf = c => PERK_KEYS.map(k => c[k]).filter(k => PERKS[k]);
 const DEFAULT_CLASSES = [
-  { name: 'ASSAULT', p: 'marc', s: 'sidearm', e: 'frag', k: 'scavenger' },
-  { name: 'CLOSE QUARTERS', p: 'viper', s: 'stinger', e: 'stun', k: 'light' },
-  { name: 'SUPPORT', p: 'anvil', s: 'hellfire', e: 'frag', k: 'tough' },
-  { name: 'RECON', p: 'hawkeye', s: 'deadeye', e: 'semtex', k: 'steady' },
-  { name: 'BREACHER', p: 'breacher', s: 'magnum', e: 'stun', k: 'quick' },
+  { name: 'ASSAULT', p: 'marc', s: 'sidearm', e: 'frag', k: 'scavenger', k2: 'quick', k3: 'tough' },
+  { name: 'CLOSE QUARTERS', p: 'viper', s: 'stinger', e: 'stun', k: 'light', k2: 'amped', k3: 'dead' },
+  { name: 'SUPPORT', p: 'anvil', s: 'hellfire', e: 'frag', k: 'flak', k2: 'hard', k3: 'iron' },
+  { name: 'RECON', p: 'hawkeye', s: 'deadeye', e: 'semtex', k: 'ghost', k2: 'steady', k3: 'aware' },
+  { name: 'BREACHER', p: 'breacher', s: 'magnum', e: 'stun', k: 'endure', k2: 'prowl', k3: 'mask' },
 ];
+// saves from before 3 slots had one perk in 'k': keep it in its own tier's slot
+function fixPerks(c, d) {
+  const old = c.k;
+  for (let t = 1; t <= 3; t++) { const key = PERK_KEYS[t - 1]; if (!PERKS[c[key]] || PERKS[c[key]].t !== t) c[key] = d[key]; }
+  if (PERKS[old] && PERKS[old].t !== 1) c[PERK_KEYS[PERKS[old].t - 1]] = old;
+  return c;
+}
 const CLASS_KEY = 'ashfall.classes.v1';
 let CLASSES = DEFAULT_CLASSES.map(c => Object.assign({}, c)), ACTIVE_CLASS = 0, ATTS = {};
 function loadClasses() {
   try {
     const o = JSON.parse(localStorage.getItem(CLASS_KEY) || 'null');
     if (o && Array.isArray(o.classes)) {
-      CLASSES = DEFAULT_CLASSES.map((d, i) => { const c = Object.assign({}, d, o.classes[i] || {}); if (!ARM[c.p] || CATS[ARM[c.p].cat].slot !== 'primary') c.p = d.p; if (!ARM[c.s] || CATS[ARM[c.s].cat].slot !== 'secondary') c.s = d.s; if (!EQUIP[c.e]) c.e = d.e; if (!PERKS[c.k]) c.k = d.k; return c; });
+      CLASSES = DEFAULT_CLASSES.map((d, i) => { const c = Object.assign({}, d, o.classes[i] || {}); if (!ARM[c.p] || CATS[ARM[c.p].cat].slot !== 'primary') c.p = d.p; if (!ARM[c.s] || CATS[ARM[c.s].cat].slot !== 'secondary') c.s = d.s; if (!EQUIP[c.e]) c.e = d.e; return fixPerks(c, d); });
       ACTIVE_CLASS = clamp(o.active | 0, 0, CLASSES.length - 1); ATTS = o.atts && typeof o.atts === 'object' ? o.atts : {};
       return;
     }
@@ -4004,11 +4028,11 @@ function equipClass(cls) {
   setGunShader(S.gunShader);
   WEAPONS.forEach((w, i) => applyLoadout(i));
   WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = Math.min(w.reserveMax, w.def.reserve); });
-  G.equip = EQUIP[cls.e] ? cls.e : 'frag'; G.perk = PERKS[cls.k] ? cls.k : 'none'; G.equipped = cls;
+  G.equip = EQUIP[cls.e] ? cls.e : 'frag'; G.perks = perksOf(cls); G.equipped = cls;
   G.cur = 0; G.burstLeft = 0;
   try { renderer.compile(vmScene, vmCamera); } catch (e) {}
 }
-const perk = k => G.perk === k;
+const perk = k => !!(G.perks && G.perks.includes(k)) && !(typeof M !== 'undefined' && M && M.mode === 'gun' && false);
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* ------------------------------------------------------------------ rumble */
@@ -4021,8 +4045,10 @@ function rumble(strong, weak, ms) {
 
 /* ------------------------------------------------------------------ player */
 const vig = $('vignette'), dmgdir = $('dmgdir');
-function hurtPlayer(dmg, fx, fz) {
+function hurtPlayer(dmg, fx, fz, boom) {
   if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0 || G.holdT > 0) return;
+  if (boom && perk('flak')) dmg *= 0.65;
+  if (!boom && G.state === 'playing') { const kn = perk('iron') ? 0.3 : 1; P.pitch += rnd(0.004, 0.012) * kn; P.yaw += rnd(-0.008, 0.008) * kn; }   // getting shot knocks your aim
   G.health -= dmg; G.lastHit = G.time; G.shake = Math.max(G.shake, 0.012);
   vig.style.opacity = clamp(0.45 + ((G.maxHp || 100) - G.health) / 120 * (100 / (G.maxHp || 100)), 0, 1);
   setTimeout(() => { vig.style.opacity = G.health < 0.35 * (G.maxHp || 100) ? 0.5 : 0; }, 160);
@@ -4046,7 +4072,8 @@ function updatePlayer(dt) {
   const str = hold ? 0 : clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
   const moving = fwd !== 0 || str !== 0;
   const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
-  let speed = (sprint ? 8 : crouch ? 2.6 : G.adsOn ? 3.2 : 5.2) * (w.move || 1) * (perk('light') ? 1.08 : 1);
+  if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
+  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1);
   if (G.reloading) speed *= 0.85;
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
@@ -4063,7 +4090,7 @@ function updatePlayer(dt) {
   if (P.y <= gy) { if (!P.onGround && P.vy < -2) G.landT = clamp(-P.vy / 11, 0.25, 1); if (!P.onGround && P.vy < -4 && !perk('light')) { G.shake = Math.max(G.shake, 0.01); sfx.thud({ vol: 0.8 }); } P.y = gy; P.vy = 0; P.onGround = true; } else if (P.y > gy + 0.05) P.onGround = false;
   P.eye = lerp(P.eye, crouch ? 1.1 : 1.7, clamp(10 * dt, 0, 1));
   const hs = Math.hypot(P.vx, P.vz);
-  if (P.onGround && hs > 0.5) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2)); }
+  if (P.onGround && hs > 0.5) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
   const rec = Math.min(P.recoilAcc, P.recoilAcc * dt * 4 + 0.0005); P.pitch -= rec; P.recoilAcc -= rec;
   if (G.time - G.lastHit > (perk('tough') ? 3 : 5) && G.health < (G.maxHp || 100)) G.health = Math.min(G.maxHp || 100, G.health + 28 * (inMatch() ? 1 : diff().regen) * (G.maxHp || 100) / 100 * dt);
 
@@ -4071,7 +4098,7 @@ function updatePlayer(dt) {
   camera.position.set(P.x + rnd(-shk, shk), P.y + P.eye + Math.sin(P.bob * 2) * 0.025 * (hs / 5) * bobOn + rnd(-shk, shk), P.z + rnd(-shk, shk));
   camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn);
   G.shake = Math.max(0, G.shake - dt * 0.05);
-  G.ads = lerp(G.ads, G.adsOn && G.swapT <= 0 ? 1 : 0, clamp(dt * 11 / Math.pow(w.adsTime || 1, 1.4), 0, 1));
+  G.ads = lerp(G.ads, G.adsOn && G.swapT <= 0 ? 1 : 0, clamp(dt * 11 * (perk('amped') ? 1.14 : 1) / Math.pow(w.adsTime || 1, 1.4), 0, 1));
   const fov = lerp(baseFov + (sprint ? 5 : 0), w.adsFov * baseFov / 75, G.ads);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   animateViewmodel(dt, hs, sprint, bobOn);
@@ -4171,7 +4198,7 @@ function shoot(moving) {
   if (w.proj) { launchProjectile(w, u); return; }
   const fresh = G.time - (G.lastShotTime || -9) > Math.max(0.22, w.interval * 2.4); G.lastShotTime = G.time;
   G.bloom = fresh ? 0 : Math.min(1.6, (G.bloom || 0) + (w.pellets > 1 ? 0 : 0.2));
-  let spread = G.adsOn ? (fresh && w.pellets === 1 ? 0 : w.adsSpread * (w.pellets > 1 ? 1 : 0.55 + G.bloom)) : w.spread * (perk('steady') ? 0.72 : 1) * (1 + G.bloom * 0.35);
+  let spread = G.adsOn ? (fresh && w.pellets === 1 ? 0 : w.adsSpread * (w.pellets > 1 ? 1 : 0.55 + G.bloom)) : w.spread * (perk('steady') ? 0.75 : 1) * (1 + G.bloom * 0.35);
   if (moving) spread *= 1.7; if (!P.onGround) spread *= 2.2; if (P.eye < 1.4) spread *= 0.75;
   camera.updateMatrixWorld();
   _org.copy(camera.position);
@@ -4226,7 +4253,7 @@ function finishReload() {
 function switchWeapon(i) {
   if (i === G.cur || i < 0 || i >= WEAPONS.length || G.state !== 'playing') return;
   gunObjs[G.cur].visible = false; gunObjs[G.cur].userData.flash.visible = false;
-  G.cur = i; gunObjs[i].visible = true; G.reloading = false; G.swapT = perk('quick') ? 0.22 : 0.35; G.fireT = G.swapT * 0.6; G.burstLeft = 0; G.inspectT = 0; sfx.click();
+  G.cur = i; gunObjs[i].visible = true; G.reloading = false; G.swapT = perk('amped') ? 0.23 : 0.35; G.fireT = G.swapT * 0.6; G.burstLeft = 0; G.inspectT = 0; sfx.click();
   rumble(0.05, 0.15, 50);
 }
 function cycleWeapon(d) { switchWeapon((G.cur + d + WEAPONS.length) % WEAPONS.length); }
@@ -4298,7 +4325,7 @@ function stunBlast(p) {
   if (dp < 12 && blastClear(p, P.x, P.y + P.eye, P.z)) {
     _pd.set(p.x - P.x, p.y + 0.2 - (P.y + P.eye), p.z - P.z).normalize(); _fwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
     const dot = _fwd.dot(_pd), face = clamp((dot - 0.35) / 0.55, 0, 1);   // 0 outside a ~70 degree cone, 1 looking straight at it
-    const k = clamp((1 - dp / 12) * face * 1.15, 0, 1), fl = $('flashW'); if (fl) { fl.style.transition = 'none'; fl.style.opacity = k; setTimeout(() => { fl.style.transition = `opacity ${1 + 2.5 * k}s ease-out`; fl.style.opacity = 0; }, 60); }
+    const k = clamp((1 - dp / 12) * face * 1.15, 0, 1) * (perk('mask') ? 0.35 : 1), fl = $('flashW'); if (fl) { fl.style.transition = 'none'; fl.style.opacity = k; setTimeout(() => { fl.style.transition = `opacity ${1 + 2.5 * k}s ease-out`; fl.style.opacity = 0; }, 60); }
     rumble(k, k, 300);
   }
 }
@@ -4315,9 +4342,9 @@ function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
     const d = Math.hypot(e.group.position.x - p.x, 1 - p.y, e.group.position.z - p.z);
     if (d < R && blastClear(p, e.group.position.x, 1, e.group.position.z)) (e.killedBy = src), damageEnemy(e, (170 * (1 - d / R) + 20) * dmgK, false, _v3.set(e.group.position.x - p.x, 0.3, e.group.position.z - p.z).normalize(), true, by === 'player' ? 'player' : src);
   }
-  if (dp < R && blastClear(p, P.x, P.y + 1, P.z)) G.killer = src, hurtPlayer(Math.round((110 * (1 - dp / R) + 5) * Math.min(1, dmgK)), p.x, p.z);
+  if (dp < R && blastClear(p, P.x, P.y + 1, P.z)) G.killer = src, hurtPlayer(Math.round((110 * (1 - dp / R) + 5) * Math.min(1, dmgK)), p.x, p.z, true);
   for (const b of barrels) if (b.alive && Math.hypot(b.x - p.x, b.z - p.z) < R * 0.8) damageBarrel(b, 999, true);
-  G.shake = Math.max(G.shake, 0.06 * clamp(1 - dp / 30, 0, 1));
+  G.shake = Math.max(G.shake, 0.06 * clamp(1 - dp / 30, 0, 1) * (perk('mask') ? 0.3 : 1));
   const rk = clamp(1 - dp / 30, 0, 1); if (rk > 0.05) rumble(rk, rk * 0.8, 120 + 300 * rk);
 }
 function updateGrenades(dt) {
@@ -5306,7 +5333,7 @@ function updateBots(dt) {
     if (face !== null) { let dy = face - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 8); }
     e.chk -= dt;
     if (e.chk <= 0) { e.chk = 0.8; if (Math.hypot(g.position.x - e.lastX, g.position.z - e.lastZ) < 0.5 && !holding && goal) { e.avoidT = 1.0; e.avoidDir = Math.random() < 0.5 ? 1 : -1; } e.lastX = g.position.x; e.lastZ = g.position.z; }
-    e.aim += ((e.tgt && dist < 60 ? 1 : 0) - e.aim) * Math.min(1, dt * e.aimRate * 0.6 * (e.tgt === 'P' ? (WEAPONS[G.cur] ? WEAPONS[G.cur].spot || 1 : 1) : 1));
+    e.aim += ((e.tgt && dist < 60 ? 1 : 0) - e.aim) * Math.min(1, dt * e.aimRate * 0.6 * (e.tgt === 'P' ? (WEAPONS[G.cur] ? WEAPONS[G.cur].spot || 1 : 1) * (perk('ghost') ? 0.7 : 1) : 1));
     e.holding = holding && !!tp;
     animEnemy(e, dt, sp);
     if (e.tgt && e.aim > 0.6 && !(e.reloadT > 0) && !busy && !(e.stunT > 0)) {
@@ -5747,7 +5774,7 @@ function renderLobby(focusSel) {
   $('lobSel').innerHTML =
     `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="lob-start"${online && (!netReady() || (NET.app && partyWaiting())) ? ' disabled' : ''}><small>PLAYLIST · ${playlist().length} MODE${playlist().length > 1 ? 'S' : ''} · Y / Q TO EDIT</small><b>${NET.app ? (partyWaiting() ? 'WAITING FOR LEADER' : 'QUICK PLAY') : 'JOIN ROOM'}</b><span>${playlist().map(k => MODES[k].short.replace(/^ONLINE /, '')).join(' · ')}</span></button>` +
     `<button class="cod-arrow" data-act="playlist" aria-label="Edit playlist" title="Edit playlist (Y / Q)">&#9776;</button></div>` +
-    `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${PERKS[c.k].name}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
+    `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${perksOf(c).map(k => PERKS[k].name).join(" · ")}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
     (stk ? `<button class="cod-row" data-act="streaks"><small>SCORESTREAKS</small><b>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => stkIcon(id)).join('')}</b><span>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => `${STREAKS[id].name} ${STREAKS[id].cost}`).join(' · ')}</span><i>&rsaquo;</i></button>` : '') +
     (!online && sel !== 'surv' ? `<div class="cod-row"><small>BOT SKILL</small><b>${SKILL[matchCfg(sel).skill].name}</b><span>change it here or in Settings</span><div class="arw"><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div></div>` : '') +
     `<button class="cod-row" data-act="custom"><small>PRIVATE CODE MATCHES &middot; SOLO VS BOTS</small><b>CUSTOM</b><span>host or join with a code, or play any mode and map against bots</span><i>&rsaquo;</i></button>` + (online ? netLobbyHtml() : '');
@@ -6147,7 +6174,7 @@ function updateEnemyFootsteps() {
     const x = e.group.position.x, z = e.group.position.z;
     if (e.fsX === undefined) { e.fsX = x; e.fsZ = z; e.fsD = Math.random(); continue; }
     e.fsD += Math.hypot(x - e.fsX, z - e.fsZ); e.fsX = x; e.fsZ = z;
-    if (e.fsD > 0.8) { e.fsD = 0; const d = Math.hypot(x - P.x, z - P.z); if (d < 22) sfx.estep(at(x, z, 6)); }
+    if (e.fsD > 0.8) { e.fsD = 0; if (e.silent) continue; const d = Math.hypot(x - P.x, z - P.z), aw = perk('aware'); if (d < (aw ? 38 : 22)) sfx.estep(at(x, z, aw ? 11 : 6)); }
   }
 }
 
@@ -6198,7 +6225,7 @@ function stkReset() { STK.pts = 0; STK.got.clear(); STK.have = []; STK.uavT = 0;
 function stkDeath() { STK.pts = 0; STK.got.clear(); stkHud(true); }
 function stkAdd(pts) {
   if (!stkOn()) return;
-  STK.pts += pts;
+  STK.pts += pts * (perk('hard') ? 1.2 : 1);
   const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
   for (const id of list) if (STK.pts >= STREAKS[id].cost && !STK.got.has(id)) {
     STK.got.add(id); STK.have.push(id);
@@ -6937,14 +6964,16 @@ function advStatsHtml(cur, pv) {
     return `<div><span>${label}</span><b class="${good ? 'up' : bad ? 'down' : ''}">${fmt(pv ? b : a)}</b></div>`;
   }).join('') + `</div>`;
 }
-const LO_ROWS = [['p', 'PRIMARY WEAPON'], ['pa', 'PRIMARY ATTACHMENTS'], ['s', 'SECONDARY WEAPON'], ['sa', 'SECONDARY ATTACHMENTS'], ['e', 'EQUIPMENT'], ['k', 'PERK']];
+const LO_ROWS = [['p', 'PRIMARY WEAPON'], ['pa', 'PRIMARY ATTACHMENTS'], ['s', 'SECONDARY WEAPON'], ['sa', 'SECONDARY ATTACHMENTS'], ['e', 'EQUIPMENT'], ['k', 'PERK 1'], ['k2', 'PERK 2'], ['k3', 'PERK 3']];
 const LO_HELP = {
   p: 'Pick the main gun for this class. Use the tabs to switch weapon type. Bars on the right compare it with the gun you have now: green is better, red is worse.',
   s: 'Pick a backup: a pistol to switch to when your main gun runs dry, or a launcher for explosives.',
   pa: 'Choose a part slot along the top, then a part. Every part has a plus and a minus, listed under it and shown on the bars.',
   sa: 'Choose a part slot along the top, then a part. Every part has a plus and a minus, listed under it and shown on the bars.',
   e: 'Thrown with G (keyboard) or RB (controller). You get a few per life and more from ammo crates.',
-  k: 'A passive bonus that is always on while you play this class.',
+  k: 'PERK 1 (blue): a passive bonus that is always on while you play this class. One perk from each of the three tiers.',
+  k2: 'PERK 2 (red): a passive bonus that is always on while you play this class. One perk from each of the three tiers.',
+  k3: 'PERK 3 (green): a passive bonus that is always on while you play this class. One perk from each of the three tiers.',
 };
 const roleOf = d => d.cat === 'la' ? 'EXPLOSIVE' : d.eff < 21 ? 'CLOSE RANGE' : d.eff < 50 ? 'MID RANGE' : 'LONG RANGE';
 const inGame = () => G.state === 'paused' || G.state === 'playing';
@@ -6956,14 +6985,14 @@ function loRowValue(r) {
   if (r === 'p' || r === 's') { const d = loDef(r); return `${d.name}<small>${CATS[d.cat].short}</small>`; }
   if (r === 'pa' || r === 'sa') { const d = loDef(r), n = fittedCount(d); return n ? `${n} OF ${slotsFor(d).length} FITTED` : 'FACTORY PARTS'; }
   if (r === 'e') return `${EQUIP[c.e].name}<small>×${EQUIP[c.e].count}</small>`;
-  return PERKS[c.k].name;
+  return (PERKS[c[r]] || PERKS[PERK_DEF[PERK_KEYS.indexOf(r) + 1]]).name;
 }
 const miniBar = (v, lo, hi) => `<i style="width:${(clamp((v - lo) / (hi - lo), 0.04, 1) * 100).toFixed(0)}%"></i>`;
 function renderLoadout(focusSel) {
   const c = activeClass();
   $('loTabs').innerHTML = CLASSES.map((k, i) => (loRename && i === ACTIVE_CLASS ? `<input class="lo-rename" id="loRenameIn" maxlength="16" value="${k.name.replace(/"/g, '')}">` : `<button class="tab${i === ACTIVE_CLASS ? ' on' : ''}" data-lo-c="${i}">${k.name}</button><button class="tab lo-pen1" data-lo-ren1="${i}" title="Rename ${k.name.replace(/"/g, '')}" aria-label="Rename ${k.name.replace(/"/g, '')}">&#9998;</button>`)).join('') + (loRename ? `<button class="tab lo-pen" data-lo-ren="1">SAVE NAME</button>` : '');
-  $('loSlots').innerHTML = LO_ROWS.map(([r, label]) => `<button class="lo-slot${r === loRow ? ' on' : ''}${r.length === 2 ? ' sub' : ''}" data-lo-r="${r}"><span>${label}</span><b>${loRowValue(r)}</b></button>`).join('');
-  const note = $('loNote'); if (note) note.textContent = inGame() && G.equipped && (G.equipped.p !== c.p || G.equipped.s !== c.s || G.equipped.e !== c.e || G.equipped.k !== c.k) ? 'CLASS CHANGES APPLY WHEN YOU NEXT SPAWN' : '';
+  $('loSlots').innerHTML = LO_ROWS.map(([r, label]) => `<button class="lo-slot${r === loRow ? ' on' : ''}${r === 'pa' || r === 'sa' ? ' sub' : ''}" data-lo-r="${r}"><span>${label}</span><b>${loRowValue(r)}</b></button>`).join('');
+  const note = $('loNote'); if (note) note.textContent = inGame() && G.equipped && (G.equipped.p !== c.p || G.equipped.s !== c.s || G.equipped.e !== c.e || PERK_KEYS.some(k => G.equipped[k] !== c[k])) ? 'CLASS CHANGES APPLY WHEN YOU NEXT SPAWN' : '';
   const help = $('loHelp'); if (help) help.textContent = LO_HELP[loRow];
   let html = '';
   if (loRow === 'p' || loRow === 's') {
@@ -6985,7 +7014,7 @@ function renderLoadout(focusSel) {
         (pc.pros.length || pc.cons.length ? `<div class="lo-pc">${pc.pros.map(p => `<span class="pro">+ ${p}</span>`).join('')}${pc.cons.map(x => `<span class="con">− ${x}</span>`).join('')}</div>` : '') + '</button>';
     }).join('');
   } else if (loRow === 'e') html = Object.keys(EQUIP).map(k => `<button class="lo-opt${k === c.e ? ' on' : ''}" data-lo-e="${k}"><div class="lo-name">${EQUIP[k].name} <small>×${EQUIP[k].count}</small>${k === c.e ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${EQUIP[k].desc}</div></button>`).join('');
-  else html = Object.keys(PERKS).map(k => `<button class="lo-opt${k === c.k ? ' on' : ''}" data-lo-k="${k}"><div class="lo-name">${PERKS[k].name}${k === c.k ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${PERKS[k].desc}</div></button>`).join('');
+  else { const tier = PERK_KEYS.indexOf(loRow) + 1; html = Object.keys(PERKS).filter(k => PERKS[k].t === tier).map(k => `<button class="lo-opt perk-t${tier}${k === c[loRow] ? ' on' : ''}" data-lo-k="${k}"><div class="lo-name">${PERKS[k].name}${k === c[loRow] ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${PERKS[k].desc}</div></button>`).join(''); }
   $('loOpts').innerHTML = html;
   renderLoStats();
   const q = sel => $('loadout').querySelectorAll(sel);
@@ -7010,13 +7039,13 @@ function renderLoadout(focusSel) {
     b.onblur = b.onmouseleave = () => { loPreview = null; renderLoStats(); };
   }
   for (const b of q('[data-lo-e]')) b.onclick = () => { c.e = b.dataset.loE; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-e="${c.e}"]`); };
-  for (const b of q('[data-lo-k]')) b.onclick = () => { c.k = b.dataset.loK; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-k="${c.k}"]`); };
+  for (const b of q('[data-lo-k]')) b.onclick = () => { const key = PERK_KEYS[PERKS[b.dataset.loK].t - 1]; c[key] = b.dataset.loK; saveClasses(); sfx.ui(); renderLoadout(`#loOpts [data-lo-k="${c[key]}"]`); };
   if (focusSel) focusFirst(focusSel);
 }
 function saveRename() { const i = $('loRenameIn'); if (i) { const v = i.value.replace(/[<>&"]/g, '').trim().toUpperCase().slice(0, 16); if (v) activeClass().name = v; saveClasses(); } loRename = false; sfx.ui(); renderLoadout(`#loTabs [data-lo-c="${ACTIVE_CLASS}"]`); }
 function selectClass(i) { ACTIVE_CLASS = (i + CLASSES.length) % CLASSES.length; saveClasses(); loPreview = loPrevW = null; loCat = null; loRename = false; sfx.ui(); renderLoadout(`#loTabs [data-lo-c="${ACTIVE_CLASS}"]`); }
 function focusFirst(sel) { setTimeout(() => { const el = document.querySelector && document.querySelector(sel); if (el && el.focus) try { el.focus(); el.scrollIntoView && el.scrollIntoView({ block: 'nearest' }); } catch (e) {} }, 0); }
-function loShown() { const row = loRow, base = row === 'e' || row === 'k' ? ARM[activeClass().p] : loDef(row); return { base, shown: loPrevW || base }; }
+function loShown() { const row = loRow, base = row === 'e' || PERK_KEYS.includes(row) ? ARM[activeClass().p] : loDef(row); return { base, shown: loPrevW || base }; }
 function renderLoStats() {
   const row = loRow, { base, shown } = loShown();
   const cur = computeStats(base), pv = loPrevW ? computeStats(loPrevW) : loPreview && (row === 'pa' || row === 'sa') ? computeStats(base, loPreview) : null;
@@ -7433,7 +7462,7 @@ function netSelf() { for (const p of netPeers()) if (p.sameTab) return p.peer; r
 const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
-  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0,
+  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0,
     a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
@@ -7452,7 +7481,7 @@ function netNum(v, lo, hi, d = 0) { v = +v; return isFinite(v) ? clamp(v, lo, hi
 function netMakeBot(R, pr) {
   const e = makeEnemy('rifleman', R.x, R.z);
   Object.assign(e, { team: R.entry.team, entry: R.entry, name: R.entry.name, pvp: true, net: R.peer, hp: 1e9, maxHp: 100, aim: 1, crouchy: false, los: true, holding: true, lastShotT: -9 });
-  e.group.position.set(R.x, R.y, R.z); e.group.rotation.y = R.yw + Math.PI;
+  e.silent = !!R.sl; e.group.position.set(R.x, R.y, R.z); e.group.rotation.y = R.yw + Math.PI;
   if (M.def.teams && R.entry.team === M.myTeam) e.group.add(friendlyMarker());
   enemies.push(e); R.bot = e; R.entry.alive = true; R.entry.bot = e;
 }
@@ -7521,7 +7550,7 @@ function netTick(dt) {
     R.entry.name = cleanNick(pr.n); R.host = !!pr.ho; R.sa = pr.sa; if (pr.ho && !pr.bot && !isHost && Array.isArray(pr.ob)) NET.ob = pr.ob; if (pr.ho && !pr.bot && NET.priv) privFromHost(pr.pc); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
     if (pr.ho && !pr.bot && !isHost && typeof pr.mp === 'string' && MAPS[pr.mp] && pr.mp !== curMap && !NET.mapBusy) { NET.mapBusy = true; setTimeout(() => { NET.mapBusy = false; if (NET.on) netSwitchMap(pr.mp); }, 0); }
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
-    R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
+    R.sl = pr.sl ? 1 : 0; R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
     R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
     R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;
     // a death since last time: drop them, credit the killer
@@ -8170,7 +8199,7 @@ const holding = () => G.holdT > 0;
 function openClassPick() {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   const gun = M && M.mode === 'gun';
-  $('cpList').innerHTML = gun ? `<div class="cp-gun">GUN GAME · everyone starts on the ${ARM[GUN_LADDER[0]].name}</div>` : CLASSES.map((c, i) => `<button class="cp-c${i === ACTIVE_CLASS ? ' on' : ''}" data-cp="${i}"><small>${i + 1}</small><b>${c.name}</b><span>${ARM[c.p].name} · ${ARM[c.s].name}</span><span>${EQUIP[c.e].name} · ${PERKS[c.k].name}</span></button>`).join('');
+  $('cpList').innerHTML = gun ? `<div class="cp-gun">GUN GAME · everyone starts on the ${ARM[GUN_LADDER[0]].name}</div>` : CLASSES.map((c, i) => `<button class="cp-c${i === ACTIVE_CLASS ? ' on' : ''}" data-cp="${i}"><small>${i + 1}</small><b>${c.name}</b><span>${ARM[c.p].name} · ${ARM[c.s].name}</span><span>${EQUIP[c.e].name}</span><span class="cp-perks">${perksOf(c).map(k => PERKS[k].name).join(" · ")}</span></button>`).join('');
   for (const b of $('cpList').querySelectorAll('[data-cp]')) b.onclick = () => cpPick(+b.dataset.cp);
   showScreen('classpick'); focusFirst(gun ? '#classpick .btn' : '#cpList .on');
 }
@@ -8190,7 +8219,7 @@ function cpPick(i) {
 .cp-c{pointer-events:auto;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink);padding:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);display:flex;flex-direction:column;gap:4px;position:relative}
 .cp-c small{position:absolute;right:10px;top:8px;font-size:11px;color:var(--dim)}.cp-c b{font-size:15px;letter-spacing:.18em}.cp-c span{font-size:11px;letter-spacing:.08em;color:var(--dim)}.cp-c:hover,.cp-c:focus{outline:0;border-color:rgba(224,180,74,.6)}.cp-c.on{border-color:var(--accent);background:rgba(224,180,74,.12)}
 .cp-t{display:flex;align-items:baseline;gap:12px;padding:18px 26px 0}.cp-t b{font-size:15px;letter-spacing:.4em;color:var(--accent)}.cp-t span{margin-left:auto;font-size:12px;letter-spacing:.3em;color:var(--dim)}.cp-t em{font-style:normal;font-size:30px;color:#fff;margin-left:6px}
-.cp-gun{grid-column:1/-1;padding:20px;text-align:center;letter-spacing:.2em;color:var(--dim)}`;
+.cp-c .cp-perks{color:var(--accent);opacity:.85}.cp-gun{grid-column:1/-1;padding:20px;text-align:center;letter-spacing:.2em;color:var(--dim)}`;
   document.head.appendChild(s);
 })();
 /* ================================================================== lobby music
@@ -9139,7 +9168,7 @@ function tick(dt) {
     const w = WEAPONS[G.cur];
     if (G.reloading) { G.reloadT -= dt; if (G.reloadT <= 0) finishReload(); }
     const want = (w.auto ? isFiring() : clickQueued) && !(G.holdT > 0);
-    if (want && !sprint && !G.reloading && G.swapT <= 0 && G.fireT <= 0 && G.state === 'playing') {
+    if (want && !sprint && !G.reloading && G.swapT <= 0 && G.fireT <= 0 && G.state === 'playing' && G.time - (G.sprintEnd || -9) > (perk('endure') ? 0.09 : 0.15)) {
       if (w.ammo > 0) shoot(moving); else { sfx.click(); G.fireT = 0.25; startReload(); }
     }
     else if (G.burstLeft > 0 && G.fireT <= 0 && !G.reloading && G.swapT <= 0 && w.ammo > 0 && G.state === 'playing') shoot(moving);

@@ -35,7 +35,7 @@ const holding = () => G.holdT > 0;
 function openClassPick() {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   const gun = M && M.mode === 'gun';
-  $('cpList').innerHTML = gun ? `<div class="cp-gun">GUN GAME · everyone starts on the ${ARM[GUN_LADDER[0]].name}</div>` : CLASSES.map((c, i) => `<button class="cp-c${i === ACTIVE_CLASS ? ' on' : ''}" data-cp="${i}"><small>${i + 1}</small><b>${c.name}</b><span>${ARM[c.p].name} · ${ARM[c.s].name}</span><span>${EQUIP[c.e].name} · ${PERKS[c.k].name}</span></button>`).join('');
+  $('cpList').innerHTML = gun ? `<div class="cp-gun">GUN GAME · everyone starts on the ${ARM[GUN_LADDER[0]].name}</div>` : CLASSES.map((c, i) => `<button class="cp-c${i === ACTIVE_CLASS ? ' on' : ''}" data-cp="${i}"><small>${i + 1}</small><b>${c.name}</b><span>${ARM[c.p].name} · ${ARM[c.s].name}</span><span>${EQUIP[c.e].name}</span><span class="cp-perks">${perksOf(c).map(k => PERKS[k].name).join(" · ")}</span></button>`).join('');
   for (const b of $('cpList').querySelectorAll('[data-cp]')) b.onclick = () => cpPick(+b.dataset.cp);
   showScreen('classpick'); focusFirst(gun ? '#classpick .btn' : '#cpList .on');
 }
@@ -55,6 +55,6 @@ function cpPick(i) {
 .cp-c{pointer-events:auto;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink);padding:14px;border:1px solid var(--line);background:rgba(255,255,255,.04);display:flex;flex-direction:column;gap:4px;position:relative}
 .cp-c small{position:absolute;right:10px;top:8px;font-size:11px;color:var(--dim)}.cp-c b{font-size:15px;letter-spacing:.18em}.cp-c span{font-size:11px;letter-spacing:.08em;color:var(--dim)}.cp-c:hover,.cp-c:focus{outline:0;border-color:rgba(224,180,74,.6)}.cp-c.on{border-color:var(--accent);background:rgba(224,180,74,.12)}
 .cp-t{display:flex;align-items:baseline;gap:12px;padding:18px 26px 0}.cp-t b{font-size:15px;letter-spacing:.4em;color:var(--accent)}.cp-t span{margin-left:auto;font-size:12px;letter-spacing:.3em;color:var(--dim)}.cp-t em{font-style:normal;font-size:30px;color:#fff;margin-left:6px}
-.cp-gun{grid-column:1/-1;padding:20px;text-align:center;letter-spacing:.2em;color:var(--dim)}`;
+.cp-c .cp-perks{color:var(--accent);opacity:.85}.cp-gun{grid-column:1/-1;padding:20px;text-align:center;letter-spacing:.2em;color:var(--dim)}`;
   document.head.appendChild(s);
 })();
