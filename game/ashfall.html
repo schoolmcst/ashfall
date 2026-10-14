@@ -4438,7 +4438,7 @@ function restartMatch() { if (M.mode === 'surv') startMatch('surv', { map: curMa
 // leave whatever is running and go back to the menu scene (soldiers posing behind the menus)
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();
-  if (MS.active && G.state !== 'over') { MS.active = false; }   // quitting a match does not count it
+  if (MS.active && G.state !== 'over') commitPartialStats();   // leaving early: your kills, deaths and time still count (not as a match)
   clearWorldState(); clearMatch(); G.state = 'menu'; G.health = 100; vig.style.opacity = 0; hideCenter();
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   spawnMenuSoldiers();
@@ -4459,9 +4459,11 @@ MS = blankMatch();
 function startMatchStats() { MS = blankMatch(); MS.active = true; }
 const wstat = id => MS.weapons[id] || (MS.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 });
 function statShot(hit) { if (!MS.active || G.bench) return; const w = WEAPONS[G.cur]; MS.shots++; if (hit) MS.hits++; if (w) { const s = wstat(w.def.id); s.shots++; if (hit) s.hits++; } }
-function statKill(e, head) {
+function statKill(e, head) { statKillAt(e.group.position.x, e.group.position.z, head); }
+// a kill where the victim is somewhere (online kills can arrive after the victim's body is gone)
+function statKillAt(x, z, head) {
   if (!MS.active || G.bench) return;
-  const w = WEAPONS[G.cur], d = Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z);
+  const w = WEAPONS[G.cur], d = Math.hypot(x - P.x, z - P.z);
   MS.kills++; if (head) MS.heads++; MS.streak++; MS.bestStreak = Math.max(MS.bestStreak, MS.streak); MS.longest = Math.max(MS.longest, d);
   if (w) { const s = wstat(w.def.id); s.kills++; if (head) s.heads++; }
 }
@@ -4472,10 +4474,24 @@ function finishMatchStats(won) {
   const st = STATS, mode = M.mode;
   st.matches++; if (won === 1) st.wins++; else if (won === -1) st.losses++; else if (won === 0) st.draws++;
   for (const k of ['kills', 'deaths', 'heads', 'shots', 'hits', 'time', 'plants', 'defuses', 'caps', 'returns', 'hpTime']) st[k] += MS[k];
-  st.bestStreak = Math.max(st.bestStreak, MS.bestStreak); st.longest = Math.max(st.longest, MS.longest); st.score += M.me ? M.me.score : G.score;
+  st.bestStreak = Math.max(st.bestStreak, MS.bestStreak); st.longest = Math.max(st.longest, MS.longest); st.score += M.online ? MS.kills * 100 : (M.me ? M.me.score : G.score);
   if (mode === 'surv') st.bestWave = Math.max(st.bestWave, G.wave);
   const ms = st.modes[mode] || (st.modes[mode] = { played: 0, wins: 0, kills: 0, deaths: 0, best: 0 });
   ms.played++; if (won === 1) ms.wins++; ms.kills += MS.kills; ms.deaths += MS.deaths; ms.best = Math.max(ms.best, mode === 'surv' ? G.wave : MS.kills);
+  for (const id in MS.weapons) { const a = MS.weapons[id], b = st.weapons[id] || (st.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 }); for (const k in a) b[k] += a[k]; }
+  saveStats();
+}
+// add what happened so far without counting a finished match (leaving early, online rounds you join part-way)
+function commitPartialStats() {
+  if (!MS.active || G.bench) return; MS.active = false;
+  if (!MS.kills && !MS.deaths && !MS.shots && MS.time < 10) return;
+  const st = STATS, mode = M.mode;
+  for (const k of ['kills', 'deaths', 'heads', 'shots', 'hits', 'time', 'plants', 'defuses', 'caps', 'returns', 'hpTime']) st[k] += MS[k];
+  st.bestStreak = Math.max(st.bestStreak, MS.bestStreak); st.longest = Math.max(st.longest, MS.longest);
+  st.score += M.online ? MS.kills * 100 : (M.me ? M.me.score : G.score);
+  if (mode === 'surv') st.bestWave = Math.max(st.bestWave, G.wave);
+  const ms = st.modes[mode] || (st.modes[mode] = { played: 0, wins: 0, kills: 0, deaths: 0, best: 0 });
+  ms.kills += MS.kills; ms.deaths += MS.deaths; ms.best = Math.max(ms.best, mode === 'surv' ? G.wave : MS.kills);
   for (const id in MS.weapons) { const a = MS.weapons[id], b = st.weapons[id] || (st.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 }); for (const k in a) b[k] += a[k]; }
   saveStats();
 }
@@ -6592,7 +6608,8 @@ function netTick(dt) {
       if (R.kb && R.kb === NET.me) {
         NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill();
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
-        else feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
+        else statKillAt(R.x, R.z, head);
+        if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
       } else if (botBy(R.kb)) { const ke = botBy(R.kb); ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> ${nameHtml(R.entry)}`); }
       else if (R.kb && NET.rem.get(R.kb)) feedLine(`${netFeedName(NET.rem.get(R.kb))} <span class="fw">✦</span> ${nameHtml(R.entry)}${head ? ' <span class="ft">HEADSHOT</span>' : ''}`);
       netDropBot(R, true, head);
@@ -6631,7 +6648,7 @@ function netTick(dt) {
   if (isHost) netBots(dt); else if (NET.botPres.length || M.entries.some(en => en.botLabel)) netClearBots();
   if (NET.app && isHost && (NET.lanT -= dt) <= 0) { NET.lanT = 2; try { window.ASHFALL_APP.lan.announce({ slot: NET.room.slot, name: NET.nick, mode: M.mode, n: NET.room.players }); } catch (e) {} }
   // someone already started the next round
-  if (maxEp > NET.ep) { NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; }
+  if (maxEp > NET.ep) { NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; commitPartialStats(); startMatchStats(); }   // joined part-way or missed the end: keep what you did
   M.me.kills = NET.k; M.me.deaths = NET.d; M.me.score = NET.k * 100; M.me.name = 'YOU';
   if (M.def.teams) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
   // score limit: show the winner, then everyone starts a fresh round
@@ -6641,7 +6658,12 @@ function netTick(dt) {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
     else for (const en of M.entries) if (en.kills >= lim) win = en.isPlayer ? 'YOU WIN' : en.name + ' WINS';
-    if (win) { NET.endT = 8; showBanner(win, 'next round in 8 seconds'); sfx.streak(); }
+    if (win) {
+      NET.endT = 8; showBanner(win, 'next round in 8 seconds'); sfx.streak();
+      // a round to the score limit counts as a match in your career stats
+      const won = M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1);
+      finishMatchStats(won); startMatchStats();
+    }
   }
   netPublish();
 }
@@ -6670,7 +6692,7 @@ function netBots(dt) {
   }
   // keep the teams topped up: real players always come first, bots only fill what is left (and not during the warm-up)
   const wl = warmLeft();
-  if (NET.warmWas > 0 && wl <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; showBanner('MATCH STARTED', 'bots fill the empty spots'); }   // warm-up over: fresh scores
+  if (NET.warmWas > 0 && wl <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; commitPartialStats(); startMatchStats(); showBanner('MATCH STARTED', 'bots fill the empty spots'); }   // warm-up over: fresh scores
   NET.warmWas = wl;
   if ((NET.botT -= dt) <= 0 && NET.teamSet) {
     NET.botT = 0.5;
@@ -7241,7 +7263,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

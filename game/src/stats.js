@@ -11,9 +11,11 @@ MS = blankMatch();
 function startMatchStats() { MS = blankMatch(); MS.active = true; }
 const wstat = id => MS.weapons[id] || (MS.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 });
 function statShot(hit) { if (!MS.active || G.bench) return; const w = WEAPONS[G.cur]; MS.shots++; if (hit) MS.hits++; if (w) { const s = wstat(w.def.id); s.shots++; if (hit) s.hits++; } }
-function statKill(e, head) {
+function statKill(e, head) { statKillAt(e.group.position.x, e.group.position.z, head); }
+// a kill where the victim is somewhere (online kills can arrive after the victim's body is gone)
+function statKillAt(x, z, head) {
   if (!MS.active || G.bench) return;
-  const w = WEAPONS[G.cur], d = Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z);
+  const w = WEAPONS[G.cur], d = Math.hypot(x - P.x, z - P.z);
   MS.kills++; if (head) MS.heads++; MS.streak++; MS.bestStreak = Math.max(MS.bestStreak, MS.streak); MS.longest = Math.max(MS.longest, d);
   if (w) { const s = wstat(w.def.id); s.kills++; if (head) s.heads++; }
 }
@@ -24,10 +26,24 @@ function finishMatchStats(won) {
   const st = STATS, mode = M.mode;
   st.matches++; if (won === 1) st.wins++; else if (won === -1) st.losses++; else if (won === 0) st.draws++;
   for (const k of ['kills', 'deaths', 'heads', 'shots', 'hits', 'time', 'plants', 'defuses', 'caps', 'returns', 'hpTime']) st[k] += MS[k];
-  st.bestStreak = Math.max(st.bestStreak, MS.bestStreak); st.longest = Math.max(st.longest, MS.longest); st.score += M.me ? M.me.score : G.score;
+  st.bestStreak = Math.max(st.bestStreak, MS.bestStreak); st.longest = Math.max(st.longest, MS.longest); st.score += M.online ? MS.kills * 100 : (M.me ? M.me.score : G.score);
   if (mode === 'surv') st.bestWave = Math.max(st.bestWave, G.wave);
   const ms = st.modes[mode] || (st.modes[mode] = { played: 0, wins: 0, kills: 0, deaths: 0, best: 0 });
   ms.played++; if (won === 1) ms.wins++; ms.kills += MS.kills; ms.deaths += MS.deaths; ms.best = Math.max(ms.best, mode === 'surv' ? G.wave : MS.kills);
+  for (const id in MS.weapons) { const a = MS.weapons[id], b = st.weapons[id] || (st.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 }); for (const k in a) b[k] += a[k]; }
+  saveStats();
+}
+// add what happened so far without counting a finished match (leaving early, online rounds you join part-way)
+function commitPartialStats() {
+  if (!MS.active || G.bench) return; MS.active = false;
+  if (!MS.kills && !MS.deaths && !MS.shots && MS.time < 10) return;
+  const st = STATS, mode = M.mode;
+  for (const k of ['kills', 'deaths', 'heads', 'shots', 'hits', 'time', 'plants', 'defuses', 'caps', 'returns', 'hpTime']) st[k] += MS[k];
+  st.bestStreak = Math.max(st.bestStreak, MS.bestStreak); st.longest = Math.max(st.longest, MS.longest);
+  st.score += M.online ? MS.kills * 100 : (M.me ? M.me.score : G.score);
+  if (mode === 'surv') st.bestWave = Math.max(st.bestWave, G.wave);
+  const ms = st.modes[mode] || (st.modes[mode] = { played: 0, wins: 0, kills: 0, deaths: 0, best: 0 });
+  ms.kills += MS.kills; ms.deaths += MS.deaths; ms.best = Math.max(ms.best, mode === 'surv' ? G.wave : MS.kills);
   for (const id in MS.weapons) { const a = MS.weapons[id], b = st.weapons[id] || (st.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 }); for (const k in a) b[k] += a[k]; }
   saveStats();
 }

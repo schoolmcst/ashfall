@@ -225,7 +225,8 @@ function netTick(dt) {
       if (R.kb && R.kb === NET.me) {
         NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill();
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
-        else feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
+        else statKillAt(R.x, R.z, head);
+        if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
       } else if (botBy(R.kb)) { const ke = botBy(R.kb); ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> ${nameHtml(R.entry)}`); }
       else if (R.kb && NET.rem.get(R.kb)) feedLine(`${netFeedName(NET.rem.get(R.kb))} <span class="fw">✦</span> ${nameHtml(R.entry)}${head ? ' <span class="ft">HEADSHOT</span>' : ''}`);
       netDropBot(R, true, head);
@@ -264,7 +265,7 @@ function netTick(dt) {
   if (isHost) netBots(dt); else if (NET.botPres.length || M.entries.some(en => en.botLabel)) netClearBots();
   if (NET.app && isHost && (NET.lanT -= dt) <= 0) { NET.lanT = 2; try { window.ASHFALL_APP.lan.announce({ slot: NET.room.slot, name: NET.nick, mode: M.mode, n: NET.room.players }); } catch (e) {} }
   // someone already started the next round
-  if (maxEp > NET.ep) { NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; }
+  if (maxEp > NET.ep) { NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; commitPartialStats(); startMatchStats(); }   // joined part-way or missed the end: keep what you did
   M.me.kills = NET.k; M.me.deaths = NET.d; M.me.score = NET.k * 100; M.me.name = 'YOU';
   if (M.def.teams) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
   // score limit: show the winner, then everyone starts a fresh round
@@ -274,7 +275,12 @@ function netTick(dt) {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
     else for (const en of M.entries) if (en.kills >= lim) win = en.isPlayer ? 'YOU WIN' : en.name + ' WINS';
-    if (win) { NET.endT = 8; showBanner(win, 'next round in 8 seconds'); sfx.streak(); }
+    if (win) {
+      NET.endT = 8; showBanner(win, 'next round in 8 seconds'); sfx.streak();
+      // a round to the score limit counts as a match in your career stats
+      const won = M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1);
+      finishMatchStats(won); startMatchStats();
+    }
   }
   netPublish();
 }
@@ -303,7 +309,7 @@ function netBots(dt) {
   }
   // keep the teams topped up: real players always come first, bots only fill what is left (and not during the warm-up)
   const wl = warmLeft();
-  if (NET.warmWas > 0 && wl <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; showBanner('MATCH STARTED', 'bots fill the empty spots'); }   // warm-up over: fresh scores
+  if (NET.warmWas > 0 && wl <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; commitPartialStats(); startMatchStats(); showBanner('MATCH STARTED', 'bots fill the empty spots'); }   // warm-up over: fresh scores
   NET.warmWas = wl;
   if ((NET.botT -= dt) <= 0 && NET.teamSet) {
     NET.botT = 0.5;
