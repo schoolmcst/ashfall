@@ -4,7 +4,7 @@ const path = require('path'), fs = require('fs'), crypto = require('crypto'), dg
 
 // the TEST app (packaged with "channel": "test") reads release-test/, keeps its own saves and says TEST everywhere
 let PKG = {}; try { PKG = require('./package.json'); } catch (e) {}
-const TEST = PKG.channel === 'test', APPNAME = TEST ? 'DARKZONE TEST' : 'DARKZONE';
+const TEST = PKG.channel === 'test', APPNAME = TEST ? 'TEST APP' : 'DARKZONE';
 const UPDATE_BASE = process.env.ASHFALL_UPDATE_BASE || ('https://raw.githubusercontent.com/schoolmcst/ashfall/main/' + (TEST ? 'release-test/' : 'release/'));
 const THREE_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
 const LAN_PORT = 41234;
