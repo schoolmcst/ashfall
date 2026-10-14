@@ -485,7 +485,7 @@ function loRowValue(r) {
 const miniBar = (v, lo, hi) => `<i style="width:${(clamp((v - lo) / (hi - lo), 0.04, 1) * 100).toFixed(0)}%"></i>`;
 function renderLoadout(focusSel) {
   const c = activeClass();
-  $('loTabs').innerHTML = CLASSES.map((k, i) => (loRename && i === ACTIVE_CLASS ? `<input class="lo-rename" id="loRenameIn" maxlength="16" value="${k.name.replace(/"/g, '')}">` : `<button class="tab${i === ACTIVE_CLASS ? ' on' : ''}" data-lo-c="${i}">${k.name}</button>`)).join('') + `<button class="tab lo-pen" data-lo-ren="1" title="Rename this class">${loRename ? 'SAVE NAME' : 'RENAME'}</button>`;
+  $('loTabs').innerHTML = CLASSES.map((k, i) => (loRename && i === ACTIVE_CLASS ? `<input class="lo-rename" id="loRenameIn" maxlength="16" value="${k.name.replace(/"/g, '')}">` : `<button class="tab${i === ACTIVE_CLASS ? ' on' : ''}" data-lo-c="${i}">${k.name}</button><button class="tab lo-pen1" data-lo-ren1="${i}" title="Rename ${k.name.replace(/"/g, '')}" aria-label="Rename ${k.name.replace(/"/g, '')}">&#9998;</button>`)).join('') + (loRename ? `<button class="tab lo-pen" data-lo-ren="1">SAVE NAME</button>` : '');
   $('loSlots').innerHTML = LO_ROWS.map(([r, label]) => `<button class="lo-slot${r === loRow ? ' on' : ''}${r.length === 2 ? ' sub' : ''}" data-lo-r="${r}"><span>${label}</span><b>${loRowValue(r)}</b></button>`).join('');
   const note = $('loNote'); if (note) note.textContent = inGame() && G.equipped && (G.equipped.p !== c.p || G.equipped.s !== c.s || G.equipped.e !== c.e || G.equipped.k !== c.k) ? 'CLASS CHANGES APPLY WHEN YOU NEXT SPAWN' : '';
   const help = $('loHelp'); if (help) help.textContent = LO_HELP[loRow];
@@ -514,6 +514,7 @@ function renderLoadout(focusSel) {
   renderLoStats();
   const q = sel => $('loadout').querySelectorAll(sel);
   for (const b of q('[data-lo-c]')) b.onclick = () => selectClass(+b.dataset.loC);
+  for (const b of q('[data-lo-ren1]')) b.onclick = () => { ACTIVE_CLASS = +b.dataset.loRen1; saveClasses(); loPreview = loPrevW = null; loCat = null; loRename = true; sfx.ui(); renderLoadout(); setTimeout(() => { const i = $('loRenameIn'); if (i) { i.focus(); i.select(); } }, 0); };
   for (const b of q('[data-lo-ren]')) b.onclick = () => { if (loRename) saveRename(); else { loRename = true; renderLoadout(); setTimeout(() => { const i = $('loRenameIn'); if (i) { i.focus(); i.select(); } }, 0); } };
   const ri = $('loRenameIn'); if (ri) ri.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') saveRename(); if (e.key === 'Escape') { loRename = false; renderLoadout(); } };
   for (const b of q('[data-lo-r]')) { b.onclick = () => { loRow = b.dataset.loR; sfx.ui(); renderLoadout(); focusFirst('#loOpts .on'); }; b.onfocus = () => { if (loRow !== b.dataset.loR) { loRow = b.dataset.loR; loPreview = loPrevW = null; renderLoadout(`#loSlots [data-lo-r="${b.dataset.loR}"]`); } }; }
