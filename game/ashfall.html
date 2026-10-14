@@ -642,7 +642,13 @@ const sfx = {
   stun: o => { burst(0.5, 5200, 0.8, 'highpass', o); burst(0.8, 900, 0.6, 'lowpass', o); tone(2600, 1.6, 0.12, 'sine', 2400, o); },
   enemy: o => { burst(0.04, 4600, 0.3, 'highpass', o); burst(0.16, 1500, 0.35, 'lowpass', o); },
   hit: head => tone(head ? 1700 : 1000, 0.05, 0.1, 'square'),
-  kill: () => { tone(520, 0.12, 0.12, 'square', 260); },
+  kill: head => {
+    burst(0.025, 7000, 0.32, 'highpass');                       // crisp snap
+    tone(95, 0.16, 0.42, 'sine', 42);                           // body thump
+    tone(head ? 1480 : 1180, 0.16, 0.16, 'triangle');            // confirm chime
+    tone(head ? 2220 : 1770, 0.22, 0.09, 'sine', undefined, { delay: 0.045 });
+    tone(head ? 2960 : 2360, 0.3, 0.05, 'sine', undefined, { delay: 0.09 });
+  },
   thud: o => { burst(0.09, 600, 0.35, 'lowpass', o); },
   explode: o => { burst(1.4, 420, 1.1, 'lowpass', o); burst(0.25, 3000, 0.5, 'highpass', o); tone(55, 0.9, 0.9, 'sine', 22, o); },
   reload: () => { burst(0.05, 3500, 0.3, 'highpass'); tone(300, 0.05, 0.1, 'square'); setTimeout(() => { burst(0.06, 2500, 0.4, 'highpass'); tone(220, 0.06, 0.12, 'square'); }, 750); },
@@ -1916,7 +1922,7 @@ function buildViewmodelMaterials() {
   VM.skin = std({ color: C(0x9c7355), roughness: 0.8 });
   VM.sleeve = std({ color: C(0x4b5240), roughness: 0.95, map: TEX.concrete.map, bumpMap: TEX.concrete.bump, bumpScale: 0.003 });
   VM.dot = new THREE.MeshBasicMaterial({ color: 0xff2a2a });
-  VM.lens = std({ color: C(0x5a7a88), metalness: 0.5, roughness: 0.05, transparent: true, opacity: 0.22, depthWrite: false });
+  VM.lens = std({ color: C(0xbfdbe6), metalness: 0.1, roughness: 0.02, transparent: true, opacity: 0.1, depthWrite: false, envMapIntensity: 0.35 });
   VM.brass = std({ color: C(0xc9a24a), metalness: 0.9, roughness: 0.28, envMapIntensity: 1.3 });
 }
 
@@ -4327,7 +4333,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
     if (by === 'player') {
       G.kills++; G.score += 100 + (head ? 50 : 0); statKill(e, head);
       try { onKill(e, head, !!boom); } catch (err) { reportError(err); }
-      sfx.kill();
+      sfx.kill(head);
     }
     try { matchBotKilled(e, by, head, boom); } catch (err) { reportError(err); }
     if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(e.group.position.x, e.group.position.z, groundAt(e.group.position.x, e.group.position.z, e.group.position.y + 0.3));
@@ -6038,7 +6044,7 @@ const ATT_HQ = {};
 function hqAtt(name) {
   if (typeof HQDATA === 'undefined' || !HQDATA['att_' + name]) return null;
   if (!ATT_HQ[name]) { armoryMats(); const H = HQDATA['att_' + name], grp = new THREE.Group(); for (const p in H.parts) grp.add(hqPart(H.parts[p])); ATT_HQ[name] = grp; }
-  const c = ATT_HQ[name].clone(); c.name = 'att_' + name; return c;
+  const c = ATT_HQ[name].clone(); c.name = 'att_' + name; c.traverse(o => { if (o.isMesh && o.material === VM.dot) o.visible = false; }); return c;
 }
 function buildAttachmentVisuals(wi) { const w = WEAPONS[wi]; attachVisuals(gunObjs[wi], w.def, w.factory, w.len, null); }
 // ovr: an attachment shown in place of the equipped one in its slot (loadout preview)
@@ -6059,7 +6065,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   const ry = coEye !== null ? Math.max(u.railY, coEye - OPTIC_H[op]) : u.railY;
   if (coEye !== null && op !== 'holo' && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
   u.dots = [];
-  if (u.stockOptic) u.stockOptic.forEach(o => { o.visible = op === 'reddot'; });
+  if (u.stockOptic) u.stockOptic.forEach(o => { o.visible = op === 'reddot' && o.material !== VM.dot; });
   // factory irons: the bead / pistol sights stay as they are; rifle irons lose the solid rear sight (see-through aperture below)
   const rifleIrons = (op === 'irons' || op === 'sirons' || op === 'irons_p') && !u.pistol;
   if (u.irons) u.irons.visible = false;
@@ -6083,7 +6089,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   if (mz === 'spreader') add(new THREE.BoxGeometry(0.05, 0.016, 0.05), M.dark, 0, my, tip - 0.02);
   }
   // optics: everything sits on the rail at (railY, opticZ)
-  const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); add(new THREE.CircleGeometry(0.0022, 8), M.dot, 0, y, z + 0.0005); };
+  const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); };
   const notStock = !(def.blender && !hasHQ(def) && op === def.optic);
   const OPT_DZ = { reddot: 0.02, scope25: 0.005, scope6: 0.015, scope10: 0.017, scope35: 0.011 };
   const hqOpt = OPTIC_H[op] !== undefined && op !== 'holo' && (op !== 'reddot' || notStock) && HQ(op, 0, ry, oz + (OPT_DZ[op] || 0));
@@ -6091,7 +6097,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   if (!hqOpt) {
   if (notStock && op === 'reddot') {
     add(new THREE.BoxGeometry(0.034, 0.012, 0.07), M.dark, 0, ry + 0.006, oz); tubeZ(0.02, 0.07, M.dark, 0, ry + 0.034, oz + 0.035, 16);
-    const l = new THREE.Mesh(new THREE.CircleGeometry(0.0165, 16), M.lens); l.position.set(0, ry + 0.034, oz + 0.036); grp.add(l); add(new THREE.CircleGeometry(0.0022, 8), M.dot, 0, ry + 0.034, oz + 0.0365);
+    const l = new THREE.Mesh(new THREE.CircleGeometry(0.0165, 16), M.lens); l.position.set(0, ry + 0.034, oz + 0.036); grp.add(l);
   }
   if (op === 'holo') {   // EOTech EXPS3-size holo (the kind Rainbow Six uses): 96 mm long, 30 x 23 mm window in a 70 mm hood tunnel, 4 mm walls
     const cy = coEye !== null ? coEye : ry + 0.035, wW = 0.030, wH = 0.023, t = 0.004, L = 0.096, hl = 0.07, hz = oz - L / 2 + hl / 2, bot = cy - wH / 2 - 0.003;
@@ -6140,9 +6146,9 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   function rearSight(eye, rz) {   // flip-up aperture: base on the rail, guard ears, a thin ring to look through
     const base = Math.min(u.railY, eye - 0.016);
     add(new THREE.BoxGeometry(0.026, 0.006, 0.022), M.dark, 0, base + 0.003, rz);
-    add(new THREE.BoxGeometry(0.012, Math.max(0.002, eye - 0.0062 - base - 0.006), 0.003), M.dark, 0, base + 0.006 + (eye - 0.0062 - base - 0.006) / 2, rz);
-    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.003, eye + 0.004 - base - 0.006, 0.012), M.dark, sx * 0.0105, base + 0.006 + (eye + 0.004 - base - 0.006) / 2, rz);
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.0034, 0.0062, 36), M.darkDS); ring.position.set(0, eye, rz); grp.add(ring);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0018, Math.max(0.002, eye - base - 0.006), 0.003), M.dark, sx * 0.0055, base + 0.006 + (eye - base - 0.006) / 2, rz);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0025, eye + 0.0015 - base - 0.006, 0.01), M.dark, sx * 0.0115, base + 0.006 + (eye + 0.0015 - base - 0.006) / 2, rz);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.0038, 0.0058, 36), M.darkDS); ring.position.set(0, eye, rz); grp.add(ring);
   }
   const si = u.sightInfo;
   if (rifleIrons && si) {
@@ -6831,7 +6837,7 @@ function netTick(dt) {
       R.ds = ds; R.kb = typeof pr.kb === 'string' ? pr.kb : ''; const head = !!pr.kh;
       const bot = R.bot;
       if (R.kb && R.kb === NET.me) {
-        NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill();
+        NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill(head);
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
         else statKillAt(R.x, R.z, head);
         if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);

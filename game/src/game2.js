@@ -160,7 +160,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
     if (by === 'player') {
       G.kills++; G.score += 100 + (head ? 50 : 0); statKill(e, head);
       try { onKill(e, head, !!boom); } catch (err) { reportError(err); }
-      sfx.kill();
+      sfx.kill(head);
     }
     try { matchBotKilled(e, by, head, boom); } catch (err) { reportError(err); }
     if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(e.group.position.x, e.group.position.z, groundAt(e.group.position.x, e.group.position.z, e.group.position.y + 0.3));

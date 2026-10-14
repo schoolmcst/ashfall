@@ -223,7 +223,7 @@ const ATT_HQ = {};
 function hqAtt(name) {
   if (typeof HQDATA === 'undefined' || !HQDATA['att_' + name]) return null;
   if (!ATT_HQ[name]) { armoryMats(); const H = HQDATA['att_' + name], grp = new THREE.Group(); for (const p in H.parts) grp.add(hqPart(H.parts[p])); ATT_HQ[name] = grp; }
-  const c = ATT_HQ[name].clone(); c.name = 'att_' + name; return c;
+  const c = ATT_HQ[name].clone(); c.name = 'att_' + name; c.traverse(o => { if (o.isMesh && o.material === VM.dot) o.visible = false; }); return c;
 }
 function buildAttachmentVisuals(wi) { const w = WEAPONS[wi]; attachVisuals(gunObjs[wi], w.def, w.factory, w.len, null); }
 // ovr: an attachment shown in place of the equipped one in its slot (loadout preview)
@@ -244,7 +244,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   const ry = coEye !== null ? Math.max(u.railY, coEye - OPTIC_H[op]) : u.railY;
   if (coEye !== null && op !== 'holo' && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
   u.dots = [];
-  if (u.stockOptic) u.stockOptic.forEach(o => { o.visible = op === 'reddot'; });
+  if (u.stockOptic) u.stockOptic.forEach(o => { o.visible = op === 'reddot' && o.material !== VM.dot; });
   // factory irons: the bead / pistol sights stay as they are; rifle irons lose the solid rear sight (see-through aperture below)
   const rifleIrons = (op === 'irons' || op === 'sirons' || op === 'irons_p') && !u.pistol;
   if (u.irons) u.irons.visible = false;
@@ -268,7 +268,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   if (mz === 'spreader') add(new THREE.BoxGeometry(0.05, 0.016, 0.05), M.dark, 0, my, tip - 0.02);
   }
   // optics: everything sits on the rail at (railY, opticZ)
-  const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); add(new THREE.CircleGeometry(0.0022, 8), M.dot, 0, y, z + 0.0005); };
+  const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); };
   const notStock = !(def.blender && !hasHQ(def) && op === def.optic);
   const OPT_DZ = { reddot: 0.02, scope25: 0.005, scope6: 0.015, scope10: 0.017, scope35: 0.011 };
   const hqOpt = OPTIC_H[op] !== undefined && op !== 'holo' && (op !== 'reddot' || notStock) && HQ(op, 0, ry, oz + (OPT_DZ[op] || 0));
@@ -276,7 +276,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   if (!hqOpt) {
   if (notStock && op === 'reddot') {
     add(new THREE.BoxGeometry(0.034, 0.012, 0.07), M.dark, 0, ry + 0.006, oz); tubeZ(0.02, 0.07, M.dark, 0, ry + 0.034, oz + 0.035, 16);
-    const l = new THREE.Mesh(new THREE.CircleGeometry(0.0165, 16), M.lens); l.position.set(0, ry + 0.034, oz + 0.036); grp.add(l); add(new THREE.CircleGeometry(0.0022, 8), M.dot, 0, ry + 0.034, oz + 0.0365);
+    const l = new THREE.Mesh(new THREE.CircleGeometry(0.0165, 16), M.lens); l.position.set(0, ry + 0.034, oz + 0.036); grp.add(l);
   }
   if (op === 'holo') {   // EOTech EXPS3-size holo (the kind Rainbow Six uses): 96 mm long, 30 x 23 mm window in a 70 mm hood tunnel, 4 mm walls
     const cy = coEye !== null ? coEye : ry + 0.035, wW = 0.030, wH = 0.023, t = 0.004, L = 0.096, hl = 0.07, hz = oz - L / 2 + hl / 2, bot = cy - wH / 2 - 0.003;
@@ -325,9 +325,9 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   function rearSight(eye, rz) {   // flip-up aperture: base on the rail, guard ears, a thin ring to look through
     const base = Math.min(u.railY, eye - 0.016);
     add(new THREE.BoxGeometry(0.026, 0.006, 0.022), M.dark, 0, base + 0.003, rz);
-    add(new THREE.BoxGeometry(0.012, Math.max(0.002, eye - 0.0062 - base - 0.006), 0.003), M.dark, 0, base + 0.006 + (eye - 0.0062 - base - 0.006) / 2, rz);
-    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.003, eye + 0.004 - base - 0.006, 0.012), M.dark, sx * 0.0105, base + 0.006 + (eye + 0.004 - base - 0.006) / 2, rz);
-    const ring = new THREE.Mesh(new THREE.RingGeometry(0.0034, 0.0062, 36), M.darkDS); ring.position.set(0, eye, rz); grp.add(ring);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0018, Math.max(0.002, eye - base - 0.006), 0.003), M.dark, sx * 0.0055, base + 0.006 + (eye - base - 0.006) / 2, rz);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0025, eye + 0.0015 - base - 0.006, 0.01), M.dark, sx * 0.0115, base + 0.006 + (eye + 0.0015 - base - 0.006) / 2, rz);
+    const ring = new THREE.Mesh(new THREE.RingGeometry(0.0038, 0.0058, 36), M.darkDS); ring.position.set(0, eye, rz); grp.add(ring);
   }
   const si = u.sightInfo;
   if (rifleIrons && si) {

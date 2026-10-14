@@ -223,7 +223,7 @@ function netTick(dt) {
       R.ds = ds; R.kb = typeof pr.kb === 'string' ? pr.kb : ''; const head = !!pr.kh;
       const bot = R.bot;
       if (R.kb && R.kb === NET.me) {
-        NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill();
+        NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill(head);
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
         else statKillAt(R.x, R.z, head);
         if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);

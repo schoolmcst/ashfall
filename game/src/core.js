@@ -128,7 +128,13 @@ const sfx = {
   stun: o => { burst(0.5, 5200, 0.8, 'highpass', o); burst(0.8, 900, 0.6, 'lowpass', o); tone(2600, 1.6, 0.12, 'sine', 2400, o); },
   enemy: o => { burst(0.04, 4600, 0.3, 'highpass', o); burst(0.16, 1500, 0.35, 'lowpass', o); },
   hit: head => tone(head ? 1700 : 1000, 0.05, 0.1, 'square'),
-  kill: () => { tone(520, 0.12, 0.12, 'square', 260); },
+  kill: head => {
+    burst(0.025, 7000, 0.32, 'highpass');                       // crisp snap
+    tone(95, 0.16, 0.42, 'sine', 42);                           // body thump
+    tone(head ? 1480 : 1180, 0.16, 0.16, 'triangle');            // confirm chime
+    tone(head ? 2220 : 1770, 0.22, 0.09, 'sine', undefined, { delay: 0.045 });
+    tone(head ? 2960 : 2360, 0.3, 0.05, 'sine', undefined, { delay: 0.09 });
+  },
   thud: o => { burst(0.09, 600, 0.35, 'lowpass', o); },
   explode: o => { burst(1.4, 420, 1.1, 'lowpass', o); burst(0.25, 3000, 0.5, 'highpass', o); tone(55, 0.9, 0.9, 'sine', 22, o); },
   reload: () => { burst(0.05, 3500, 0.3, 'highpass'); tone(300, 0.05, 0.1, 'square'); setTimeout(() => { burst(0.06, 2500, 0.4, 'highpass'); tone(220, 0.06, 0.12, 'square'); }, 750); },

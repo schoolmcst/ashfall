@@ -45,7 +45,7 @@ function buildViewmodelMaterials() {
   VM.skin = std({ color: C(0x9c7355), roughness: 0.8 });
   VM.sleeve = std({ color: C(0x4b5240), roughness: 0.95, map: TEX.concrete.map, bumpMap: TEX.concrete.bump, bumpScale: 0.003 });
   VM.dot = new THREE.MeshBasicMaterial({ color: 0xff2a2a });
-  VM.lens = std({ color: C(0x5a7a88), metalness: 0.5, roughness: 0.05, transparent: true, opacity: 0.22, depthWrite: false });
+  VM.lens = std({ color: C(0xbfdbe6), metalness: 0.1, roughness: 0.02, transparent: true, opacity: 0.1, depthWrite: false, envMapIntensity: 0.35 });
   VM.brass = std({ color: C(0xc9a24a), metalness: 0.9, roughness: 0.28, envMapIntensity: 1.3 });
 }
 
