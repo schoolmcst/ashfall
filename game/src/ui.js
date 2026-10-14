@@ -1,5 +1,5 @@
 /* ================================================================== UI: screens, settings, input, loop, boot */
-const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes'];
+const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist'];
 let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
   curScreen = id; if (id === 'menu') try { renderMenuCard(); } catch (e) {}
@@ -154,7 +154,9 @@ function actions(act) {
     case 'mode-': lobbyTab(-1); break;
     case 'mode+': lobbyTab(1); break;
     case 'modes-back': renderLobby(); showScreen('lobby'); focusFirst('.cod-go'); break;
-    case 'lob-start': startMatch(LOBBY.mode); break;
+    case 'lob-start': if (NET.app && MODES[LOBBY.mode].online) quickPlay(); else startMatch(LOBBY.mode); break;
+    case 'playlist': openPlaylist(); break;
+    case 'pl-back': renderLobby('.cod-go'); showScreen('lobby'); focusFirst('.cod-go'); break;
     case 'lobby-back': showScreen('menu'); break;
     case 'custom': cusReturn = curScreen === 'lobby' ? 'lobby' : 'menu'; renderCustom(); showScreen('custom'); break;
     case 'cus-back': if (cusReturn === 'lobby') renderLobby(); showScreen(cusReturn); break;
@@ -166,7 +168,7 @@ function actions(act) {
     case 'pl-start': privStart(); break;
     case 'streaks': openStreaks(curScreen || 'menu'); break;
     case 'stk-back': if (stkReturn === 'lobby') renderLobby(); showScreen(stkReturn); break;
-    case 'pl-leave': toLobby(); break;
+    case 'pl-leave': QP.busy = false; toLobby(); break;
     case 'res-stats': statsReturn = 'results'; statOnline = !!(M && M.online); renderStats(); showScreen('career'); break;
     case 'settings': returnScreen = curScreen || 'menu'; showScreen('settings'); break;
     case 'settings-back': showScreen(returnScreen); break;
@@ -202,6 +204,7 @@ function goBack() {
   else if (curScreen === 'career') actions('stats-back');
   else if (curScreen === 'streaks') actions('stk-back');
   else if (curScreen === 'modes') actions('modes-back');
+  else if (curScreen === 'playlist') actions('pl-back');
   else if (curScreen === 'results') toLobby();
   else if (curScreen === 'settings' || curScreen === 'howto' || curScreen === 'credits') showScreen(returnScreen);
   else if (curScreen === 'pause') resumeGame();
@@ -225,7 +228,6 @@ function adjustFocused(d) {
   else if (a.getAttribute && a.getAttribute('data-act') === 'diff-') { cycleDiff(d); }
   else if (a.getAttribute && /^diff/.test(a.getAttribute('data-act') || '')) cycleDiff(d);
   else if (a.getAttribute && /^class/.test(a.getAttribute('data-act') || '')) cycleClass(d);
-  else if (a.classList && a.classList.contains('cod-go')) lobbyTab(d);
 }
 
 /* ------------------------------------------------------------------ input */
@@ -239,6 +241,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Tab' || e.code === bind('board')) e.preventDefault();
   if (G.state !== 'playing') {
     if (!curScreen) return;
+    if (curScreen === 'lobby' && e.code === 'KeyQ' && !(document.activeElement && document.activeElement.tagName === 'INPUT')) { openPlaylist(); return; }
     if (e.code === 'ArrowDown') { moveFocus(1); e.preventDefault(); }
     else if (e.code === 'ArrowUp') { moveFocus(-1); e.preventDefault(); }
     else if (e.code === 'ArrowRight' && document.activeElement && (document.activeElement.classList.contains('cod-go') || document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(1); e.preventDefault(); }
@@ -366,6 +369,7 @@ function menuPad(dt, mx, my, ry, press, down) {
   const d = padNavDir(mx, my, down);
   if (d !== nav.dir) { nav.dir = d; nav.n = 0; if (d) { menuMove(d); nav.t = 0.34; } }
   else if (d) { nav.t -= dt; if (nav.t <= 0) { menuMove(d); nav.n++; nav.t = Math.max(0.045, 0.1 - nav.n * 0.005); } }
+  if (press(3) && curScreen === 'lobby') { openPlaylist(); return; }
   if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); }
   if (press(1)) goBack();
   if (press(4) || press(5)) menuTab(press(4) ? -1 : 1);
@@ -374,7 +378,7 @@ function menuPad(dt, mx, my, ry, press, down) {
 }
 function menuTab(d) {
   if (curScreen === 'loadout') loadoutTab(d);
-  else if (curScreen === 'lobby') lobbyTab(d);
+  else if (curScreen === 'lobby') {}
   else if (curScreen === 'career') statsTab(d);
   else if (curScreen === 'settings') { const ks = Object.keys(SCHEMA); curTab = ks[(ks.indexOf(curTab) + d + ks.length) % ks.length]; buildTabs(); renderSettings(); sfx.ui(); setTimeout(() => { const t = $('tabs').querySelector('.on'); if (t) t.focus(); }, 0); }
   else if (curScreen === 'menu') cycleClass(d);

@@ -510,7 +510,7 @@
 
 <div id="plobby" class="screen center hide">
   <div class="panel plob">
-    <div class="ttl">PRIVATE MATCH<span id="plCode"></span></div>
+    <div class="ttl"><span id="plTtl">PRIVATE MATCH</span><span id="plCode"></span></div>
     <div class="plob-body"><div class="plob-set" id="plSet"></div><div class="plob-players"><div class="plob-h">PLAYERS</div><div id="plPlayers"></div></div></div>
     <div class="plob-hint" id="plHint"></div>
     <div class="actions"><button class="btn" data-act="pl-leave">LEAVE</button><span></span><button class="btn" data-act="loadout">LOADOUT</button><button class="btn primary" data-act="pl-start" id="plStart">START MATCH</button></div>
@@ -551,6 +551,15 @@
     <div class="cod-roster" id="lobRoster"></div>
   </div>
   <div class="cod-foot"><span class="padhint">LB / RB  CHANGE MODE &middot; START  PLAY</span></div>
+</div>
+
+<div id="playlist" class="screen center hide">
+  <div class="panel plp">
+    <h2>PLAYLIST</h2>
+    <div class="pl-count" id="plCount"></div>
+    <div id="plGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;padding:10px 26px 16px;overflow:auto"></div>
+    <div class="actions"><button class="btn primary" data-act="pl-back">DONE</button></div>
+  </div>
 </div>
 
 <div id="modes" class="screen center hide">
@@ -4889,7 +4898,7 @@ const MATCH_CFG_KEY = 'ashfall.match.v1';
 let LOBBY = { mode: 'tdm', map: 'random' };
 // 'random' picks any map except the one you just played
 function pickMapFor(sel) { if (sel && MAPS[sel]) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : 'ruins'; }
-try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || MAPS[o.map])) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; } catch (e) {}
+try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || MAPS[o.map])) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; if (o && Array.isArray(o.playlist)) LOBBY.playlist = o.playlist.filter(k => MODES[k] && MODES[k].online); } catch (e) {}
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
 function matchCfg(mode, custom) {
@@ -4931,7 +4940,7 @@ function startMatch(mode, custom) {
     M.online = true; if (def.base) M.mode = def.base; const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false };
     M.entries.push(me); M.me = me; G.state = 'respawning'; G.respT = 2.2; showScreen(null); lockPointer(); startMatchStats(); objSetup(); updateModeHud(true);
     if (M.mode === 'gun') equipGunGame(0);
-    NET.priv = null; if (privWanted()) privEnter();
+    NET.priv = null; if (privWanted()) privEnter(); else if (NET.pubNext) privEnterPublic(); NET.pubNext = false;
     netStart(mode); if (NET.priv) return; showBanner(def.name, NET.app ? (NET.kind === 'code' ? 'private match: ' + NET.code.toUpperCase() : NET.kind === 'slot' ? 'joining a game on your Wi-Fi' : 'quick play') : NET.ns ? 'room: ' + NET.code.toUpperCase() : 'offline'); return;
   }
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5); let ni = 0;
@@ -5516,7 +5525,7 @@ function privCodeHtml() {
 }
 const modeGroup = k => MODES[k].online ? 'on' : 'off';
 function renderLobby(focusSel) {
-  if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm';
+  if (!MODES[LOBBY.mode].online || !playlist().includes(LOBBY.mode)) LOBBY.mode = playlist()[0];
   const sel = LOBBY.mode, d = MODES[sel], online = !!d.online, st = careerOf(online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   if (online) LOBBY.lastOn = sel; else LOBBY.lastOff = sel;
   $('lobKind').textContent = 'MULTIPLAYER';
@@ -5525,9 +5534,8 @@ function renderLobby(focusSel) {
   const goTxt = online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH';
   const m = MAPS[LOBBY.map];
   $('lobSel').innerHTML =
-    `<div class="cod-play"><button class="cod-arrow" data-act="mode-" aria-label="Previous mode" tabindex="-1">&lsaquo;</button>` +
-    `<button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}><small>${modeRules(sel)}</small><b>${d.name.replace(/^ONLINE /, '')}</b><span>${goTxt}</span></button>` +
-    `<button class="cod-arrow" data-act="mode+" aria-label="Next mode" tabindex="-1">&rsaquo;</button></div>` +
+    `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}><small>PLAYLIST · ${playlist().length} MODE${playlist().length > 1 ? 'S' : ''} · Y / Q TO EDIT</small><b>${NET.app ? 'QUICK PLAY' : 'JOIN ROOM'}</b><span>${playlist().map(k => MODES[k].short.replace(/^ONLINE /, '')).join(' · ')}</span></button>` +
+    `<button class="cod-arrow" data-act="playlist" aria-label="Edit playlist" title="Edit playlist (Y / Q)">&#9776;</button></div>` +
     `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${PERKS[c.k].name}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
     (stk ? `<button class="cod-row" data-act="streaks"><small>SCORESTREAKS</small><b>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => stkIcon(id)).join('')}</b><span>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => `${STREAKS[id].name} ${STREAKS[id].cost}`).join(' · ')}</span><i>&rsaquo;</i></button>` : '') +
     (!online && sel !== 'surv' ? `<div class="cod-row"><small>BOT SKILL</small><b>${SKILL[matchCfg(sel).skill].name}</b><span>change it here or in Settings</span><div class="arw"><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div></div>` : '') +
@@ -6903,7 +6911,7 @@ const P2P = (() => {
   }
 
   // ------------------------------------------------------------------ a match room
-  function makeRoom(kind, mode, code) {
+  function makeRoom(kind, mode, code, opts = {}) {
     const me = rid(10);   // my stable label (peers() key)
     const R = { me, mode, kind, code, host: false, slot: '', mine: {}, snap: new Map(), order: [], ls: new Set(), closed: false, sig: null, hostLink: null, links: new Map(), extras: () => [], status: 'connecting', players: 1 };
     const slotName = n => kind === 'quick' ? `ashfall-${VER()}-${mode}-q${n}` : kind === 'slot' ? code : `ashfall-${VER()}-${mode}-c-${code}`;
@@ -7020,6 +7028,7 @@ const P2P = (() => {
         if (L) { startClient(L, slot); return R; }
         if (R.full) continue;                                   // that match is full: try the next one
         if (R.hostSeen) throw new Error('could not reach the host of that match - check your firewall and try again');
+        if (opts.noHost) continue;   // only looking for a match someone else hosts
         try { await becomeHost(slot); return R; }
         catch (e) {
           if (e.message !== 'taken') throw e;
@@ -7028,7 +7037,7 @@ const P2P = (() => {
           if (R.hostSeen) throw new Error('could not reach the host of that match - check your firewall and try again');
         }
       }
-      throw new Error(kind === 'quick' ? 'all matches full' : 'match full');
+      throw new Error(opts.noHost ? 'none' : kind === 'quick' ? 'all matches full' : 'match full');
     };
     R.leave = async () => {
       R.closed = true; clearInterval(R.timer);
@@ -7044,7 +7053,7 @@ const P2P = (() => {
     current: null,
     // can this computer reach the match service? resolves the round-trip in ms, or throws
     async ping() { const t = performance.now(), s = await signal('p' + rid(14)); const ms = Math.round(performance.now() - t); s.close(); return ms; },
-    async open(kind, mode, code) { const r = makeRoom(kind, mode, code); this.current = r; try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
+    async open(kind, mode, code, opts) { const r = makeRoom(kind, mode, code, opts); this.current = r; try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
   };
 })();
 /* ================================================================== online play
@@ -7142,13 +7151,13 @@ async function netStart(mode) {
   if (NET.app) {
     const kind = NET.kind, code = kind === 'slot' ? NET.slot : NET.code; NET.joinKind = kind;
     let room = null;
-    try { room = await P2P.open(kind, kind === 'code' ? 'priv' : mode, code); }
+    try { if (NET.preRoom) { room = NET.preRoom; NET.preRoom = null; } else room = await P2P.open(kind, kind === 'code' ? 'priv' : mode, code); }
     catch (e) { if (NET.on && NET.mode === mode) { NET.on = false; showBanner('COULD NOT JOIN', e.message === 'timeout' || e.message === 'fail' ? 'no internet connection to the match service' : e.message); setTimeout(() => { if (M.online && !NET.room) toLobby(); }, 6000); } return; }
     if (!NET.on || NET.mode !== mode) { room.leave(); return; }
     room.extras = () => NET.botPres;
     NET.room = room; NET.joinedAt = performance.now() / 1000; NET.botT = 2;
     NET.warmEnd = room.host && !NET.priv ? performance.now() / 1000 + WARMUP : 0;   // a new match waits for people before bots come in (private: the lobby does that)
-    if (room.host) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : 'random'));   // the host picks the map; everyone else follows it
+    if (room.host) netSwitchMap(pickMapFor(NET.priv && NET.priv.cfg ? NET.priv.cfg.mp : 'random'));   // the host picks the map; everyone else follows it
     return;
   }
   if (!NET.ns) { NET.on = false; showMsg('OFFLINE: ONLINE PLAY NEEDS CLAUDE.AI'); return; }
@@ -7328,7 +7337,7 @@ function netTick(dt) {
   { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
   if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
-  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : 'random')); netNewRound(); } }
+  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor(NET.priv && NET.priv.cfg ? NET.priv.cfg.mp : 'random')); netNewRound(); } }
   else {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
@@ -7397,7 +7406,7 @@ function netBots(dt) {
     const humans = [0, 0]; let hum = 1; humans[M.myTeam]++;
     for (const R of NET.rem.values()) if (!R.isBot) { hum++; if (M.def.teams) humans[R.entry.team]++; }
     const add = wl <= 0 && (NET.addT = (NET.addT || 0) - 0.5) <= 0;   // add one bot every 1.5 s; remove extras at once
-    const pw = NET.priv ? (NET.priv.started ? privBotWant(humans) : (M.def.teams ? [0, 0] : 0)) : null;
+    const pw = NET.priv ? (!NET.priv.started ? (M.def.teams ? [0, 0] : 0) : NET.priv.pub ? null : privBotWant(humans)) : null;
     if (M.def.teams) for (let t = 0; t < 2; t++) {
       const mine = bots.filter(b => b.team === t), want = pw ? pw[t] : wl > 0 ? 0 : Math.max(0, BOT_FILL.teams - humans[t]);
       for (let i = mine.length - 1; i >= want; i--) netRemoveBot(mine[i]);
@@ -7478,6 +7487,7 @@ function privEnter() {
 }
 // the room settings -> this game (mode, limits); switching between teams and free-for-all redraws everyone
 function privApply() {
+  if (NET.priv.pub) return;
   const c = NET.priv.cfg, want = c.md === 'ffa' ? 'offa' : 'otdm';
   M.cfg.score = c.sc; M.cfg.time = c.tl;
   if (M.mode !== want) {
@@ -7488,9 +7498,10 @@ function privApply() {
   }
 }
 // what the host sends: [mode, map, bots, time, kills, started, round time]
-const privPack = () => { const c = NET.priv.cfg; return [c.md, c.mp, c.b, c.tl, c.sc, NET.priv.started ? 1 : 0, Math.round(M.t)]; };
+const privPack = () => { if (NET.priv.pub) return ['P', Math.ceil(Math.max(0, NET.priv.lt)), NET.priv.started ? 1 : 0, Math.round(M.t)]; const c = NET.priv.cfg; return [c.md, c.mp, c.b, c.tl, c.sc, NET.priv.started ? 1 : 0, Math.round(M.t)]; };
 function privFromHost(pc) {
   if (!NET.priv || !Array.isArray(pc) || privHost()) return;
+  if (pc[0] === 'P') { NET.priv.lt = +pc[1] || 0; if (pc[2] && !NET.priv.started) privBegin(); if (NET.priv.started && G.state !== 'over' && Math.abs((+pc[3] || 0) - M.t) > 2) M.t = +pc[3] || 0; return; }
   const c = privClean({ md: pc[0], mp: pc[1], b: pc[2], tl: pc[3], sc: pc[4] });
   if (JSON.stringify(c) !== JSON.stringify(NET.priv.cfg)) { NET.priv.cfg = c; privApply(); if (curScreen === 'plobby') renderPlobby(true); }
   if (pc[5] && !NET.priv.started) privBegin();
@@ -7500,8 +7511,7 @@ function privFromHost(pc) {
 function privStart() {
   if (!NET.priv || !privHost() || NET.priv.started) return;
   if (!NET.teamSet) { showMsg('STILL CONNECTING…'); return; }
-  const c = NET.priv.cfg; PRIVCFG = Object.assign({}, c); privSave();
-  netSwitchMap(pickMapFor(c.mp));
+  if (!NET.priv.pub) { const c = NET.priv.cfg; PRIVCFG = Object.assign({}, c); privSave(); netSwitchMap(pickMapFor(c.mp)); }
   NET.ep++; NET.k = NET.d = 0; G.kills = 0; NET.botT = 0; NET.addT = 0;
   privBegin();
 }
@@ -7510,7 +7520,7 @@ function privBegin() {
   for (const en of M.entries) { en.kills = en.deaths = en.score = 0; }
   commitPartialStats(); startMatchStats();
   G.state = 'respawning'; G.respT = 0.4; showScreen(null); lockPointer(); updateModeHud(true);
-  showBanner(MODES[M.mode].short, `${mapName(curMap)} · first to ${M.cfg.score} kills${M.cfg.time ? ' · ' + M.cfg.time + ' min' : ''}`);
+  showBanner(M.def.name.replace(/^ONLINE /, ''), `${mapName(curMap)} · ${modeGoalText()}`);
 }
 // how many bots each side should have: the host's count, put where they even out the teams
 function privBotWant(humans) {
@@ -7521,6 +7531,7 @@ function privBotWant(humans) {
   return w;
 }
 function privTick(dt) {
+  if (NET.priv.pub && !NET.priv.started && privHost() && NET.teamSet) { NET.priv.lt -= dt; if (NET.priv.lt <= 0) privStart(); }
   if ((NET.priv.uiT = (NET.priv.uiT || 0) - dt) > 0) return; NET.priv.uiT = 0.4;
   if (curScreen === 'plobby') renderPlobby(false);
 }
@@ -7531,7 +7542,9 @@ function privPlayers() {
 }
 function renderPlobby(full) {
   if (!NET.priv) return;
+  if (NET.priv.pub) return renderPubLobby();
   const host = privHost(), c = NET.priv.cfg, st = NET.room ? '' : (P2P.current ? String(P2P.current.status || 'connecting') : 'connecting');
+  $('plTtl').textContent = 'PRIVATE MATCH'; $('plStart').style.display = '';
   $('plCode').textContent = NET.priv.kind === 'code' ? NET.code.toUpperCase() : 'WI-FI';
   const pl = privPlayers();
   $('plPlayers').innerHTML = pl.map(p => `<div class="pl-p${p.me ? ' me' : ''}"><b>${p.name}</b>${p.host ? '<i>HOST</i>' : ''}${p.me ? '<i class="you">YOU</i>' : ''}</div>`).join('') +
@@ -7570,8 +7583,85 @@ function renderPlobby(full) {
 .plob .seg{flex-wrap:wrap}@media (max-width:820px){.plob-body{grid-template-columns:1fr}}`;
   document.head.appendChild(s);
 })();
+/* ================================================================== quick play: playlist + pre-game lobby (desktop app)
+   PLAY in the multiplayer lobby searches every mode on your playlist (Y / Q edits it) for a match someone is already
+   hosting; if none, you host one in a random mode from the list. Everyone waits in a pre-game lobby with the player
+   list while a 30 second countdown runs (the host's clock), then the match starts for everyone at once. Players who
+   find the match after it started drop straight in. */
+const ONLINE_MODES = () => MODE_ORDER.filter(k => MODES[k].online);
+function playlist() {
+  const ok = ONLINE_MODES(); let L = Array.isArray(LOBBY.playlist) ? LOBBY.playlist.filter(k => ok.includes(k)) : [];
+  if (!L.length) L = ['otdm', 'offa'];
+  return L;
+}
+const shortName = k => MODES[k].name.replace(/^ONLINE /, '');
+
+/* ---------- playlist screen */
+function openPlaylist() { renderPlaylist(); showScreen('playlist'); focusFirst('#plGrid .on'); }
+function renderPlaylist() {
+  const sel = playlist();
+  $('plGrid').innerHTML = ONLINE_MODES().map(k => { const d = MODES[k], on = sel.includes(k);
+    return `<button class="mode-card pl-card${on ? ' on' : ''}" data-pl="${k}"><i>${d.icon}</i><b>${shortName(k)}</b><p>${d.desc}</p><span>${modeRules(k)}</span><em>${on ? '✓ IN PLAYLIST' : '+ ADD'}</em></button>`; }).join('');
+  $('plCount').textContent = `${sel.length} MODE${sel.length > 1 ? 'S' : ''} SELECTED · ONE IS PICKED AT RANDOM EACH TIME YOU PLAY`;
+  for (const b of $('plGrid').children) b.onclick = () => {
+    const k = b.dataset.pl, L = playlist().slice(), i = L.indexOf(k); sfx.ui();
+    if (i >= 0) { if (L.length > 1) L.splice(i, 1); } else L.push(k);
+    LOBBY.playlist = L; LOBBY.mode = L[0]; saveLobby(); renderPlaylist(); focusFirst(`#plGrid [data-pl="${k}"]`);
+  };
+}
+
+/* ---------- searching -> pre-game lobby */
+const QP = { busy: false, status: '' };
+async function quickPlay() {
+  if (QP.busy) return; QP.busy = true;
+  const L = playlist().slice().sort(() => Math.random() - 0.5);
+  NET.kind = 'quick'; NET.priv = { pub: true, searching: true, started: false, key: '', lt: 30 };
+  QP.status = 'SEARCHING FOR A MATCH'; renderPubLobby(); showScreen('plobby'); G.state = 'plobby';
+  let room = null, mode = null;
+  for (const k of L) {
+    QP.status = `SEARCHING · ${shortName(k)}`; renderPubLobby();
+    try { room = await P2P.open('quick', k, '', { noHost: true }); mode = k; break; } catch (e) { if (curScreen !== 'plobby' || !QP.busy) { QP.busy = false; return; } }
+  }
+  if (!QP.busy || curScreen !== 'plobby') { if (room) room.leave(); QP.busy = false; return; }   // backed out while searching
+  if (!mode) { mode = L[0]; QP.status = `NO MATCH FOUND · HOSTING ${shortName(mode)}`; }
+  QP.busy = false;
+  LOBBY.mode = mode; NET.preRoom = room; NET.pubNext = true; NET.kind = 'quick';
+  startMatch(mode);
+}
+function privEnterPublic() {
+  NET.priv = { pub: true, searching: false, started: false, key: '', lt: 30, kind: 'quick' };
+  G.state = 'plobby'; mouseDown = false; mouseAds = false;
+  hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
+  renderPubLobby(); showScreen('plobby');
+}
+function renderPubLobby() {
+  const pv = NET.priv; if (!pv) return;
+  const searching = pv.searching || !M || !M.online, d = searching ? null : M.def;
+  $('plTtl').textContent = 'MULTIPLAYER LOBBY';
+  $('plCode').textContent = searching ? '' : shortName(Object.keys(MODES).find(k => MODES[k] === d) || 'otdm');
+  const pl = searching ? [{ name: NET.nick, me: true, host: false }] : privPlayers();
+  $('plPlayers').innerHTML = pl.map(p => `<div class="pl-p${p.me ? ' me' : ''}"><b>${p.name}</b>${p.host ? '<i>HOST</i>' : ''}${p.me ? '<i class="you">YOU</i>' : ''}</div>`).join('') +
+    `<div class="pl-n">${pl.length} PLAYER${pl.length > 1 ? 'S' : ''}${searching ? '' : ' · BOTS FILL EMPTY SPOTS WHEN IT STARTS'}</div>`;
+  const lt = Math.ceil(Math.max(0, pv.lt || 0)), conn = !searching && NET.room && NET.teamSet;
+  const big = searching ? `<div class="pub-cd"><small>${QP.status || 'SEARCHING'}</small><b class="spin">···</b></div>`
+    : conn ? `<div class="pub-cd"><small>MATCH STARTS IN</small><b>${lt}</b></div>` : `<div class="pub-cd"><small>${String((P2P.current && P2P.current.status) || 'connecting').toUpperCase()}</small><b class="spin">···</b></div>`;
+  $('plSet').innerHTML = big + (searching ? `<div class="pub-info"><b>PLAYLIST</b>${playlist().map(shortName).join(' · ')}</div>` :
+    `<div class="pub-info"><b>${d.name.replace(/^ONLINE /, '')}</b>${d.desc}</div><div class="pub-info"><b>MAP</b>${mapName(curMap)}</div>`);
+  $('plHint').textContent = searching ? 'Looking for a match in your playlist. Press LEAVE to stop.' : 'Players can join until the countdown ends. Change your class with LOADOUT while you wait.';
+  const sb = $('plStart'); sb.style.display = 'none';
+}
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `.pub-cd{display:flex;flex-direction:column;align-items:center;justify-content:center;padding:26px 10px;border:1px solid rgba(224,180,74,.4);background:rgba(224,180,74,.07);margin-bottom:10px}
+.pub-cd small{font-size:11px;letter-spacing:.35em;color:var(--accent)}.pub-cd b{font-size:72px;line-height:1;margin-top:8px;font-variant-numeric:tabular-nums}
+.pub-cd b.spin{font-size:40px;letter-spacing:.3em;animation:blink 1s infinite}
+.pub-info{padding:10px 12px;border:1px solid var(--line);background:rgba(0,0,0,.35);margin-bottom:8px;font-size:12px;line-height:1.45;color:var(--dim);text-align:left}.pub-info b{display:block;color:var(--ink);letter-spacing:.2em;font-size:12px;margin-bottom:3px}
+.pl-card em{position:absolute;right:12px;top:14px;font-style:normal;font-size:10px;letter-spacing:.2em;color:var(--dim)}.pl-card.on em{color:var(--accent)}
+.plp{width:min(1100px,94vw)}.pl-count{padding:0 26px 6px;font-size:11px;letter-spacing:.25em;color:var(--dim);text-align:left}`;
+  document.head.appendChild(s);
+})();
 /* ================================================================== UI: screens, settings, input, loop, boot */
-const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes'];
+const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist'];
 let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
   curScreen = id; if (id === 'menu') try { renderMenuCard(); } catch (e) {}
@@ -7726,7 +7816,9 @@ function actions(act) {
     case 'mode-': lobbyTab(-1); break;
     case 'mode+': lobbyTab(1); break;
     case 'modes-back': renderLobby(); showScreen('lobby'); focusFirst('.cod-go'); break;
-    case 'lob-start': startMatch(LOBBY.mode); break;
+    case 'lob-start': if (NET.app && MODES[LOBBY.mode].online) quickPlay(); else startMatch(LOBBY.mode); break;
+    case 'playlist': openPlaylist(); break;
+    case 'pl-back': renderLobby('.cod-go'); showScreen('lobby'); focusFirst('.cod-go'); break;
     case 'lobby-back': showScreen('menu'); break;
     case 'custom': cusReturn = curScreen === 'lobby' ? 'lobby' : 'menu'; renderCustom(); showScreen('custom'); break;
     case 'cus-back': if (cusReturn === 'lobby') renderLobby(); showScreen(cusReturn); break;
@@ -7738,7 +7830,7 @@ function actions(act) {
     case 'pl-start': privStart(); break;
     case 'streaks': openStreaks(curScreen || 'menu'); break;
     case 'stk-back': if (stkReturn === 'lobby') renderLobby(); showScreen(stkReturn); break;
-    case 'pl-leave': toLobby(); break;
+    case 'pl-leave': QP.busy = false; toLobby(); break;
     case 'res-stats': statsReturn = 'results'; statOnline = !!(M && M.online); renderStats(); showScreen('career'); break;
     case 'settings': returnScreen = curScreen || 'menu'; showScreen('settings'); break;
     case 'settings-back': showScreen(returnScreen); break;
@@ -7774,6 +7866,7 @@ function goBack() {
   else if (curScreen === 'career') actions('stats-back');
   else if (curScreen === 'streaks') actions('stk-back');
   else if (curScreen === 'modes') actions('modes-back');
+  else if (curScreen === 'playlist') actions('pl-back');
   else if (curScreen === 'results') toLobby();
   else if (curScreen === 'settings' || curScreen === 'howto' || curScreen === 'credits') showScreen(returnScreen);
   else if (curScreen === 'pause') resumeGame();
@@ -7797,7 +7890,6 @@ function adjustFocused(d) {
   else if (a.getAttribute && a.getAttribute('data-act') === 'diff-') { cycleDiff(d); }
   else if (a.getAttribute && /^diff/.test(a.getAttribute('data-act') || '')) cycleDiff(d);
   else if (a.getAttribute && /^class/.test(a.getAttribute('data-act') || '')) cycleClass(d);
-  else if (a.classList && a.classList.contains('cod-go')) lobbyTab(d);
 }
 
 /* ------------------------------------------------------------------ input */
@@ -7811,6 +7903,7 @@ addEventListener('keydown', e => {
   if (e.code === 'Tab' || e.code === bind('board')) e.preventDefault();
   if (G.state !== 'playing') {
     if (!curScreen) return;
+    if (curScreen === 'lobby' && e.code === 'KeyQ' && !(document.activeElement && document.activeElement.tagName === 'INPUT')) { openPlaylist(); return; }
     if (e.code === 'ArrowDown') { moveFocus(1); e.preventDefault(); }
     else if (e.code === 'ArrowUp') { moveFocus(-1); e.preventDefault(); }
     else if (e.code === 'ArrowRight' && document.activeElement && (document.activeElement.classList.contains('cod-go') || document.activeElement.type === 'range' || (document.activeElement.parentElement && document.activeElement.parentElement.classList.contains('seg')))) { adjustFocused(1); e.preventDefault(); }
@@ -7938,6 +8031,7 @@ function menuPad(dt, mx, my, ry, press, down) {
   const d = padNavDir(mx, my, down);
   if (d !== nav.dir) { nav.dir = d; nav.n = 0; if (d) { menuMove(d); nav.t = 0.34; } }
   else if (d) { nav.t -= dt; if (nav.t <= 0) { menuMove(d); nav.n++; nav.t = Math.max(0.045, 0.1 - nav.n * 0.005); } }
+  if (press(3) && curScreen === 'lobby') { openPlaylist(); return; }
   if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); }
   if (press(1)) goBack();
   if (press(4) || press(5)) menuTab(press(4) ? -1 : 1);
@@ -7946,7 +8040,7 @@ function menuPad(dt, mx, my, ry, press, down) {
 }
 function menuTab(d) {
   if (curScreen === 'loadout') loadoutTab(d);
-  else if (curScreen === 'lobby') lobbyTab(d);
+  else if (curScreen === 'lobby') {}
   else if (curScreen === 'career') statsTab(d);
   else if (curScreen === 'settings') { const ks = Object.keys(SCHEMA); curTab = ks[(ks.indexOf(curTab) + d + ks.length) % ks.length]; buildTabs(); renderSettings(); sfx.ui(); setTimeout(() => { const t = $('tabs').querySelector('.on'); if (t) t.focus(); }, 0); }
   else if (curScreen === 'menu') cycleClass(d);

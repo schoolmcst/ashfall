@@ -75,7 +75,7 @@ const P2P = (() => {
   }
 
   // ------------------------------------------------------------------ a match room
-  function makeRoom(kind, mode, code) {
+  function makeRoom(kind, mode, code, opts = {}) {
     const me = rid(10);   // my stable label (peers() key)
     const R = { me, mode, kind, code, host: false, slot: '', mine: {}, snap: new Map(), order: [], ls: new Set(), closed: false, sig: null, hostLink: null, links: new Map(), extras: () => [], status: 'connecting', players: 1 };
     const slotName = n => kind === 'quick' ? `ashfall-${VER()}-${mode}-q${n}` : kind === 'slot' ? code : `ashfall-${VER()}-${mode}-c-${code}`;
@@ -192,6 +192,7 @@ const P2P = (() => {
         if (L) { startClient(L, slot); return R; }
         if (R.full) continue;                                   // that match is full: try the next one
         if (R.hostSeen) throw new Error('could not reach the host of that match - check your firewall and try again');
+        if (opts.noHost) continue;   // only looking for a match someone else hosts
         try { await becomeHost(slot); return R; }
         catch (e) {
           if (e.message !== 'taken') throw e;
@@ -200,7 +201,7 @@ const P2P = (() => {
           if (R.hostSeen) throw new Error('could not reach the host of that match - check your firewall and try again');
         }
       }
-      throw new Error(kind === 'quick' ? 'all matches full' : 'match full');
+      throw new Error(opts.noHost ? 'none' : kind === 'quick' ? 'all matches full' : 'match full');
     };
     R.leave = async () => {
       R.closed = true; clearInterval(R.timer);
@@ -216,6 +217,6 @@ const P2P = (() => {
     current: null,
     // can this computer reach the match service? resolves the round-trip in ms, or throws
     async ping() { const t = performance.now(), s = await signal('p' + rid(14)); const ms = Math.round(performance.now() - t); s.close(); return ms; },
-    async open(kind, mode, code) { const r = makeRoom(kind, mode, code); this.current = r; try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
+    async open(kind, mode, code, opts) { const r = makeRoom(kind, mode, code, opts); this.current = r; try { await r.start(); } catch (e) { r.leave(); throw e; } return r; },
   };
 })();

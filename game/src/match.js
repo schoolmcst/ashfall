@@ -85,7 +85,7 @@ const MATCH_CFG_KEY = 'ashfall.match.v1';
 let LOBBY = { mode: 'tdm', map: 'random' };
 // 'random' picks any map except the one you just played
 function pickMapFor(sel) { if (sel && MAPS[sel]) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : 'ruins'; }
-try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || MAPS[o.map])) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; } catch (e) {}
+try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || MAPS[o.map])) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; if (o && Array.isArray(o.playlist)) LOBBY.playlist = o.playlist.filter(k => MODES[k] && MODES[k].online); } catch (e) {}
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
 function matchCfg(mode, custom) {
@@ -127,7 +127,7 @@ function startMatch(mode, custom) {
     M.online = true; if (def.base) M.mode = def.base; const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false };
     M.entries.push(me); M.me = me; G.state = 'respawning'; G.respT = 2.2; showScreen(null); lockPointer(); startMatchStats(); objSetup(); updateModeHud(true);
     if (M.mode === 'gun') equipGunGame(0);
-    NET.priv = null; if (privWanted()) privEnter();
+    NET.priv = null; if (privWanted()) privEnter(); else if (NET.pubNext) privEnterPublic(); NET.pubNext = false;
     netStart(mode); if (NET.priv) return; showBanner(def.name, NET.app ? (NET.kind === 'code' ? 'private match: ' + NET.code.toUpperCase() : NET.kind === 'slot' ? 'joining a game on your Wi-Fi' : 'quick play') : NET.ns ? 'room: ' + NET.code.toUpperCase() : 'offline'); return;
   }
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5); let ni = 0;

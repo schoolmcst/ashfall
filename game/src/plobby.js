@@ -24,6 +24,7 @@ function privEnter() {
 }
 // the room settings -> this game (mode, limits); switching between teams and free-for-all redraws everyone
 function privApply() {
+  if (NET.priv.pub) return;
   const c = NET.priv.cfg, want = c.md === 'ffa' ? 'offa' : 'otdm';
   M.cfg.score = c.sc; M.cfg.time = c.tl;
   if (M.mode !== want) {
@@ -34,9 +35,10 @@ function privApply() {
   }
 }
 // what the host sends: [mode, map, bots, time, kills, started, round time]
-const privPack = () => { const c = NET.priv.cfg; return [c.md, c.mp, c.b, c.tl, c.sc, NET.priv.started ? 1 : 0, Math.round(M.t)]; };
+const privPack = () => { if (NET.priv.pub) return ['P', Math.ceil(Math.max(0, NET.priv.lt)), NET.priv.started ? 1 : 0, Math.round(M.t)]; const c = NET.priv.cfg; return [c.md, c.mp, c.b, c.tl, c.sc, NET.priv.started ? 1 : 0, Math.round(M.t)]; };
 function privFromHost(pc) {
   if (!NET.priv || !Array.isArray(pc) || privHost()) return;
+  if (pc[0] === 'P') { NET.priv.lt = +pc[1] || 0; if (pc[2] && !NET.priv.started) privBegin(); if (NET.priv.started && G.state !== 'over' && Math.abs((+pc[3] || 0) - M.t) > 2) M.t = +pc[3] || 0; return; }
   const c = privClean({ md: pc[0], mp: pc[1], b: pc[2], tl: pc[3], sc: pc[4] });
   if (JSON.stringify(c) !== JSON.stringify(NET.priv.cfg)) { NET.priv.cfg = c; privApply(); if (curScreen === 'plobby') renderPlobby(true); }
   if (pc[5] && !NET.priv.started) privBegin();
@@ -46,8 +48,7 @@ function privFromHost(pc) {
 function privStart() {
   if (!NET.priv || !privHost() || NET.priv.started) return;
   if (!NET.teamSet) { showMsg('STILL CONNECTING…'); return; }
-  const c = NET.priv.cfg; PRIVCFG = Object.assign({}, c); privSave();
-  netSwitchMap(pickMapFor(c.mp));
+  if (!NET.priv.pub) { const c = NET.priv.cfg; PRIVCFG = Object.assign({}, c); privSave(); netSwitchMap(pickMapFor(c.mp)); }
   NET.ep++; NET.k = NET.d = 0; G.kills = 0; NET.botT = 0; NET.addT = 0;
   privBegin();
 }
@@ -56,7 +57,7 @@ function privBegin() {
   for (const en of M.entries) { en.kills = en.deaths = en.score = 0; }
   commitPartialStats(); startMatchStats();
   G.state = 'respawning'; G.respT = 0.4; showScreen(null); lockPointer(); updateModeHud(true);
-  showBanner(MODES[M.mode].short, `${mapName(curMap)} · first to ${M.cfg.score} kills${M.cfg.time ? ' · ' + M.cfg.time + ' min' : ''}`);
+  showBanner(M.def.name.replace(/^ONLINE /, ''), `${mapName(curMap)} · ${modeGoalText()}`);
 }
 // how many bots each side should have: the host's count, put where they even out the teams
 function privBotWant(humans) {
@@ -67,6 +68,7 @@ function privBotWant(humans) {
   return w;
 }
 function privTick(dt) {
+  if (NET.priv.pub && !NET.priv.started && privHost() && NET.teamSet) { NET.priv.lt -= dt; if (NET.priv.lt <= 0) privStart(); }
   if ((NET.priv.uiT = (NET.priv.uiT || 0) - dt) > 0) return; NET.priv.uiT = 0.4;
   if (curScreen === 'plobby') renderPlobby(false);
 }
@@ -77,7 +79,9 @@ function privPlayers() {
 }
 function renderPlobby(full) {
   if (!NET.priv) return;
+  if (NET.priv.pub) return renderPubLobby();
   const host = privHost(), c = NET.priv.cfg, st = NET.room ? '' : (P2P.current ? String(P2P.current.status || 'connecting') : 'connecting');
+  $('plTtl').textContent = 'PRIVATE MATCH'; $('plStart').style.display = '';
   $('plCode').textContent = NET.priv.kind === 'code' ? NET.code.toUpperCase() : 'WI-FI';
   const pl = privPlayers();
   $('plPlayers').innerHTML = pl.map(p => `<div class="pl-p${p.me ? ' me' : ''}"><b>${p.name}</b>${p.host ? '<i>HOST</i>' : ''}${p.me ? '<i class="you">YOU</i>' : ''}</div>`).join('') +

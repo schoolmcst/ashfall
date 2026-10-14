@@ -510,7 +510,7 @@
 
 <div id="plobby" class="screen center hide">
   <div class="panel plob">
-    <div class="ttl">PRIVATE MATCH<span id="plCode"></span></div>
+    <div class="ttl"><span id="plTtl">PRIVATE MATCH</span><span id="plCode"></span></div>
     <div class="plob-body"><div class="plob-set" id="plSet"></div><div class="plob-players"><div class="plob-h">PLAYERS</div><div id="plPlayers"></div></div></div>
     <div class="plob-hint" id="plHint"></div>
     <div class="actions"><button class="btn" data-act="pl-leave">LEAVE</button><span></span><button class="btn" data-act="loadout">LOADOUT</button><button class="btn primary" data-act="pl-start" id="plStart">START MATCH</button></div>
@@ -551,6 +551,15 @@
     <div class="cod-roster" id="lobRoster"></div>
   </div>
   <div class="cod-foot"><span class="padhint">LB / RB  CHANGE MODE &middot; START  PLAY</span></div>
+</div>
+
+<div id="playlist" class="screen center hide">
+  <div class="panel plp">
+    <h2>PLAYLIST</h2>
+    <div class="pl-count" id="plCount"></div>
+    <div id="plGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;padding:10px 26px 16px;overflow:auto"></div>
+    <div class="actions"><button class="btn primary" data-act="pl-back">DONE</button></div>
+  </div>
 </div>
 
 <div id="modes" class="screen center hide">
