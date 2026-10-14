@@ -30,6 +30,7 @@ const fs = require('fs');
   await ev(B, () => { const P = window.__A.P, L = window.__A.LAYOUT; P.x = L.spawn[0].x + 6; P.z = L.spawn[0].z; P.y = 0; window.__A.G.spawnProt = 0; window.__A.G.health = 100; });
   await ev(A, () => { const P = window.__A.P, L = window.__A.LAYOUT; P.x = L.spawn[0].x; P.z = L.spawn[0].z; P.y = 0; for (const e of window.__A.enemies.slice()) if (e.entry && e.entry.botLabel) { e.group.position.set(-40, 0, -40); } });
   await A.waitForTimeout(2500);
+  const pin = ev(B, async () => { const A_ = window.__A, L = A_.LAYOUT; for (let i = 0; i < 50; i++) { if (A_.G.state === 'paused') A_.G.state = 'playing'; Object.assign(A_.P, { x: L.spawn[0].x + 6, z: L.spawn[0].z, y: 0 }); A_.G.spawnProt = 0; if (A_.NET.k + A_.NET.d > 0) break; await new Promise(r => setTimeout(r, 150)); } return { st: A_.G.state, alive: A_.M.me.alive, team: A_.M.myTeam, map: A_.curMap, ep: A_.NET.ep, room: !!A_.NET.room, host: A_.NET.room && A_.NET.room.host }; });
   const shots = await ev(A, async () => {
     const A_ = window.__A, P = A_.P, G = A_.G, NET = A_.NET, camera = A_.camera; let fired = 0, bravo = null;
     for (let i = 0; i < 40 && NET.k === 0; i++) {
@@ -38,9 +39,9 @@ const fs = require('fs');
       const w = A_.W[G.cur]; w.ammo = Math.max(w.ammo, 5); G.reloading = false; camera.rotation.set(P.pitch, P.yaw, 0, 'YXZ'); camera.position.set(P.x, P.y + P.eye, P.z); A_.scene.updateMatrixWorld();
       A_.shoot(false); fired++; await new Promise(r => setTimeout(r, 160));
     }
-    return { fired, k: NET.k };
+    return { fired, k: NET.k, hseq: NET.hseq, hs: NET.hs.slice(-3), bravo: bravo && bravo.bot ? [bravo.bot.group.position.x, bravo.bot.group.position.z, bravo.entry.team] : null, me: [P.x, P.z, A_.M.myTeam], map: A_.curMap, rem: [...NET.rem.values()].map(R => R.entry.name + ':' + !!R.bot), ep: NET.ep, bep: bravo && bravo.ep };
   });
-  await A.waitForTimeout(2500);
+  console.log('PIN', JSON.stringify(await pin)); await A.waitForTimeout(2500);
   const s2 = [await st(A), await st(B)];
   // C joins with a private code that does not exist yet: hosts its own match
   await ev(C, () => { window.__A.NET.nick = 'CHARLIE'; window.__A.NET.code = 'squad7'; window.__A.G.noRender = true; window.__A.LOBBY.mode = 'otdm'; window.__A.toLobby(); document.getElementById('netCodeGo').click(); });

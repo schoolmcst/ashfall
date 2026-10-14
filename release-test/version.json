@@ -1,11 +1,18 @@
 {
- "version": "1.1.1",
+ "version": "1.1.2",
  "notes": [
-  "MAPS: rebuilt staircases (solid flights, steel stairs with stringers, proper handrails) and smoother ramps",
-  "MAPS: lots more props - forklifts, pallets, floodlights, lamps, benches, bins, vending machines, signs, laundry lines, parasols, market produce, cones, puddles and more",
-  "MAPS: lights in the warehouse, station and car park; office furniture; a better statue on Vernon Square",
-  "BOTS: smarter about floors above and below them (no more trying to walk through ceilings), and they fit through gaps better"
+  "SIGHTS: iron sights are see-through; red dots and holos sit just above the front post on every gun",
+  "STATS: separate ONLINE and OFFLINE career pages; online kills, deaths and rounds now count properly",
+  "PRIVATE MATCHES: a lobby before the match - the host picks mode, map, number of bots, time limit and kill limit, friends join by code or on your Wi-Fi, host presses START",
+  "END OF MATCH: full scoreboard after every game, then the next match starts by itself (45 s offline, 40 s online) with a full reset",
+  "ONLINE: pausing no longer freezes the match for anyone, and a minimised host keeps the game running",
+  "KEYBINDS: new Settings tab to rebind every key; new MELEE key (V by default)",
+  "GUN GAME: bots play gun game too, and there is a short delay before you can fire each new gun",
+  "SPAWNS: many more spawn points on every floor, randomised and spread out so bots no longer spawn clumped",
+  "WINDOWS: glass you can see through but not shoot through",
+  "Grenades throw much farther; soldiers hold their rifles properly in their hands",
+  "ATTACHMENTS: pros and cons are stronger and actually change how the gun handles"
  ],
- "sha256": "6d9a636d3087122f65cbc967ad936a08eb145567112ca9b5d994942ddcb48147",
+ "sha256": "4da4c19a187d28e0080bad79790a6eee2e7935d1d198e685827dffee21d58a3d",
  "minApp": "1.0.0"
 }
