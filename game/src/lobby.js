@@ -16,6 +16,18 @@ function renderMenuCard() {
   const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true));
   const nb = $('newsBody'); if (nb && typeof NEWS !== 'undefined' && !nb._done) { nb._done = 1; nb.innerHTML = NEWS.map((v, i) => `<div class="cn-v"><b>${v.v} BETA${i === 0 ? '<em>NEW</em>' : ''}</b><small>${v.d}</small><ul>${v.n.map(n => `<li>${String(n).replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}</li>`).join('')}</ul></div>`).join(''); }
   const q = $('quitBtn'); if (q) q.style.display = window.ASHFALL_APP ? '' : 'none';
+  renderMenuClasses();
+}
+// home screen class list: click a name to rename it (Enter saves, Escape cancels)
+function renderMenuClasses(edit = -1) {
+  const box = $('menuClasses'); if (!box) return;
+  box.innerHTML = CLASSES.map((c, i) => `<div class="mc-r${i === ACTIVE_CLASS ? ' on' : ''}">${i === edit ? `<input id="mcIn" maxlength="16" value="${c.name.replace(/"/g, '')}" spellcheck="false">` : `<button class="mc-n" data-mc="${i}" title="Rename">${c.name}</button>`}<span>${ARM[c.p].name} · ${ARM[c.s].name}</span></div>`).join('');
+  for (const b of box.querySelectorAll('[data-mc]')) b.onclick = () => { sfx.ui(); renderMenuClasses(+b.dataset.mc); };
+  const inp = $('mcIn'); if (inp) {
+    setTimeout(() => { inp.focus(); inp.select(); }, 0);
+    const save = () => { const v = inp.value.trim().toUpperCase().slice(0, 16); if (v) { CLASSES[edit].name = v; saveClasses(); updateClassUI(); } renderMenuClasses(); };
+    inp.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') save(); if (e.key === 'Escape') renderMenuClasses(); }; inp.onkeyup = e => e.stopPropagation(); inp.onblur = save;
+  }
 }
 function privCodeHtml() {
   if (!NET.app) return `<div class="cus-priv"><div class="cp-h">PRIVATE MATCH &middot; ONLINE</div><div class="net-hint">Private code matches run in the desktop app.</div></div>`;

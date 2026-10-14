@@ -74,7 +74,8 @@
   .cod-opts .row-opt{margin:6px 0}
   .cod-main{gap:14px}.cod-tile.exit{padding:12px 22px 12px 26px}.cod-tile.exit b{font-size:16px;margin:0;color:var(--dim)}
   .cod-news{border:1px solid var(--line);background:rgba(0,0,0,.5)}.cn-h{padding:10px 16px;font-size:11px;letter-spacing:.35em;color:var(--accent);border-bottom:1px solid var(--line)}
-  .cn-body{max-height:230px;overflow:auto;padding:4px 0}.cn-v{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.cn-v:last-child{border-bottom:0}
+  .mc-r{display:flex;align-items:center;gap:10px;padding:6px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.mc-r:last-child{border-bottom:0}.mc-r .mc-n{pointer-events:auto;cursor:text;background:none;border:0;color:#fff;font:700 13px/1 inherit;font-family:inherit;letter-spacing:.18em;padding:4px 0;text-align:left;min-width:150px}.mc-r .mc-n:hover,.mc-r .mc-n:focus{outline:0;color:var(--accent)}.mc-r span{font-size:11px;letter-spacing:.08em;color:var(--dim)}.mc-r.on .mc-n::before{content:'★ ';color:var(--accent)}.mc-r input{pointer-events:auto;font:inherit;font-size:13px;letter-spacing:.16em;padding:3px 6px;background:rgba(0,0,0,.4);border:1px solid var(--accent);color:#fff;width:160px;text-transform:uppercase}
+  .cn-body{max-height:150px;overflow:auto;padding:4px 0}.cn-v{padding:10px 16px;border-bottom:1px solid rgba(255,255,255,.05)}.cn-v:last-child{border-bottom:0}
   .cn-v b{font-size:13px;letter-spacing:.2em;color:#fff}.cn-v b em{font-style:normal;font-size:9px;letter-spacing:.2em;color:#111;background:var(--accent);padding:2px 5px;margin-left:8px;vertical-align:2px}
   .cn-v small{float:right;font-size:10px;letter-spacing:.15em;color:var(--dim)}.cn-v ul{margin:6px 0 0;padding-left:16px;font-size:12px;line-height:1.45;color:var(--dim)}
   .cus-priv{margin:10px 26px 4px;padding:12px 14px;border:1px solid rgba(224,180,74,.4);background:rgba(224,180,74,.06);text-align:left}.cus-priv .cp-h{font-size:11px;letter-spacing:.3em;color:var(--accent);margin-bottom:4px}
@@ -385,6 +386,7 @@
       <button class="cod-tile primary" data-act="go-on"><small>ONLINE &middot; REAL PLAYERS</small><b>MULTIPLAYER</b><span>QUICK PLAY &middot; CUSTOM &amp; PRIVATE MATCHES IN THE LOBBY</span></button>
       <button class="cod-tile" data-act="settings"><small>VIDEO &middot; AUDIO &middot; CONTROLS &middot; KEYBINDS</small><b>SETTINGS</b><span>MAKE IT YOURS</span></button>
     </div>
+    <div class="cod-news"><div class="cn-h">CLASSES &middot; CLICK A NAME TO RENAME IT</div><div id="menuClasses"></div></div>
     <div class="cod-news"><div class="cn-h">NEWS &middot; PATCH NOTES</div><div class="cn-body" id="newsBody"></div></div>
     <div class="cod-tiles"><button class="cod-tile exit" data-act="quit" id="quitBtn"><b>EXIT GAME</b></button></div>
     <span id="bestWave" hidden>0</span><span id="bestScore" hidden>0</span><span id="classVal" hidden></span><span id="diffVal" hidden></span>
