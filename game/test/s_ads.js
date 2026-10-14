@@ -11,7 +11,8 @@ module.exports = async p => {
       A.equipClass({ p: pri ? id : 'marc', s: pri ? 'sidearm' : id, e: 'frag', k: 'none' }); if (!pri) A.switchWeapon(1);
       A.G.swapT = 0; A.G.look = { x: -3.5, z: 10.5, yaw: 0.05, pitch: -0.02 }; A.G.lookAds = true; A.G.health = 1e9;
     }, [id, optic]);
-    await p.waitForTimeout(1500);
+    for (let k = 0; k < 40; k++) { await p.waitForTimeout(250); if (await p.evaluate(() => window.__A.G.ads > 0.995)) break; }
+    await p.waitForTimeout(500);
     await p.screenshot({ path: path.join(out, `ads_${id}_${optic || 'def'}.png`), clip: { x: 440, y: 160, width: 400, height: 400 } });
   }
   return list.length;

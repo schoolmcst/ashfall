@@ -232,7 +232,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   // red dots / holos / reflexes ride on a riser so the dot lines up just above the front post
   const coEye = COWITNESS.has(op) && u.sightInfo ? ironEye(u, 'irons') + 0.0028 : null;
   const ry = coEye !== null ? Math.max(u.railY, coEye - OPTIC_H[op]) : u.railY;
-  if (coEye !== null && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
+  if (coEye !== null && op !== 'holo' && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
   u.dots = [];
   if (u.stockOptic) u.stockOptic.forEach(o => { o.visible = op === 'reddot'; });
   // factory irons: the bead / pistol sights stay as they are; rifle irons lose the solid rear sight (see-through aperture below)
@@ -261,17 +261,19 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); add(new THREE.CircleGeometry(0.0022, 8), M.dot, 0, y, z + 0.0005); };
   const notStock = !(def.blender && !hasHQ(def) && op === def.optic);
   const OPT_DZ = { reddot: 0.02, scope25: 0.005, scope6: 0.015, scope10: 0.017, scope35: 0.011 };
-  const hqOpt = OPTIC_H[op] !== undefined && (op !== 'reddot' || notStock) && HQ(op, 0, ry, oz + (OPT_DZ[op] || 0));
+  const hqOpt = OPTIC_H[op] !== undefined && op !== 'holo' && (op !== 'reddot' || notStock) && HQ(op, 0, ry, oz + (OPT_DZ[op] || 0));
   if (!hqOpt) {
   if (notStock && op === 'reddot') {
     add(new THREE.BoxGeometry(0.034, 0.012, 0.07), M.dark, 0, ry + 0.006, oz); tubeZ(0.02, 0.07, M.dark, 0, ry + 0.034, oz + 0.035, 16);
     const l = new THREE.Mesh(new THREE.CircleGeometry(0.0165, 16), M.lens); l.position.set(0, ry + 0.034, oz + 0.036); grp.add(l); add(new THREE.CircleGeometry(0.0022, 8), M.dot, 0, ry + 0.034, oz + 0.0365);
   }
-  if (op === 'holo') {
-    add(new THREE.BoxGeometry(0.036, 0.012, 0.07), M.dark, 0, ry + 0.006, oz);
-    for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.006, 0.042, 0.05), M.dark, s * 0.021, ry + 0.033, oz - 0.005);
-    add(new THREE.BoxGeometry(0.048, 0.006, 0.05), M.dark, 0, ry + 0.056, oz - 0.005);
-    lensAt(ry + 0.035, oz - 0.02, 0.036, 0.034);
+  if (op === 'holo') {   // compact holo: a slim mount, a thin hood and a big window centred on the reticle
+    const cy = coEye !== null ? coEye : ry + 0.035, wW = 0.028, wH = 0.022, wz = oz - 0.012, bot = cy - wH / 2 - 0.0025, hl = 0.04;
+    add(new THREE.BoxGeometry(0.026, bot - u.railY, 0.068), M.dark, 0, u.railY + (bot - u.railY) / 2, oz);   // mount + body under the window
+    add(new THREE.BoxGeometry(0.018, 0.008, 0.026), M.poly, 0, bot - 0.004, oz + 0.022);                         // battery cap at the back
+    for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.003, wH + 0.006, hl), M.dark, s * (wW / 2 + 0.0015), cy + 0.0005, wz);
+    add(new THREE.BoxGeometry(wW + 0.006, 0.003, hl), M.dark, 0, cy + wH / 2 + 0.002, wz);
+    add(new THREE.PlaneGeometry(wW, wH), M.lens, 0, cy, wz - hl / 2 + 0.002);
   }
   if (op === 'reflex') {
     add(new THREE.BoxGeometry(0.03, 0.01, 0.04), M.dark, 0, ry + 0.005, oz);
@@ -294,8 +296,8 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   // aim points: the dot (and the holo ring) at eye height, and a front post under it when the irons are folded away
   if (coEye !== null) {
     const dz = op === 'reddot' ? oz + 0.03 : op === 'holo' ? oz - 0.02 : oz - 0.015;
-    const dm = new THREE.Mesh(new THREE.CircleGeometry(op === 'holo' ? 0.0011 : 0.0016, 12), M.dotTop); dm.position.set(0, coEye, dz); dm.renderOrder = 20; grp.add(dm); u.dots.push(dm);
-    if (op === 'holo') { const rg = new THREE.Mesh(new THREE.RingGeometry(0.0062, 0.0072, 32), M.dotTop); rg.position.set(0, coEye, dz); rg.renderOrder = 20; grp.add(rg); u.dots.push(rg); }
+    const dm = new THREE.Mesh(new THREE.CircleGeometry(op === 'holo' ? 0.0008 : 0.0016, 12), M.dotTop); dm.position.set(0, coEye, dz); dm.renderOrder = 20; grp.add(dm); u.dots.push(dm);
+    if (op === 'holo') { const rg = new THREE.Mesh(new THREE.RingGeometry(0.0044, 0.0050, 40), M.dotTop); rg.position.set(0, coEye, dz); rg.renderOrder = 20; grp.add(rg); u.dots.push(rg); }
     if (!u.sightInfo.hasFront) {
       const fz = u.sightInfo.frontZ, py = coEye - 0.0028, base = Math.min(u.railY, py - 0.012);
       add(new THREE.BoxGeometry(0.018, 0.008, 0.016), M.dark, 0, base + 0.004, fz);

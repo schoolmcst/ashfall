@@ -1,7 +1,7 @@
 {
- "version": "1.1.2",
+ "version": "1.1.3",
  "notes": [
-  "SIGHTS: iron sights are see-through; red dots and holos sit just above the front post on every gun",
+  "SIGHTS: iron sights are see-through; red dots and holos sit just above the front post on every gun; the holo is smaller and cleaner, with a big clear window and a smaller reticle ring",
   "STATS: separate ONLINE and OFFLINE career pages; online kills, deaths and rounds now count properly",
   "PRIVATE MATCHES: a lobby before the match - the host picks mode, map, number of bots, time limit and kill limit, friends join by code or on your Wi-Fi, host presses START",
   "END OF MATCH: full scoreboard after every game, then the next match starts by itself (45 s offline, 40 s online) with a full reset",
@@ -13,6 +13,6 @@
   "Grenades throw much farther; soldiers hold their rifles properly in their hands",
   "ATTACHMENTS: pros and cons are stronger and actually change how the gun handles"
  ],
- "sha256": "4da4c19a187d28e0080bad79790a6eee2e7935d1d198e685827dffee21d58a3d",
+ "sha256": "5d15efd6fb9d92ffd390367859570f78be374dc8095cbdb0e8dce31800ff0630",
  "minApp": "1.0.0"
 }
