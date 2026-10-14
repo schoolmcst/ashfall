@@ -1,15 +1,13 @@
 {
- "version": "1.2.0",
+ "version": "1.2.1",
  "notes": [
-  "SOCIAL: send friend requests with a friend code (accept or decline), see which friends are online in the lobby and join them, and a friends leaderboard of online stats",
-  "PARTIES: party members are always put on the same team",
-  "MATCH START: a 5 second loading screen with a picture of the map, then 15 seconds to pick your class (no moving or shooting, last chance for players to join)",
-  "SPAWNS: every map has two spawn areas per team - two or more enemies in yours moves your team to the other one. 1.5 s spawn protection. Nobody (bots too) can leave the map",
-  "GUNS: every gun rebalanced, attachments now all do what they say, advanced stats shown in the loadout. Perfect first shot when aiming, then a little bloom",
-  "FIXES: muzzle flash and kick on iron sights toned down, stuns only blind people looking at them, more realistic grenade throws, Survival no longer stays frozen at the start",
-  "SETTINGS: ADS sensitivity for every scope zoom (mouse and controller), controller button remapping (Controller > Edit Controller Buttons), rename classes in the Weapons tab",
-  "NEW: lobby music (Music volume in Audio), a Replay tab to rewatch your last match on a tactical map, and Career mode stats now cover every online mode"
+  "PERKS: every class now has 3 perk slots - one from each tier (blue, red, green), 5 perks per tier including the new Endurance, Prowler and Iron Skin. Every perk now really does what it says",
+  "HITBOXES: headshots do the most damage, then chest, then stomach, then arms and legs (lower arms and legs least). Getting shot knocks your aim a little",
+  "DAMAGE RANGE: every gun does full damage up to its MAX DAMAGE RANGE, then less further away (SMGs and pistols drop off the most, snipers not at all)",
+  "BALANCE: SMGs do less damage, pistols toned down (only the revolver one-shots a head), short delay before you can shoot after sprinting",
+  "CONTROLLER: every button in menus and the lobby can be reached, popups and friend requests too, an on-screen keyboard for typing, and a clear gold ring shows where you are",
+  "SAVES: your stats, classes and settings now have a backup, so an update can never wipe them"
  ],
- "sha256": "627ad5e05fd0c539ca0cfaf8b12fe21f6e4b9f7e9cbb70e7004065ced5aff6eb",
+ "sha256": "3f7c83cbfb226a5ee623f2a87801309322597fadc881146b53b80d4626f2d830",
  "minApp": "1.0.0"
 }
