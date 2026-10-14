@@ -13,9 +13,10 @@ const MODES = {
   ogun: { name: 'ONLINE GUN GAME', short: 'ONLINE GUN', icon: 'GUN', desc: 'Real people, every kill moves you up the ladder of 20 guns. First to the end wins.', teams: false, respawn: 2.5, score: 20, time: 0, players: 12, unit: 'LEVELS', online: true, base: 'gun' },
   ohp: { name: 'ONLINE HARDPOINT', short: 'ONLINE HP', icon: 'HP', desc: 'Real people, two teams. Hold the zone to score; it moves every minute.', teams: true, respawn: 4, score: 150, time: 0, perTeam: 6, unit: 'POINTS', online: true, base: 'hp' },
   octf: { name: 'ONLINE CAPTURE THE FLAG', short: 'ONLINE CTF', icon: 'CTF', desc: 'Real people, two teams. Grab the enemy flag and bring it home.', teams: true, respawn: 5, score: 3, time: 0, perTeam: 6, unit: 'CAPTURES', online: true, base: 'ctf' },
+  osnd: { name: 'ONLINE SEARCH & DESTROY', short: 'ONLINE S&D', icon: 'S&D', desc: 'Real people, one life per round. Attackers plant the bomb at A or B, defenders stop them. First to 4 rounds.', teams: true, respawn: 0, score: 4, time: 0, perTeam: 5, unit: 'ROUNDS', online: true, base: 'snd' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'osnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 const SKILL = {
@@ -151,6 +152,7 @@ function startMatch(mode, custom) {
 function objSetup() {
   if (M.mode === 'hp') M.hp = { idx: 0, t: 60, owner: -1, status: 'neutral', mesh: null, wait: 5 };
   if (M.mode === 'ctf') M.ctf = { flags: LAYOUT.flags.map((h, t) => ({ team: t, home: h, x: h.x, z: h.z, y: h.y || 0, state: 'home', carrier: null, dropT: 0, mesh: null })) };
+  if (M.mode === 'snd' && M.online) M.snd = { round: 0, wins: [0, 0], att: 0, state: 'wait', t: 0, freeze: 0, bomb: null, site: 0, plant: 0, defuse: 0, post: 0 };
   if (M.mode === 'hp' || M.mode === 'ctf' || M.mode === 'snd') buildObjectiveMeshes();
 }
 const netHostNow = () => !M.online || !!(NET.room && NET.room.host);
@@ -436,6 +438,7 @@ function netObjPack() {
   const ts = M.teamScore || [0, 0];
   if (M.mode === 'hp' && M.hp) { const h = M.hp; return ['h', h.idx, Math.round(h.t), Math.ceil(h.wait || 0), h.status, ts[0], ts[1]]; }
   if (M.mode === 'ctf' && M.ctf) return ['c', ts[0], ts[1], ...M.ctf.flags.flatMap(f => [CTF_ST.indexOf(f.state), f.carrier === 'player' ? NET.me : f.carrier ? (f.carrier.net || (f.carrier.entry && f.carrier.entry.botLabel) || '') : '', r2(f.x), r2(f.z)])];
+  if (M.mode === 'snd' && M.snd) { const sn = M.snd, b = sn.bomb; return ['s', sn.round, sn.wins[0], sn.wins[1], sn.att, ['wait', 'freeze', 'live', 'planted', 'post', 'done'].indexOf(sn.state), Math.round(sn.t), b ? r2(b.x) : 0, b ? r2(b.z) : 0, b ? +b.t.toFixed(1) : -1, b ? b.n : '', sn.bombN || 0, sn.lastWhy || '']; }
   return undefined;
 }
 function netObjApply() {
@@ -447,6 +450,16 @@ function netObjApply() {
     h.idx = idx; h.t = +o[2] || 0; h.wait = +o[3] || 0; h.status = typeof o[4] === 'string' ? o[4] : 'neutral';
     if (h.status === 'team0' || h.status === 'team1') { const t = +h.status.slice(4); if (t === M.myTeam && playerAlive()) { const z = LAYOUT.hp[h.idx]; if (z && Math.hypot(P.x - z.x, P.z - z.z) < 5 && (h.myAcc = (h.myAcc || 0) + 1 / 60) >= 1) { h.myAcc = 0; MS.hpTime++; M.me.obj++; } } }
     M.teamScore = [+o[5] | 0, +o[6] | 0];
+  }
+  if (o[0] === 's' && M.snd) {
+    const sn = M.snd, round = o[1] | 0, st = ['wait', 'freeze', 'live', 'planted', 'post', 'done'][o[5] | 0] || 'wait', oldSt = sn.state, oldWins = sn.wins.slice();
+    sn.att = o[4] ? 1 : 0; sn.wins = [o[2] | 0, o[3] | 0]; M.teamScore = sn.wins.slice(); sn.t = +o[6] || 0;
+    if (round !== sn.round) { sn.round = round; if (round > 0) sndRespawnMe(); }
+    if (st === 'live' && oldSt === 'freeze') showMsg('GO GO GO');
+    if ((o[11] | 0) !== (sn.bombN || 0)) { sn.bombN = o[11] | 0; if (st === 'planted') { showBanner('BOMB PLANTED', `site ${o[10]} · 35 seconds`); sfx.pin(); } }
+    sn.bomb = o[9] >= 0 ? { x: +o[7], z: +o[8], t: +o[9], n: o[10], y: (LAYOUT.sites.find(s => s.n === o[10]) || {}).y || 0 } : null;
+    if (st === 'post' && oldSt !== 'post') { for (let t = 0; t < 2; t++) if (sn.wins[t] > oldWins[t]) { const why = { elim: 'ENEMY ELIMINATED', time: 'TIME EXPIRED', defused: 'BOMB DEFUSED', detonated: 'TARGET DESTROYED' }[o[12]] || ''; showBanner(t === M.myTeam ? 'ROUND WON' : 'ROUND LOST', `${why} · ${sn.wins[M.myTeam]} – ${sn.wins[1 - M.myTeam]}`); if (t === M.myTeam) sfx.streak(); if (o[12] === 'detonated' && oldSt === 'planted' && OBJ.bomb) explosionFx({ x: OBJ.bomb.position.x, y: 0.5, z: OBJ.bomb.position.z }, 2); } }
+    sn.state = st;
   }
   if (o[0] === 'c' && M.ctf) {
     const old = M.teamScore.slice(); M.teamScore = [+o[1] | 0, +o[2] | 0];
@@ -464,6 +477,7 @@ function resetFlag(f) { f.state = 'home'; f.carrier = null; f.x = f.home.x; f.z 
 
 /* ---------- search and destroy */
 function startRound() {
+  if (M.online) return startRoundOnline();
   const sn = M.snd; sn.round++;
   if (sn.round === Math.ceil(M.cfg.score) && sn.round > 1) { sn.att = 1 - sn.att; showMsg('SIDES SWITCHED'); }
   sn.state = 'freeze'; sn.t = 100; sn.freeze = 4; sn.bomb = null; sn.site = Math.random() < 0.5 ? 0 : 1; sn.plant = 0; sn.defuse = 0;
@@ -477,6 +491,20 @@ function startRound() {
   G.state = 'playing'; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide'); hideCenter(); camera.fov = baseFov; camera.updateProjectionMatrix();
   const myAtt = sn.att === M.myTeam;
   showBanner(`ROUND ${sn.round}`, myAtt ? 'ATTACK · plant the bomb at A or B' : 'DEFEND · protect A and B');
+}
+function startRoundOnline() {
+  const sn = M.snd; sn.round++;
+  if (sn.round === Math.ceil(M.cfg.score) && sn.round > 1) { sn.att = 1 - sn.att; showMsg('SIDES SWITCHED'); }
+  sn.state = 'freeze'; sn.t = 100; sn.freeze = 5; sn.bomb = null; sn.site = Math.random() < 0.5 ? 0 : 1; sn.plant = 0; sn.defuse = 0;
+  for (const en of M.entries) if (en.botLabel) { if (en.bot && enemies.includes(en.bot)) { scene.remove(en.bot.group); enemies.splice(enemies.indexOf(en.bot), 1); } spawnBot(en, pickSpawnFor(en.team, sideOf(en.team), true)); }
+  sndRespawnMe();
+}
+// everyone (online): back in at the start of each round, on your side
+function sndRespawnMe() {
+  const sn = M.snd; if (OBJ.bomb) OBJ.bomb.visible = false;
+  if (!NET.teamSet) return;
+  M.me.alive = true; respawnPlayer(); placePlayer(pickSpawnFor(M.myTeam, sideOf(M.myTeam), true));
+  showBanner(`ROUND ${sn.round}`, sn.att === M.myTeam ? 'ATTACK · plant the bomb at A or B' : 'DEFEND · protect A and B');
 }
 function aliveCount(team) { let n = team === M.myTeam && M.me.alive ? 1 : 0; for (const e of enemies) if (e.team === team) n++; return n; }
 function sndBotAct(e, dt) {
@@ -493,7 +521,7 @@ function sndBotAct(e, dt) {
 function plantBomb(site, en) {
   const sn = M.snd; sn.bomb = { x: site.x + rnd(-0.8, 0.8), z: site.z + rnd(-0.8, 0.8), y: site.y || 0, t: 35, n: site.n }; sn.state = 'planted';
   en.score += 200; en.obj++; if (en.isPlayer) { MS.plants++; popScore('+200', 'big', 'BOMB PLANTED'); }
-  OBJ.bomb.position.set(sn.bomb.x, (sn.bomb.y || 0) + 0.09, sn.bomb.z); OBJ.bomb.visible = true;
+  OBJ.bomb.position.set(sn.bomb.x, (sn.bomb.y || 0) + 0.09, sn.bomb.z); OBJ.bomb.visible = true; sn.bombN = (sn.bombN || 0) + 1;
   showBanner('BOMB PLANTED', `site ${site.n} · 35 seconds`); sfx.pin(); for (const e of enemies) { e.goalT = 0; e.act = 0; }
 }
 function defuseBomb(en) {
@@ -502,6 +530,9 @@ function defuseBomb(en) {
 }
 function updateSnd(dt) {
   const sn = M.snd;
+  if (M.online && !netHostNow()) { netObjApply(); sndVisual(dt); return; }
+  if (M.online && sn.state === 'wait') { if (NET.teamSet && (!NET.priv || NET.priv.started)) startRoundOnline(); return; }
+  if (M.online) sndRemoteActions();
   if (sn.state === 'freeze') { sn.freeze -= dt; if (sn.freeze <= 0) { sn.state = 'live'; showMsg('GO GO GO'); } else { for (const e of enemies) { e.cd = Math.max(e.cd, 0.5); } } }
   if (sn.state === 'live') { sn.t -= dt; if (sn.t <= 0) return endRound(1 - sn.att, 'time'); }
   if (sn.state === 'planted') {
@@ -509,8 +540,26 @@ function updateSnd(dt) {
     if ((sn.beep = (sn.beep || 0) - dt) <= 0) { sn.beep = Math.max(0.15, sn.bomb.t / 35); tone(1900, 0.05, 0.08, 'square', null, at(sn.bomb.x, sn.bomb.z, 12)); }
     if (sn.bomb.t <= 0) { explode({ x: sn.bomb.x, y: 0.5, z: sn.bomb.z }, 'grenade', 14, 4); OBJ.bomb.visible = false; sn.bomb = null; return endRound(sn.att, 'detonated'); }
   }
-  if (sn.state === 'post') { sn.post -= dt; if (sn.post <= 0) { if (sn.wins[0] >= M.cfg.score || sn.wins[1] >= M.cfg.score) endMatch(sn.wins[0] >= M.cfg.score ? 0 : 1); else startRound(); } }
+  if (sn.state === 'post') { sn.post -= dt; if (sn.post <= 0) { if (sn.wins[0] >= M.cfg.score || sn.wins[1] >= M.cfg.score) { if (M.online) sn.state = 'done'; else endMatch(sn.wins[0] >= M.cfg.score ? 0 : 1); } else startRound(); } }
   if (sn.state === 'live' || sn.state === 'planted') checkRoundEnd();
+}
+function sndVisual(dt) {
+  const sn = M.snd;
+  if (sn.state === 'planted' && sn.bomb && OBJ.bomb) {
+    OBJ.bomb.position.set(sn.bomb.x, (sn.bomb.y || 0) + 0.09, sn.bomb.z); OBJ.bomb.visible = true;
+    const led = OBJ.bomb.userData.led; led.visible = Math.sin(NOW * (6 + (35 - sn.bomb.t) * 0.6)) > 0;
+    if ((sn.beep = (sn.beep || 0) - dt) <= 0) { sn.beep = Math.max(0.15, sn.bomb.t / 35); tone(1900, 0.05, 0.08, 'square', null, at(sn.bomb.x, sn.bomb.z, 12)); }
+  } else if (OBJ.bomb) OBJ.bomb.visible = false;
+}
+// online host: plants and defuses that other players finished on their screens (checked against where the host sees them)
+function sndRemoteActions() {
+  const sn = M.snd;
+  for (const R of NET.rem.values()) {
+    const a = R.sa; if (!Array.isArray(a) || a[2] === R.saDone || !R.bot) continue; R.saDone = a[2];
+    const p = R.bot.group.position;
+    if (a[0] === 'p' && sn.state === 'live' && !sn.bomb && R.entry.team === sn.att) { const s = LAYOUT.sites[a[1] | 0]; if (s && Math.hypot(s.x - p.x, s.z - p.z) < 4) plantBomb(s, R.entry); }
+    if (a[0] === 'd' && sn.state === 'planted' && sn.bomb && R.entry.team !== sn.att && Math.hypot(sn.bomb.x - p.x, sn.bomb.z - p.z) < 3) defuseBomb(R.entry);
+  }
 }
 function checkRoundEnd() {
   const sn = M.snd; if (!sn || (sn.state !== 'live' && sn.state !== 'planted')) return;
@@ -520,7 +569,7 @@ function checkRoundEnd() {
 }
 function endRound(winner, why) {
   const sn = M.snd; if (sn.state === 'post') return;
-  sn.state = 'post'; sn.post = 4.5; sn.wins[winner]++; M.teamScore = sn.wins.slice();
+  sn.state = 'post'; sn.post = 4.5; sn.wins[winner]++; M.teamScore = sn.wins.slice(); sn.lastWhy = why;
   const txt = { elim: 'ENEMY ELIMINATED', time: 'TIME EXPIRED', defused: 'BOMB DEFUSED', detonated: 'TARGET DESTROYED' }[why];
   showBanner(winner === M.myTeam ? 'ROUND WON' : 'ROUND LOST', `${txt} · ${sn.wins[M.myTeam]} – ${sn.wins[1 - M.myTeam]}`);
   if (winner === M.myTeam) sfx.streak();
@@ -530,8 +579,8 @@ function playerInteract(dt, held) {
   const bar = $('ihold'); let txt = '', prog = -1;
   if (M.mode === 'snd' && M.snd && playerAlive()) {
     const sn = M.snd, att = sn.att === M.myTeam;
-    if (att && !sn.bomb && sn.state === 'live') { const s = LAYOUT.sites.find(s => Math.hypot(s.x - P.x, s.z - P.z) < 3); if (s) { txt = `HOLD ${pad.on ? '(X)' : '[E]'} TO PLANT AT ${s.n}`; if (held) { sn.plant += dt; prog = sn.plant / 4; if (sn.plant >= 4) { plantBomb(s, M.me); sn.plant = 0; } } else sn.plant = 0; } }
-    if (!att && sn.bomb && sn.state === 'planted' && Math.hypot(sn.bomb.x - P.x, sn.bomb.z - P.z) < 2) { txt = `HOLD ${pad.on ? '(X)' : '[E]'} TO DEFUSE`; if (held) { sn.defuse += dt; prog = sn.defuse / 6; if (sn.defuse >= 6) { sn.defuse = 0; defuseBomb(M.me); } } else sn.defuse = 0; }
+    if (att && !sn.bomb && sn.state === 'live') { const s = LAYOUT.sites.find(s => Math.hypot(s.x - P.x, s.z - P.z) < 3); if (s) { txt = `HOLD ${pad.on ? '(X)' : '[E]'} TO PLANT AT ${s.n}`; if (held) { sn.plant += dt; prog = sn.plant / 4; if (sn.plant >= 4) { sn.plant = 0; if (netHostNow()) plantBomb(s, M.me); else { NET.sa = ['p', LAYOUT.sites.indexOf(s), (NET.saN = (NET.saN || 0) + 1)]; MS.plants++; popScore('+200', 'big', 'BOMB PLANTED'); } } } else sn.plant = 0; } }
+    if (!att && sn.bomb && sn.state === 'planted' && Math.hypot(sn.bomb.x - P.x, sn.bomb.z - P.z) < 2) { txt = `HOLD ${pad.on ? '(X)' : '[E]'} TO DEFUSE`; if (held) { sn.defuse += dt; prog = sn.defuse / 6; if (sn.defuse >= 6) { sn.defuse = 0; if (netHostNow()) defuseBomb(M.me); else { NET.sa = ['d', 0, (NET.saN = (NET.saN || 0) + 1)]; MS.defuses++; popScore('+200', 'big', 'BOMB DEFUSED'); } } } else sn.defuse = 0; }
   }
   G.interactTxt = txt;
   if (bar) { const on = !!txt; if (bar._on !== on) { bar._on = on; bar.classList.toggle('hide', !on); } if (on) { bar.firstChild.textContent = txt; bar.lastChild.firstChild.style.width = Math.max(0, prog) * 100 + '%'; } }
