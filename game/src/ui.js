@@ -224,6 +224,7 @@ document.addEventListener('click', e => {
   if (b) { sfx.ui(); actions(b.getAttribute('data-act')); }
 });
 function goBack() {
+  if (typeof oskIsOpen === 'function' && oskIsOpen()) { oskClose(); return; }
   if (curScreen === 'loadout') { updateClassUI(); if (returnScreen === 'lobby') renderLobby(); showScreen(returnScreen); }
   else if (curScreen === 'lobby') showScreen('menu');
   else if (curScreen === 'custom') actions('cus-back');
@@ -240,9 +241,17 @@ function goBack() {
 }
 
 /* ------------------------------------------------------------------ keyboard / pointer focus navigation in menus */
+// everything the controller / arrow keys can move between: the open popup if there is one (update notes, on-screen
+// keyboard, Homecoming splash), else the current screen, plus a friend-request toast if one is showing
+const NAV_SEL = 'button, .sw, input[type=range], input[type=text], input:not([type])';
+function navModal() { return document.querySelector('#oskBox, #hcSplash:not(.out), .app-notes'); }
 function focusables() {
+  const vis = x => !x.disabled && x.tabIndex !== -1 && x.getClientRects().length > 0 && getComputedStyle(x).visibility !== 'hidden';
+  const modal = navModal(); if (modal) return [...modal.querySelectorAll(NAV_SEL)].filter(vis);
   const root = curScreen ? $(curScreen) : null; if (!root) return [];
-  return [...root.querySelectorAll('button, .sw, input[type=range]')].filter(x => x.offsetParent !== null);
+  const list = [...root.querySelectorAll(NAV_SEL)];
+  for (const t of document.querySelectorAll('.fr-toast')) list.push(...t.querySelectorAll('button'));
+  return list.filter(vis);
 }
 function moveFocus(d) {
   const f = focusables(); if (!f.length) return;
@@ -398,7 +407,7 @@ function pollPad(dt) {
     if (pad.sprint && (pad.crouch && press(pb('crouch')))) pad.sprint = false;
   } else {
     pad.crouch = false;
-    if (curScreen) menuPad(dt, mx, my, ly, press, down);
+    if (curScreen || navModal()) menuPad(dt, mx, my, ly, press, down);
   }
   if (!playing || (S.padSprint !== 'hold' && Math.hypot(mx, my) < 0.3)) pad.sprint = false;
   prevBtn = gp.buttons.map(b => b.pressed);
@@ -406,11 +415,19 @@ function pollPad(dt) {
 // menus: hold a direction to repeat (accelerating), bumpers change tabs, right stick scrolls, Y resets
 function menuPad(dt, mx, my, ry, press, down) {
   const d = padNavDir(mx, my, down);
+  if (d || press(0) || press(1)) document.body.classList.add('padnav');
+  if (typeof oskPad === 'function' && oskPad(press)) { if (d !== nav.dir) { nav.dir = d; if (d) spatialFocus(d); } return; }
+  const modal = navModal();
+  if (modal && modal.id !== 'hcSplash') {   // update notes: A on OK, B closes
+    if (d !== nav.dir) { nav.dir = d; if (d) spatialFocus(d); }
+    if (press(0) || press(1)) { const a = document.activeElement, f = focusables(); (f.includes(a) ? a : f[0] || { click() {} }).click(); }
+    return;
+  }
   if (d !== nav.dir) { nav.dir = d; nav.n = 0; if (d) { menuMove(d); nav.t = 0.34; } }
   else if (d) { nav.t -= dt; if (nav.t <= 0) { menuMove(d); nav.n++; nav.t = Math.max(0.045, 0.1 - nav.n * 0.005); } }
   if (press(3) && curScreen === 'lobby') { openPlaylist(); return; }
   if (curScreen === 'replay') { if (press(2)) rpToggle(); if (press(4) || press(5)) rpSeekBy(press(4) ? -5 : 5); if (press(1)) goBack(); if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); } return; }
-  if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); }
+  if (press(0)) { const a = document.activeElement; if (a && focusables().includes(a)) { if (a.tagName === 'INPUT' && a.type !== 'range') oskOpen(a); else if (a.click) a.click(); } else { const f = focusables(); if (f[0]) f[0].focus(); } }
   if (press(1)) goBack();
   if (press(4) || press(5)) menuTab(press(4) ? -1 : 1);
   if (press(3)) { if (curScreen === 'loadout') actions('lo-reset'); else if (curScreen === 'settings') actions('reset-settings'); }
@@ -621,7 +638,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, hcShow, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, hcShow, oskOpen, oskKey, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

@@ -8533,6 +8533,63 @@ const hcWait = setInterval(() => { if (typeof G !== 'undefined' && G.state === '
 @keyframes hcIn{from{opacity:0}}@keyframes hcUp{from{opacity:0;transform:translateY(18px)}}@keyframes hcZoom{from{transform:scale(1.12)}}`;
   document.head.appendChild(s);
 })();
+/* ================================================================== on-screen keyboard (controller)
+   Pressing A on a text box (friend code, callsign, private match code) opens this. D-pad / stick moves, A types the
+   key, X deletes, Y adds a space, B or START finishes. A mouse or a real keyboard works on it too. */
+const OSK = { el: null, input: null, prevFocus: null };
+const OSK_ROWS = ['1234567890', 'QWERTYUIOP', 'ASDFGHJKL-', 'ZXCVBNM_.'];
+const oskIsOpen = () => !!OSK.el;
+function oskOpen(input) {
+  if (OSK.el) oskClose();
+  OSK.input = input; OSK.prevFocus = input;
+  const b = document.createElement('div'); b.id = 'oskBox';
+  b.innerHTML = `<div class="osk-p"><div class="osk-h">${(input.placeholder || input.getAttribute('aria-label') || 'TYPE').toUpperCase()}</div><div class="osk-val" id="oskVal"></div>` +
+    OSK_ROWS.map(r => `<div class="osk-r">${[...r].map(c => `<button class="osk-k" data-k="${c}">${c}</button>`).join('')}</div>`).join('') +
+    `<div class="osk-r"><button class="osk-k wide" data-k="space">SPACE <small>Y</small></button><button class="osk-k wide" data-k="back">⌫ DELETE <small>X</small></button><button class="osk-k wide done" data-k="done">DONE <small>B</small></button></div></div>`;
+  document.body.appendChild(b); OSK.el = b;
+  for (const k of b.querySelectorAll('[data-k]')) k.onclick = () => oskKey(k.dataset.k);
+  b.onclick = e => { if (e.target === b) oskClose(); };
+  oskShow(); setTimeout(() => { const f = b.querySelector('[data-k="1"]'); if (f) f.focus(); }, 0);
+}
+function oskShow() { const v = $('oskVal'); if (v && OSK.input) v.textContent = OSK.input.value || ' '; }
+function oskKey(k) {
+  const i = OSK.input; if (!i) return;
+  const max = i.maxLength > 0 ? i.maxLength : 32;
+  if (k === 'done') { oskClose(); return; }
+  if (k === 'back') i.value = i.value.slice(0, -1);
+  else if (i.value.length < max) i.value += k === 'space' ? ' ' : k;
+  i.dispatchEvent(new Event('input', { bubbles: true })); oskShow(); try { sfx.ui(); } catch (e) {}
+}
+function oskClose() {
+  if (!OSK.el) return;
+  const i = OSK.input; OSK.el.remove(); OSK.el = null; OSK.input = null;
+  if (i) { i.dispatchEvent(new Event('change', { bubbles: true })); try { i.focus(); } catch (e) {} }
+}
+// called from the controller poll; returns true while the keyboard is open (it takes the buttons)
+function oskPad(press) {
+  if (!OSK.el) return false;
+  if (press(0)) { const a = document.activeElement; if (a && OSK.el.contains(a)) a.click(); }
+  if (press(2)) oskKey('back');
+  if (press(3)) oskKey('space');
+  if (press(1) || press(9)) oskClose();
+  return true;
+}
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `#oskBox{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.55);display:flex;align-items:flex-end;justify-content:center;padding-bottom:6vh}
+.osk-p{background:#121518;border:1px solid rgba(224,180,74,.45);padding:16px 18px;box-shadow:0 20px 60px rgba(0,0,0,.6)}.osk-h{font-size:11px;letter-spacing:.35em;color:var(--accent)}
+.osk-val{font-size:26px;letter-spacing:.2em;color:#fff;padding:8px 10px;margin:8px 0 12px;background:rgba(255,255,255,.05);border-bottom:2px solid var(--accent);min-height:34px;white-space:pre}
+.osk-r{display:flex;gap:6px;margin-top:6px;justify-content:center}.osk-k{pointer-events:auto;cursor:pointer;font:700 16px system-ui,sans-serif;color:#e6e8ea;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);width:46px;height:44px}
+.osk-k.wide{width:auto;flex:1;padding:0 14px;font-size:12px;letter-spacing:.2em}.osk-k small{opacity:.55;margin-left:6px}.osk-k.done{color:#111;background:var(--accent)}
+.osk-k:hover,.osk-k:focus{outline:0;border-color:var(--accent);background:rgba(224,180,74,.25);color:#fff}`;
+  document.head.appendChild(s);
+  // a clear gold ring on whatever the controller / arrow keys are on; the mouse turns it off again
+  const r = document.createElement('style');
+  r.textContent = `body.padnav button:focus,body.padnav .sw:focus,body.padnav input:focus{outline:2px solid var(--accent)!important;outline-offset:2px;box-shadow:0 0 0 4px rgba(224,180,74,.18),0 0 18px rgba(224,180,74,.25)}`;
+  document.head.appendChild(r);
+  addEventListener('mousemove', e => { if (Math.abs(e.movementX) + Math.abs(e.movementY) > 3) document.body.classList.remove('padnav'); });
+  addEventListener('keydown', e => { if (/^Arrow|^Tab$/.test(e.code)) document.body.classList.add('padnav'); });
+})();
 /* ================================================================== UI: screens, settings, input, loop, boot */
 const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist', 'classpick', 'leaderboard', 'replay'];
 let curScreen = null, returnScreen = 'menu';
@@ -8759,6 +8816,7 @@ document.addEventListener('click', e => {
   if (b) { sfx.ui(); actions(b.getAttribute('data-act')); }
 });
 function goBack() {
+  if (typeof oskIsOpen === 'function' && oskIsOpen()) { oskClose(); return; }
   if (curScreen === 'loadout') { updateClassUI(); if (returnScreen === 'lobby') renderLobby(); showScreen(returnScreen); }
   else if (curScreen === 'lobby') showScreen('menu');
   else if (curScreen === 'custom') actions('cus-back');
@@ -8775,9 +8833,17 @@ function goBack() {
 }
 
 /* ------------------------------------------------------------------ keyboard / pointer focus navigation in menus */
+// everything the controller / arrow keys can move between: the open popup if there is one (update notes, on-screen
+// keyboard, Homecoming splash), else the current screen, plus a friend-request toast if one is showing
+const NAV_SEL = 'button, .sw, input[type=range], input[type=text], input:not([type])';
+function navModal() { return document.querySelector('#oskBox, #hcSplash:not(.out), .app-notes'); }
 function focusables() {
+  const vis = x => !x.disabled && x.tabIndex !== -1 && x.getClientRects().length > 0 && getComputedStyle(x).visibility !== 'hidden';
+  const modal = navModal(); if (modal) return [...modal.querySelectorAll(NAV_SEL)].filter(vis);
   const root = curScreen ? $(curScreen) : null; if (!root) return [];
-  return [...root.querySelectorAll('button, .sw, input[type=range]')].filter(x => x.offsetParent !== null);
+  const list = [...root.querySelectorAll(NAV_SEL)];
+  for (const t of document.querySelectorAll('.fr-toast')) list.push(...t.querySelectorAll('button'));
+  return list.filter(vis);
 }
 function moveFocus(d) {
   const f = focusables(); if (!f.length) return;
@@ -8933,7 +8999,7 @@ function pollPad(dt) {
     if (pad.sprint && (pad.crouch && press(pb('crouch')))) pad.sprint = false;
   } else {
     pad.crouch = false;
-    if (curScreen) menuPad(dt, mx, my, ly, press, down);
+    if (curScreen || navModal()) menuPad(dt, mx, my, ly, press, down);
   }
   if (!playing || (S.padSprint !== 'hold' && Math.hypot(mx, my) < 0.3)) pad.sprint = false;
   prevBtn = gp.buttons.map(b => b.pressed);
@@ -8941,11 +9007,19 @@ function pollPad(dt) {
 // menus: hold a direction to repeat (accelerating), bumpers change tabs, right stick scrolls, Y resets
 function menuPad(dt, mx, my, ry, press, down) {
   const d = padNavDir(mx, my, down);
+  if (d || press(0) || press(1)) document.body.classList.add('padnav');
+  if (typeof oskPad === 'function' && oskPad(press)) { if (d !== nav.dir) { nav.dir = d; if (d) spatialFocus(d); } return; }
+  const modal = navModal();
+  if (modal && modal.id !== 'hcSplash') {   // update notes: A on OK, B closes
+    if (d !== nav.dir) { nav.dir = d; if (d) spatialFocus(d); }
+    if (press(0) || press(1)) { const a = document.activeElement, f = focusables(); (f.includes(a) ? a : f[0] || { click() {} }).click(); }
+    return;
+  }
   if (d !== nav.dir) { nav.dir = d; nav.n = 0; if (d) { menuMove(d); nav.t = 0.34; } }
   else if (d) { nav.t -= dt; if (nav.t <= 0) { menuMove(d); nav.n++; nav.t = Math.max(0.045, 0.1 - nav.n * 0.005); } }
   if (press(3) && curScreen === 'lobby') { openPlaylist(); return; }
   if (curScreen === 'replay') { if (press(2)) rpToggle(); if (press(4) || press(5)) rpSeekBy(press(4) ? -5 : 5); if (press(1)) goBack(); if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); } return; }
-  if (press(0)) { const a = document.activeElement; if (a && a.click && focusables().includes(a)) a.click(); }
+  if (press(0)) { const a = document.activeElement; if (a && focusables().includes(a)) { if (a.tagName === 'INPUT' && a.type !== 'range') oskOpen(a); else if (a.click) a.click(); } else { const f = focusables(); if (f[0]) f[0].focus(); } }
   if (press(1)) goBack();
   if (press(4) || press(5)) menuTab(press(4) ? -1 : 1);
   if (press(3)) { if (curScreen === 'loadout') actions('lo-reset'); else if (curScreen === 'settings') actions('reset-settings'); }
@@ -9156,7 +9230,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, hcShow, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, hcShow, oskOpen, oskKey, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
