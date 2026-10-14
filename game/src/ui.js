@@ -39,7 +39,10 @@ const SCHEMA = {
   ],
   CONTROLS: [
     { k: 'sens', t: 'range', name: 'MOUSE SENSITIVITY', min: 20, max: 300, step: 5, fmt: pct },
-    { k: 'adsSens', t: 'range', name: 'AIM DOWN SIGHTS SENSITIVITY', hint: 'Multiplier while aiming', min: 20, max: 150, step: 5, fmt: pct },
+    { k: 'adsSens', t: 'range', name: 'ADS SENSITIVITY · IRONS / 1×', hint: 'Iron sights, red dots, holos, reflex', min: 10, max: 150, step: 5, fmt: pct },
+    { k: 'adsSens2', t: 'range', name: 'ADS SENSITIVITY · 2.5× – 3.5×', hint: 'Combat scope, scout scope', min: 10, max: 150, step: 5, fmt: pct },
+    { k: 'adsSens4', t: 'range', name: 'ADS SENSITIVITY · 4×', hint: 'Battle scope', min: 10, max: 150, step: 5, fmt: pct },
+    { k: 'adsSens6', t: 'range', name: 'ADS SENSITIVITY · 6× – 10×', hint: 'Sniper scopes', min: 10, max: 150, step: 5, fmt: pct },
     { k: 'invertY', t: 'toggle', name: 'INVERT MOUSE Y' },
     { k: 'toggleAds', t: 'toggle', name: 'TOGGLE AIM', hint: 'Press right mouse once to aim, again to stop' },
   ],
@@ -233,6 +236,8 @@ function adjustFocused(d) {
 }
 
 /* ------------------------------------------------------------------ input */
+// aiming sensitivity follows the magnification of the sight in use
+function adsSensMul() { const w = WEAPONS[G.cur], o = (w && w.overlay) || 0; return (o >= 6 ? S.adsSens6 : o >= 4 ? S.adsSens4 : o >= 2 ? S.adsSens2 : S.adsSens) / 100; }
 let bindCapture = null;   // Settings > KEYBINDS: waiting for the key to assign
 addEventListener('keydown', e => {
   if (bindCapture) { e.preventDefault(); const f = bindCapture; bindCapture = null; if (e.code !== 'Escape') f(e.code); else renderSettings(); return; }
@@ -277,7 +282,7 @@ addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('wheel', e => { if (G.state === 'playing') cycleWeapon(e.deltaY > 0 ? 1 : -1); });
 addEventListener('mousemove', e => {
   if (G.state !== 'playing' || document.pointerLockElement !== renderer.domElement) return;
-  const sens = 0.0022 * S.sens / 100 * lerp(1, S.adsSens / 100, G.ads);
+  const sens = 0.0022 * S.sens / 100 * lerp(1, adsSensMul(), G.ads);
   P.yaw -= e.movementX * sens; P.pitch = clamp(P.pitch - e.movementY * sens * (S.invertY ? -1 : 1), -1.5, 1.5);
 });
 document.addEventListener('pointerlockerror', () => showMsg('MOUSE CAPTURE BLOCKED · USE ARROW KEYS TO LOOK'));
@@ -443,7 +448,7 @@ function applyPadLook(dt) {
   const m = pad.lm || 0, out = m > 0 ? lookCurve(m) / m : 0;
   if (m > 0.93) pad.turnT = (pad.turnT || 0) + dt; else pad.turnT = Math.max(0, (pad.turnT || 0) - dt * 5);
   const boost = 1 + (S.padAccel / 100) * 0.9 * smooth(0.12, 0.45, pad.turnT) * (1 - G.ads);
-  let k = lerp(1, S.padAdsSens / 100, G.ads) * S.padSens / 100;
+  let k = lerp(1, S.padAdsSens / 100 * adsSensMul() / Math.max(0.1, S.adsSens / 100), G.ads) * S.padSens / 100;
   if (target) k *= lerp(L.fr, 1, clamp(Math.acos(clamp(_toE.copy(aimPoint(target, _toE)).sub(camera.position).normalize().dot(_fw.set(0, 0, -1).applyQuaternion(camera.quaternion)), -1, 1)) / L.cone, 0, 1) * 0.6);
   const tvx = -pad.lx * out * 3.6 * k * boost, tvy = -pad.ly * out * 2.7 * k * (S.padInvertY ? -1 : 1);
   const tau = S.padSmooth / 100 * 0.07, a = tau > 0 ? 1 - Math.exp(-dt / tau) : 1;
@@ -483,7 +488,7 @@ function tick(dt) {
     G.adsOn = mouseAds || pad.ads;
     applyPadLook(dt);
     const lkx = (keys.ArrowLeft ? 1 : 0) - (keys.ArrowRight ? 1 : 0), lky = (keys.ArrowUp ? 1 : 0) - (keys.ArrowDown ? 1 : 0);
-    if (lkx || lky) { const k = lerp(1, 0.55, G.ads) * S.sens / 100; P.yaw += lkx * 2.4 * k * dt; P.pitch = clamp(P.pitch + lky * 1.7 * k * dt, -1.5, 1.5); }
+    if (lkx || lky) { const k = lerp(1, adsSensMul(), G.ads) * S.sens / 100; P.yaw += lkx * 2.4 * k * dt; P.pitch = clamp(P.pitch + lky * 1.7 * k * dt, -1.5, 1.5); }
     const { moving, sprint } = updatePlayer(dt);
     G.fireT -= dt; if (G.swapT > 0) G.swapT -= dt;
     const w = WEAPONS[G.cur];

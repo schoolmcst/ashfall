@@ -25,9 +25,11 @@ function statKillAt(x, z, head) {
 }
 function statDeath() { if (!MS.active || G.bench) return; MS.deaths++; MS.streak = 0; }
 // won: 1 win, 0 draw, -1 loss; null for Survival (no winner)
+// the key a match is filed under: the online mode itself (ONLINE HARDPOINT, not offline Hardpoint)
+function statModeKey() { if (!M) return 'surv'; if (M.online) { const k = Object.keys(MODES).find(k => MODES[k] === M.def); if (k) return k; } return M.mode; }
 function finishMatchStats(won) {
   if (!MS.active || G.bench) return; MS.active = false;
-  const st = careerOf(M.online), mode = M.mode;
+  const st = careerOf(M.online), mode = statModeKey();
   st.matches++; if (won === 1) st.wins++; else if (won === -1) st.losses++; else if (won === 0) st.draws++;
   for (const k of ['kills', 'deaths', 'heads', 'shots', 'hits', 'time', 'plants', 'defuses', 'caps', 'returns', 'hpTime']) st[k] += MS[k];
   st.bestStreak = Math.max(st.bestStreak, MS.bestStreak); st.longest = Math.max(st.longest, MS.longest); st.score += M.online ? MS.kills * 100 : (M.me ? M.me.score : G.score);
@@ -42,7 +44,7 @@ function finishMatchStats(won) {
 function commitPartialStats() {
   if (!MS.active || G.bench) return; MS.active = false;
   if (!MS.kills && !MS.deaths && !MS.shots && MS.time < 10) return;
-  const st = careerOf(M.online), mode = M.mode, played = MS.time >= 120;
+  const st = careerOf(M.online), mode = statModeKey(), played = MS.time >= 120;
   if (played) st.matches++;
   for (const k of ['kills', 'deaths', 'heads', 'shots', 'hits', 'time', 'plants', 'defuses', 'caps', 'returns', 'hpTime']) st[k] += MS[k];
   st.bestStreak = Math.max(st.bestStreak, MS.bestStreak); st.longest = Math.max(st.longest, MS.longest);
@@ -77,7 +79,7 @@ function renderStats() {
     const used = list.filter(x => x.s.shots > 0);
     h += used.length ? `<table class="st-table"><tr><th>WEAPON</th><th>TYPE</th><th>KILLS</th><th>HEADSHOTS</th><th>ACCURACY</th><th>SHOTS</th></tr>${used.map(({ d, s }) => `<tr><td>${d.name}</td><td>${CATS[d.cat].short}</td><td>${s.kills}</td><td>${s.heads}</td><td>${pctS(s.hits, s.shots)}</td><td>${s.shots}</td></tr>`).join('')}</table>` : '<div class="st-empty">Play a match and your weapon stats show up here.</div>';
   } else {
-    h += `<table class="st-table"><tr><th>MODE</th><th>PLAYED</th><th>WINS</th><th>WIN RATE</th><th>KILLS</th><th>K/D</th><th>BEST</th></tr>${MODE_ORDER.filter(k => !!MODES[k].online === statOnline).map(k => { const m = st.modes[k] || { played: 0, wins: 0, kills: 0, deaths: 0, best: 0 }; return `<tr><td>${MODES[k].name}</td><td>${m.played}</td><td>${k === 'surv' ? '—' : m.wins}</td><td>${k === 'surv' ? '—' : pctS(m.wins, m.played)}</td><td>${m.kills}</td><td>${kdS(m.kills, m.deaths)}</td><td>${m.best}${k === 'surv' ? ' WAVES' : ' KILLS'}</td></tr>`; }).join('')}</table>`;
+    h += `<table class="st-table"><tr><th>MODE</th><th>PLAYED</th><th>WINS</th><th>WIN RATE</th><th>KILLS</th><th>K/D</th><th>BEST</th></tr>${MODE_ORDER.filter(k => !!MODES[k].online === statOnline).map(k => { const m0 = st.modes[k] || { played: 0, wins: 0, kills: 0, deaths: 0, best: 0 }, mb = statOnline && MODES[k].base && st.modes[MODES[k].base], m = mb ? { played: m0.played + mb.played, wins: m0.wins + mb.wins, kills: m0.kills + mb.kills, deaths: m0.deaths + mb.deaths, best: Math.max(m0.best, mb.best) } : m0; return `<tr><td>${MODES[k].name}</td><td>${m.played}</td><td>${k === 'surv' ? '—' : m.wins}</td><td>${k === 'surv' ? '—' : pctS(m.wins, m.played)}</td><td>${m.kills}</td><td>${kdS(m.kills, m.deaths)}</td><td>${m.best}${k === 'surv' ? ' WAVES' : ' KILLS'}</td></tr>`; }).join('')}</table>`;
   }
   $('stBody').innerHTML = h;
   for (const b of $('stTabs').querySelectorAll('[data-st]')) b.onclick = () => { statTab = b.dataset.st; sfx.ui(); renderStats(); };

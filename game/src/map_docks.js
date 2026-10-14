@@ -166,7 +166,7 @@ function dressDocks(s) {
   for (const x of [36.5, 40]) B('signalCold', 1.2, 0.05, 0.3, x, 6.3, Z(15), 0, 0, 0, false);
 }
 defineMap({
-  id: 'docks', name: 'KESSEL DOCKS', place: 'Container port, golden hour', desc: 'Quay, container yard and warehouse. A gantry crane looks down the waterfront; the warehouse mezzanine controls the east.',
+  id: 'docks', play: [-38.6, 44.0, -43.0, 43.0], name: 'KESSEL DOCKS', place: 'Container port, golden hour', desc: 'Quay, container yard and warehouse. A gantry crane looks down the waterfront; the warehouse mezzanine controls the east.',
   build: buildDocks,
   env: { top: 0x3f5f8f, horizon: 0xe2b48c, fog: 0.0085, sun: [-60, 22, 18], sunCol: 0xffc48a, sunI: 2.5, skySun: 0xffb070, hemiSky: 0xc0b8c0, hemiGround: 0x4a3c30, exposure: 1.08 },
   grass: { count: 600, avoid: (x, z) => x > -37 && x < 44 && Math.abs(z) < 43 && !(x > 38 && Math.abs(z) > 20) },

@@ -108,8 +108,17 @@ const ARMORY_SRC = [
   { id: 'hellfire', cat: 'la', name: 'RPG-7', desc: 'Shoulder-fired rocket. Flat, fast and huge. One shot, then a long reload.', dmg: 190, interval: 1, mag: 1, reload: 3.4, recoil: 0.06, reserve: 4, reserveMax: 6, snd: 'rocket', proj: 'rocket', speed: 48, grav: 0, blast: 7.5, move: 0.86, ads: 1.4, optic: 'irons_p', adsFov: 55, noSlots: ['magazine'],
     v: { t: 'rocket' } },
 ];
+// balance pass (1.2.0): close-range body-shot kill times line up by class; range and handling separate the guns
+const BALANCE = {
+  marc: { dmg: 28, interval: 0.088 }, kv47: { dmg: 33, interval: 0.1 }, vanguard: { dmg: 45, interval: 0.133 }, talon: { dmg: 25, interval: 0.075 },
+  striker: { dmg: 26, interval: 0.081 }, spectre: { dmg: 27, interval: 0.086 },
+  viper: { dmg: 25, interval: 0.071 }, wasp: { dmg: 20, interval: 0.055 }, kestrel: { dmg: 25, interval: 0.067 }, bulwark: { dmg: 34, interval: 0.092 }, hornet: { dmg: 25, interval: 0.07 }, whisper: { dmg: 25, interval: 0.08 },
+  anvil: { dmg: 30, interval: 0.092 }, titan: { dmg: 33, interval: 0.107 }, hailstorm: { dmg: 30, interval: 0.092 },
+  sentinel: { dmg: 45, interval: 0.2 }, arbiter: { dmg: 45, interval: 0.16 },
+  warden: { dmg: 92 },
+};
 const ARMORY = ARMORY_SRC.map(src => {
-  const d = Object.assign({ move: 1, ads: 1 }, CAT_BASE[src.cat], src);
+  const d = Object.assign({ move: 1, ads: 1 }, CAT_BASE[src.cat], src, BALANCE[src.id] || {});
   d.sfxP = SND[d.snd] || SND.rifle; d.base = d; d.magSize = d.mag;
   return Object.freeze(d);
 });

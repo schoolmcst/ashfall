@@ -108,7 +108,7 @@ function spawnBot(en, pos) {
   const e = makeEnemy(type, pos.x, pos.z), sk = SKILL[M.cfg.skill] || SKILL.regular;
   Object.assign(e, { team: en.team, entry: en, name: en.name, pvp: true, hp: M.maxHp, maxHp: M.maxHp, speed: 3.6 + rnd(-0.2, 0.4) + (type === 'scout' ? 0.25 : 0), dmg: sk.dmg * (M.cfg.hardcore ? 1.4 : 1), acc: sk.acc, aimRate: sk.aim,
     hold: rnd(9, 20), think: rnd(0, 0.3), tgt: null, goal: null, goalT: 0, role: en.role || 'hunt', act: 0, seenT: -9, lastShotT: -9 });
-  e.group.rotation.y = Math.atan2(-pos.x, -pos.z); e.group.position.y = pos.y || 0;
+  e.group.rotation.y = Math.atan2(-pos.x, -pos.z); e.group.position.y = pos.y || 0; e.spawnProt = 1.5;
   if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
   en.bot = e; en.alive = true; enemies.push(e);
   if (M.mode === 'gun') botGunProfile(e, GUN_LADDER[Math.min(en.level || 0, GUN_LADDER.length - 1)]);
@@ -338,8 +338,10 @@ function updateBots(dt) {
     let sp = ml > 0.01 ? e.speed * (holding ? 0.5 : 1) * stun * ((e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.4 : 1) : 0;
     if (ml > 0.01) { g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt; if (!face) face = Math.atan2(mx, mz); }
     if (e.stunT > 0) { e.stunT -= dt; e.aim = 0; }
+    if (e.spawnProt > 0) e.spawnProt -= dt;
     resolve(g.position, 0.45, g.position.y); botGround(g, dt);
     for (let j = 0; j < enemies.length; j++) { if (j === i) continue; const o = enemies[j].group.position, sx = g.position.x - o.x, sz = g.position.z - o.z, sd = Math.hypot(sx, sz); if (sd < 0.85 && sd > 0.001) { const pu = (0.85 - sd) * 0.5; g.position.x += sx / sd * pu; g.position.z += sz / sd * pu; } }
+    if (!e.net) { g.position.x = clamp(g.position.x, PLAYRECT[0] + 0.5, PLAYRECT[1] - 0.5); g.position.z = clamp(g.position.z, PLAYRECT[2] + 0.5, PLAYRECT[3] - 0.5); }
     const pd = Math.hypot(P.x - g.position.x, P.z - g.position.z); if (pd < 0.9 && pd > 0.001 && G.state === 'playing') { g.position.x -= (P.x - g.position.x) / pd * (0.9 - pd); g.position.z -= (P.z - g.position.z) / pd * (0.9 - pd); }
     g.position.x = clamp(g.position.x, -ARENA + 0.6, ARENA - 0.6); g.position.z = clamp(g.position.z, -ARENA + 0.6, ARENA - 0.6);
     if (face !== null) { let dy = face - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 8); }

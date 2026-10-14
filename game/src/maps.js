@@ -239,12 +239,13 @@ function clearWorld() {
   if (grassMesh) { scene.remove(grassMesh); grassMesh.geometry.dispose(); grassMesh = null; }
   SPAWNS = null; FLOW.clear(); navTarget = -1; navField = null;
 }
+let PLAYRECT = [-44, 44, -44, 44];
 function loadMap(id) {
   if (!MAPS[id]) id = 'ruins';
   if (curMap === id && boxes.length) return false;
   const t0 = performance.now();
   clearWorld(); buildMapMaterials();
-  const map = MAPS[id]; curMap = id;
+  const map = MAPS[id]; curMap = id; PLAYRECT = map.play || [-43.5, 43.5, -43.5, 43.5];
   applyEnv(map.env);
   const before = new Set(scene.children);
   map.build(); flushBatches(); rayFlush();

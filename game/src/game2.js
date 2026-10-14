@@ -149,6 +149,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (!enemies.includes(e)) return false;
   if (e.entry) { e.entry.lastBy = by; e.entry.lastHead = head ? 1 : 0; }
   if (e.net) { netHit(e, dmg, head, by); return false; }
+  if (e.spawnProt > 0 && inMatch() && by !== 'world') return false;   // spawn protection
   e.hp -= dmg; e.flinch = 1;
   if (e.hp > 0 && dir) { const pk = boom ? 0.5 : 0.07; e.group.position.x += dir.x * pk; e.group.position.z += dir.z * pk; e.slowT = boom ? 0.8 : 0.3; }
   if (e.hp <= 0) {

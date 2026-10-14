@@ -184,7 +184,7 @@ function dressMetro(s) {
   lampLight(30, L2V - 0.6, Z(9), 0xdfeaff, 0.7, 16);
 }
 defineMap({
-  id: 'metro', name: 'VERNON SQUARE', place: 'City square over a metro station, dusk', desc: 'Fight on the street, under it, or above it: the avenue, the station and its open atrium, and a three-storey car park.',
+  id: 'metro', play: [-43.0, 43.6, -42.8, 42.8], name: 'VERNON SQUARE', place: 'City square over a metro station, dusk', desc: 'Fight on the street, under it, or above it: the avenue, the station and its open atrium, and a three-storey car park.',
   build: buildMetro,
   env: { top: 0x4c5868, horizon: 0x98a2ac, fog: 0.0115, sun: [34, 38, -52], sunCol: 0xdfe6f2, sunI: 1.5, skySun: 0xe0e4ea, hemiSky: 0xb4c0d0, hemiGround: 0x3c3c40, exposure: 1.18 },
   grass: { count: 0 },

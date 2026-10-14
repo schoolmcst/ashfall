@@ -81,7 +81,7 @@ function updatePlayer(dt) {
   P.vx = lerp(P.vx, tx, clamp(acc * dt, 0, 1)); P.vz = lerp(P.vz, tz, clamp(acc * dt, 0, 1));
   P.x += P.vx * dt; P.z += P.vz * dt;
   resolve(P, 0.4, P.y);
-  P.x = clamp(P.x, -ARENA + 0.5, ARENA - 0.5); P.z = clamp(P.z, -ARENA + 0.5, ARENA - 0.5);
+  P.x = clamp(P.x, PLAYRECT[0] + 0.45, PLAYRECT[1] - 0.45); P.z = clamp(P.z, PLAYRECT[2] + 0.45, PLAYRECT[3] - 0.45);
   if ((kb('jump') || pad.jump) && P.onGround) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); }
   P.vy -= 22 * dt; const py0 = P.y; P.y += P.vy * dt;
   if (P.vy > 0) { const ce = ceilingAt(P.x, P.z, py0); if (P.y + 1.8 > ce) { P.y = Math.max(py0, ce - 1.8); P.vy = 0; } }
@@ -112,8 +112,9 @@ function animateViewmodel(dt, hs, sprint, bobOn) {
   const adsX = 0, adsY = -w.sightY, adsZ = w.adsZ;
   let vx = lerp(HIP.x, adsX, G.ads), vy = lerp(HIP.y, adsY, G.ads), vz = lerp(HIP.z - (u.hipBack || 0), adsZ, G.ads);
   const bobAmt = (1 - G.ads * 0.85) * (hs / 5) * bobOn, idle = Math.sin(NOW * 1.6) * 0.0016 * (1 - G.ads * 0.7);
-  vx += Math.cos(P.bob) * 0.008 * bobAmt; vy += Math.abs(Math.sin(P.bob)) * 0.01 * bobAmt + idle; vz += G.kick * 0.07; vy += G.kick * 0.008;
-  let rx = G.kick * 0.06, ry = 0, rz = 0;
+  const kAds = 1 - 0.75 * G.ads;
+  vx += Math.cos(P.bob) * 0.008 * bobAmt; vy += Math.abs(Math.sin(P.bob)) * 0.01 * bobAmt + idle; vz += G.kick * 0.07 * (1 - 0.4 * G.ads); vy += G.kick * 0.008 * kAds;
+  let rx = G.kick * 0.06 * kAds, ry = 0, rz = 0;
   if (sprint) { rx += -0.25; ry += 0.5; vy -= 0.04; vx -= 0.05; }
   // weapon lags behind fast turns, leans into strafes, dips on landing, lifts in the air
   let dYaw = P.yaw - (G.lastYaw === undefined ? P.yaw : G.lastYaw); while (dYaw > Math.PI) dYaw -= TAU; while (dYaw < -Math.PI) dYaw += TAU;
@@ -194,7 +195,9 @@ function shoot(moving) {
   const rm = w.rum || [0.1, 0.4, 60]; rumble(rm[0], rm[1], rm[2]);
   if (u.cylSpin) u.cylBase = (u.cylBase || 0) + TAU / 6;
   if (w.proj) { launchProjectile(w, u); return; }
-  let spread = G.adsOn ? w.adsSpread : w.spread * (perk('steady') ? 0.72 : 1);
+  const fresh = G.time - (G.lastShotTime || -9) > Math.max(0.22, w.interval * 2.4); G.lastShotTime = G.time;
+  G.bloom = fresh ? 0 : Math.min(1.6, (G.bloom || 0) + (w.pellets > 1 ? 0 : 0.2));
+  let spread = G.adsOn ? (fresh && w.pellets === 1 ? 0 : w.adsSpread * (w.pellets > 1 ? 1 : 0.55 + G.bloom)) : w.spread * (perk('steady') ? 0.72 : 1) * (1 + G.bloom * 0.35);
   if (moving) spread *= 1.7; if (!P.onGround) spread *= 2.2; if (P.eye < 1.4) spread *= 0.75;
   camera.updateMatrixWorld();
   _org.copy(camera.position);
@@ -225,11 +228,11 @@ function shoot(moving) {
     clearTimeout(hm._t); hm._t = setTimeout(() => (hm.style.opacity = 0), 90);
     sfx.hit(anyHead);
   }
-  const kick = w.recoil * rnd(0.85, 1.15) * (G.adsOn ? 0.7 : 1);
-  P.pitch = clamp(P.pitch + kick, -1.5, 1.5); P.recoilAcc += kick * 0.55; P.yaw += rnd(-1, 1) * w.recoil * 0.5;
+  const kick = w.recoil * rnd(0.9, 1.1) * (G.adsOn ? 0.62 : 1);
+  P.pitch = clamp(P.pitch + kick, -1.5, 1.5); P.recoilAcc += kick * 0.6; P.yaw += rnd(-1, 1) * w.recoil * (G.adsOn ? 0.3 : 0.5);
   G.kick = clamp(w.recoil / (w.def.recoil || w.recoil || 0.011), 0.5, 2.2); G.shake = Math.max(G.shake, w.pellets > 1 ? 0.01 : 0.003);   // the gun visibly kicks harder or softer with recoil attachments
   // muzzle flash on the weapon, light on the world, smoke and a brass casing
-  u.flash.visible = !w.stealth; const fs = rnd(0.22, 0.38) * (w.pellets > 1 ? 1.6 : 1); u.flash.scale.set(fs, fs, 1); u.flash.material.rotation = rnd(0, 6.28); G.flashT = 0.045;
+  u.flash.visible = !w.stealth; const fs = rnd(0.22, 0.38) * (w.pellets > 1 ? 1.6 : 1) * (G.ads > 0.5 ? 0.38 : 1); u.flash.scale.set(fs, fs, 1); u.flash.material.rotation = rnd(0, 6.28); G.flashT = 0.045;
   vmFlashLight.position.set(viewmodel.position.x, viewmodel.position.y + 0.03, viewmodel.position.z - w.len - 0.1); vmFlashLight.intensity = w.stealth ? 0 : 2.2;
   if (!w.stealth) flashLight(_muz.x + _fwd.x, _muz.y + _fwd.y, _muz.z + _fwd.z, w.pellets > 1 ? 7 : 4.5, 0.06, 22);
   puff(_muz.x, _muz.y, _muz.z, { color: 0xb8b8b8, size: 0.12, grow: 0.55, life: 0.7, vy: 0.35, vx: _fwd.x * 1.2, vz: _fwd.z * 1.2, op: 0.3, minor: 1 });
@@ -289,7 +292,8 @@ function throwGrenade() {
   const m = new THREE.Mesh(gGeo, EQ_MAT[G.equip]); m.castShadow = true;
   const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   m.position.copy(camera.position).addScaledVector(dir, 0.5); scene.add(m);
-  grenadesInFlight.push({ m, vx: dir.x * 23 + P.vx * 0.6, vy: dir.y * 23 + 4.6, vz: dir.z * 23 + P.vz * 0.6, fuse: eq.fuse, spin: rnd(6, 12), kind: G.equip, sticky: !!eq.sticky });
+  const up = 0.28; dir.y += up; dir.normalize();
+  grenadesInFlight.push({ m, grav: 13, vx: dir.x * 17 + P.vx * 0.5, vy: dir.y * 17 + 1.2, vz: dir.z * 17 + P.vz * 0.5, fuse: eq.fuse, spin: rnd(6, 12), kind: G.equip, sticky: !!eq.sticky });
 }
 // launcher rounds: a rocket flies flat, a 40 mm shell arcs; both burst on contact
 let projGeo = null, projMat = null;
@@ -315,11 +319,12 @@ function launchProjectile(w, u) {
 }
 function stunBlast(p) {
   sfx.stun(at(p.x, p.z, 30)); flashLight(p.x, p.y + 0.5, p.z, 14, 0.15, 30);
-  for (const e of enemies) { const d = Math.hypot(e.group.position.x - p.x, e.group.position.z - p.z); if (d < 11 && blastClear(p, e.group.position.x, 1.4, e.group.position.z)) { e.stunT = 4 * (1 - d / 16); e.flinch = 1; } }
+  for (const e of enemies) { const d = Math.hypot(e.group.position.x - p.x, e.group.position.z - p.z); if (d < 11 && blastClear(p, e.group.position.x, 1.4, e.group.position.z)) { const ex = p.x - e.group.position.x, ez = p.z - e.group.position.z, f = (Math.sin(e.group.rotation.y) * ex + Math.cos(e.group.rotation.y) * ez) / (Math.hypot(ex, ez) || 1); e.stunT = 4 * (1 - d / 16) * (f > 0.2 ? 1 : 0.35); e.flinch = 1; } }
   const dp = Math.hypot(P.x - p.x, P.z - p.z);
-  if (dp < 10 && blastClear(p, P.x, P.y + P.eye, P.z)) {
-    _pd.set(p.x - P.x, 0, p.z - P.z).normalize(); const face = (-Math.sin(P.yaw) * _pd.x - Math.cos(P.yaw) * _pd.z + 1) / 2;
-    const k = clamp((1 - dp / 10) * (0.35 + face * 0.65), 0, 1), fl = $('flashW'); if (fl) { fl.style.transition = 'none'; fl.style.opacity = k; setTimeout(() => { fl.style.transition = `opacity ${1 + 2.5 * k}s ease-out`; fl.style.opacity = 0; }, 60); }
+  if (dp < 12 && blastClear(p, P.x, P.y + P.eye, P.z)) {
+    _pd.set(p.x - P.x, p.y + 0.2 - (P.y + P.eye), p.z - P.z).normalize(); _fwd.set(0, 0, -1).applyQuaternion(camera.quaternion);
+    const dot = _fwd.dot(_pd), face = clamp((dot - 0.35) / 0.55, 0, 1);   // 0 outside a ~70 degree cone, 1 looking straight at it
+    const k = clamp((1 - dp / 12) * face * 1.15, 0, 1), fl = $('flashW'); if (fl) { fl.style.transition = 'none'; fl.style.opacity = k; setTimeout(() => { fl.style.transition = `opacity ${1 + 2.5 * k}s ease-out`; fl.style.opacity = 0; }, 60); }
     rumble(k, k, 300);
   }
 }
@@ -352,7 +357,7 @@ function updateGrenades(dt) {
     }
     if (g.sticky) for (const e of enemies) { const ep = e.group.position; if (Math.hypot(ep.x - m.position.x, ep.z - m.position.z) < 0.5 && m.position.y < 1.9) { g.stuck = true; g.on = e; g.off = new THREE.Vector3(m.position.x - ep.x, clamp(m.position.y, 0.9, 1.5), m.position.z - ep.z); sfx.thud(at(ep.x, ep.z, 10)); break; } }
     if (g.stuck) continue;
-    g.vy -= 20 * dt;
+    g.vy -= (g.grav || 20) * dt;
     let nx = m.position.x + g.vx * dt, ny = m.position.y + g.vy * dt, nz = m.position.z + g.vz * dt;
     for (const b of boxes) {
       const inX = nx > b.minx - 0.1 && nx < b.maxx + 0.1, inZ = nz > b.minz - 0.1 && nz < b.maxz + 0.1;

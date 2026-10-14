@@ -436,6 +436,31 @@ const STAT_BARS = [
   ['MOVE SPEED', s => s.move, 0.78, 1.15, s => `${Math.round(s.move * 100)}%`],
   ['MAGAZINE', s => s.magSize, 0, 120, s => `${s.magSize} ROUNDS`],
 ];
+// ADVANCED STATS under the bars: the real numbers the game uses (and the preview's, green/red when they change)
+const ADV = [
+  ['BODY DAMAGE', s => s.dmg * s.pellets, 1, v => Math.round(v)],
+  ['HEADSHOT DAMAGE', s => s.dmg * s.head * (s.pellets > 1 ? 1 : 1), 1, v => Math.round(v)],
+  ['SHOTS TO KILL', s => Math.ceil(100 / (s.dmg * (s.pellets > 1 ? s.pellets * 0.6 : 1))), -1, v => v],
+  ['TIME TO KILL', s => (Math.ceil(100 / (s.dmg * (s.pellets > 1 ? s.pellets * 0.6 : 1))) - 1) * s.interval * 1000, -1, v => Math.round(v) + ' MS'],
+  ['FIRE RATE', s => 60 / s.interval, 1, v => Math.round(v) + ' RPM'],
+  ['EFFECTIVE RANGE', s => s.eff, 1, v => Math.round(v) + ' M'],
+  ['MAX RANGE', s => s.range, 1, v => Math.round(v) + ' M'],
+  ['AIM DOWN SIGHTS', s => s.adsTime * 180, -1, v => Math.round(v) + ' MS'],
+  ['HIP SPREAD', s => s.spread * 57.3, -1, v => v.toFixed(2) + '°'],
+  ['ADS SPREAD (AFTER 1ST SHOT)', s => s.adsSpread * 57.3 * 0.75, -1, v => v.toFixed(2) + '°'],
+  ['VERTICAL RECOIL', s => s.recoil * 57.3 * 0.62, -1, v => v.toFixed(2) + '°'],
+  ['RELOAD', s => s.reload, -1, v => v.toFixed(2) + ' S'],
+  ['MAGAZINE', s => s.magSize, 1, v => v],
+  ['MOVE SPEED', s => s.move * 100, 1, v => Math.round(v) + '%'],
+  ['ZOOM', s => s.overlay || (70 / (s.adsFov || 70)), 0, v => v.toFixed(1) + '×'],
+  ['VS ARMOUR', s => s.vsHeavy || 1, 1, v => '×' + v.toFixed(2)],
+];
+function advStatsHtml(cur, pv) {
+  return `<div class="lo-adv"><div class="lo-adv-h">ADVANCED STATS</div>` + ADV.map(([label, f, dir, fmt]) => {
+    const a = f(cur), b = pv ? f(pv) : a, ch = Math.abs(b - a) > Math.abs(a) * 0.005 + 1e-9, good = dir && ch && (b - a) * dir > 0, bad = dir && ch && (b - a) * dir < 0;
+    return `<div><span>${label}</span><b class="${good ? 'up' : bad ? 'down' : ''}">${fmt(pv ? b : a)}</b></div>`;
+  }).join('') + `</div>`;
+}
 const LO_ROWS = [['p', 'PRIMARY WEAPON'], ['pa', 'PRIMARY ATTACHMENTS'], ['s', 'SECONDARY WEAPON'], ['sa', 'SECONDARY ATTACHMENTS'], ['e', 'EQUIPMENT'], ['k', 'PERK']];
 const LO_HELP = {
   p: 'Pick the main gun for this class. Use the tabs to switch weapon type. Bars on the right compare it with the gun you have now: green is better, red is worse.',
@@ -526,7 +551,7 @@ function renderLoStats() {
     return `<div class="lo-stat"><span>${label}</span><div class="bar"><i style="width:${Math.min(a, b).toFixed(1)}%"></i>` +
       (better ? `<i class="up" style="left:${a.toFixed(1)}%;width:${(b - a).toFixed(1)}%"></i>` : worse ? `<i class="down" style="left:${b.toFixed(1)}%;width:${(a - b).toFixed(1)}%"></i>` : '') +
       `</div><b class="${better ? 'up' : worse ? 'down' : ''}">${fmt(sh)}</b></div>`;
-  }).join('') + (pv ? '<div class="lo-legend"><span class="up">GREEN = BETTER</span><span class="down">RED = WORSE</span></div>' : '');
+  }).join('') + (pv ? '<div class="lo-legend"><span class="up">GREEN = BETTER</span><span class="down">RED = WORSE</span></div>' : '') + advStatsHtml(cur, pv);
   PV.want = { def: shown, ovr: !loPrevW && (row === 'pa' || row === 'sa') ? loPreview : null };
 }
 function resetLoadoutWeapon() {

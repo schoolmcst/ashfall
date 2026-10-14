@@ -174,7 +174,7 @@ function dressTown(s) {
   rubbleScatter(-33, Z(20), 0, 1.5, 5); rubbleScatter(-20, Z(0.6), 0, 1, 3);
 }
 defineMap({
-  id: 'town', name: 'CASTELLMARE', place: 'Hill town on the coast, midday', desc: 'Stepped alleys climb to a piazza. Take the lower road under the windows, the tunnel beneath the square, or the gardens and the loggia roof.',
+  id: 'town', play: [-41.8, 43.6, -43.0, 43.0], name: 'CASTELLMARE', place: 'Hill town on the coast, midday', desc: 'Stepped alleys climb to a piazza. Take the lower road under the windows, the tunnel beneath the square, or the gardens and the loggia roof.',
   build: buildTown,
   env: { top: 0x3a78c4, horizon: 0xd6e2e8, fog: 0.0062, sun: [-24, 70, 32], sunCol: 0xfff1da, sunI: 2.6, skySun: 0xfff0c8, hemiSky: 0xc8dcf0, hemiGround: 0x8a7458, exposure: 1.0 },
   grass: { count: 900, color: 0xc8d090, avoid: (x, z) => !(x > 16 || x < -22) },
