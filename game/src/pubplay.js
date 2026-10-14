@@ -1,7 +1,7 @@
 /* ================================================================== quick play: playlist + pre-game lobby (desktop app)
    PLAY in the multiplayer lobby searches every mode on your playlist (Y / Q edits it) for a match someone is already
    hosting; if none, you host one in a random mode from the list. Everyone waits in a pre-game lobby with the player
-   list while a 30 second countdown runs (the host's clock), then the match starts for everyone at once. Players who
+   list while a 15 second countdown runs (the host's clock), then the match starts for everyone at once. Players who
    find the match after it started drop straight in. */
 const ONLINE_MODES = () => MODE_ORDER.filter(k => MODES[k].online);
 function playlist() {
@@ -30,7 +30,7 @@ const QP = { busy: false, status: '' };
 async function quickPlay() {
   if (QP.busy) return; QP.busy = true;
   const L = playlist().slice().sort(() => Math.random() - 0.5);
-  NET.kind = 'quick'; NET.priv = { pub: true, searching: true, started: false, key: '', lt: 30 };
+  NET.kind = 'quick'; NET.priv = { pub: true, searching: true, started: false, key: '', lt: 15 };
   QP.status = 'SEARCHING FOR A MATCH'; renderPubLobby(); showScreen('plobby'); G.state = 'plobby';
   let room = null, mode = null;
   for (const k of L) {
@@ -44,7 +44,7 @@ async function quickPlay() {
   startMatch(mode);
 }
 function privEnterPublic() {
-  NET.priv = { pub: true, searching: false, started: false, key: '', lt: 30, kind: 'quick' };
+  NET.priv = { pub: true, searching: false, started: false, key: '', lt: 15, kind: 'quick' };
   G.state = 'plobby'; mouseDown = false; mouseAds = false;
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   renderPubLobby(); showScreen('plobby');

@@ -324,7 +324,7 @@ function netNewRound() {
 function clearWorldFx() { for (const g of grenadesInFlight) scene.remove(g.m); grenadesInFlight.length = 0; for (const d of decals) d.visible = false; }
 
 /* ---------- bots that fill empty spots (the host runs them; everyone else sees them like players) */
-const BOT_FILL = { teams: 6, ffa: 8 }, WARMUP = 30;
+const BOT_FILL = { teams: 6, ffa: 8 }, WARMUP = 15;
 const warmLeft = () => Math.max(0, (NET.warmEnd || 0) - performance.now() / 1000);
 function netNewBot(team) {
   const names = BOT_NAMES.filter(n => !M.entries.some(e => e.name === n.toUpperCase() + ' BOT'));
