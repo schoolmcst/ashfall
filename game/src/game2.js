@@ -344,7 +344,7 @@ function restartMatch() { if (M.over && typeof nextMatch === 'function') { nextM
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();
   if (MS.active && G.state !== 'over') commitPartialStats();   // leaving early: your kills, deaths and time still count (not as a match)
-  clearWorldState(); clearMatch(); G.state = 'menu'; G.health = 100; vig.style.opacity = 0; hideCenter();
+  clearWorldState(); clearMatch(); G.holdT = 0; G.loadT = 0; try { hideLoadScreen(); } catch (e) {} G.state = 'menu'; G.health = 100; vig.style.opacity = 0; hideCenter();
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   spawnMenuSoldiers();
 }

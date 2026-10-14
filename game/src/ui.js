@@ -35,6 +35,7 @@ const SCHEMA = {
     { k: 'master', t: 'range', name: 'MASTER VOLUME', min: 0, max: 100, step: 5, fmt: pct },
     { k: 'realSnd', t: 'toggle', name: 'RECORDED SOUNDS', hint: 'Real recorded gunshots, reloads, footsteps and explosions (CC0). Off = the older synthesised sounds' },
     { k: 'sfx', t: 'range', name: 'EFFECTS VOLUME', min: 0, max: 100, step: 5, fmt: pct },
+    { k: 'music', t: 'range', name: 'MUSIC VOLUME', hint: 'Menu and lobby music', min: 0, max: 100, step: 5, fmt: pct },
     { k: 'ambience', t: 'range', name: 'AMBIENCE VOLUME', hint: 'Wind and distant artillery', min: 0, max: 100, step: 5, fmt: pct },
   ],
   CONTROLS: [
@@ -505,7 +506,7 @@ function menuCamera() {
 }
 function tick(dt) {
   pollPad(dt);
-  if (G.holdT > 0 && inMatch() && G.state !== 'over' && G.state !== 'plobby') updateHold(dt);
+  if (G.holdT > 0 && M && !G.bench && G.state !== 'over' && G.state !== 'plobby') updateHold(dt);
   skyMat.uniforms.time.value += dt; sky.position.copy(camera.position);
   updateGrain(dt); updateAmbience(NOW); updateFires(dt, NOW);
   fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5) { if (S.showFps) $('fps').textContent = Math.round(fpsN / fpsAcc) + ' FPS' + (S.dynRes && DR.scale < 0.999 ? `  ·  RES ${Math.round(DR.scale * 100)}%` : ''); fpsAcc = 0; fpsN = 0; }
@@ -611,7 +612,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
