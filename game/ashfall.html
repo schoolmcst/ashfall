@@ -6360,9 +6360,11 @@ function ironEye(u, optic) {
   if (optic === 'bead') return Math.max(si.body, si.bodyFront, si.bodyNear) + 0.0065;
   return si.E;   // the front post tip sits just under the centre
 }
+// red dot / holo / reflex: the dot sits in the middle of the optic's window, never below it, and just above the front post
+const coEyeFor = (u, op) => Math.max(ironEye(u, 'irons') + 0.0028, (u.railY || 0) + OPTIC_H[op]);
 function sightFor(def, u, optic) {
   if (u.sightInfo && IRON_IDS.has(optic)) return ironEye(u, optic);
-  if (u.sightInfo && COWITNESS.has(optic)) return ironEye(u, 'irons') + 0.0028;
+  if (u.sightInfo && COWITNESS.has(optic)) return coEyeFor(u, optic);
   if (!OPTIC_H[optic] || (def.blender && !hasHQ(def) && optic === def.optic)) return u.sightY;
   return u.railY + OPTIC_H[optic];
 }
@@ -6445,7 +6447,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   const base = u.len, barrelExtra = E('barrel') === 'long' ? 0.12 : 0, my = u.muzzleY, br = u.barrelR || 0.011, R = y => y;
   const op = E('optic') || def.optic, oz = u.opticZ; sightInfo(g);
   // red dots / holos / reflexes ride on a riser so the dot lines up just above the front post
-  const coEye = COWITNESS.has(op) && u.sightInfo ? ironEye(u, 'irons') + 0.0028 : null;
+  const coEye = COWITNESS.has(op) && u.sightInfo ? coEyeFor(u, op) : null;
   const ry = coEye !== null ? Math.max(u.railY, coEye - OPTIC_H[op]) : u.railY;
   if (coEye !== null && op !== 'holo' && op !== 'reflex' && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
   u.dots = [];
