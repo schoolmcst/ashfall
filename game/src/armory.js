@@ -109,17 +109,20 @@ const ARMORY_SRC = [
     v: { t: 'rocket' } },
 ];
 // balance pass (1.2.0): close-range body-shot kill times line up by class; range and handling separate the guns
+// Balance (100 health; chest x1.1, stomach x1, limbs x0.7-0.8; damage parts add at most +10%):
+//   ARs and LMGs kill in 4 chest shots even with damage parts (battle rifle / burst rifle: 3, slower fire),
+//   SMGs in 5 chest shots up close (Bulwark 4, Wasp 6) and fall off hard; pistols are backups: 5 chest shots (revolver 2, Deadeye 3)
 const BALANCE = {
-  marc: { dmg: 28, interval: 0.088 }, kv47: { dmg: 33, interval: 0.1 }, vanguard: { dmg: 45, interval: 0.133 }, talon: { dmg: 25, interval: 0.075 },
-  striker: { dmg: 26, interval: 0.081 }, spectre: { dmg: 27, interval: 0.086 },
-  // SMGs: 5 body shots up close (Bulwark 4), quick to fall off past their max damage range
-  viper: { dmg: 22, interval: 0.066 }, wasp: { dmg: 18, interval: 0.055 }, kestrel: { dmg: 21, interval: 0.064 }, bulwark: { dmg: 30, interval: 0.092 }, hornet: { dmg: 22, interval: 0.068 }, whisper: { dmg: 21, interval: 0.075 },
-  anvil: { dmg: 30, interval: 0.092 }, titan: { dmg: 33, interval: 0.107 }, hailstorm: { dmg: 30, interval: 0.092 },
-  sentinel: { dmg: 45, interval: 0.2 }, arbiter: { dmg: 45, interval: 0.16 },
+  marc: { dmg: 27, interval: 0.088 }, kv47: { dmg: 27.5, interval: 0.1, fallMin: 0.8, eff: 50 }, vanguard: { dmg: 40, interval: 0.133 }, talon: { dmg: 24, interval: 0.075 },
+  gale: { dmg: 36 }, striker: { dmg: 25, interval: 0.081 }, spectre: { dmg: 26, interval: 0.086 },
+  viper: { dmg: 20, interval: 0.066 }, wasp: { dmg: 16, interval: 0.055 }, kestrel: { dmg: 20, interval: 0.064 }, bulwark: { dmg: 27, interval: 0.092 }, hornet: { dmg: 20, interval: 0.068 }, whisper: { dmg: 19, interval: 0.075 },
+  anvil: { dmg: 27, interval: 0.092 }, titan: { dmg: 27.5, interval: 0.107, fallMin: 0.8 }, hailstorm: { dmg: 27, interval: 0.092 },
+  sentinel: { dmg: 40, interval: 0.2 }, arbiter: { dmg: 40, interval: 0.16 }, longhorn: { dmg: 80 },
   warden: { dmg: 92 },
-  // pistols are backups: slower to kill than any primary, less of a laser from the hip, only the revolver one-shots a head
-  sidearm: { dmg: 26, head: 2.0, interval: 0.16, spread: 0.016 }, magnum: { dmg: 52, head: 2.0, interval: 0.42, spread: 0.02, eff: 26 },
-  stinger: { dmg: 16, head: 1.6, interval: 0.07, spread: 0.02, adsSpread: 0.007 }, deadeye: { dmg: 50, head: 1.9, interval: 0.36, spread: 0.02, eff: 26, move: 1.02 },
+  sidearm: { dmg: 20, head: 2.0, interval: 0.17, spread: 0.022, adsSpread: 0.0045, eff: 22, fallMin: 0.5 },
+  magnum: { dmg: 46, head: 2.0, interval: 0.45, spread: 0.026, eff: 24, fallMin: 0.5 },
+  stinger: { dmg: 14, head: 1.6, interval: 0.08, spread: 0.026, adsSpread: 0.008, eff: 12, fallMin: 0.5 },
+  deadeye: { dmg: 40, head: 1.9, interval: 0.36, spread: 0.024, eff: 24, fallMin: 0.5, move: 1.02 },
 };
 const ARMORY = ARMORY_SRC.map(src => {
   const d = Object.assign({ move: 1, ads: 1 }, CAT_BASE[src.cat], src, BALANCE[src.id] || {});

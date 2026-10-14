@@ -182,8 +182,8 @@ function buildSoldierTemplates() {
     ];
     if (heavy) tparts.push(Pt(Bx(0.5, 0.3, 0.06), v.helm, 0, 0.38, 0.17), Pt(Bx(0.18, 0.2, 0.2), v.vest, -0.3, 0.55, 0), Pt(Bx(0.18, 0.2, 0.2), v.vest, 0.3, 0.55, 0));
     torso.add(solSeg(key, 'body', 'body', mat) || seg1(tparts, 'body', mat));
-    // hit zones: head (gun's headshot multiplier) > chest 1.15 > stomach 1.0 > hips 0.9 > upper arm / thigh 0.8 > forearm / shin 0.7
-    torso.add(hit(Bx(0.5 * tw, 0.3, 0.34), 0, 0.48, 0, { mult: 1.15, zone: 'chest' }));
+    // hit zones: head (gun's headshot multiplier) > chest 1.1 > stomach 1.0 > hips 0.9 > upper arm / thigh 0.8 > forearm / shin 0.7
+    torso.add(hit(Bx(0.5 * tw, 0.3, 0.34), 0, 0.48, 0, { mult: 1.1, zone: 'chest' }));
     torso.add(hit(Bx(0.5 * tw, 0.36, 0.34), 0, 0.15, 0, { mult: 1, zone: 'stomach' }));
     const head = new THREE.Bone(); head.name = 'head'; head.position.set(0, 0.7, 0); torso.add(head);
     const hparts = [Pt(Sp(1, 12, 10), v.skin, 0, 0, 0, 0, 0, 0, 0.105, 0.13, 0.12), Pt(Bx(0.17, 0.045, 0.05), v.goggle, 0, 0.025, 0.105)];

@@ -30,7 +30,7 @@ const ATT = [
   { id: 'spreader', slot: 'muzzle', c: ['sg'], name: 'Spreader Choke', desc: 'Throws a wide pattern for room clearing. Falls apart at range.', mods: { spread: 0.35, adsSpread: 0.35, pellets: 2, range: -0.2, len: 0.04 } },
   // ---------- barrels
   { id: 'stdbarrel', slot: 'barrel', c: ALLC, name: 'Standard Barrel', desc: 'Factory length.', mods: {} },
-  { id: 'long', slot: 'barrel', c: GUNC, not: ['coach'], name: 'Long Barrel', desc: 'More velocity and reach. Heavier and slower to swing.', mods: { dmg: 0.08, range: 0.3, adsSpread: -0.1, ads: 0.12, move: -0.05, spread: 0.1, len: 0.12 } },
+  { id: 'long', slot: 'barrel', c: GUNC, not: ['coach'], name: 'Long Barrel', desc: 'More velocity and reach. Heavier and slower to swing.', mods: { dmg: 0.04, range: 0.3, adsSpread: -0.1, ads: 0.12, move: -0.05, spread: 0.1, len: 0.12 } },
   { id: 'short', slot: 'barrel', c: GUNC, name: 'Short Barrel', desc: 'Handy in tight spaces. Loses velocity and climbs more.', mods: { ads: -0.15, move: 0.05, spread: -0.15, range: -0.3, dmg: -0.06, recoil: 0.12 } },
   { id: 'heavy', slot: 'barrel', c: ['ar', 'lmg', 'mr', 'sr', 'sg'], not: ['coach'], name: 'Heavy Barrel', desc: 'Thick profile soaks up recoil and holds accuracy. Weighs a lot.', mods: { recoil: -0.15, range: 0.15, move: -0.07, ads: 0.15 } },
   // ---------- underbarrel
@@ -56,7 +56,7 @@ const ATT = [
   { id: 'lightstock', slot: 'stock', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'sg'], name: 'Skeleton Stock', desc: 'Cut-down frame. Quicker handling, less damping.', mods: { move: 0.04, ads: -0.08, recoil: 0.1 } },
   // ---------- ammo
   { id: 'fmj', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Full Metal Jacket', desc: 'Standard ball ammunition.', mods: {} },
-  { id: 'hollow', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Hollow Point', desc: 'Expands on impact for more damage. Sheds energy fast and splashes on armour.', mods: { dmg: 0.15, range: -0.25, vsHeavy: -0.15 } },
+  { id: 'hollow', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Hollow Point', desc: 'Expands on impact for more damage. Sheds energy fast and splashes on armour.', mods: { dmg: 0.06, range: -0.25, vsHeavy: -0.15 } },
   { id: 'ap', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Armour Piercing', desc: 'Punches through Heavy armour. Passes through soft targets with less effect.', mods: { vsHeavy: 0.35, range: 0.1, dmg: -0.08 } },
   { id: 'subsonic', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Subsonic', desc: 'No supersonic crack, softer kick. Slow and weak at range.', mods: { spot: -0.15, recoil: -0.1, dmg: -0.12, range: -0.2 } },
   { id: 'buck', slot: 'ammo', c: ['sg'], name: '00 Buckshot', desc: 'The standard shell.', mods: {} },
@@ -439,7 +439,7 @@ const STAT_BARS = [
 // ADVANCED STATS under the bars: the real numbers the game uses (and the preview's, green/red when they change)
 const ADV = [
   ['HEAD DAMAGE', s => s.dmg * s.head, 1, v => Math.round(v)],
-  ['CHEST DAMAGE', s => s.dmg * 1.15, 1, v => Math.round(v)],
+  ['CHEST DAMAGE', s => s.dmg * 1.1, 1, v => Math.round(v)],
   ['STOMACH DAMAGE', s => s.dmg, 1, v => Math.round(v)],
   ['ARM / LEG DAMAGE', s => s.dmg * 0.7, 1, v => Math.round(v) + '–' + Math.round(v / 0.7 * 0.8)],
   ['SHOTS TO KILL', s => Math.ceil(100 / (s.dmg * (s.pellets > 1 ? s.pellets * 0.6 : 1))), -1, v => v],
