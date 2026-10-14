@@ -59,7 +59,7 @@ function buildDocks() {
   rail(34, -8.6, 34, 8.6, 3.6);
   for (const s of [1, -1]) {
     stairs(33.2, s * 4.6, s > 0 ? 's' : 'n', 1.4, 0, 3.6, 'steel', { open: true, run: 0.42 });
-    wall(34, s * 12, 42, s * 12, 2.8, 'plaster', { y: 3.6, t: 0.2, holes: [{ at: 2, w: 1.1, b: 0, h: 2.1 }, { at: 5.5, w: 3, b: 1, h: 1.2 }] });
+    wall(34, s * 12, 42, s * 12, 2.8, 'plaster', { y: 3.6, t: 0.2, holes: [{ at: 2, w: 1.5, b: 0, h: 2.1 }, { at: 5.5, w: 3, b: 1, h: 1.2 }] });
     wall(34, s * 12, 34, s * 17.7, 2.8, 'plaster', { y: 3.6, t: 0.2, holes: [{ at: 2.8, w: 2.6, b: 1, h: 1.2 }] });
     crate(39.5, s * 15.5, 1.0, 3.6, 0.8); crate(36.2, s * 16.6, 0.9, 3.6, 0.75);
     // office furniture: desks with screens, chairs, filing cabinets

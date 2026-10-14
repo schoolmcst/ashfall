@@ -62,6 +62,18 @@ function enemyShoot(e, dist) {
   else if (dist > 4) { const f = at(to.x, to.z, 8); f.vol *= 0.8; sfx.flyby(f); }
 }
 
+// put the rifle in the soldier's hands: grip in the right hand, pointing ahead of the body
+const _hR = new THREE.Vector3(), _hL = new THREE.Vector3(), _gf = new THREE.Vector3(), _gu = new THREE.Vector3(), _gs = new THREE.Vector3(), _gm = new THREE.Matrix4(), _gq = new THREE.Quaternion();
+function seatGun(e) {
+  const r = e.rig; if (!r.gun || !r.elR || !r.elL) return;
+  r.torso.updateWorldMatrix(true, true);
+  r.elR.localToWorld(_hR.set(0, -0.29, 0.02)); r.torso.worldToLocal(_hR);
+  const f = _gf.set(-0.1, lerp(-0.32, -0.03, e.aim || 0), 1).normalize();   // pointing ahead: lowered when relaxed, level when aiming
+  _gu.set(0, 1, 0); _gs.crossVectors(_gu, f).normalize(); _gu.crossVectors(f, _gs);
+  _gm.makeBasis(_gs, _gu, f); _gq.setFromRotationMatrix(_gm);
+  r.gun.quaternion.copy(_gq); if (e.gunCant) r.gun.rotateZ(e.gunCant);
+  r.gun.position.copy(_hR).addScaledVector(f, -0.06).addScaledVector(_gu, 0.03);   // grip sits in the palm, the receiver just above it
+}
 function animEnemy(e, dt, sp) {
   const r = e.rig, amp = clamp(sp / 2.8, 0, 1.3), a = e.aim;
   e.phase += dt * sp * 2.4;
@@ -74,7 +86,6 @@ function animEnemy(e, dt, sp) {
   r.head.rotation.x = -0.05 - e.flinch * 0.3; r.head.rotation.y = -0.18 * a;
   r.armR.rotation.set(lerp(-0.95, -1.4, a) + br, lerp(-0.2, -0.12, a), 0); r.elR.rotation.set(lerp(-0.95, -0.75, a), 0, 0);
   r.armL.rotation.set(lerp(-1.2, -1.45, a) + br, lerp(0.55, 0.42, a), 0); r.elL.rotation.set(lerp(-0.35, -0.2, a), 0, 0);
-  r.gun.rotation.x = lerp(0.28, 0, a);
   // crouch while holding a firing position (about half the squad does)
   const ck = e.crouchK = lerp(e.crouchK || 0, e.holding && e.crouchy && e.los ? 1 : 0, Math.min(1, dt * 5));
   if (ck > 0.01) {
@@ -87,9 +98,10 @@ function animEnemy(e, dt, sp) {
   if (e.reloadT > 0) {
     e.reloadT -= dt; const p = clamp(1 - e.reloadT / e.reloadDur, 0, 1), k = Math.sin(p * Math.PI);
     r.armL.rotation.x = lerp(r.armL.rotation.x, -0.55, k); r.armL.rotation.y = lerp(r.armL.rotation.y, 0.25, k); r.elL.rotation.x = lerp(r.elL.rotation.x, -1.35, k);
-    r.gun.rotation.z = 0.55 * k; r.gun.rotation.x += 0.35 * k; r.head.rotation.x += 0.25 * k;
+    e.gunCant = 0.55 * k; r.head.rotation.x += 0.25 * k;
     if (!e.reloadSnd && p > 0.55) { e.reloadSnd = true; const o = at(e.group.position.x, e.group.position.z, 10); sfx.ereload(o); }
-  } else r.gun.rotation.z = 0;
+  } else e.gunCant = 0;
+  seatGun(e);
   e.flinch = Math.max(0, e.flinch - dt * 4);
   if (e.flashT > 0) { e.flashT -= dt; if (e.flashT <= 0) r.flash.visible = false; }
 }

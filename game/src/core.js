@@ -37,6 +37,11 @@ function loadSettings() {
     else NEED_AUTO_DERIVE = true;
   } catch (e) { NEED_AUTO_DERIVE = true; }
 }
+// keyboard bindings (Settings > KEYBINDS); mouse stays fire / aim
+const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab' };
+const bind = a => (S.binds && S.binds[a]) || DEFAULT_BINDS[a];
+const kb = a => !!keys[bind(a)] || (a === 'sprint' && bind(a) === 'ShiftLeft' && !!keys.ShiftRight);
+function keyName(c) { if (!c) return '—'; return c.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'NUM ').replace('ShiftLeft', 'LEFT SHIFT').replace('ShiftRight', 'RIGHT SHIFT').replace('ControlLeft', 'LEFT CTRL').replace('ControlRight', 'RIGHT CTRL').replace('AltLeft', 'LEFT ALT').replace('AltRight', 'RIGHT ALT').replace('Space', 'SPACE').replace('Arrow', '').toUpperCase(); }
 function saveSettings() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
 const best = { wave: 0, score: 0 };
 function loadBest() { try { const o = JSON.parse(localStorage.getItem(BEST) || '{}'); best.wave = o.wave | 0; best.score = o.score | 0; } catch (e) {} }

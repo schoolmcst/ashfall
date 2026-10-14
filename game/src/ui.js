@@ -39,6 +39,12 @@ const SCHEMA = {
     { k: 'invertY', t: 'toggle', name: 'INVERT MOUSE Y' },
     { k: 'toggleAds', t: 'toggle', name: 'TOGGLE AIM', hint: 'Press right mouse once to aim, again to stop' },
   ],
+  KEYBINDS: [
+    { a: 'fwd', t: 'bind', name: 'MOVE FORWARD' }, { a: 'back', t: 'bind', name: 'MOVE BACK' }, { a: 'left', t: 'bind', name: 'MOVE LEFT' }, { a: 'right', t: 'bind', name: 'MOVE RIGHT' },
+    { a: 'jump', t: 'bind', name: 'JUMP' }, { a: 'crouch', t: 'bind', name: 'CROUCH' }, { a: 'sprint', t: 'bind', name: 'SPRINT' },
+    { a: 'reload', t: 'bind', name: 'RELOAD' }, { a: 'melee', t: 'bind', name: 'MELEE' }, { a: 'grenade', t: 'bind', name: 'THROW EQUIPMENT' }, { a: 'use', t: 'bind', name: 'USE (PLANT / DEFUSE)' },
+    { a: 'swap', t: 'bind', name: 'SWITCH WEAPON' }, { a: 'prim', t: 'bind', name: 'PRIMARY WEAPON' }, { a: 'sec', t: 'bind', name: 'SECONDARY WEAPON' }, { a: 'inspect', t: 'bind', name: 'INSPECT WEAPON' }, { a: 'board', t: 'bind', name: 'SCOREBOARD' },
+  ],
   CONTROLLER: [
     { k: 'padSens', t: 'range', name: 'LOOK SENSITIVITY', min: 40, max: 250, step: 5, fmt: pct },
     { k: 'padAdsSens', t: 'range', name: 'AIM DOWN SIGHTS SENSITIVITY', hint: 'Multiplier while aiming', min: 30, max: 150, step: 5, fmt: pct },
@@ -101,6 +107,18 @@ function renderSettings() {
       sw.onclick = () => { S[it.k] = !S[it.k]; sw.classList.toggle('on', S[it.k]); applySetting(it.k); };
       sw.onkeydown = e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); sw.click(); } };
       ctl.appendChild(sw);
+    } else if (it.t === 'bind') {
+      const b = document.createElement('button'); b.className = 'bindbtn'; b.textContent = keyName(bind(it.a));
+      b.onclick = () => {
+        b.textContent = 'PRESS A KEY (ESC TO CANCEL)'; b.classList.add('wait');
+        bindCapture = code => {
+          S.binds = Object.assign({}, DEFAULT_BINDS, S.binds || {});
+          const other = Object.keys(S.binds).find(k => k !== it.a && S.binds[k] === code);   // that key was used elsewhere: swap them
+          if (other) S.binds[other] = S.binds[it.a];
+          S.binds[it.a] = code; saveSettings(); sfx.ui(); renderSettings();
+        };
+      };
+      ctl.appendChild(b);
     } else {
       const seg = document.createElement('div'); seg.className = 'seg';
       for (const [val, label] of it.opts) { const b = document.createElement('button'); b.textContent = label; b.className = S[it.k] === val ? 'on' : ''; b.onclick = () => { S[it.k] = val; applySetting(it.k); if (it.k !== 'quality') [...seg.children].forEach(c => c.classList.toggle('on', c === b)); }; seg.appendChild(b); }
@@ -123,11 +141,11 @@ function actions(act) {
     case 'custom': renderCustom(); showScreen('custom'); break;
     case 'cus-back': renderLobby(); showScreen('lobby'); break;
     case 'cus-start': startCustom(); break;
-    case 'stats': statsReturn = curScreen || 'lobby'; renderStats(); showScreen('career'); break;
+    case 'stats': statsReturn = curScreen || 'lobby'; statOnline = !!(MODES[LOBBY.mode] && MODES[LOBBY.mode].online); renderStats(); showScreen('career'); break;
     case 'stats-back': if (statsReturn === 'lobby') renderLobby(); showScreen(statsReturn); break;
     case 'res-again': restartMatch(); break;
     case 'res-lobby': toLobby(); break;
-    case 'res-stats': statsReturn = 'results'; renderStats(); showScreen('career'); break;
+    case 'res-stats': statsReturn = 'results'; statOnline = !!(M && M.online); renderStats(); showScreen('career'); break;
     case 'settings': returnScreen = curScreen || 'menu'; showScreen('settings'); break;
     case 'settings-back': showScreen(returnScreen); break;
     case 'bench': startBench(); break;
@@ -138,7 +156,7 @@ function actions(act) {
     case 'howto-back': showScreen(returnScreen); break;
     case 'credits': returnScreen = curScreen || 'menu'; showScreen('credits'); break;
     case 'credits-back': showScreen(returnScreen); break;
-    case 'reset-settings': for (const it of SCHEMA[curTab]) S[it.k] = DEFAULTS[it.k]; applyVideoSettings(); applyAudioSettings(); updateDiffUI(); saveSettings(); renderSettings(); break;
+    case 'reset-settings': if (curTab === 'KEYBINDS') S.binds = {}; for (const it of SCHEMA[curTab]) if (it.k) S[it.k] = DEFAULTS[it.k]; applyVideoSettings(); applyAudioSettings(); updateDiffUI(); saveSettings(); renderSettings(); break;
     case 'resume': resumeGame(); break;
     case 'restart': restartMatch(); break;
     case 'tomenu': toMenu(); break;
@@ -186,12 +204,14 @@ function adjustFocused(d) {
 }
 
 /* ------------------------------------------------------------------ input */
+let bindCapture = null;   // Settings > KEYBINDS: waiting for the key to assign
 addEventListener('keydown', e => {
+  if (bindCapture) { e.preventDefault(); const f = bindCapture; bindCapture = null; if (e.code !== 'Escape') f(e.code); else renderSettings(); return; }
   keys[e.code] = true;
   if (G.state === 'deathcam') { if (G.dc && G.dc.t > 0.6 && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) finishDeath(); return; }
   if ((G.state === 'respawning' || G.state === 'spectate') && e.code === 'Escape') { pauseGame(); return; }
   if (G.state === 'spectate' && (e.code === 'Space' || e.code === 'Enter')) { G.specNext = true; return; }
-  if (e.code === 'Tab') e.preventDefault();
+  if (e.code === 'Tab' || e.code === bind('board')) e.preventDefault();
   if (G.state !== 'playing') {
     if (!curScreen) return;
     if (e.code === 'ArrowDown') { moveFocus(1); e.preventDefault(); }
@@ -202,13 +222,15 @@ addEventListener('keydown', e => {
     return;
   }
   if (e.code === 'Escape') { pauseGame(); return; }
-  if (e.code === 'KeyR') startReload();
-  if (e.code === 'KeyF' && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
-  if (e.code === 'KeyG') throwGrenade();
-  if (e.code === 'Digit1') switchWeapon(0);
-  if (e.code === 'Digit2') switchWeapon(1);
-  if (e.code === 'KeyQ') cycleWeapon(1);
-  if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab') e.preventDefault();
+  const c = e.code;
+  if (c === bind('reload')) startReload();
+  if (c === bind('inspect') && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
+  if (c === bind('grenade')) throwGrenade();
+  if (c === bind('melee')) melee();
+  if (c === bind('prim')) switchWeapon(0);
+  if (c === bind('sec')) switchWeapon(1);
+  if (c === bind('swap')) cycleWeapon(1);
+  if (c === 'Space' || c.startsWith('Arrow') || c === 'Tab' || c === bind('jump')) e.preventDefault();
 });
 addEventListener('keyup', e => { keys[e.code] = false; });
 addEventListener('blur', () => { if (G.bench || G.look) return; for (const k in keys) keys[k] = false; mouseDown = false; if (!S.toggleAds) mouseAds = false; pad.crouch = false; pauseGame(); });
@@ -299,6 +321,7 @@ function pollPad(dt) {
     if (press(14)) cycleWeapon(-1);
     if (press(5)) throwGrenade();
     if (press(13) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
+    if (press(11)) melee();
     const fwdPush = -my;
     if (S.padSprint === 'hold') pad.sprint = down(10);
     else if (S.padSprint === 'auto') { pad.autoT = fwdPush > 0.85 && mm > 0.92 ? (pad.autoT || 0) + dt : 0; pad.sprint = pad.autoT > 0.22 || (pad.sprint && fwdPush > 0.6) || press(10) || (pad.sprint && down(10)); }
@@ -439,7 +462,7 @@ function tick(dt) {
     else if (G.burstLeft > 0 && G.fireT <= 0 && !G.reloading && G.swapT <= 0 && w.ammo > 0 && G.state === 'playing') shoot(moving);
     clickQueued = false;
     if (w.ammo === 0 && !G.reloading && w.reserve > 0 && G.swapT <= 0 && G.fireT <= 0) startReload();
-    const used = inMatch() ? playerInteract(dt, !!keys.KeyE || pad.use) : false;
+    const used = inMatch() ? playerInteract(dt, kb('use') || pad.use) : false;
     if (inMatch()) { updateBots(dt); updateMatch(dt); } else { updateNav(P.x, P.z); updateWaves(dt); updateEnemies(dt); }
     updateGrenades(dt); updatePickups(dt); updateHud();
   } else if (G.state === 'menu') { menuCamera(); updateMenuSoldiers(dt); }
@@ -453,7 +476,7 @@ function tick(dt) {
   else if (G.state === 'deathcam') { const w = dt * 0.32; updateDeathCam(dt); updateEnemies(w); updateGrenades(w); }
   if (M.online) { try { netTick(dt); } catch (err) { reportError(err); } }
   const wdt = G.state === 'deathcam' && !inMatch() ? dt * 0.32 : dt;
-  tickStats(dt); setScoreboard(keys.Tab || pad.board);
+  tickStats(dt); setScoreboard(kb('board') || pad.board);
   try { updatePolish(dt); } catch (err) { reportError(err); }
   updateDying(wdt); updateFx(wdt);
 }
@@ -508,7 +531,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

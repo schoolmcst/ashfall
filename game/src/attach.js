@@ -108,7 +108,46 @@ function computeStats(def, override, factory) {
 }
 // eye height of each optic above the rail it sits on
 const OPTIC_H = { reddot: 0.034, holo: 0.035, reflex: 0.024, scope25: 0.044, acog4: 0.044, scope6: 0.05, scope10: 0.052, scope35: 0.046 };
+// where the eye sits when aiming. Iron sights: just over the top of the sights, so you look past the rear sight and the
+// front post tip sits at the centre. Red dot / holo / reflex: raised so the dot sits just above the front post.
+const COWITNESS = new Set(['reddot', 'holo', 'reflex']);
+function sightInfo(g) {
+  const u = g.userData; if (u.sightInfo) return u.sightInfo;
+  g.updateMatrixWorld(true); const inv = new THREE.Matrix4().copy(g.matrixWorld).invert(), v = new THREE.Vector3(), m = new THREE.Matrix4();
+  const scan = (obj, fn) => obj.traverse(o => { if (!o.isMesh || !o.geometry || !o.geometry.attributes.position) return; m.multiplyMatrices(inv, o.matrixWorld); const a = o.geometry.attributes.position; for (let i = 0; i < a.count; i++) { v.fromBufferAttribute(a, i).applyMatrix4(m); fn(v); } });
+  const len = u.len || 0.6;
+  let top = -1, zmin = 1e9, zmax = -1e9;
+  if (u.irons) scan(u.irons, p => { top = Math.max(top, p.y); zmin = Math.min(zmin, p.z); zmax = Math.max(zmax, p.z); });
+  // split the factory irons: keep the front sight, drop the rear one (we draw a see-through aperture instead)
+  let frontTop = -1, frontZ = -len * 0.62, rearZ = zmax > -1e8 ? zmax - 0.01 : -0.02, front = null;
+  if (u.irons) {
+    const split = zmin < -0.12 ? Math.min(zmax - 0.06, (zmin + zmax) / 2) : -1e9;
+    u.irons.traverse(o => {
+      if (!o.isMesh || split < -1e8) return;
+      m.multiplyMatrices(inv, o.matrixWorld); const gsrc = o.geometry.index ? o.geometry.toNonIndexed() : o.geometry, a = gsrc.attributes.position, keep = [];
+      for (let t = 0; t < a.count; t += 3) { let zc = 0; for (let k = 0; k < 3; k++) { v.fromBufferAttribute(a, t + k).applyMatrix4(m); zc += v.z; if (v.z < split) frontTop = Math.max(frontTop, v.y); } if (zc / 3 < split) keep.push(t); }
+      if (!keep.length) return;
+      const pos = new Float32Array(keep.length * 9), nor = new Float32Array(keep.length * 9), n = gsrc.attributes.normal;
+      keep.forEach((t, q) => { for (let k = 0; k < 3; k++) { v.fromBufferAttribute(a, t + k).applyMatrix4(m); pos.set([v.x, v.y, v.z], q * 9 + k * 3); if (n) nor.set([n.getX(t + k), n.getY(t + k), n.getZ(t + k)], q * 9 + k * 3); } });
+      const ng = new THREE.BufferGeometry(); ng.setAttribute('position', new THREE.BufferAttribute(pos, 3)); if (n) ng.setAttribute('normal', new THREE.BufferAttribute(nor, 3)); else ng.computeVertexNormals();
+      front = front || new THREE.Group(); front.add(new THREE.Mesh(ng, o.material));
+    });
+    if (front) { frontZ = zmin + 0.01; front.name = 'ironsFront'; front.visible = false; g.add(front); u.ironsFront = front; }
+  }
+  // no front sight in the irons part (it is part of the body, e.g. on the gas block): find the tallest thing up front
+  let bodyFront = -1, body = -1; const bodyObj = g.children[0];
+  if (bodyObj) scan(bodyObj, p => { if (p.z < -len * 0.3 && p.z > -len * 0.95) bodyFront = Math.max(bodyFront, p.y); if (p.z > frontZ + 0.03 && p.z < 0.3) body = Math.max(body, p.y); });
+  const tip = frontTop > 0 ? frontTop : bodyFront > (u.railY || 0) + 0.01 ? bodyFront : top > 0 ? top : (u.sightY || 0.06) + 0.004;
+  return (u.sightInfo = { tip, ironTop: top > 0 ? top : tip, frontZ, rearZ, body, hasFront: frontTop > 0 || bodyFront > (u.railY || 0) + 0.01 });
+}
+function ironEye(u, optic) {
+  const si = u.sightInfo; if (!si) return u.sightY;
+  if (optic === 'bead') return Math.max(si.ironTop, si.body) + 0.0016;
+  return si.tip + 0.0012;   // the front post tip sits just under the centre
+}
 function sightFor(def, u, optic) {
+  if (u.sightInfo && IRON_IDS.has(optic)) return ironEye(u, optic);
+  if (u.sightInfo && COWITNESS.has(optic)) return ironEye(u, 'irons') + 0.0028;
   if (!OPTIC_H[optic] || (def.blender && !hasHQ(def) && optic === def.optic)) return u.sightY;
   return u.railY + OPTIC_H[optic];
 }
@@ -117,7 +156,7 @@ function applyLoadout(wi) {
   const def = w.def, u = gunObjs[wi] ? gunObjs[wi].userData : null, s = computeStats(def, null, w.factory), oldMag = w.magSize;
   Object.assign(w, { dmg: s.dmg, pellets: s.pellets, head: s.head, interval: s.interval, spread: s.spread, adsSpread: s.adsSpread, recoil: s.recoil, reload: s.reload, blast: s.blast,
     magSize: s.magSize, eff: s.eff, range: s.range, adsTime: s.adsTime, move: s.move, spot: s.spot, vsHeavy: s.vsHeavy, adsFov: s.adsFov, stealth: s.stealth, laser: s.laser, overlay: s.overlay, optic: s.optic });
-  if (u) { w.sightY = sightFor(def, u, s.optic); w.adsZ = u.adsZ; w.len = u.len + s.lenAdd; buildAttachmentVisuals(wi); }
+  if (u) { sightInfo(gunObjs[wi]); w.sightY = sightFor(def, u, s.optic); w.adsZ = u.adsZ; w.len = u.len + s.lenAdd; buildAttachmentVisuals(wi); }
   if (w.magSize !== oldMag) { const extra = Math.max(0, w.ammo - w.magSize); w.ammo = Math.min(w.ammo, w.magSize); w.reserve = Math.min(w.reserveMax, w.reserve + extra); }
 }
 function initAttachments() { WEAPONS.forEach((w, i) => applyLoadout(i)); WEAPONS.forEach(w => { w.ammo = w.magSize; }); }
@@ -163,6 +202,7 @@ function attMat() {
   AV.brass = VM.brass;
   AV.laser = new THREE.MeshBasicMaterial({ color: 0xff2a2a, transparent: true, opacity: 0.35, blending: THREE.AdditiveBlending, depthWrite: false });
   AV.lens = VM.lens; AV.dot = VM.dot;
+  AV.dotTop = new THREE.MeshBasicMaterial({ color: 0xff3020, depthTest: false, depthWrite: false, transparent: true, toneMapped: false });
   return AV;
 }
 const IRON_IDS = new Set(['irons', 'irons_p', 'bead', 'sirons']);
@@ -186,9 +226,17 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   const fit = (want, have) => clamp(want / have, 0.6, 1.7);
   const slots = slotsFor(def), E = s => (slots.includes(s) ? (ovr && ovr.slot === s ? ovr : factory ? stockFor(def, s) : equipped(def, s)).id : null);
   const base = u.len, barrelExtra = E('barrel') === 'long' ? 0.12 : 0, my = u.muzzleY, br = u.barrelR || 0.011, R = y => y;
-  const op = E('optic') || def.optic, ry = u.railY, oz = u.opticZ;
+  const op = E('optic') || def.optic, oz = u.opticZ; sightInfo(g);
+  // red dots / holos / reflexes ride on a riser so the dot lines up just above the front post
+  const coEye = COWITNESS.has(op) && u.sightInfo ? ironEye(u, 'irons') + 0.0028 : null;
+  const ry = coEye !== null ? Math.max(u.railY, coEye - OPTIC_H[op]) : u.railY;
+  if (coEye !== null && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
+  u.dots = [];
   if (u.stockOptic) u.stockOptic.forEach(o => { o.visible = op === 'reddot'; });
-  if (u.irons) u.irons.visible = IRON_IDS.has(op);
+  // factory irons: the bead / pistol sights stay as they are; rifle irons lose the solid rear sight (see-through aperture below)
+  const rifleIrons = (op === 'irons' || op === 'sirons') && !u.pistol;
+  if (u.irons) u.irons.visible = IRON_IDS.has(op) && !(rifleIrons && u.ironsFront) && !(COWITNESS.has(op) && u.ironsFront && false);
+  if (u.ironsFront) u.ironsFront.visible = (rifleIrons || COWITNESS.has(op));
   // barrels
   const tip = -(base + barrelExtra);
   if (barrelExtra) { tubeZ(br * 0.95, barrelExtra + 0.02, M.dark, 0, my, -base + 0.01); if (def.blender === 'rifle') add(new THREE.BoxGeometry(0.06, 0.06, 0.1), M.poly, 0, 0.004, -0.6); }
@@ -240,6 +288,31 @@ function attachVisuals(g, def, factory, wlen, ovr) {
     for (const z of [oz + L * 0.3, oz - L * 0.15]) add(new THREE.BoxGeometry(0.03, OPTIC_H[op] - 0.01, 0.014), M.dark, 0, ry + (OPTIC_H[op] - 0.01) / 2, z);
     add(new THREE.CircleGeometry(ob - 0.003, 18), M.lens, 0, y, oz - L * 0.45 - 0.0005);
   }
+  }
+  // aim points: the dot (and the holo ring) at eye height, and a front post under it when the irons are folded away
+  if (coEye !== null) {
+    const dz = op === 'reddot' ? oz + 0.03 : op === 'holo' ? oz - 0.02 : oz - 0.015;
+    const dm = new THREE.Mesh(new THREE.CircleGeometry(op === 'holo' ? 0.0011 : 0.0016, 12), M.dotTop); dm.position.set(0, coEye, dz); dm.renderOrder = 20; grp.add(dm); u.dots.push(dm);
+    if (op === 'holo') { const rg = new THREE.Mesh(new THREE.RingGeometry(0.0062, 0.0072, 32), M.dotTop); rg.position.set(0, coEye, dz); rg.renderOrder = 20; grp.add(rg); u.dots.push(rg); }
+    if (!u.sightInfo.hasFront) {
+      const fz = u.sightInfo.frontZ, py = coEye - 0.0028, base = Math.min(u.railY, py - 0.012);
+      add(new THREE.BoxGeometry(0.018, 0.008, 0.016), M.dark, 0, base + 0.004, fz);
+      add(new THREE.BoxGeometry(0.0035, py - base - 0.006, 0.004), M.dark, 0, base + 0.006 + (py - base - 0.006) / 2, fz);
+      for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.003, py - base - 0.004, 0.01), M.dark, sx * 0.008, base + 0.004 + (py - base - 0.004) / 2, fz);
+    }
+  }
+  // rifle irons: a thin ring aperture at the back, centred on the eye line, so you look through it
+  if (rifleIrons && u.sightInfo) {
+    const eye = ironEye(u, op), rz = u.sightInfo.rearZ, base = u.railY;
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(0.0078, 0.0016, 8, 28), M.dark); ring.position.set(0, eye, rz); grp.add(ring);
+    add(new THREE.BoxGeometry(0.004, Math.max(0.002, eye - 0.0094 - base), 0.006), M.dark, 0, base + (eye - 0.0094 - base) / 2, rz);
+    add(new THREE.BoxGeometry(0.03, 0.008, 0.02), M.dark, 0, base + 0.004, rz);
+  }
+  // shotgun bead raised on a small post when the receiver sits higher than the barrel
+  if (op === 'bead' && u.sightInfo && u.sightInfo.body > u.sightInfo.ironTop) {
+    const eye = ironEye(u, 'bead'), fz = -(u.len || 0.7) + 0.03, by = (u.muzzleY || u.railY) + (u.barrelR || 0.01);
+    add(new THREE.BoxGeometry(0.004, Math.max(0.002, eye - 0.0035 - by), 0.006), M.dark, 0, by + (eye - 0.0035 - by) / 2, fz);
+    add(new THREE.SphereGeometry(0.0028, 8, 6), M.brass, 0, eye - 0.0028, fz);
   }
   // underbarrel
   const ub = E('underbarrel'), uy = u.underY, uz = u.underZ;

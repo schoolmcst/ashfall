@@ -37,9 +37,9 @@ function buildSpawns() {
   if (SPAWNS) return SPAWNS;
   SPAWNS = [];
   const maxY = (MAPS[curMap] && MAPS[curMap].spawnMaxY) || 0.5, ok = MAPS[curMap] && MAPS[curMap].spawnOk;
-  for (let z = -40; z <= 40; z += 5) for (let x = -40; x <= 40; x += 5) {
-    const cx = cellOf(x + rnd(-1, 1)), cz = cellOf(z + rnd(-1, 1)), c = cz * NN + cx, opts = [];
-    for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h <= maxY && !lvS[c * NL + l]) opts.push(h); }
+  for (let z = -41; z <= 41; z += 3.5) for (let x = -41; x <= 41; x += 3.5) {
+    const cx = cellOf(x + rnd(-1.2, 1.2)), cz = cellOf(z + rnd(-1.2, 1.2)), c = cz * NN + cx, opts = [];
+    for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h > maxY || lvS[c * NL + l]) continue; let room = 0; for (const [ox, oz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const c2 = (cz + oz) * NN + cx + ox; if (c2 >= 0 && c2 < NN * NN) for (let m = 0; m < lvN[c2]; m++) if (Math.abs(lvH[c2 * NL + m] - h) < 0.3) { room++; break; } } if (room >= 3) opts.push(h); }
     if (!opts.length) continue;
     const p = { x: cellPos(cx), z: cellPos(cz), y: opts[(Math.random() * opts.length) | 0] };
     if (ok && !ok(p)) continue;
@@ -55,18 +55,25 @@ function hostilesOf(team) {
   for (const e of enemies) if (e.team !== team) out.push({ x: e.group.position.x, z: e.group.position.z });
   return out;
 }
-function pickSpawnFor(team, side) {
-  const pts = buildSpawns(), hs = hostilesOf(team);
+// pick a spawn: away from enemies, not on top of anyone who just spawned, spread out and a bit random.
+// initial: the start of a match/round, everyone near their own side but spread over the whole spawn area
+const SPAWN_USED = [];
+function pickSpawnFor(team, side, initial) {
+  const pts = buildSpawns(), hs = hostilesOf(team), now = performance.now();
+  while (SPAWN_USED.length && now - SPAWN_USED[0].t > 6000) SPAWN_USED.shift();
+  const home = side !== undefined && side >= 0 ? LAYOUT.spawn[side] : null;
   let best = null, bs = -1e9;
-  for (let i = 0; i < 26; i++) {
+  for (let i = 0; i < 48; i++) {
     const p = pts[(Math.random() * pts.length) | 0];
     let near = 1e9; for (const h of hs) near = Math.min(near, Math.hypot(h.x - p.x, h.z - p.z));
-    let s = Math.min(near, 40) * 1.4 + rnd(0, 6);
-    if (side !== undefined && side >= 0) s -= Math.hypot(p.x - LAYOUT.spawn[side].x, p.z - LAYOUT.spawn[side].z) * 0.9;
-    if (near < 9) s -= 60;
+    let s = Math.min(near, 36) + rnd(0, 14);
+    if (home) { const d = Math.hypot(p.x - home.x, p.z - home.z); s -= initial ? Math.max(0, d - 14) * 2.5 : Math.max(0, d - 30) * 0.4; }
+    if (near < 10) s -= 60;
+    for (const u of SPAWN_USED) { const d = Math.hypot(u.x - p.x, u.z - p.z); if (d < 4) s -= (4 - d) * 12; }
     if (s > bs) { bs = s; best = p; }
   }
-  return { x: best.x + rnd(-0.3, 0.3), z: best.z + rnd(-0.3, 0.3), y: best.y || 0 };
+  SPAWN_USED.push({ x: best.x, z: best.z, t: now });
+  return { x: best.x + rnd(-0.4, 0.4), z: best.z + rnd(-0.4, 0.4), y: best.y || 0 };
 }
 const sideOf = team => !M.def.teams ? -1 : M.mode === 'snd' ? (team === M.snd.att ? 0 : 1) : team;
 
@@ -100,6 +107,7 @@ function spawnBot(en, pos) {
   e.group.rotation.y = Math.atan2(-pos.x, -pos.z); e.group.position.y = pos.y || 0;
   if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
   en.bot = e; en.alive = true; enemies.push(e);
+  if (M.mode === 'gun') botGunProfile(e, GUN_LADDER[Math.min(en.level || 0, GUN_LADDER.length - 1)]);
   return e;
 }
 function startMatch(mode, custom) {
@@ -144,8 +152,8 @@ function modeGoalText() {
 }
 function placeEveryone() {
   for (const en of M.entries) {
-    if (en.isPlayer) { const p = pickSpawnFor(en.team, sideOf(en.team)); placePlayer(p); continue; }
-    spawnBot(en, pickSpawnFor(en.team, sideOf(en.team)));
+    if (en.isPlayer) { const p = pickSpawnFor(en.team, sideOf(en.team), true); placePlayer(p); continue; }
+    spawnBot(en, pickSpawnFor(en.team, sideOf(en.team), true));
   }
 }
 function placePlayer(p) {
@@ -154,10 +162,19 @@ function placePlayer(p) {
   P.yaw = Math.atan2(p.x, p.z) + rnd(-0.2, 0.2);
   G.health = G.maxHp = M.maxHp || 100; G.lastHit = -99; G.spawnProt = 1.5; M.me.alive = true;
 }
+// gun game bots fight with the gun of their level: its damage, fire rate and burst length
+function botGunProfile(e, id) {
+  const d = ARM[id]; if (!d || !e) return;
+  const sk = SKILL[M.cfg.skill] || SKILL.regular, per = d.dmg * (d.pellets ? d.pellets * 0.55 : 1);
+  e.gunId = id; e.dmg = sk.dmg * (M.cfg.hardcore ? 1.4 : 1) * clamp(per / 34, 0.55, 3.2);
+  e.gap = clamp(d.interval || 0.1, 0.06, 1.3); e.burstMin = d.interval > 0.3 || d.auto === false ? 1 : 3; e.burstMax = d.interval > 0.3 || d.auto === false ? 3 : 7;
+  e.cd = Math.max(e.cd || 0, 0.7);   // a moment to bring the new gun up
+}
 function equipGunGame(level) {
   const id = GUN_LADDER[Math.min(level, GUN_LADDER.length - 1)], d = ARM[id];
   equipClass({ p: CATS[d.cat].slot === 'primary' ? id : null, s: CATS[d.cat].slot === 'secondary' ? id : null, e: 'frag', k: 'none', only: id, factory: true });
   G.grenades = 0;
+  G.swapT = Math.max(G.swapT, 0.65); G.fireT = Math.max(G.fireT, 0.65);   // a short delay before the new gun can fire
 }
 const playerAlive = () => G.state === 'playing' && M.me && M.me.alive;
 
@@ -194,6 +211,7 @@ function creditKill(ke, victim) {
   if (M.mode === 'gun') {
     ke.level++;
     if (ke.isPlayer) { if (ke.level < GUN_LADDER.length) { equipGunGame(ke.level); popScore(`LEVEL ${ke.level + 1}`, 'big', ARM[GUN_LADDER[ke.level]].name); sfx.streak(); } }
+    else if (ke.bot && ke.level < GUN_LADDER.length) botGunProfile(ke.bot, GUN_LADDER[ke.level]);
     if (ke.level >= GUN_LADDER.length) endMatch(ke);
   }
   checkScoreLimit();
@@ -318,7 +336,7 @@ function updateBots(dt) {
     animEnemy(e, dt, sp);
     if (e.tgt && e.aim > 0.6 && !(e.reloadT > 0) && !busy && !(e.stunT > 0)) {
       e.cd -= dt;
-      if (e.cd <= 0) { botShoot(e, e.tgt, dist); if (--e.mag <= 0) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; } e.shots--; if (e.shots <= 0) { e.shots = Math.floor(rnd(3, 7)); e.cd = rnd(0.35, 0.9); } else e.cd = 0.11; }
+      if (e.cd <= 0) { botShoot(e, e.tgt, dist); if (--e.mag <= 0) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; } e.shots--; if (e.shots <= 0) { e.shots = Math.floor(rnd(e.burstMin || 3, e.burstMax || 7)); e.cd = rnd(0.35, 0.9) + (e.gap > 0.3 ? e.gap : 0); } else e.cd = e.gap || 0.11; }
     }
   }
 }

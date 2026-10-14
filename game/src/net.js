@@ -265,9 +265,15 @@ function netTick(dt) {
   if (isHost) netBots(dt); else if (NET.botPres.length || M.entries.some(en => en.botLabel)) netClearBots();
   if (NET.app && isHost && (NET.lanT -= dt) <= 0) { NET.lanT = 2; try { window.ASHFALL_APP.lan.announce({ slot: NET.room.slot, name: NET.nick, mode: M.mode, n: NET.room.players }); } catch (e) {} }
   // someone already started the next round
-  if (maxEp > NET.ep) { NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; commitPartialStats(); startMatchStats(); }   // joined part-way or missed the end: keep what you did
+  if (maxEp > NET.ep) {   // someone else's game moved on first: count the round we were in from the scores we saw
+    const lim = M.cfg.score, ts = M.teamScore || [0, 0], played = NET.ep > 0 && !NET.endT && MS.time >= 60;
+    if (played && NET.lastNear) finishMatchStats(NET.lastNear); else commitPartialStats();
+    NET.ep = maxEp; NET.k = NET.d = 0; NET.endT = 0; G.kills = 0; NET.lastNear = 0; startMatchStats();
+  }
   M.me.kills = NET.k; M.me.deaths = NET.d; M.me.score = NET.k * 100; M.me.name = 'YOU';
   if (M.def.teams) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
+  // remember who was about to win, in case another game ends the round a moment before ours does
+  { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
   if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
   if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor('random')); showBanner('NEW ROUND', mapName(curMap) + ' · scores reset'); } }

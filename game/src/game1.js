@@ -67,11 +67,11 @@ function isFiring() { return mouseDown || pad.fire; }
 let wasSprint = false;
 function updatePlayer(dt) {
   const w = WEAPONS[G.cur];
-  const crouch = !!keys.KeyC || pad.crouch;
-  const fwd = clamp((keys.KeyW ? 1 : 0) - (keys.KeyS ? 1 : 0) - pad.my, -1, 1);
-  const str = clamp((keys.KeyD ? 1 : 0) - (keys.KeyA ? 1 : 0) + pad.mx, -1, 1);
+  const crouch = kb('crouch') || pad.crouch;
+  const fwd = clamp((kb('fwd') ? 1 : 0) - (kb('back') ? 1 : 0) - pad.my, -1, 1);
+  const str = clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
   const moving = fwd !== 0 || str !== 0;
-  const sprint = !!(keys.ShiftLeft || keys.ShiftRight || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
+  const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
   let speed = (sprint ? 8 : crouch ? 2.6 : G.adsOn ? 3.2 : 5.2) * (w.move || 1) * (perk('light') ? 1.08 : 1);
   if (G.reloading) speed *= 0.85;
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
@@ -82,7 +82,7 @@ function updatePlayer(dt) {
   P.x += P.vx * dt; P.z += P.vz * dt;
   resolve(P, 0.4, P.y);
   P.x = clamp(P.x, -ARENA + 0.5, ARENA - 0.5); P.z = clamp(P.z, -ARENA + 0.5, ARENA - 0.5);
-  if ((keys.Space || pad.jump) && P.onGround) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); }
+  if ((kb('jump') || pad.jump) && P.onGround) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); }
   P.vy -= 22 * dt; const py0 = P.y; P.y += P.vy * dt;
   if (P.vy > 0) { const ce = ceilingAt(P.x, P.z, py0); if (P.y + 1.8 > ce) { P.y = Math.max(py0, ce - 1.8); P.vy = 0; } }
   const gy = groundAt(P.x, P.z, P.y);
@@ -108,6 +108,7 @@ function updatePlayer(dt) {
 
 function animateViewmodel(dt, hs, sprint, bobOn) {
   const w = WEAPONS[G.cur], g = gunObjs[G.cur], u = g.userData;
+  if (u.dots) for (const d of u.dots) d.visible = G.ads > 0.6;   // the reticle only shows when you look through the sight
   const adsX = 0, adsY = -w.sightY, adsZ = w.adsZ;
   let vx = lerp(HIP.x, adsX, G.ads), vy = lerp(HIP.y, adsY, G.ads), vz = lerp(HIP.z - (u.hipBack || 0), adsZ, G.ads);
   const bobAmt = (1 - G.ads * 0.85) * (hs / 5) * bobOn, idle = Math.sin(NOW * 1.6) * 0.0016 * (1 - G.ads * 0.7);
@@ -125,6 +126,8 @@ function animateViewmodel(dt, hs, sprint, bobOn) {
   G.airK = lerp(G.airK || 0, P.onGround ? 0 : 1, clamp(dt * 6, 0, 1)); vy += G.airK * 0.018 * sAmt; rx += G.airK * 0.05 * sAmt;
   // grenade throw: rifle drops out of the way while the arm swings
   if (G.throwT > 0) { G.throwT = Math.max(0, G.throwT - dt); const t = Math.sin((1 - G.throwT / 0.6) * Math.PI); vy -= t * 0.28; rx -= t * 0.6; rz += t * 0.35; vx += t * 0.06; }
+  // melee: a quick bash with the weapon
+  if (G.meleeT > 0) { G.meleeT = Math.max(0, G.meleeT - dt); const t = Math.sin((1 - G.meleeT / 0.55) * Math.PI); vx -= t * 0.12; vz -= t * 0.16; vy += t * 0.03; ry += t * 0.9; rz += t * 0.5; rx -= t * 0.15; }
   // inspect (F / D-pad down): turn the weapon over, look at the other side, bring it back
   if (G.inspectT > 0) {
     if (isFiring() || G.reloading || G.adsOn || sprint || G.swapT > 0 || G.throwT > 0) G.inspectT = 0;
@@ -254,6 +257,28 @@ function cycleWeapon(d) { switchWeapon((G.cur + d + WEAPONS.length) % WEAPONS.le
 /* ------------------------------------------------------------------ grenades, equipment and launcher rounds */
 let gGeo = null, gMat = null;
 const EQ_MAT = {};
+// melee: anyone right in front of you (2.4 m, within about 50 degrees) takes a heavy hit
+function melee() {
+  if (G.state !== 'playing' || G.meleeT > 0 || G.swapT > 0 || G.throwT > 0) return;
+  G.meleeT = 0.55; G.fireT = Math.max(G.fireT, 0.5); G.reloading = false; G.inspectT = 0; G.burstLeft = 0;
+  burst(0.12, 1800, 0.25, 'bandpass'); rumble(0.3, 0.5, 90);
+  setTimeout(() => {
+    if (G.state !== 'playing') return;
+    const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw); let best = null, bd = 2.4;
+    for (const e of enemies) {
+      if (M && M.def && isFriend(e)) continue;
+      const p = e.group.position, dx = p.x - P.x, dz = p.z - P.z, d = Math.hypot(dx, dz);
+      if (d > bd || Math.abs(p.y - P.y) > 1.5) continue;
+      if ((dx * fx + dz * fz) / (d || 1) < 0.62) continue;
+      best = e; bd = d;
+    }
+    if (best) {
+      const dir = new THREE.Vector3(best.group.position.x - P.x, 0, best.group.position.z - P.z).normalize();
+      sfx.thud({ vol: 1 }); G.shake = Math.max(G.shake, 0.02);
+      damageEnemy(best, 150, false, dir, false, 'player');
+    }
+  }, 130);
+}
 function throwGrenade() {
   if (G.grenades <= 0 || G.state !== 'playing') return;
   if (!gGeo && hasModel('props', 'grenade')) { const gg = modelGeos('props', 'grenade'); gGeo = mergeGeos(Object.keys(gg).map(k => ({ g: gg[k] }))); gMat = new THREE.MeshStandardMaterial({ color: C(0x3a4630), metalness: 0.5, roughness: 0.5 }); }
@@ -264,7 +289,7 @@ function throwGrenade() {
   const m = new THREE.Mesh(gGeo, EQ_MAT[G.equip]); m.castShadow = true;
   const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
   m.position.copy(camera.position).addScaledVector(dir, 0.5); scene.add(m);
-  grenadesInFlight.push({ m, vx: dir.x * 15 + P.vx * 0.5, vy: dir.y * 15 + 3.5, vz: dir.z * 15 + P.vz * 0.5, fuse: eq.fuse, spin: rnd(6, 12), kind: G.equip, sticky: !!eq.sticky });
+  grenadesInFlight.push({ m, vx: dir.x * 23 + P.vx * 0.6, vy: dir.y * 23 + 4.6, vz: dir.z * 23 + P.vz * 0.6, fuse: eq.fuse, spin: rnd(6, 12), kind: G.equip, sticky: !!eq.sticky });
 }
 // launcher rounds: a rocket flies flat, a 40 mm shell arcs; both burst on contact
 let projGeo = null, projMat = null;

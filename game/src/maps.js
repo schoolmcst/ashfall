@@ -46,7 +46,12 @@ function wall(x0, z0, x1, z1, h, key, o = {}) {
     piece(a, h0, 0, h);
     piece(h0, h1, 0, hl.b || 0);                         // sill
     piece(h0, h1, (hl.b || 0) + hl.h, h);                // lintel
-    if (hl.b > 0.5 && o.glass !== false) { const c = hl.at; batchAdd('dark', new THREE.BoxGeometry(alongX ? hl.w : 0.06, hl.h, alongX ? 0.06 : hl.w), mat4(x0 + sx * c, y + hl.b + hl.h / 2, z0 + sz * c), false); }
+    if (hl.b > 0.5 && hl.h < 2 && o.glass !== false) {   // window: clear glass you can see through, but it stops bullets
+      const c = hl.at, gm = mat4(x0 + sx * c, y + hl.b + hl.h / 2, z0 + sz * c), gw = alongX ? hl.w : 0.04, gd = alongX ? 0.04 : hl.w;
+      batchAdd('windowGlass', new THREE.BoxGeometry(gw, hl.h, gd), gm, false); rayAdd(new THREE.BoxGeometry(gw, hl.h, gd), gm);
+      boxes.push(mkBox(x0 + sx * c, z0 + sz * c, alongX ? hl.w : 0.1, alongX ? 0.1 : hl.w, hl.h, { y: y + hl.b, walk: false }));
+      batchAdd('dark', new THREE.BoxGeometry(alongX ? hl.w + 0.06 : 0.08, 0.05, alongX ? 0.08 : hl.w + 0.06), mat4(x0 + sx * c, y + hl.b + hl.h / 2, z0 + sz * c), false);   // a frame bar
+    }
     a = h1;
   }
   piece(a, L, 0, h);
@@ -200,6 +205,7 @@ function buildMapMaterials() {
   MAT.signalCold = new THREE.MeshStandardMaterial({ color: C(0xe6f0ff), emissive: C(0xcfe2ff), emissiveIntensity: 1.4, roughness: 0.6 });
   MAT.train = std(TEX.metal, { color: C(0xb7bcc0), roughness: 0.45, metalness: 0.6 });
   MAT.olive = new THREE.MeshStandardMaterial({ color: C(0x5d6b3a), roughness: 1, flatShading: true });
+  MAT.windowGlass = new THREE.MeshStandardMaterial({ color: C(0xb8d0dc), roughness: 0.04, metalness: 0.2, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1.5 });
   buildPropMaterials();
   try { addFresnelAll({ a: MAT.paintRed, b: MAT.paintBlue, c: MAT.paintGreen, d: MAT.paintOrange, e: MAT.paintYellow, f: MAT.paintWhite, g: MAT.steel, h: MAT.water, i: MAT.train }); } catch (e) {}
 }

@@ -9,7 +9,7 @@ function modeRules(k, cfg) {
 }
 function openLobby() { G.state = G.state === 'over' ? 'menu' : G.state; renderLobby(); showScreen('lobby'); }
 function renderLobby(focusSel) {
-  const st = STATS, sel = LOBBY.mode, d = MODES[sel], c = activeClass(), p = ARM[c.p], s = ARM[c.s];
+  const sel = LOBBY.mode, d = MODES[sel], st = careerOf(!!d.online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   $('lobPlayer').innerHTML = `<span>K/D <b>${kdS(st.kills, st.deaths)}</b></span><span>WINS <b>${st.wins}</b></span><span>MATCHES <b>${st.matches}</b></span>`;
   $('lobModes').innerHTML = MODE_ORDER.map(k => `<button class="lob-mode${k === sel ? ' on' : ''}" data-mode="${k}"><i>${MODES[k].icon}</i><div><b>${MODES[k].name}</b><small>${modeRules(k)}</small></div></button>`).join('');
   $('lobSel').innerHTML = `<div class="lob-mname">${d.name}</div><div class="lob-mdesc">${d.desc}</div><div class="lob-rules">${modeRules(sel)}${sel !== 'surv' && !d.online ? ` · BOTS ${SKILL[matchCfg(sel).skill].name}` : ''}</div>${lobbyMapRow(d)}<button class="btn primary lob-go" data-act="lob-start"${d.online && !netReady() ? ' disabled' : ''}>${d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'}</button>${d.online ? netLobbyHtml() : ''}`;
