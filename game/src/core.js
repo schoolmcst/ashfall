@@ -38,7 +38,7 @@ function loadSettings() {
   } catch (e) { NEED_AUTO_DERIVE = true; }
 }
 // keyboard bindings (Settings > KEYBINDS); mouse stays fire / aim
-const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab' };
+const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab', streak: 'KeyX' };
 const bind = a => (S.binds && S.binds[a]) || DEFAULT_BINDS[a];
 const kb = a => !!keys[bind(a)] || (a === 'sprint' && bind(a) === 'ShiftLeft' && !!keys.ShiftRight);
 function keyName(c) { if (!c) return '—'; return c.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'NUM ').replace('ShiftLeft', 'LEFT SHIFT').replace('ShiftRight', 'RIGHT SHIFT').replace('ControlLeft', 'LEFT CTRL').replace('ControlRight', 'RIGHT CTRL').replace('AltLeft', 'LEFT ALT').replace('AltRight', 'RIGHT ALT').replace('Space', 'SPACE').replace('Arrow', '').toUpperCase(); }
@@ -147,6 +147,7 @@ const sfx = {
   ui: () => tone(880, 0.04, 0.06, 'square'),
   heart: k => { tone(58, 0.11, 0.55 * k, 'sine', 38); tone(52, 0.12, 0.42 * k, 'sine', 34, { delay: 0.16 }); },
   multi: n => { for (let i = 0; i < Math.min(n, 4); i++) tone(660 + i * 180, 0.07, 0.1, 'square', null, { delay: i * 0.06 }); },
+  streakReady: () => { tone(523, 0.1, 0.13, 'square'); tone(784, 0.1, 0.13, 'square', null, { delay: 0.09 }); tone(1046, 0.28, 0.14, 'triangle', null, { delay: 0.18 }); burst(0.2, 3000, 0.12, 'highpass', { delay: 0.18 }); },
   streak: () => { tone(440, 0.12, 0.12, 'triangle'); tone(660, 0.14, 0.12, 'triangle', null, { delay: 0.1 }); tone(880, 0.22, 0.12, 'triangle', null, { delay: 0.2 }); },
   estep: o => burst(0.05, 380 + Math.random() * 260, 0.32, 'lowpass', o),
   suppressed: big => { burst(0.05, big ? 1400 : 1900, big ? 0.32 : 0.22, 'lowpass'); burst(0.03, 4200, 0.06, 'highpass'); tone(110, 0.06, 0.12, 'sine', 60); },

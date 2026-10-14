@@ -52,6 +52,52 @@
   #msg{position:absolute;left:0;right:0;bottom:22%;text-align:center;font-size:15px;letter-spacing:3px;opacity:0;transition:opacity .3s;text-shadow:0 0 6px #000}
   #err{position:fixed;left:0;right:0;top:0;z-index:50;display:none;background:rgba(150,20,20,.94);color:#fff;font:13px/1.5 Consolas,"Courier New",monospace;padding:10px 14px;white-space:pre-wrap;user-select:text}
 
+
+  /* ---------- CoD-style front end ---------- */
+  .screen.cod{flex-direction:column;align-items:stretch;justify-content:flex-start;background:linear-gradient(90deg,rgba(5,7,8,.92) 0%,rgba(5,7,8,.62) 42%,rgba(5,7,8,.08) 75%),linear-gradient(0deg,rgba(5,7,8,.7),rgba(5,7,8,0) 30%)}
+  .cod-top{display:flex;align-items:center;gap:28px;padding:18px 3vw 0;border-bottom:1px solid var(--line);background:linear-gradient(180deg,rgba(0,0,0,.65),rgba(0,0,0,.15))}
+  .logo.cod-logo{font-size:30px;letter-spacing:.14em;padding-bottom:14px;line-height:1}.cod-logo .beta-tag{font-size:9px;margin-top:4px}
+  .cod-title{padding-bottom:12px}.cod-title small{display:block;font-size:11px;letter-spacing:.4em;color:var(--accent)}.cod-title b{font-size:26px;letter-spacing:.24em}
+  .cod-nav{display:flex;gap:4px;flex:1;align-self:flex-end}
+  .cod-tab{pointer-events:auto;cursor:pointer;background:none;border:0;border-bottom:3px solid transparent;color:var(--dim);font:700 14px/1 inherit;font-family:inherit;letter-spacing:.28em;padding:14px 16px 16px}
+  .cod-tab:hover,.cod-tab:focus,.cod-tab.on{outline:0;color:#fff;border-bottom-color:var(--accent)}.cod-tab.on{color:var(--accent)}
+  .cod-card{align-self:center;display:flex;gap:14px;align-items:center;padding:8px 14px;margin-bottom:12px;border:1px solid var(--line);background:rgba(0,0,0,.45);font-size:11px;letter-spacing:.18em;color:var(--dim)}
+  .cod-card .cs{font-size:15px;font-weight:700;color:#fff;letter-spacing:.14em}.cod-card .em{width:34px;height:34px;display:grid;place-items:center;background:linear-gradient(135deg,var(--accent),#7a5a1a);color:#111;font-weight:800;font-size:14px}
+  .cod-card span b{color:var(--accent);font-size:13px;margin-left:4px}
+  .cod-main{flex:1;display:flex;flex-direction:column;justify-content:center;gap:26px;padding:0 3vw;max-width:560px}
+  .cod-tiles{display:flex;flex-direction:column;gap:10px}
+  .cod-tile{pointer-events:auto;cursor:pointer;position:relative;text-align:left;font-family:inherit;color:var(--ink);padding:16px 22px 16px 26px;border:1px solid rgba(255,255,255,.1);background:linear-gradient(90deg,rgba(255,255,255,.07),rgba(255,255,255,.02));transition:all .12s;clip-path:polygon(0 0,100% 0,100% 70%,96% 100%,0 100%)}
+  .cod-tile::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:rgba(255,255,255,.15)}
+  .cod-tile small{display:block;font-size:10px;letter-spacing:.35em;color:var(--dim)}.cod-tile b{display:block;font-size:26px;letter-spacing:.2em;margin:4px 0}.cod-tile span{font-size:11px;letter-spacing:.22em;color:var(--dim)}.cod-tile span i{font-style:normal;color:var(--accent)}
+  .cod-tile:hover,.cod-tile:focus{outline:0;background:linear-gradient(90deg,rgba(224,180,74,.28),rgba(224,180,74,.04));border-color:rgba(224,180,74,.5);transform:translateX(6px)}.cod-tile:hover::before,.cod-tile:focus::before,.cod-tile.primary::before{background:var(--accent)}
+  .cod-tile.primary b{color:var(--accent)}
+  .cod-opts .row-opt{margin:6px 0}
+  .cod-foot{display:flex;align-items:center;gap:20px;padding:12px 3vw;border-top:1px solid var(--line);background:rgba(0,0,0,.4);font-size:11px;letter-spacing:.2em;color:var(--dim)}.cod-foot span{margin-left:auto}
+  .lnk{pointer-events:auto;cursor:pointer;background:none;border:0;color:var(--dim);font:600 12px/1 inherit;font-family:inherit;letter-spacing:.25em;padding:6px 0}.lnk:hover,.lnk:focus{outline:0;color:var(--accent)}
+  .cod-lob{flex:1;display:grid;grid-template-columns:minmax(360px,520px) 1fr;gap:3vw;padding:22px 3vw;min-height:0}
+  .cod-lcol{display:flex;flex-direction:column;gap:8px;overflow:auto;padding-right:6px}
+  .cod-row{pointer-events:auto;cursor:pointer;position:relative;display:block;width:100%;box-sizing:border-box;margin:0;text-align:left;font-family:inherit;color:var(--ink);padding:12px 44px 12px 18px;border:1px solid rgba(255,255,255,.1);background:rgba(0,0,0,.42);border-left:4px solid rgba(255,255,255,.15);transition:all .12s}
+  .cod-row small{display:block;font-size:10px;letter-spacing:.35em;color:var(--dim)}.cod-row b{display:flex;align-items:center;gap:8px;font-size:19px;letter-spacing:.16em;margin:5px 0 4px}.cod-row span{display:block;font-size:11px;letter-spacing:.12em;color:var(--dim)}
+  .cod-row>i{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-style:normal;font-size:26px;color:var(--dim)}
+  .cod-row:hover,.cod-row:focus,.cod-row:focus-within{outline:0;border-left-color:var(--accent);background:linear-gradient(90deg,rgba(224,180,74,.18),rgba(0,0,0,.4))}.cod-row:hover>i,.cod-row:focus>i{color:var(--accent)}
+  .cod-row.big b{font-size:24px;color:var(--accent)}
+  .cod-row .arw{position:absolute;right:10px;top:50%;transform:translateY(-50%);display:flex;gap:6px}
+  .cod-row .stk-ic{width:22px;height:22px}
+  .cod-go{width:100%!important;max-width:none!important;text-align:center!important;font-size:22px!important;padding:18px!important;margin:8px 0 0!important;background:linear-gradient(90deg,var(--accent),#b8892c)!important;color:#141414!important;border:0!important;letter-spacing:.32em!important;font-weight:800!important}
+  .cod-go:hover,.cod-go:focus{filter:brightness(1.12);padding-left:18px!important}.cod-go[disabled]{opacity:.45;filter:grayscale(1)}
+  .cod-small{display:flex;gap:18px;margin-top:4px}
+  .cod-roster{align-self:start;justify-self:end;width:min(520px,100%);display:flex;flex-direction:column;gap:12px}
+  .ros-h{display:flex;justify-content:space-between;font-size:11px;letter-spacing:.3em;color:var(--dim);padding:0 4px}.ros-h b{color:var(--ink)}
+  .ros-team{border:1px solid var(--line);background:rgba(0,0,0,.45)}.ros-team .tn{padding:8px 12px;font-size:11px;letter-spacing:.3em;border-bottom:1px solid var(--line);color:var(--tc,var(--accent))}
+  .ros-p{display:flex;align-items:center;gap:10px;padding:7px 12px;font-size:13px;letter-spacing:.12em;border-bottom:1px solid rgba(255,255,255,.05)}.ros-p:last-child{border-bottom:0}.ros-p.me{background:rgba(224,180,74,.12);color:#fff}.ros-p em{font-style:normal;margin-left:auto;font-size:10px;letter-spacing:.2em;color:var(--dim)}
+  .ros-p .lv{width:24px;height:18px;display:grid;place-items:center;font-size:10px;background:rgba(255,255,255,.08);color:var(--dim)}
+  .ros-info{border:1px solid var(--line);background:rgba(0,0,0,.45);padding:14px;font-size:13px;line-height:1.5;color:var(--dim)}.ros-info b{display:block;color:var(--ink);letter-spacing:.2em;font-size:12px;margin-bottom:4px}
+  .modep{width:min(1100px,94vw)}#modeGrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px;padding:16px 26px;overflow:auto}
+  .mode-card{pointer-events:auto;cursor:pointer;text-align:left;font-family:inherit;color:var(--ink);padding:16px;border:1px solid var(--line);background:linear-gradient(160deg,rgba(255,255,255,.06),rgba(0,0,0,.2));min-height:150px;display:flex;flex-direction:column;gap:6px;position:relative}
+  .mode-card i{font-style:normal;font-size:12px;letter-spacing:.2em;color:var(--accent);border:1px solid rgba(224,180,74,.5);align-self:flex-start;padding:3px 7px}.mode-card b{font-size:16px;letter-spacing:.18em}.mode-card p{margin:0;font-size:12px;line-height:1.4;color:var(--dim)}.mode-card span{margin-top:auto;font-size:10px;letter-spacing:.18em;color:var(--dim)}
+  .mode-card:hover,.mode-card:focus{outline:0;border-color:rgba(224,180,74,.6)}.mode-card.on{border-color:var(--accent);background:linear-gradient(160deg,rgba(224,180,74,.2),rgba(0,0,0,.2))}
+  @media (max-width:900px){.cod-lob{grid-template-columns:1fr}.cod-roster{justify-self:stretch}.cod-nav{overflow:auto}.cod-card{display:none}}
+
   /* ---------- menus ---------- */
   .screen{position:fixed;inset:0;z-index:5;display:flex;align-items:center;background:linear-gradient(90deg,rgba(6,8,9,.88) 0%,rgba(6,8,9,.55) 45%,rgba(6,8,9,.1) 100%);backdrop-filter:blur(2px)}
   .screen.center{justify-content:center;text-align:center;background:rgba(6,8,9,.72);flex-direction:column}
@@ -204,7 +250,7 @@
   #mhud .ts.a{border-color:#5aaeff;color:#cfe6ff} #mhud .ts.b{border-color:#ff5a4a;color:#ffd7d2}
   #mhud .tm{display:flex;flex-direction:column;min-width:76px} #mhud .tm b{font-size:18px;letter-spacing:2px} #mhud .tm small{font-size:10px;letter-spacing:3px;opacity:.75}
   #mhud .minfo{margin-top:6px;font-size:12px;letter-spacing:3px;opacity:.9}
-  #marks{position:absolute;inset:0;overflow:hidden}
+  #marks{position:absolute;inset:0;overflow:hidden}#uavMarks{position:absolute;inset:0;overflow:hidden;pointer-events:none}
   #marks .mk{position:absolute;left:0;top:0;margin:-14px 0 0 -40px;width:80px;text-align:center;font-weight:700;text-shadow:0 0 4px #000,0 0 2px #000}
   #marks .mk b{display:inline-block;min-width:26px;padding:2px 6px;font-size:13px;letter-spacing:2px;border:2px solid currentColor;background:rgba(0,0,0,.35)} #marks .mk small{display:block;font-size:10px;letter-spacing:2px;margin-top:2px}
   #center{position:absolute;left:0;right:0;top:36%;text-align:center;text-shadow:0 0 10px #000} #center b{display:block;font-size:30px;letter-spacing:8px} #center small{display:block;font-size:14px;letter-spacing:4px;opacity:.85;margin-top:6px}
@@ -300,27 +346,37 @@
   <div id="feed"></div>
   <div id="mhud" class="hide"></div>
   <div id="marks"></div>
+  <div id="uavMarks"></div>
+  <div id="stkHud" class="hide"></div>
   <div id="center" class="hide"></div>
   <div id="ihold" class="hide"><span></span><div><i></i></div></div>
 </div>
 
 <div id="loading"><div class="logo" style="font-size:44px">DARK<em>ZONE</em></div><div class="bar"><div id="ldbar"></div></div><div class="ld" id="ldtxt">BUILDING WORLD</div></div>
 
-<div id="menu" class="screen hide">
-  <div class="col">
-    <div class="logo">DARK<em>ZONE</em><span class="beta-tag">BETA</span></div>
-    <div class="tag">HOLD THE LINE &middot; SURVIVE THE WAVES</div>
-    <button class="btn primary" data-act="play">PLAY</button>
-    <button class="btn" data-act="loadout">LOADOUT</button>
-    <button class="btn" data-act="settings">SETTINGS</button>
-    <button class="btn" data-act="howto">HOW TO PLAY</button>
-    <button class="btn" data-act="bench">BENCHMARK</button>
-    <button class="btn" data-act="credits">CREDITS</button>
-    <div class="row-opt"><span>CLASS</span><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><span class="val" id="classVal">ASSAULT</span><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div>
-    <div class="row-opt"><span>DIFFICULTY</span><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><span class="val" id="diffVal">REGULAR</span><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div>
-    <div class="best">BEST &middot; WAVE <b id="bestWave">0</b> &middot; SCORE <b id="bestScore">0</b></div>
+<div id="menu" class="screen cod hide">
+  <div class="cod-top">
+    <div class="logo cod-logo">DARK<em>ZONE</em><span class="beta-tag">BETA</span></div>
+    <nav class="cod-nav">
+      <button class="cod-tab on" data-act="nav-play">PLAY</button>
+      <button class="cod-tab" data-act="loadout">WEAPONS</button>
+      <button class="cod-tab" data-act="streaks">SCORESTREAKS</button>
+      <button class="cod-tab" data-act="stats">CAREER</button>
+      <button class="cod-tab" data-act="settings">SETTINGS</button>
+    </nav>
+    <div class="cod-card" id="menuCard"></div>
   </div>
-  <div class="foot">ORIGINAL WORK OF FICTION &middot; BUILT WITH THREE.JS</div>
+  <div class="cod-main">
+    <div class="cod-tiles">
+      <button class="cod-tile primary" data-act="go-on"><small>ONLINE &middot; REAL PLAYERS</small><b>MULTIPLAYER</b><span id="tileMp">QUICK PLAY &middot; PRIVATE MATCHES</span></button>
+      <button class="cod-tile" data-act="custom"><small>SOLO &middot; VS BOTS</small><b>CUSTOM GAME</b><span>ANY MODE &middot; MAP &middot; BOTS &middot; TIME &middot; SURVIVAL BEST WAVE <i id="bestWave">0</i> <i id="bestScore" style="display:none">0</i></span></button>
+    </div>
+    <div class="cod-opts">
+      <div class="row-opt"><span>CLASS</span><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><span class="val" id="classVal">ASSAULT</span><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div>
+      <div class="row-opt"><span>BOT SKILL</span><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><span class="val" id="diffVal">REGULAR</span><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div>
+    </div>
+  </div>
+  <div class="cod-foot"><button class="lnk" data-act="howto">HOW TO PLAY</button><button class="lnk" data-act="bench">BENCHMARK</button><button class="lnk" data-act="credits">CREDITS</button><span>ORIGINAL WORK OF FICTION &middot; BUILT WITH THREE.JS</span></div>
 </div>
 
 <div id="settings" class="screen center hide">
@@ -467,18 +523,41 @@
   </div>
 </div>
 
-<div id="lobby" class="screen center hide">
-  <div class="panel lob">
-    <div class="lob-head"><div class="ttl">LOBBY</div><div class="lob-player" id="lobPlayer"></div></div>
-    <div class="lob-body">
-      <div class="lob-col"><div class="lob-label">CHOOSE A MODE</div><div class="lob-modes" id="lobModes"></div></div>
-      <div class="lob-col">
-        <div class="lob-card lob-sel" id="lobSel"></div>
-        <div class="lob-card lob-class" id="lobClass"></div>
-        <div class="lob-btns"><button class="btn" data-act="custom">CUSTOM GAME</button><button class="btn" data-act="stats">CAREER STATS</button></div>
-      </div>
-    </div>
-    <div class="actions"><button class="btn" data-act="lobby-back">BACK</button><span class="padhint">LB / RB  CHANGE MODE · START  PLAY</span><button class="btn primary" id="lobGoFoot" data-act="lob-start" style="margin-left:auto">START MATCH</button></div>
+<div id="lobby" class="screen cod hide">
+  <div class="cod-top">
+    <div class="cod-title"><small id="lobKind">MULTIPLAYER</small><b>LOBBY</b></div>
+    <nav class="cod-nav">
+      <button class="cod-tab" data-act="lobby-back">&lsaquo; BACK</button>
+      <button class="cod-tab" data-act="custom">CUSTOM</button>
+      <button class="cod-tab" data-act="loadout">WEAPONS</button>
+      <button class="cod-tab" data-act="streaks">SCORESTREAKS</button>
+      <button class="cod-tab" data-act="stats">CAREER</button>
+      <button class="cod-tab" data-act="settings">SETTINGS</button>
+    </nav>
+    <div class="cod-card" id="lobPlayer"></div>
+  </div>
+  <div class="cod-lob">
+    <div class="cod-lcol" id="lobSel"></div>
+    <div class="cod-roster" id="lobRoster"></div>
+  </div>
+  <div class="cod-foot"><span class="padhint">LB / RB  CHANGE MODE &middot; START  PLAY</span></div>
+</div>
+
+<div id="modes" class="screen center hide">
+  <div class="panel modep">
+    <h2 id="modesTtl">GAME MODE</h2>
+    <div id="modeGrid"></div>
+    <div class="actions"><button class="btn" data-act="modes-back">BACK</button></div>
+  </div>
+</div>
+
+<div id="streaks" class="screen center hide">
+  <div class="panel stkp">
+    <h2>SCORESTREAKS</h2>
+    <div class="stk-top" id="stkSel"></div>
+    <div class="net-hint" style="padding:0 26px 10px">Pick three. Earn points from kills without dying; each streak unlocks at its cost and waits until you press the SCORESTREAK key (X by default). Dying resets your points, not what you already earned.</div>
+    <div id="stkGrid"></div>
+    <div class="actions"><button class="btn primary" data-act="stk-back">DONE</button></div>
   </div>
 </div>
 

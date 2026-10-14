@@ -246,7 +246,7 @@ function drawRadar() {
   const cs = Math.cos(P.yaw), sn = Math.sin(P.yaw);
   const dot = (x, z) => { const dx = x - P.x, dz = z - P.z; let px = (dx * cs - dz * sn) * scale, py = (dx * sn + dz * cs) * scale; const l = Math.hypot(px, py); if (l > R) { px *= R / l; py *= R / l; } c.fillRect(W / 2 + px - 2, W / 2 + py - 2, 4, 4); };
   const pvp = inMatch();
-  for (const e of enemies) { const fr = isFriend(e); if (pvp && !fr && !(M.t - (e.lastShotT || -9) < 2.5 && !e.stealth)) continue; c.fillStyle = fr ? '#5aaeff' : '#e04a3a'; dot(e.group.position.x, e.group.position.z); }
+  for (const e of enemies) { const fr = isFriend(e); if (pvp && !fr && !stkSeen(e) && !(M.t - (e.lastShotT || -9) < 2.5 && !e.stealth)) continue; c.fillStyle = fr ? '#5aaeff' : '#e04a3a'; dot(e.group.position.x, e.group.position.z); }
   if (pvp) { c.fillStyle = '#ffd24a'; for (const m of markerList()) dot(m.x, m.z); }
   c.fillStyle = '#6fcf5a'; for (const k of pickups) dot(k.x, k.z);
 }
@@ -290,7 +290,7 @@ function clearWorldState() {
   for (const k of pickups) scene.remove(k.m); pickups.length = 0;
   if (G.bench) endBenchState();
   for (const d of decals) d.visible = false; for (const c of casings) { c.on = false; c.m.visible = false; }
-  navTarget = -1; G.streak = 0; G.multi = 0; restoreBarrels(); G.killer = null; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide');
+  navTarget = -1; G.streak = 0; if (typeof stkReset === 'function') stkReset(); G.multi = 0; restoreBarrels(); G.killer = null; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide');
 }
 function resetGame() {
   clearWorldState();
@@ -311,7 +311,7 @@ function updateMenuSoldiers(dt) { for (const m of menuSoldiers) animEnemy(m.e, d
 
 function die() {
   if (G.state === 'paused') { showScreen(null); G.state = G.pausedFrom || 'playing'; }
-  mouseDown = false; mouseAds = false; G.streak = 0; statDeath();
+  mouseDown = false; mouseAds = false; G.streak = 0; statDeath(); stkDeath();
   try { matchPlayerKilled(G.killer); } catch (err) { reportError(err); }
   if (M.over) return;
   if (inMatch() && !S.deathCam) { G.state = 'deathcam'; afterDeathInMatch(); return; }

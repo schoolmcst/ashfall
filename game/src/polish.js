@@ -28,7 +28,7 @@ function onKill(e, head, boom, bonusOnly) {
   if (G.multi >= 2) { const b = 50 * G.multi; extra += b; multiTxt = MULTI[Math.min(G.multi, 5)]; sfx.multi(G.multi); }
   G.streak = (G.streak || 0) + 1;
   if (G.streak % 5 === 0) { const b = G.streak * 20; extra += b; showBanner(`${G.streak} KILL STREAK`, `+${b} bonus`); sfx.streak(); }
-  G.score += extra;
+  G.score += extra; stkAdd(pts + extra);
   popScore('+' + (pts + extra), multiTxt ? 'big' : head ? 'head' : '', [multiTxt, ...tags].filter(Boolean).join(' · '));
   feedLine(`<b>YOU</b> <span class="fw">${boom ? '✹' : WEAPONS[G.cur].name}</span> ${e.name ? `<span style="color:${isFriend(e) ? '#5aaeff' : '#ff5a4a'}">${e.name}</span>` : e.type.toUpperCase()}${tags.length ? ` <span class="ft">${tags.join(' · ')}</span>` : ''} <span class="fp">+${pts + extra}</span>`);
 }

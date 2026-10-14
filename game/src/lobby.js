@@ -8,18 +8,53 @@ function modeRules(k, cfg) {
   return `${size} · ${goal}${c.time && k !== 'snd' ? ` · ${c.time} MIN` : ''}`;
 }
 function openLobby() { G.state = G.state === 'over' ? 'menu' : G.state; renderLobby(); showScreen('lobby'); }
+function playerCard(st) {
+  const kd = kdS(st.kills, st.deaths), nick = (typeof NET !== 'undefined' && NET.nick) || 'PLAYER';
+  return `<div class="em">${nick.slice(0, 1)}</div><div><div class="cs">${nick}</div><span>K/D<b>${kd}</b></span> &nbsp; <span>WINS<b>${st.wins}</b></span> &nbsp; <span>MATCHES<b>${st.matches}</b></span></div>`;
+}
+function renderMenuCard() { const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true)); }
+const modeGroup = k => MODES[k].online ? 'on' : 'off';
 function renderLobby(focusSel) {
-  const sel = LOBBY.mode, d = MODES[sel], st = careerOf(!!d.online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
-  $('lobPlayer').innerHTML = `<span>K/D <b>${kdS(st.kills, st.deaths)}</b></span><span>WINS <b>${st.wins}</b></span><span>MATCHES <b>${st.matches}</b></span>`;
-  $('lobModes').innerHTML = MODE_ORDER.map(k => `<button class="lob-mode${k === sel ? ' on' : ''}" data-mode="${k}"><i>${MODES[k].icon}</i><div><b>${MODES[k].name}</b><small>${modeRules(k)}</small></div></button>`).join('');
-  $('lobSel').innerHTML = `<div class="lob-mname">${d.name}</div><div class="lob-mdesc">${d.desc}</div><div class="lob-rules">${modeRules(sel)}${sel !== 'surv' && !d.online ? ` · BOTS ${SKILL[matchCfg(sel).skill].name}` : ''}</div>${lobbyMapRow(d)}<button class="btn primary lob-go" data-act="lob-start"${d.online && !netReady() ? ' disabled' : ''}>${d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'}</button>${d.online ? netLobbyHtml() : ''}`;
-  $('lobClass').innerHTML = `<div class="lob-ctop"><span>YOUR CLASS</span><div class="lob-cpick"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><b id="lobClassName">${c.name}</b><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button></div></div>` +
-    `<div class="lob-kit"><div><span>PRIMARY</span><b>${sel === 'gun' ? 'GUN GAME LADDER' : p.name}</b></div><div><span>SECONDARY</span><b>${sel === 'gun' ? '—' : s.name}</b></div><div><span>EQUIPMENT</span><b>${EQUIP[c.e].name}</b></div><div><span>PERK</span><b>${PERKS[c.k].name}</b></div></div>` +
-    `<button class="btn" data-act="loadout">EDIT LOADOUT</button>`;
-  for (const b of $('lobModes').children) { b.onclick = () => { LOBBY.mode = b.dataset.mode; saveLobby(); sfx.ui(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); }; b.onfocus = () => { if (LOBBY.mode !== b.dataset.mode) { LOBBY.mode = b.dataset.mode; saveLobby(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); } }; }
-  const foot = $('lobGoFoot'); if (foot) { foot.textContent = d.online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH'; foot.disabled = !!(d.online && !netReady()); }
-  if (d.online) netLobbyWire();
+  if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm';
+  const sel = LOBBY.mode, d = MODES[sel], online = !!d.online, st = careerOf(online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
+  if (online) LOBBY.lastOn = sel; else LOBBY.lastOff = sel;
+  $('lobKind').textContent = 'MULTIPLAYER';
+  $('lobPlayer').innerHTML = playerCard(st);
+  const gun = sel === 'gun', stk = sel !== 'surv' && !gun;
+  const goTxt = online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH';
+  const m = MAPS[LOBBY.map];
+  $('lobSel').innerHTML =
+    `<button class="cod-row big" data-act="modes"><small>GAME MODE</small><b>${d.name}</b><span>${modeRules(sel)}</span><i>&rsaquo;</i></button>` +
+    `<div class="cod-row"><small>MAP</small><b>ROTATING</b><span>every round is on a new map · pick your own in CUSTOM or a private match</span></div>` +
+    `<div class="cod-row cod-class" data-act="loadout" tabindex="-1"><small>CREATE A CLASS</small><b>${c.name}</b><span>${gun ? 'GUN GAME LADDER · everyone uses the same guns' : `${p.name} · ${s.name} · ${EQUIP[c.e].name} · ${PERKS[c.k].name}`}</span><div class="arw"><button class="mini" data-act="class-" aria-label="Previous class">&lsaquo;</button><button class="mini" data-act="class+" aria-label="Next class">&rsaquo;</button><button class="mini" data-act="loadout" aria-label="Edit class">&#9998;</button></div></div>` +
+    (stk ? `<button class="cod-row" data-act="streaks"><small>SCORESTREAKS</small><b>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => stkIcon(id)).join('')}</b><span>${STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost).map(id => `${STREAKS[id].name} ${STREAKS[id].cost}`).join(' · ')}</span><i>&rsaquo;</i></button>` : '') +
+    (!online && sel !== 'surv' ? `<div class="cod-row"><small>BOT SKILL</small><b>${SKILL[matchCfg(sel).skill].name}</b><span>change it here or in Settings</span><div class="arw"><button class="mini" data-act="diff-" aria-label="Easier">&lsaquo;</button><button class="mini" data-act="diff+" aria-label="Harder">&rsaquo;</button></div></div>` : '') +
+    `<button class="btn primary lob-go cod-go" data-act="lob-start"${online && !netReady() ? ' disabled' : ''}>${goTxt}</button>` +
+    (online ? netLobbyHtml() : '') +
+    `<div class="cod-small"><button class="lnk" data-act="custom">CUSTOM GAME (SOLO VS BOTS)</button><button class="lnk" data-act="stats">CAREER STATS</button></div>`;
+  $('lobRoster').innerHTML = rosterHtml(sel);
+  if (online) netLobbyWire();
   if (focusSel) focusFirst(focusSel);
+}
+function rosterHtml(k) {
+  const d = MODES[k], cfg = matchCfg(k), names = BOT_NAMES.slice(0, 16), me = (NET.nick || 'YOU');
+  const p = (n, cls = '', tag = '') => `<div class="ros-p ${cls}"><span class="lv">${cls === 'me' ? '★' : 'AI'}</span>${n}${tag ? `<em>${tag}</em>` : ''}</div>`;
+  const info = `<div class="ros-info"><b>${d.name}</b>${d.desc}</div>`;
+  if (k === 'surv') return `<div class="ros-h"><span>SQUAD</span><b>SOLO</b></div><div class="ros-team"><div class="tn">YOU</div>${p(me, 'me', 'READY')}</div>` + info;
+  if (d.online) return `<div class="ros-h"><span>${NET.app ? 'QUICK PLAY' : 'ROOM'}</span><b>${d.teams ? '6 V 6' : 'FREE-FOR-ALL'}</b></div><div class="ros-team"><div class="tn">YOUR PARTY</div>${p(me, 'me', 'READY')}<div class="ros-p"><span class="lv">+</span>real players join here &middot; bots fill empty spots</div></div>` + info;
+  if (d.teams) { const n = clamp(cfg.perTeam, 1, 8);
+    return `<div class="ros-h"><span>LOBBY</span><b>${n} V ${n}</b></div>` +
+      `<div class="ros-team" style="--tc:${TEAM_COL[0]}"><div class="tn">YOUR TEAM</div>${p(me, 'me', 'READY')}${names.slice(0, n - 1).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` +
+      `<div class="ros-team" style="--tc:${TEAM_COL[1]}"><div class="tn">ENEMY TEAM</div>${names.slice(8, 8 + n).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` + info; }
+  const n = clamp(cfg.players, 2, 12);
+  return `<div class="ros-h"><span>LOBBY</span><b>${n} PLAYERS</b></div><div class="ros-team"><div class="tn">FREE-FOR-ALL</div>${p(me, 'me', 'READY')}${names.slice(0, n - 1).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` + info;
+}
+function openModes() {
+  const g = modeGroup(LOBBY.mode), list = MODE_ORDER.filter(k => modeGroup(k) === g);
+  $('modesTtl').textContent = g === 'on' ? 'ONLINE · GAME MODE' : 'GAME MODE';
+  $('modeGrid').innerHTML = list.map(k => `<button class="mode-card${k === LOBBY.mode ? ' on' : ''}" data-mode="${k}"><i>${MODES[k].icon}</i><b>${MODES[k].name}</b><p>${MODES[k].desc}</p><span>${modeRules(k)}</span></button>`).join('');
+  for (const b of $('modeGrid').children) b.onclick = () => { LOBBY.mode = b.dataset.mode; saveLobby(); sfx.ui(); renderLobby('.cod-go'); showScreen('lobby'); focusFirst('.cod-go'); };
+  showScreen('modes'); focusFirst('#modeGrid .on');
 }
 // MAP: random or a fixed map (online: used when you end up hosting)
 const MAP_CHOICES = () => ['random', ...MAP_ORDER.filter(id => !MAPS[id].hidden)];
@@ -28,8 +63,8 @@ function lobbyMapRow(d) {
   const name = m ? m.name : 'RANDOM', sub = m ? m.place : d.online && NET.app ? 'the host picks; you pick when you host' : 'a different map each match';
   return `<div class="lob-map"><span>MAP${d.online && NET.app ? ' (IF YOU HOST)' : ''}</span><div class="lob-cpick"><button class="mini" data-act="map-" aria-label="Previous map">&lsaquo;</button><b>${name}</b><button class="mini" data-act="map+" aria-label="Next map">&rsaquo;</button></div><small>${sub}</small></div>`;
 }
-function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.lob-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
-function lobbyTab(d) { const i = MODE_ORDER.indexOf(LOBBY.mode); LOBBY.mode = MODE_ORDER[(i + d + MODE_ORDER.length) % MODE_ORDER.length]; saveLobby(); sfx.ui(); renderLobby(`#lobModes [data-mode="${LOBBY.mode}"]`); }
+function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
+function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-row.big'); }
 
 /* ---------- custom game */
 const CUS_KEY = 'ashfall.custom.v1';

@@ -1,8 +1,8 @@
 /* ================================================================== UI: screens, settings, input, loop, boot */
-const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby'];
+const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes'];
 let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
-  curScreen = id;
+  curScreen = id; if (id === 'menu') try { renderMenuCard(); } catch (e) {}
   for (const s of SCREENS) $(s).classList.toggle('hide', s !== id);
   $('hud').classList.toggle('hide', !(G.state === 'playing' || G.state === 'paused' || G.state === 'dead' || G.state === 'respawning' || G.state === 'spectate' || G.state === 'deathcam'));
   if (id) setTimeout(() => { const f = focusables(); if (f.length && !f.includes(document.activeElement)) { try { f[0].focus(); } catch (e) {} } }, 0);
@@ -43,7 +43,7 @@ const SCHEMA = {
     { a: 'fwd', t: 'bind', name: 'MOVE FORWARD' }, { a: 'back', t: 'bind', name: 'MOVE BACK' }, { a: 'left', t: 'bind', name: 'MOVE LEFT' }, { a: 'right', t: 'bind', name: 'MOVE RIGHT' },
     { a: 'jump', t: 'bind', name: 'JUMP' }, { a: 'crouch', t: 'bind', name: 'CROUCH' }, { a: 'sprint', t: 'bind', name: 'SPRINT' },
     { a: 'reload', t: 'bind', name: 'RELOAD' }, { a: 'melee', t: 'bind', name: 'MELEE' }, { a: 'grenade', t: 'bind', name: 'THROW EQUIPMENT' }, { a: 'use', t: 'bind', name: 'USE (PLANT / DEFUSE)' },
-    { a: 'swap', t: 'bind', name: 'SWITCH WEAPON' }, { a: 'prim', t: 'bind', name: 'PRIMARY WEAPON' }, { a: 'sec', t: 'bind', name: 'SECONDARY WEAPON' }, { a: 'inspect', t: 'bind', name: 'INSPECT WEAPON' }, { a: 'board', t: 'bind', name: 'SCOREBOARD' },
+    { a: 'swap', t: 'bind', name: 'SWITCH WEAPON' }, { a: 'prim', t: 'bind', name: 'PRIMARY WEAPON' }, { a: 'sec', t: 'bind', name: 'SECONDARY WEAPON' }, { a: 'inspect', t: 'bind', name: 'INSPECT WEAPON' }, { a: 'board', t: 'bind', name: 'SCOREBOARD' }, { a: 'streak', t: 'bind', name: 'USE SCORESTREAK' },
   ],
   CONTROLLER: [
     { k: 'padSens', t: 'range', name: 'LOOK SENSITIVITY', min: 40, max: 250, step: 5, fmt: pct },
@@ -128,24 +128,32 @@ function renderSettings() {
   }
 }
 function updateClassUI() { const v = $('classVal'); if (v) v.textContent = activeClass().name; }
-function cycleClass(d) { ACTIVE_CLASS = (ACTIVE_CLASS + d + CLASSES.length) % CLASSES.length; saveClasses(); updateClassUI(); sfx.ui(); if (curScreen === 'lobby') { renderLobby(); focusFirst('#lobClass [data-act="class' + (d > 0 ? '+' : '-') + '"]'); } }
-let statsReturn = 'lobby';
+function cycleClass(d) { ACTIVE_CLASS = (ACTIVE_CLASS + d + CLASSES.length) % CLASSES.length; saveClasses(); updateClassUI(); sfx.ui(); if (curScreen === 'lobby') { renderLobby(); focusFirst('.cod-class [data-act="class' + (d > 0 ? '+' : '-') + '"]'); } }
+let statsReturn = 'lobby', cusReturn = 'menu';
 function updateDiffUI() { $('diffVal').textContent = diff().name; }
-function cycleDiff(d) { const ks = Object.keys(DIFFS); S.difficulty = ks[(ks.indexOf(S.difficulty) + d + ks.length) % ks.length]; updateDiffUI(); saveSettings(); sfx.ui(); if (curTab === 'GAMEPLAY') renderSettings(); }
+function cycleDiff(d) { const ks = Object.keys(DIFFS); S.difficulty = ks[(ks.indexOf(S.difficulty) + d + ks.length) % ks.length]; updateDiffUI(); saveSettings(); sfx.ui(); if (curTab === 'GAMEPLAY') renderSettings(); if (curScreen === 'lobby') renderLobby('.cod-row [data-act="diff' + (d > 0 ? '+' : '-') + '"]'); }
 
 function actions(act) {
   switch (act) {
     case 'deploy': case 'play': toLobby(); break;
+    case 'nav-play': showScreen('menu'); break;
+    case 'go-mp': if (MODES[LOBBY.mode].online || LOBBY.mode === 'surv') LOBBY.mode = LOBBY.lastOff && LOBBY.lastOff !== 'surv' ? LOBBY.lastOff : 'tdm'; saveLobby(); toLobby(); focusFirst('.cod-go'); break;
+    case 'go-on': if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm'; saveLobby(); toLobby(); focusFirst('.cod-go'); break;
+    case 'go-surv': LOBBY.mode = 'surv'; saveLobby(); startMatch('surv', { map: LOBBY.map }); break;
+    case 'modes': openModes(); break;
+    case 'modes-back': renderLobby(); showScreen('lobby'); focusFirst('.cod-row.big'); break;
     case 'lob-start': startMatch(LOBBY.mode); break;
     case 'lobby-back': showScreen('menu'); break;
-    case 'custom': renderCustom(); showScreen('custom'); break;
-    case 'cus-back': renderLobby(); showScreen('lobby'); break;
+    case 'custom': cusReturn = curScreen === 'lobby' ? 'lobby' : 'menu'; renderCustom(); showScreen('custom'); break;
+    case 'cus-back': if (cusReturn === 'lobby') renderLobby(); showScreen(cusReturn); break;
     case 'cus-start': startCustom(); break;
     case 'stats': statsReturn = curScreen || 'lobby'; statOnline = !!(MODES[LOBBY.mode] && MODES[LOBBY.mode].online); renderStats(); showScreen('career'); break;
     case 'stats-back': if (statsReturn === 'lobby') renderLobby(); showScreen(statsReturn); break;
     case 'res-again': restartMatch(); break;
     case 'res-lobby': toLobby(); break;
     case 'pl-start': privStart(); break;
+    case 'streaks': openStreaks(curScreen || 'menu'); break;
+    case 'stk-back': if (stkReturn === 'lobby') renderLobby(); showScreen(stkReturn); break;
     case 'pl-leave': toLobby(); break;
     case 'res-stats': statsReturn = 'results'; statOnline = !!(M && M.online); renderStats(); showScreen('career'); break;
     case 'settings': returnScreen = curScreen || 'menu'; showScreen('settings'); break;
@@ -178,8 +186,10 @@ document.addEventListener('click', e => {
 function goBack() {
   if (curScreen === 'loadout') { updateClassUI(); if (returnScreen === 'lobby') renderLobby(); showScreen(returnScreen); }
   else if (curScreen === 'lobby') showScreen('menu');
-  else if (curScreen === 'custom') { renderLobby(); showScreen('lobby'); }
+  else if (curScreen === 'custom') actions('cus-back');
   else if (curScreen === 'career') actions('stats-back');
+  else if (curScreen === 'streaks') actions('stk-back');
+  else if (curScreen === 'modes') actions('modes-back');
   else if (curScreen === 'results') toLobby();
   else if (curScreen === 'settings' || curScreen === 'howto' || curScreen === 'credits') showScreen(returnScreen);
   else if (curScreen === 'pause') resumeGame();
@@ -229,6 +239,7 @@ addEventListener('keydown', e => {
   if (c === bind('inspect') && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
   if (c === bind('grenade')) throwGrenade();
   if (c === bind('melee')) melee();
+  if (c === bind('streak')) stkUse();
   if (c === bind('prim')) switchWeapon(0);
   if (c === bind('sec')) switchWeapon(1);
   if (c === bind('swap')) cycleWeapon(1);
@@ -324,6 +335,7 @@ function pollPad(dt) {
     if (press(5)) throwGrenade();
     if (press(13) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
     if (press(11)) melee();
+    if (press(15)) stkUse();
     const fwdPush = -my;
     if (S.padSprint === 'hold') pad.sprint = down(10);
     else if (S.padSprint === 'auto') { pad.autoT = fwdPush > 0.85 && mm > 0.92 ? (pad.autoT || 0) + dt : 0; pad.sprint = pad.autoT > 0.22 || (pad.sprint && fwdPush > 0.6) || press(10) || (pad.sprint && down(10)); }
@@ -483,6 +495,7 @@ function tick(dt) {
   else if (G.state === 'dead') { P.pitch = lerp(P.pitch, -0.35, dt * 2); camera.rotation.set(P.pitch, P.yaw, lerp(camera.rotation.z, 0.5, dt * 2)); camera.position.y = lerp(camera.position.y, 0.5, dt * 3); }
   else if (G.state === 'deathcam') { const w = dt * 0.32; updateDeathCam(dt); updateEnemies(w); updateGrenades(w); }
   if (M.online) { try { netTick(dt); } catch (err) { reportError(err); } }
+  if (inMatch() && G.state !== 'over' && G.state !== 'menu' && G.state !== 'plobby') { try { updateStreaks(dt); } catch (err) { reportError(err); } }
   const wdt = G.state === 'deathcam' && !inMatch() ? dt * 0.32 : dt;
   tickStats(dt); setScoreboard(kb('board') || pad.board);
   try { updatePolish(dt); } catch (err) { reportError(err); }
@@ -548,7 +561,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

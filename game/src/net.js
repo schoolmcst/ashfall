@@ -100,7 +100,7 @@ async function netStart(mode) {
     room.extras = () => NET.botPres;
     NET.room = room; NET.joinedAt = performance.now() / 1000; NET.botT = 2;
     NET.warmEnd = room.host && !NET.priv ? performance.now() / 1000 + WARMUP : 0;   // a new match waits for people before bots come in (private: the lobby does that)
-    if (room.host) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : LOBBY.map));   // the host picks the map; everyone else follows it
+    if (room.host) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : 'random'));   // the host picks the map; everyone else follows it
     return;
   }
   if (!NET.ns) { NET.on = false; showMsg('OFFLINE: ONLINE PLAY NEEDS CLAUDE.AI'); return; }
@@ -223,7 +223,7 @@ function netTick(dt) {
       R.ds = ds; R.kb = typeof pr.kb === 'string' ? pr.kb : ''; const head = !!pr.kh;
       const bot = R.bot;
       if (R.kb && R.kb === NET.me) {
-        NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill(head);
+        NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill(head); if (!bot) stkAdd(100 + (head ? 50 : 0));
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
         else statKillAt(R.x, R.z, head);
         if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);

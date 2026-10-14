@@ -242,7 +242,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   // red dots / holos / reflexes ride on a riser so the dot lines up just above the front post
   const coEye = COWITNESS.has(op) && u.sightInfo ? ironEye(u, 'irons') + 0.0028 : null;
   const ry = coEye !== null ? Math.max(u.railY, coEye - OPTIC_H[op]) : u.railY;
-  if (coEye !== null && op !== 'holo' && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
+  if (coEye !== null && op !== 'holo' && op !== 'reflex' && ry - u.railY > 0.003) add(new THREE.BoxGeometry(0.026, ry - u.railY, 0.05), M.dark, 0, u.railY + (ry - u.railY) / 2, oz);
   u.dots = [];
   if (u.stockOptic) u.stockOptic.forEach(o => { o.visible = op === 'reddot' && o.material !== VM.dot; });
   // factory irons: the bead / pistol sights stay as they are; rifle irons lose the solid rear sight (see-through aperture below)
@@ -271,7 +271,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); };
   const notStock = !(def.blender && !hasHQ(def) && op === def.optic);
   const OPT_DZ = { reddot: 0.02, scope25: 0.005, scope6: 0.015, scope10: 0.017, scope35: 0.011 };
-  const hqOpt = OPTIC_H[op] !== undefined && op !== 'holo' && (op !== 'reddot' || notStock) && HQ(op, 0, ry, oz + (OPT_DZ[op] || 0));
+  const hqOpt = OPTIC_H[op] !== undefined && op !== 'holo' && op !== 'reflex' && (op !== 'reddot' || notStock) && HQ(op, 0, ry, oz + (OPT_DZ[op] || 0));
   if (op === 'acog4') add(new THREE.BoxGeometry(0.0045, 0.0045, 0.075), M.fiberR, 0, ry + (hqOpt ? 0.0762 : 0.0715), oz - 0.01);   // the lit fibre on top
   if (!hqOpt) {
   if (notStock && op === 'reddot') {
@@ -288,10 +288,12 @@ function attachVisuals(g, def, factory, wlen, ovr) {
     add(new THREE.PlaneGeometry(wW, wH), M.lens, 0, cy, hz - hl / 2 + 0.003);                                           // front glass
     for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.004, 0.008, 0.012), M.dark, s * 0.009, bot + 0.004, oz + L / 2 - 0.008);   // rear buttons
   }
-  if (op === 'reflex') {
-    add(new THREE.BoxGeometry(0.03, 0.01, 0.04), M.dark, 0, ry + 0.005, oz);
-    add(new THREE.BoxGeometry(0.03, 0.032, 0.006), M.dark, 0, ry + 0.02, oz - 0.018);
-    lensAt(ry + 0.024, oz - 0.0145, 0.022, 0.018);
+  if (op === 'reflex') {   // open mini reflex: slim base, thin frame, clear window around the dot
+    const cy = coEye !== null ? coEye : ry + 0.024, wW = 0.022, wH = 0.017, t = 0.0025, wz = oz - 0.012, bot = cy - wH / 2 - t;
+    add(new THREE.BoxGeometry(0.022, bot - u.railY, 0.04), M.dark, 0, u.railY + (bot - u.railY) / 2, oz);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(t, wH + t, 0.006), M.dark, sx * (wW + t) / 2, cy, wz);
+    add(new THREE.BoxGeometry(wW + 2 * t, t, 0.006), M.dark, 0, cy + wH / 2 + t / 2, wz);
+    add(new THREE.PlaneGeometry(wW, wH), M.lens, 0, cy, wz - 0.002);
   }
   if (op === 'scope25' || op === 'acog4') {
     const big = op === 'acog4', y = ry + 0.044;
@@ -316,10 +318,10 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   // iron sights, built the same way on every gun so they line up exactly with where the bullets go
   function frontSight(top, fz) {   // protected front post: a tower off the barrel, two ears, a thin post with a fibre insert
     const foot = Math.min((u.muzzleY || 0) + (u.barrelR || 0.01) * 0.6, top - 0.02), h = top - foot;
-    add(new THREE.BoxGeometry(0.011, Math.max(0.002, h - 0.012), 0.012), M.dark, 0, foot + (h - 0.012) / 2, fz);
-    add(new THREE.BoxGeometry(0.017, 0.004, 0.012), M.dark, 0, top - 0.012, fz);
-    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0022, 0.0135, 0.009), M.dark, sx * 0.0075, top - 0.0055, fz);
-    add(new THREE.BoxGeometry(0.0019, 0.011, 0.0025), M.dark, 0, top - 0.0055, fz);
+    add(new THREE.BoxGeometry(0.006, Math.max(0.002, h - 0.02), 0.012), M.dark, 0, foot + (h - 0.02) / 2, fz);
+    add(new THREE.BoxGeometry(0.018, 0.003, 0.01), M.dark, 0, top - 0.02, fz);
+    for (const sx of [-1, 1]) add(new THREE.BoxGeometry(0.0018, 0.021, 0.008), M.dark, sx * 0.0078, top - 0.0095, fz);
+    add(new THREE.BoxGeometry(0.0017, 0.019, 0.0022), M.dark, 0, top - 0.0095, fz);
     add(new THREE.BoxGeometry(0.0011, 0.0016, 0.0005), M.fiber, 0, top - 0.0012, fz + 0.0014);
   }
   function rearSight(eye, rz) {   // flip-up aperture: base on the rail, guard ears, a thin ring to look through
