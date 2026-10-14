@@ -25,7 +25,7 @@ const netReady = () => NET.app || !!NET.ns;
 /* ---------- lobby panel for the online modes */
 function netLobbyHtml() {
   if (NET.app) return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label></div>` +
-    `<div class="net-hint">Quick Play finds a public match. Bots fill empty spots.</div>` +
+    `<div class="net-hint">Quick Play finds a public match; bots fill empty spots. A private code opens a lobby where the host picks the mode, map, bots and time limit, then starts when everyone is in.</div>` +
     `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div>` +
     `<div class="net-lan" id="netLan"></div><div class="net-svc" id="netSvc">MATCH SERVICE: CHECKING…</div><div class="net-count" id="netCount"></div>`;
   if (!NET.ns) return `<div class="net-off">Online play runs when this game is open on claude.ai. Share the page with friends (they need a Claude account), then everyone picks the same room code.</div>`;
@@ -89,18 +89,18 @@ function netLobbyCount() {
 
 /* ---------- joining and leaving */
 async function netStart(mode) {
-  netLeave();
+  const pv = NET.priv; netLeave(); NET.priv = pv;
   NET.mode = mode; NET.on = true; NET.teamSet = false; NET.joinedAt = 0; NET.k = NET.d = NET.ds = NET.sh = NET.hseq = 0; NET.hs = []; NET.kb = ''; NET.ep = 0; NET.endT = 0; NET.wasAlive = false;
   if (NET.app) {
     const kind = NET.kind, code = kind === 'slot' ? NET.slot : NET.code; NET.joinKind = kind;
     let room = null;
-    try { room = await P2P.open(kind, mode, code); }
+    try { room = await P2P.open(kind, kind === 'code' ? 'priv' : mode, code); }
     catch (e) { if (NET.on && NET.mode === mode) { NET.on = false; showBanner('COULD NOT JOIN', e.message === 'timeout' || e.message === 'fail' ? 'no internet connection to the match service' : e.message); setTimeout(() => { if (M.online && !NET.room) toLobby(); }, 6000); } return; }
     if (!NET.on || NET.mode !== mode) { room.leave(); return; }
     room.extras = () => NET.botPres;
     NET.room = room; NET.joinedAt = performance.now() / 1000; NET.botT = 2;
-    NET.warmEnd = room.host ? performance.now() / 1000 + WARMUP : 0;   // a new match waits for people before bots come in
-    if (room.host) netSwitchMap(pickMapFor(LOBBY.map));   // the host picks the map; everyone else follows it
+    NET.warmEnd = room.host && !NET.priv ? performance.now() / 1000 + WARMUP : 0;   // a new match waits for people before bots come in (private: the lobby does that)
+    if (room.host) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : LOBBY.map));   // the host picks the map; everyone else follows it
     return;
   }
   if (!NET.ns) { NET.on = false; showMsg('OFFLINE: ONLINE PLAY NEEDS CLAUDE.AI'); return; }
@@ -119,7 +119,7 @@ function netSwitchMap(id) {
   showBanner(mapName(id), MAPS[id].place.toLowerCase());
 }
 function netLeave() {
-  const r = NET.room; NET.room = null; NET.on = false;
+  const r = NET.room; NET.room = null; NET.on = false; NET.priv = null;
   if (r) { try { if (r !== NET.ns && r.leave) r.leave().catch(() => {}); else r.presence({ on: null, rm: null }).catch(() => {}); } catch (e) {} }
   for (const [, R] of NET.rem) netDropBot(R, false);
   NET.rem.clear(); netClearBots();
@@ -132,7 +132,7 @@ const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0,
-    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ho: NET.room && NET.room.host ? 1 : 0 }).catch(() => {});
+    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ho: NET.room && NET.room.host ? 1 : 0, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { if (NET.on) NET.sh++; }
@@ -209,9 +209,9 @@ function netTick(dt) {
       R = { peer: p.peer, entry: { name: cleanNick(pr.n), team, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false, netPeer: p.peer }, bot: null,
         seen: hs.reduce((m, h) => Math.max(m, +(h && h[3]) || 0), 0), ds: +pr.ds || 0, sh: +pr.sh || 0, ep: 0, x: 0, y: 0, z: 0, yw: 0, pt: 0, kb: '' };
       NET.rem.set(p.peer, R); M.entries.push(R.entry); R.isBot = !!pr.bot;
-      if (!pr.bot) feedLine(`${nameHtml(R.entry)} <span class="fw">JOINED</span>`);
+      if (!pr.bot && !(performance.now() < (NET.quietT || 0))) feedLine(`${nameHtml(R.entry)} <span class="fw">JOINED</span>`);
     }
-    R.entry.name = cleanNick(pr.n); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
+    R.entry.name = cleanNick(pr.n); R.host = !!pr.ho; if (pr.ho && !pr.bot && NET.priv) privFromHost(pr.pc); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
     if (pr.ho && !pr.bot && !isHost && typeof pr.mp === 'string' && MAPS[pr.mp] && pr.mp !== curMap && !NET.mapBusy) { NET.mapBusy = true; setTimeout(() => { NET.mapBusy = false; if (NET.on) netSwitchMap(pr.mp); }, 0); }
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
     R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
@@ -276,15 +276,20 @@ function netTick(dt) {
   { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
   if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
-  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor('random')); netNewRound(); } }
+  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : 'random')); netNewRound(); } }
   else {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
     else for (const en of M.entries) if (en.kills >= lim) win = en.isPlayer ? 'YOU WIN' : en.name + ' WINS';
+    if (NET.priv && !NET.priv.started) win = null;
+    else if (!win && M.cfg.time && M.t >= M.cfg.time * 60) {   // time limit (private matches): the leader wins
+      if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; win = a === b ? 'TIME · DRAW' : a > b ? 'TIME · YOUR TEAM WINS' : 'TIME · ENEMY TEAM WINS'; NET.timeWon = a === b ? 0 : a > b ? 1 : -1; }
+      else { const top = M.entries.slice().sort((x, y) => y.kills - x.kills)[0]; win = 'TIME · ' + (top.isPlayer ? 'YOU WIN' : top.name + ' WINS'); NET.timeWon = top.isPlayer ? 1 : -1; }
+    }
     if (win) {
       NET.endT = INTERMISSION_ON; sfx.streak();
       // a round to the score limit counts as a match in your career stats
-      const won = M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1);
+      const won = NET.timeWon !== undefined ? NET.timeWon : M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1); NET.timeWon = undefined;
       finishMatchStats(won); netIntermission(won, win); startMatchStats();
     }
   }
@@ -302,6 +307,7 @@ function netIntermission(won, txt) {
 function netNewRound() {
   showBanner('NEW ROUND', mapName(curMap) + ' · scores reset');
   for (const en of M.entries) { en.kills = en.deaths = en.score = 0; }
+  M.t = 0;
   if (G.state !== 'over') return;
   M.over = false; showScreen(null); clearWorldFx();
   if (M.me) M.me.alive = true; respawnPlayer();
@@ -339,14 +345,15 @@ function netBots(dt) {
     const humans = [0, 0]; let hum = 1; humans[M.myTeam]++;
     for (const R of NET.rem.values()) if (!R.isBot) { hum++; if (M.def.teams) humans[R.entry.team]++; }
     const add = wl <= 0 && (NET.addT = (NET.addT || 0) - 0.5) <= 0;   // add one bot every 1.5 s; remove extras at once
+    const pw = NET.priv ? (NET.priv.started ? privBotWant(humans) : (M.def.teams ? [0, 0] : 0)) : null;
     if (M.def.teams) for (let t = 0; t < 2; t++) {
-      const mine = bots.filter(b => b.team === t), want = wl > 0 ? 0 : Math.max(0, BOT_FILL.teams - humans[t]);
+      const mine = bots.filter(b => b.team === t), want = pw ? pw[t] : wl > 0 ? 0 : Math.max(0, BOT_FILL.teams - humans[t]);
       for (let i = mine.length - 1; i >= want; i--) netRemoveBot(mine[i]);
-      if (mine.length < want && add) { netNewBot(t); NET.addT = 1.5; }
+      if (mine.length < want && add) { netNewBot(t); NET.addT = NET.priv ? 0.3 : 1.5; }
     } else {
-      const want = wl > 0 ? 0 : Math.max(0, BOT_FILL.ffa - hum);
+      const want = pw !== null ? pw : wl > 0 ? 0 : Math.max(0, BOT_FILL.ffa - hum);
       for (let i = bots.length - 1; i >= want; i--) netRemoveBot(bots[i]);
-      if (bots.length < want && add) { netNewBot(1000 + NET.botN); NET.addT = 1.5; }
+      if (bots.length < want && add) { netNewBot(1000 + NET.botN); NET.addT = NET.priv ? 0.3 : 1.5; }
     }
   }
   NET.botPres = M.entries.filter(en => en.botLabel).map(en => {

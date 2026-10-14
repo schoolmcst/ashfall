@@ -432,6 +432,15 @@
   </div>
 </div>
 
+<div id="plobby" class="screen center hide">
+  <div class="panel plob">
+    <div class="ttl">PRIVATE MATCH<span id="plCode"></span></div>
+    <div class="plob-body"><div class="plob-set" id="plSet"></div><div class="plob-players"><div class="plob-h">PLAYERS</div><div id="plPlayers"></div></div></div>
+    <div class="plob-hint" id="plHint"></div>
+    <div class="actions"><button class="btn" data-act="pl-leave">LEAVE</button><span></span><button class="btn" data-act="loadout">LOADOUT</button><button class="btn primary" data-act="pl-start" id="plStart">START MATCH</button></div>
+  </div>
+</div>
+
 <div id="over" class="screen center hide">
   <div class="big" style="color:#d65a4a">K.I.A.</div><div class="sub" id="overStats"></div>
   <div class="sub" id="overBest" style="margin-top:-18px;color:var(--accent)"></div>
@@ -4710,7 +4719,8 @@ function startMatch(mode, custom) {
   if (def.online) {   // real players over the room: no bots; you drop in once the room has answered
     M.online = true; const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false };
     M.entries.push(me); M.me = me; G.state = 'respawning'; G.respT = 2.2; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
-    netStart(mode); showBanner(def.name, NET.app ? (NET.kind === 'code' ? 'private match: ' + NET.code.toUpperCase() : NET.kind === 'slot' ? 'joining a game on your Wi-Fi' : 'quick play') : NET.ns ? 'room: ' + NET.code.toUpperCase() : 'offline'); return;
+    NET.priv = null; if (privWanted()) privEnter();
+    netStart(mode); if (NET.priv) return; showBanner(def.name, NET.app ? (NET.kind === 'code' ? 'private match: ' + NET.code.toUpperCase() : NET.kind === 'slot' ? 'joining a game on your Wi-Fi' : 'quick play') : NET.ns ? 'room: ' + NET.code.toUpperCase() : 'offline'); return;
   }
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5); let ni = 0;
   const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: true };
@@ -5086,7 +5096,7 @@ function updateMatch(dt) {
   if (M.mode === 'hp') updateHardpoint(dt);
   if (M.mode === 'ctf') updateCtf(dt);
   if (M.mode === 'snd') updateSnd(dt);
-  if (M.cfg.time && M.mode !== 'snd' && M.t >= M.cfg.time * 60) { timeUp(); return; }
+  if (M.cfg.time && M.mode !== 'snd' && !M.online && M.t >= M.cfg.time * 60) { timeUp(); return; }
   if (G.state === 'respawning') { G.respT -= dt; showCenter(M.online && !NET.teamSet ? (NET.app ? 'FINDING A MATCH' : 'JOINING ROOM') : 'RESPAWNING', M.online && !NET.teamSet && NET.app && P2P.current ? String(P2P.current.status || '').toUpperCase() : Math.max(0, G.respT).toFixed(1)); if (G.respT <= 0 && !(M.online && !NET.teamSet)) respawnPlayer(); }
   if (G.state === 'spectate') updateSpectate(dt);
   updateModeHud(false); updateMarkers();
@@ -6580,7 +6590,7 @@ const netReady = () => NET.app || !!NET.ns;
 /* ---------- lobby panel for the online modes */
 function netLobbyHtml() {
   if (NET.app) return `<div class="net-form"><label>CALLSIGN<input id="netNick" maxlength="14" value="${NET.nick}" autocomplete="off" spellcheck="false"></label></div>` +
-    `<div class="net-hint">Quick Play finds a public match. Bots fill empty spots.</div>` +
+    `<div class="net-hint">Quick Play finds a public match; bots fill empty spots. A private code opens a lobby where the host picks the mode, map, bots and time limit, then starts when everyone is in.</div>` +
     `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div>` +
     `<div class="net-lan" id="netLan"></div><div class="net-svc" id="netSvc">MATCH SERVICE: CHECKING…</div><div class="net-count" id="netCount"></div>`;
   if (!NET.ns) return `<div class="net-off">Online play runs when this game is open on claude.ai. Share the page with friends (they need a Claude account), then everyone picks the same room code.</div>`;
@@ -6644,18 +6654,18 @@ function netLobbyCount() {
 
 /* ---------- joining and leaving */
 async function netStart(mode) {
-  netLeave();
+  const pv = NET.priv; netLeave(); NET.priv = pv;
   NET.mode = mode; NET.on = true; NET.teamSet = false; NET.joinedAt = 0; NET.k = NET.d = NET.ds = NET.sh = NET.hseq = 0; NET.hs = []; NET.kb = ''; NET.ep = 0; NET.endT = 0; NET.wasAlive = false;
   if (NET.app) {
     const kind = NET.kind, code = kind === 'slot' ? NET.slot : NET.code; NET.joinKind = kind;
     let room = null;
-    try { room = await P2P.open(kind, mode, code); }
+    try { room = await P2P.open(kind, kind === 'code' ? 'priv' : mode, code); }
     catch (e) { if (NET.on && NET.mode === mode) { NET.on = false; showBanner('COULD NOT JOIN', e.message === 'timeout' || e.message === 'fail' ? 'no internet connection to the match service' : e.message); setTimeout(() => { if (M.online && !NET.room) toLobby(); }, 6000); } return; }
     if (!NET.on || NET.mode !== mode) { room.leave(); return; }
     room.extras = () => NET.botPres;
     NET.room = room; NET.joinedAt = performance.now() / 1000; NET.botT = 2;
-    NET.warmEnd = room.host ? performance.now() / 1000 + WARMUP : 0;   // a new match waits for people before bots come in
-    if (room.host) netSwitchMap(pickMapFor(LOBBY.map));   // the host picks the map; everyone else follows it
+    NET.warmEnd = room.host && !NET.priv ? performance.now() / 1000 + WARMUP : 0;   // a new match waits for people before bots come in (private: the lobby does that)
+    if (room.host) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : LOBBY.map));   // the host picks the map; everyone else follows it
     return;
   }
   if (!NET.ns) { NET.on = false; showMsg('OFFLINE: ONLINE PLAY NEEDS CLAUDE.AI'); return; }
@@ -6674,7 +6684,7 @@ function netSwitchMap(id) {
   showBanner(mapName(id), MAPS[id].place.toLowerCase());
 }
 function netLeave() {
-  const r = NET.room; NET.room = null; NET.on = false;
+  const r = NET.room; NET.room = null; NET.on = false; NET.priv = null;
   if (r) { try { if (r !== NET.ns && r.leave) r.leave().catch(() => {}); else r.presence({ on: null, rm: null }).catch(() => {}); } catch (e) {} }
   for (const [, R] of NET.rem) netDropBot(R, false);
   NET.rem.clear(); netClearBots();
@@ -6687,7 +6697,7 @@ const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0,
-    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ho: NET.room && NET.room.host ? 1 : 0 }).catch(() => {});
+    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ho: NET.room && NET.room.host ? 1 : 0, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { if (NET.on) NET.sh++; }
@@ -6764,9 +6774,9 @@ function netTick(dt) {
       R = { peer: p.peer, entry: { name: cleanNick(pr.n), team, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false, netPeer: p.peer }, bot: null,
         seen: hs.reduce((m, h) => Math.max(m, +(h && h[3]) || 0), 0), ds: +pr.ds || 0, sh: +pr.sh || 0, ep: 0, x: 0, y: 0, z: 0, yw: 0, pt: 0, kb: '' };
       NET.rem.set(p.peer, R); M.entries.push(R.entry); R.isBot = !!pr.bot;
-      if (!pr.bot) feedLine(`${nameHtml(R.entry)} <span class="fw">JOINED</span>`);
+      if (!pr.bot && !(performance.now() < (NET.quietT || 0))) feedLine(`${nameHtml(R.entry)} <span class="fw">JOINED</span>`);
     }
-    R.entry.name = cleanNick(pr.n); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
+    R.entry.name = cleanNick(pr.n); R.host = !!pr.ho; if (pr.ho && !pr.bot && NET.priv) privFromHost(pr.pc); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
     if (pr.ho && !pr.bot && !isHost && typeof pr.mp === 'string' && MAPS[pr.mp] && pr.mp !== curMap && !NET.mapBusy) { NET.mapBusy = true; setTimeout(() => { NET.mapBusy = false; if (NET.on) netSwitchMap(pr.mp); }, 0); }
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
     R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
@@ -6831,15 +6841,20 @@ function netTick(dt) {
   { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
   if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
-  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor('random')); netNewRound(); } }
+  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor(NET.priv ? NET.priv.cfg.mp : 'random')); netNewRound(); } }
   else {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
     else for (const en of M.entries) if (en.kills >= lim) win = en.isPlayer ? 'YOU WIN' : en.name + ' WINS';
+    if (NET.priv && !NET.priv.started) win = null;
+    else if (!win && M.cfg.time && M.t >= M.cfg.time * 60) {   // time limit (private matches): the leader wins
+      if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; win = a === b ? 'TIME · DRAW' : a > b ? 'TIME · YOUR TEAM WINS' : 'TIME · ENEMY TEAM WINS'; NET.timeWon = a === b ? 0 : a > b ? 1 : -1; }
+      else { const top = M.entries.slice().sort((x, y) => y.kills - x.kills)[0]; win = 'TIME · ' + (top.isPlayer ? 'YOU WIN' : top.name + ' WINS'); NET.timeWon = top.isPlayer ? 1 : -1; }
+    }
     if (win) {
       NET.endT = INTERMISSION_ON; sfx.streak();
       // a round to the score limit counts as a match in your career stats
-      const won = M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1);
+      const won = NET.timeWon !== undefined ? NET.timeWon : M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1); NET.timeWon = undefined;
       finishMatchStats(won); netIntermission(won, win); startMatchStats();
     }
   }
@@ -6857,6 +6872,7 @@ function netIntermission(won, txt) {
 function netNewRound() {
   showBanner('NEW ROUND', mapName(curMap) + ' · scores reset');
   for (const en of M.entries) { en.kills = en.deaths = en.score = 0; }
+  M.t = 0;
   if (G.state !== 'over') return;
   M.over = false; showScreen(null); clearWorldFx();
   if (M.me) M.me.alive = true; respawnPlayer();
@@ -6894,14 +6910,15 @@ function netBots(dt) {
     const humans = [0, 0]; let hum = 1; humans[M.myTeam]++;
     for (const R of NET.rem.values()) if (!R.isBot) { hum++; if (M.def.teams) humans[R.entry.team]++; }
     const add = wl <= 0 && (NET.addT = (NET.addT || 0) - 0.5) <= 0;   // add one bot every 1.5 s; remove extras at once
+    const pw = NET.priv ? (NET.priv.started ? privBotWant(humans) : (M.def.teams ? [0, 0] : 0)) : null;
     if (M.def.teams) for (let t = 0; t < 2; t++) {
-      const mine = bots.filter(b => b.team === t), want = wl > 0 ? 0 : Math.max(0, BOT_FILL.teams - humans[t]);
+      const mine = bots.filter(b => b.team === t), want = pw ? pw[t] : wl > 0 ? 0 : Math.max(0, BOT_FILL.teams - humans[t]);
       for (let i = mine.length - 1; i >= want; i--) netRemoveBot(mine[i]);
-      if (mine.length < want && add) { netNewBot(t); NET.addT = 1.5; }
+      if (mine.length < want && add) { netNewBot(t); NET.addT = NET.priv ? 0.3 : 1.5; }
     } else {
-      const want = wl > 0 ? 0 : Math.max(0, BOT_FILL.ffa - hum);
+      const want = pw !== null ? pw : wl > 0 ? 0 : Math.max(0, BOT_FILL.ffa - hum);
       for (let i = bots.length - 1; i >= want; i--) netRemoveBot(bots[i]);
-      if (bots.length < want && add) { netNewBot(1000 + NET.botN); NET.addT = 1.5; }
+      if (bots.length < want && add) { netNewBot(1000 + NET.botN); NET.addT = NET.priv ? 0.3 : 1.5; }
     }
   }
   NET.botPres = M.entries.filter(en => en.botLabel).map(en => {
@@ -6948,8 +6965,126 @@ setTimeout(() => {
 .app-notes b{display:block;font-size:18px;letter-spacing:.14em;color:#ffd24a;margin-bottom:12px}.app-notes ul{margin:0 0 18px;padding-left:20px;line-height:1.55;font-size:14px}`;
   document.head.appendChild(s);
 })();
+/* ================================================================== private matches (desktop app)
+   A private code (or a private game found on your Wi-Fi) opens a pre-match lobby. Whoever hosts picks the mode, map,
+   number of bots, time limit and kill limit; everyone who joins sees the settings and the player list, and the match
+   starts when the host presses START. The host's settings travel in its presence (`pc`), so if the host leaves, the
+   next host carries on with the same settings. */
+const PRIV_KEY = 'ashfall.priv.v1';
+let PRIVCFG = { md: 'tdm', mp: 'random', b: 6, tl: 10, sc: 40 };
+try { const o = JSON.parse(localStorage.getItem(PRIV_KEY) || 'null'); if (o && typeof o === 'object') Object.assign(PRIVCFG, o); } catch (e) {}
+const PRIV_SC = { tdm: [10, 150, 5], ffa: [5, 60, 5] };
+function privClean(c) {
+  const md = c.md === 'ffa' ? 'ffa' : 'tdm', L = PRIV_SC[md];
+  return { md, mp: c.mp === 'random' || MAPS[c.mp] ? c.mp : 'random', b: clamp(+c.b | 0, 0, 11), tl: clamp(+c.tl | 0, 0, 30), sc: clamp(+c.sc | 0 || L[0], L[0], L[1]) };
+}
+PRIVCFG = privClean(PRIVCFG);
+const privSave = () => { try { localStorage.setItem(PRIV_KEY, JSON.stringify(PRIVCFG)); } catch (e) {} };
+const privWanted = () => NET.app && (NET.kind === 'code' || (NET.kind === 'slot' && /-priv-c-/.test(NET.slot || '')));
+const privHost = () => !!(NET.room && NET.room.host);
+// called by startMatch for an online match: private rooms wait in the lobby instead of dropping straight in
+function privEnter() {
+  NET.priv = { cfg: Object.assign({}, PRIVCFG), started: false, key: '', kind: NET.kind };
+  G.state = 'plobby'; mouseDown = false; mouseAds = false;
+  hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
+  privApply(); renderPlobby(true); showScreen('plobby');
+}
+// the room settings -> this game (mode, limits); switching between teams and free-for-all redraws everyone
+function privApply() {
+  const c = NET.priv.cfg, want = c.md === 'ffa' ? 'offa' : 'otdm';
+  M.cfg.score = c.sc; M.cfg.time = c.tl;
+  if (M.mode !== want) {
+    M.mode = want; M.def = MODES[want]; NET.mode = want; M.myTeam = 0; if (M.me) M.me.team = 0;
+    for (const [, R] of NET.rem) { netDropBot(R, false); const i = M.entries.indexOf(R.entry); if (i >= 0) M.entries.splice(i, 1); }
+    NET.rem.clear(); netClearBots(); NET.quietT = performance.now() + 2500;
+    NET.teamSet = false; NET.joinedAt = performance.now() / 1000 - 1.5;
+  }
+}
+// what the host sends: [mode, map, bots, time, kills, started, round time]
+const privPack = () => { const c = NET.priv.cfg; return [c.md, c.mp, c.b, c.tl, c.sc, NET.priv.started ? 1 : 0, Math.round(M.t)]; };
+function privFromHost(pc) {
+  if (!NET.priv || !Array.isArray(pc) || privHost()) return;
+  const c = privClean({ md: pc[0], mp: pc[1], b: pc[2], tl: pc[3], sc: pc[4] });
+  if (JSON.stringify(c) !== JSON.stringify(NET.priv.cfg)) { NET.priv.cfg = c; privApply(); if (curScreen === 'plobby') renderPlobby(true); }
+  if (pc[5] && !NET.priv.started) privBegin();
+  if (NET.priv.started && G.state !== 'over' && Math.abs((+pc[6] || 0) - M.t) > 2) M.t = +pc[6] || 0;   // keep the round clock in step with the host
+}
+// host pressed START
+function privStart() {
+  if (!NET.priv || !privHost() || NET.priv.started) return;
+  if (!NET.teamSet) { showMsg('STILL CONNECTING…'); return; }
+  const c = NET.priv.cfg; PRIVCFG = Object.assign({}, c); privSave();
+  netSwitchMap(pickMapFor(c.mp));
+  NET.ep++; NET.k = NET.d = 0; G.kills = 0; NET.botT = 0; NET.addT = 0;
+  privBegin();
+}
+function privBegin() {
+  NET.priv.started = true; M.t = 0; M.over = false;
+  for (const en of M.entries) { en.kills = en.deaths = en.score = 0; }
+  commitPartialStats(); startMatchStats();
+  G.state = 'respawning'; G.respT = 0.4; showScreen(null); lockPointer(); updateModeHud(true);
+  showBanner(MODES[M.mode].short, `${mapName(curMap)} · first to ${M.cfg.score} kills${M.cfg.time ? ' · ' + M.cfg.time + ' min' : ''}`);
+}
+// how many bots each side should have: the host's count, put where they even out the teams
+function privBotWant(humans) {
+  const b = NET.priv.cfg.b;
+  if (!M.def.teams) return b;
+  const w = [0, 0], tot = [humans[0], humans[1]];
+  for (let i = 0; i < b; i++) { const t = tot[0] <= tot[1] ? 0 : 1; w[t]++; tot[t]++; }
+  return w;
+}
+function privTick(dt) {
+  if ((NET.priv.uiT = (NET.priv.uiT || 0) - dt) > 0) return; NET.priv.uiT = 0.4;
+  if (curScreen === 'plobby') renderPlobby(false);
+}
+function privPlayers() {
+  const L = [{ name: NET.nick, me: true, host: privHost(), team: M.myTeam }];
+  for (const R of NET.rem.values()) if (!R.isBot) L.push({ name: R.entry.name, team: R.entry.team, host: !!R.host });
+  return L;
+}
+function renderPlobby(full) {
+  if (!NET.priv) return;
+  const host = privHost(), c = NET.priv.cfg, st = NET.room ? '' : (P2P.current ? String(P2P.current.status || 'connecting') : 'connecting');
+  $('plCode').textContent = NET.priv.kind === 'code' ? NET.code.toUpperCase() : 'WI-FI';
+  const pl = privPlayers();
+  $('plPlayers').innerHTML = pl.map(p => `<div class="pl-p${p.me ? ' me' : ''}"><b>${p.name}</b>${p.host ? '<i>HOST</i>' : ''}${p.me ? '<i class="you">YOU</i>' : ''}</div>`).join('') +
+    (st ? `<div class="pl-st">${st.toUpperCase()}…</div>` : '') + `<div class="pl-n">${pl.length} PLAYER${pl.length > 1 ? 'S' : ''} · ${c.b} BOT${c.b === 1 ? '' : 'S'}</div>`;
+  $('plHint').textContent = host ? `You are the host. Friends type the code ${NET.priv.kind === 'code' ? NET.code.toUpperCase() : ''} under PRIVATE MATCH CODE and press HOST / JOIN; players on your Wi-Fi see this game under ON YOUR WI-FI. Press START when everyone is in.`
+    : NET.room ? 'Waiting for the host to start the match.' : 'Connecting to the room…';
+  const sb = $('plStart'); sb.disabled = !host || !NET.room; sb.textContent = host ? 'START MATCH' : 'WAITING FOR HOST';
+  const key = (host ? 'h' : 'g') + JSON.stringify(c);
+  if (!full && NET.priv.key === key) return; NET.priv.key = key;
+  const box = $('plSet'); box.innerHTML = '';
+  const rows = [
+    { name: 'MODE', t: 'seg', opts: [['tdm', 'TEAM DEATHMATCH'], ['ffa', 'FREE-FOR-ALL']], get: () => c.md, set: v => { c.md = v; c.sc = clamp(c.sc, PRIV_SC[v][0], PRIV_SC[v][1]); if (v === 'ffa' && c.sc > 60) c.sc = 30; } },
+    { name: 'MAP', t: 'seg', opts: MAP_CHOICES().map(id => [id, id === 'random' ? 'RANDOM' : MAPS[id].name]), get: () => c.mp, set: v => { c.mp = v; } },
+    { name: 'BOTS', hint: 'On top of the real players', t: 'range', min: 0, max: 11, step: 1, get: () => c.b, set: v => { c.b = v; }, fmt: v => v || 'NONE' },
+    { name: 'TIME LIMIT', hint: 'Most kills when time runs out wins', t: 'range', min: 0, max: 30, step: 1, get: () => c.tl, set: v => { c.tl = v; }, fmt: v => v ? v + ' MIN' : 'NONE' },
+    { name: 'KILL LIMIT', hint: c.md === 'tdm' ? 'Team kills to win' : 'Kills to win', t: 'range', min: PRIV_SC[c.md][0], max: PRIV_SC[c.md][1], step: PRIV_SC[c.md][2], get: () => c.sc, set: v => { c.sc = v; }, fmt: v => v },
+  ];
+  const changed = redraw => { NET.priv.cfg = privClean(c); Object.assign(c, NET.priv.cfg); PRIVCFG = Object.assign({}, c); privSave(); privApply(); if (c.mp !== 'random') netSwitchMap(c.mp); NET.priv.key = (host ? 'h' : 'g') + JSON.stringify(c); if (redraw) { renderPlobby(true); } };
+  for (const it of rows) {
+    const row = document.createElement('div'); row.className = 'setrow';
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name; if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
+    const ctl = document.createElement('div'); ctl.className = 'ctl';
+    if (!host) { const v = document.createElement('span'); v.className = 'num pl-ro'; v.textContent = it.t === 'range' ? it.fmt(it.get()) : (it.opts.find(o => o[0] === it.get()) || ['', ''])[1]; ctl.appendChild(v); }
+    else if (it.t === 'range') { const r = document.createElement('input'); r.type = 'range'; r.min = it.min; r.max = it.max; r.step = it.step; r.value = it.get(); const n = document.createElement('span'); n.className = 'num'; n.textContent = it.fmt(it.get()); r.oninput = () => { it.set(+r.value); n.textContent = it.fmt(+r.value); changed(false); }; ctl.append(r, n); }
+    else { const seg = document.createElement('div'); seg.className = 'seg'; for (const [v, l] of it.opts) { const b = document.createElement('button'); b.textContent = l; b.className = it.get() === v ? 'on' : ''; b.onclick = () => { it.set(v); sfx.ui(); changed(it.name === 'MODE'); if (it.name !== 'MODE') [...seg.children].forEach(x => x.classList.toggle('on', x === b)); }; seg.appendChild(b); } ctl.appendChild(seg); }
+    row.append(nm, ctl); box.appendChild(row);
+  }
+}
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `.plob{width:min(980px,calc(100vw - 32px));max-height:calc(100vh - 40px);overflow:auto;box-sizing:border-box}
+.plob .ttl span{color:#ffd24a;margin-left:10px}.plob-body{display:grid;grid-template-columns:1.6fr 1fr;gap:18px;margin:12px 0}
+.plob-h{font-size:11px;letter-spacing:.25em;opacity:.7;margin-bottom:8px}.pl-p{display:flex;gap:8px;align-items:center;padding:8px 10px;border:1px solid rgba(255,255,255,.12);margin-bottom:6px;background:rgba(255,255,255,.03)}
+.pl-p.me{border-color:rgba(255,210,74,.5)}.pl-p b{flex:1;letter-spacing:.08em}.pl-p i{font-style:normal;font-size:10px;letter-spacing:.2em;padding:2px 6px;border:1px solid #ffd24a;color:#ffd24a}.pl-p i.you{border-color:#7fd16b;color:#7fd16b}
+.pl-st,.pl-n{font-size:11px;letter-spacing:.12em;opacity:.7;margin-top:8px}.plob-hint{font-size:12px;line-height:1.45;opacity:.75;margin-bottom:10px}.pl-ro{min-width:0!important;text-align:right;color:#e8e2d0}
+.plob .seg{flex-wrap:wrap}@media (max-width:820px){.plob-body{grid-template-columns:1fr}}`;
+  document.head.appendChild(s);
+})();
 /* ================================================================== UI: screens, settings, input, loop, boot */
-const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results'];
+const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby'];
 let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
   curScreen = id;
@@ -7095,6 +7230,8 @@ function actions(act) {
     case 'stats-back': if (statsReturn === 'lobby') renderLobby(); showScreen(statsReturn); break;
     case 'res-again': restartMatch(); break;
     case 'res-lobby': toLobby(); break;
+    case 'pl-start': privStart(); break;
+    case 'pl-leave': toLobby(); break;
     case 'res-stats': statsReturn = 'results'; statOnline = !!(M && M.online); renderStats(); showScreen('career'); break;
     case 'settings': returnScreen = curScreen || 'menu'; showScreen('settings'); break;
     case 'settings-back': showScreen(returnScreen); break;
@@ -7420,6 +7557,7 @@ function tick(dt) {
     P.vy -= 22 * dt; P.y += P.vy * dt; const gy = groundAt(P.x, P.z, P.y); if (P.y <= gy) { P.y = gy; P.vy = 0; }
     updateBots(dt); updateMatch(dt); updateGrenades(dt); updateHud();
   }
+  else if (G.state === 'plobby' && M.online && NET.priv) privTick(dt);
   else if (G.state === 'over' && inMatch()) { tickIntermission(dt); if (M.online) { P.vy -= 22 * dt; P.y += P.vy * dt; const gy = groundAt(P.x, P.z, P.y); if (P.y <= gy) { P.y = gy; P.vy = 0; } } }
   else if (G.state === 'respawning' || G.state === 'spectate') {
     if (G.state === 'respawning' && G.dc) { G.dc.t += dt; aimDeathCam(dt, Math.min(G.dc.t / G.dc.dur, 1)); }
@@ -7495,7 +7633,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; } }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

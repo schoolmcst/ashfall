@@ -123,7 +123,8 @@ function startMatch(mode, custom) {
   if (def.online) {   // real players over the room: no bots; you drop in once the room has answered
     M.online = true; const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false };
     M.entries.push(me); M.me = me; G.state = 'respawning'; G.respT = 2.2; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
-    netStart(mode); showBanner(def.name, NET.app ? (NET.kind === 'code' ? 'private match: ' + NET.code.toUpperCase() : NET.kind === 'slot' ? 'joining a game on your Wi-Fi' : 'quick play') : NET.ns ? 'room: ' + NET.code.toUpperCase() : 'offline'); return;
+    NET.priv = null; if (privWanted()) privEnter();
+    netStart(mode); if (NET.priv) return; showBanner(def.name, NET.app ? (NET.kind === 'code' ? 'private match: ' + NET.code.toUpperCase() : NET.kind === 'slot' ? 'joining a game on your Wi-Fi' : 'quick play') : NET.ns ? 'room: ' + NET.code.toUpperCase() : 'offline'); return;
   }
   const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5); let ni = 0;
   const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: true };
@@ -499,7 +500,7 @@ function updateMatch(dt) {
   if (M.mode === 'hp') updateHardpoint(dt);
   if (M.mode === 'ctf') updateCtf(dt);
   if (M.mode === 'snd') updateSnd(dt);
-  if (M.cfg.time && M.mode !== 'snd' && M.t >= M.cfg.time * 60) { timeUp(); return; }
+  if (M.cfg.time && M.mode !== 'snd' && !M.online && M.t >= M.cfg.time * 60) { timeUp(); return; }
   if (G.state === 'respawning') { G.respT -= dt; showCenter(M.online && !NET.teamSet ? (NET.app ? 'FINDING A MATCH' : 'JOINING ROOM') : 'RESPAWNING', M.online && !NET.teamSet && NET.app && P2P.current ? String(P2P.current.status || '').toUpperCase() : Math.max(0, G.respT).toFixed(1)); if (G.respT <= 0 && !(M.online && !NET.teamSet)) respawnPlayer(); }
   if (G.state === 'spectate') updateSpectate(dt);
   updateModeHud(false); updateMarkers();
