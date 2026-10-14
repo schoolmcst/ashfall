@@ -124,8 +124,20 @@ const BALANCE = {
   stinger: { dmg: 14, head: 1.6, interval: 0.08, spread: 0.026, adsSpread: 0.008, eff: 12, fallMin: 0.5 },
   deadeye: { dmg: 40, head: 1.9, interval: 0.36, spread: 0.024, eff: 24, fallMin: 0.5, move: 1.02 },
 };
+// DAMAGE RANGE per gun: [max damage range in metres, damage left far away (reached at 2x that range)].
+// By class: SMGs 14-22 m and drop to 55-60%, ARs 30-55 m / 70-80%, LMGs 44-58 m / 75-80%, marksman 60-75 m / 85%,
+// snipers never drop, shotguns 9-14 m and fall to 25%, pistols 12-26 m / 50%.
+const RANGES = {
+  marc: [45, 0.7], kv47: [50, 0.8], vanguard: [60, 0.8], talon: [38, 0.7], gale: [55, 0.75], striker: [32, 0.7], spectre: [30, 0.65],
+  viper: [20, 0.6], wasp: [14, 0.55], kestrel: [22, 0.6], bulwark: [18, 0.6], hornet: [17, 0.55], whisper: [16, 0.55],
+  anvil: [48, 0.75], titan: [58, 0.8], hailstorm: [44, 0.75],
+  sentinel: [70, 0.85], longhorn: [60, 0.85], arbiter: [65, 0.85],
+  hawkeye: [120, 1], warden: [120, 1], wraith: [120, 1],
+  breacher: [12, 0.25], rampart: [11, 0.25], coach: [9, 0.2], mauler: [14, 0.3],
+  sidearm: [22, 0.5], magnum: [24, 0.5], stinger: [12, 0.5], deadeye: [26, 0.5],
+};
 const ARMORY = ARMORY_SRC.map(src => {
-  const d = Object.assign({ move: 1, ads: 1 }, CAT_BASE[src.cat], src, BALANCE[src.id] || {});
+  const rg = RANGES[src.id], d = Object.assign({ move: 1, ads: 1 }, CAT_BASE[src.cat], src, BALANCE[src.id] || {}, rg ? { eff: rg[0], fallMin: rg[1] } : {});
   d.sfxP = SND[d.snd] || SND.rifle; d.base = d; d.magSize = d.mag;
   return Object.freeze(d);
 });

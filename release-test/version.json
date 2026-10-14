@@ -1,6 +1,8 @@
 {
- "version": "1.2.4",
+ "version": "1.2.5",
  "notes": [
+  "DAMAGE RANGE: every gun has its own damage range, tuned by class (SMGs 14-22 m, assault rifles 30-60 m, LMGs 44-58 m, marksman 60-70 m, snipers never drop, shotguns 9-14 m, pistols 12-26 m)",
+  "LOADOUT: new DAMAGE RANGE graph shows damage from 0 to 120 m and chest shots to kill at 10, 30, 60 and 100 m; compare guns before you pick (green/red line)",
   "GUN BALANCE: every gun re-tuned around shots to kill. Assault rifles and LMGs: 4 chest shots. SMGs: 5 chest shots up close (Bulwark 4, Wasp 6) and much weaker far away",
   "PISTOLS: Service 9 now needs 5 chest shots, Revolver 2 (3 to the stomach) and no one-shot headshots, Deadeye 3, Stinger 7. Shorter range and less accurate from the hip",
   "ATTACHMENTS: Hollow Point (+6%) and Long Barrel (+4%) add less damage, so parts can no longer turn a 4-shot gun into a 3-shot gun",
@@ -12,6 +14,6 @@
   "DEAD SILENCE: fixed, it now turns on for other players as soon as you pick it",
   "SCAVENGER: kills (bots or players) now really top up a magazine of reserve ammo"
  ],
- "sha256": "9556ee47b33e914785965dcb1562c6f6642da592c329d0fee8a96746a4087ebc",
+ "sha256": "c783f211ee09b84b0acb0762a015e687a1a1ceaec43db1549cead67938b03fdc",
  "minApp": "1.0.0"
 }

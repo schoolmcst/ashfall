@@ -458,6 +458,19 @@ const ADV = [
   ['ZOOM', s => s.overlay || (70 / (s.adsFov || 70)), 0, v => v.toFixed(1) + '×'],
   ['VS ARMOUR', s => s.vsHeavy || 1, 1, v => '×' + v.toFixed(2)],
 ];
+// DAMAGE RANGE graph: body damage from 0 to 120 m (full damage up to the gun's range, then down to its floor at 2x)
+function dmgRangeHtml(cur, pv) {
+  const W = 300, H = 92, X = m => 26 + m / 120 * (W - 34), Y = f => 10 + (1 - f) * (H - 30);
+  const fall = (s, m) => { const e = s.eff, mn = s.fallMin === undefined ? 0.6 : s.fallMin; return m <= e ? 1 : Math.max(mn, 1 - (m - e) / e * (1 - mn)); };
+  const line = s => { let d = ''; for (let m = 0; m <= 120; m += 2) d += (m ? 'L' : 'M') + X(m).toFixed(1) + ' ' + Y(fall(s, m)).toFixed(1); return d; };
+  const stk = (s, m) => Math.ceil(100 / (s.dmg * 1.1 * fall(s, m) * (s.pellets > 1 ? s.pellets * 0.6 : 1)) - 1e-9);
+  const sh = pv || cur, mn = sh.fallMin === undefined ? 0.6 : sh.fallMin, better = pv && pv.eff > cur.eff + 0.5, worse = pv && pv.eff < cur.eff - 0.5;
+  const grid = [0, 30, 60, 90, 120].map(m => `<line x1="${X(m)}" y1="${Y(1)}" x2="${X(m)}" y2="${Y(0)}" class="g"/><text x="${X(m)}" y="${H - 4}" text-anchor="middle">${m}</text>`).join('') +
+    [1, 0.5].map(f => `<line x1="${X(0)}" y1="${Y(f)}" x2="${X(120)}" y2="${Y(f)}" class="g"/><text x="${X(0) - 4}" y="${Y(f) + 3}" text-anchor="end">${f * 100}%</text>`).join('');
+  return `<div class="lo-range"><div class="lo-adv-h">DAMAGE RANGE <span>${sh.blast ? 'EXPLOSIVE' : mn >= 1 ? `FULL DAMAGE AT ANY RANGE` : `FULL TO ${Math.round(sh.eff)} M · ${Math.round(mn * 100)}% FROM ${Math.round(sh.eff * 2)} M`}</span></div>` +
+    `<svg viewBox="0 0 ${W} ${H}" class="lo-rsvg">${grid}<path d="${line(cur)}" class="cur"/>${pv ? `<path d="${line(pv)}" class="${better ? 'up' : worse ? 'down' : 'cur'} pv"/>` : ''}<line x1="${X(Math.min(120, sh.eff))}" y1="${Y(1) - 4}" x2="${X(Math.min(120, sh.eff))}" y2="${Y(0)}" class="mark"/></svg>` +
+    `<div class="lo-rstk"><em>CHEST SHOTS TO KILL</em>${[10, 30, 60, 100].map(m => `<span><b>${stk(sh, m)}</b>@${m}M</span>`).join('')}</div></div>`;
+}
 function advStatsHtml(cur, pv) {
   return `<div class="lo-adv"><div class="lo-adv-h">ADVANCED STATS</div>` + ADV.map(([label, f, dir, fmt]) => {
     const a = f(cur), b = pv ? f(pv) : a, ch = Math.abs(b - a) > Math.abs(a) * 0.005 + 1e-9, good = dir && ch && (b - a) * dir > 0, bad = dir && ch && (b - a) * dir < 0;
@@ -557,7 +570,7 @@ function renderLoStats() {
     return `<div class="lo-stat"><span>${label}</span><div class="bar"><i style="width:${Math.min(a, b).toFixed(1)}%"></i>` +
       (better ? `<i class="up" style="left:${a.toFixed(1)}%;width:${(b - a).toFixed(1)}%"></i>` : worse ? `<i class="down" style="left:${b.toFixed(1)}%;width:${(a - b).toFixed(1)}%"></i>` : '') +
       `</div><b class="${better ? 'up' : worse ? 'down' : ''}">${fmt(sh)}</b></div>`;
-  }).join('') + (pv ? '<div class="lo-legend"><span class="up">GREEN = BETTER</span><span class="down">RED = WORSE</span></div>' : '') + advStatsHtml(cur, pv);
+  }).join('') + (pv ? '<div class="lo-legend"><span class="up">GREEN = BETTER</span><span class="down">RED = WORSE</span></div>' : '') + (sh.blast ? '' : dmgRangeHtml(cur, pv)) + advStatsHtml(cur, pv);
   PV.want = { def: shown, ovr: !loPrevW && (row === 'pa' || row === 'sa') ? loPreview : null };
 }
 function resetLoadoutWeapon() {
