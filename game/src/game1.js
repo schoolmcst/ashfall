@@ -32,11 +32,11 @@ function equipClass(cls) {
   setGunShader(S.gunShader);
   WEAPONS.forEach((w, i) => applyLoadout(i));
   WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = Math.min(w.reserveMax, w.def.reserve); });
-  G.equip = EQUIP[cls.e] ? cls.e : 'frag'; G.perk = PERKS[cls.k] ? cls.k : 'none'; G.equipped = cls;
+  G.equip = EQUIP[cls.e] ? cls.e : 'frag'; G.perks = perksOf(cls); G.equipped = cls;
   G.cur = 0; G.burstLeft = 0;
   try { renderer.compile(vmScene, vmCamera); } catch (e) {}
 }
-const perk = k => G.perk === k;
+const perk = k => !!(G.perks && G.perks.includes(k)) && !(typeof M !== 'undefined' && M && M.mode === 'gun' && false);
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
 
 /* ------------------------------------------------------------------ rumble */
@@ -254,7 +254,7 @@ function finishReload() {
 function switchWeapon(i) {
   if (i === G.cur || i < 0 || i >= WEAPONS.length || G.state !== 'playing') return;
   gunObjs[G.cur].visible = false; gunObjs[G.cur].userData.flash.visible = false;
-  G.cur = i; gunObjs[i].visible = true; G.reloading = false; G.swapT = perk('quick') ? 0.22 : 0.35; G.fireT = G.swapT * 0.6; G.burstLeft = 0; G.inspectT = 0; sfx.click();
+  G.cur = i; gunObjs[i].visible = true; G.reloading = false; G.swapT = perk('amped') ? 0.23 : 0.35; G.fireT = G.swapT * 0.6; G.burstLeft = 0; G.inspectT = 0; sfx.click();
   rumble(0.05, 0.15, 50);
 }
 function cycleWeapon(d) { switchWeapon((G.cur + d + WEAPONS.length) % WEAPONS.length); }
