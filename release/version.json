@@ -1,12 +1,8 @@
 {
- "version": "1.1.8",
+ "version": "1.1.9",
  "notes": [
-  "ONLINE MODES: Gun Game, Hardpoint, Capture the Flag and Search & Destroy are now online (the host runs the objectives for everyone)",
-  "PLAYLIST: press Y (controller) or Q (keyboard) in the lobby to pick which modes Quick Play can choose from",
-  "PRE-GAME LOBBY: Quick Play searches your playlist, then everyone waits in a lobby with a 30 second countdown and starts together",
-  "FRIENDS & PARTY: share your friend code (lobby or Settings > Account), add friends, JOIN their party; the party follows the leader into matches",
-  "RED DOT: the M4A1 dot sits in the middle of the sight again"
+  "PRIVATE MATCHES: the host can now pick any mode - Team Deathmatch, Free-for-All, Gun Game, Hardpoint, Capture the Flag or Search & Destroy - with the right limit for each"
  ],
- "sha256": "5910d4bde8722b54b1ec878201af14925b6bc9f0f7adc1e1a32f18ec8dfc8059",
+ "sha256": "80af666ebf4c43731929f0d63cb5748be2779e5a11842bfa1a0a4cd3f485d2b1",
  "minApp": "1.0.0"
 }
