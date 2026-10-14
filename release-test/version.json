@@ -1,7 +1,7 @@
 {
- "version": "1.1.3",
+ "version": "1.1.4",
  "notes": [
-  "SIGHTS: iron sights are see-through; red dots and holos sit just above the front post on every gun; the holo is smaller and cleaner, with a big clear window and a smaller reticle ring",
+  "SIGHTS: iron sights are see-through; red dots sit just above the front post on every gun; the holo is rebuilt at real EOTech EXPS3 size (the Rainbow Six style holo): 30 x 23 mm window, thin hood, 68 MOA ring",
   "STATS: separate ONLINE and OFFLINE career pages; online kills, deaths and rounds now count properly",
   "PRIVATE MATCHES: a lobby before the match - the host picks mode, map, number of bots, time limit and kill limit, friends join by code or on your Wi-Fi, host presses START",
   "END OF MATCH: full scoreboard after every game, then the next match starts by itself (45 s offline, 40 s online) with a full reset",
@@ -13,6 +13,6 @@
   "Grenades throw much farther; soldiers hold their rifles properly in their hands",
   "ATTACHMENTS: pros and cons are stronger and actually change how the gun handles"
  ],
- "sha256": "5d15efd6fb9d92ffd390367859570f78be374dc8095cbdb0e8dce31800ff0630",
+ "sha256": "a09f869f92766b7309a19852bf82ae49539231d565cdc0290116f9d3da5826c7",
  "minApp": "1.0.0"
 }

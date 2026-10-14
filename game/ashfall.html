@@ -6073,13 +6073,15 @@ function attachVisuals(g, def, factory, wlen, ovr) {
     add(new THREE.BoxGeometry(0.034, 0.012, 0.07), M.dark, 0, ry + 0.006, oz); tubeZ(0.02, 0.07, M.dark, 0, ry + 0.034, oz + 0.035, 16);
     const l = new THREE.Mesh(new THREE.CircleGeometry(0.0165, 16), M.lens); l.position.set(0, ry + 0.034, oz + 0.036); grp.add(l); add(new THREE.CircleGeometry(0.0022, 8), M.dot, 0, ry + 0.034, oz + 0.0365);
   }
-  if (op === 'holo') {   // compact holo: a slim mount, a thin hood and a big window centred on the reticle
-    const cy = coEye !== null ? coEye : ry + 0.035, wW = 0.028, wH = 0.022, wz = oz - 0.012, bot = cy - wH / 2 - 0.0025, hl = 0.04;
-    add(new THREE.BoxGeometry(0.026, bot - u.railY, 0.068), M.dark, 0, u.railY + (bot - u.railY) / 2, oz);   // mount + body under the window
-    add(new THREE.BoxGeometry(0.018, 0.008, 0.026), M.poly, 0, bot - 0.004, oz + 0.022);                         // battery cap at the back
-    for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.003, wH + 0.006, hl), M.dark, s * (wW / 2 + 0.0015), cy + 0.0005, wz);
-    add(new THREE.BoxGeometry(wW + 0.006, 0.003, hl), M.dark, 0, cy + wH / 2 + 0.002, wz);
-    add(new THREE.PlaneGeometry(wW, wH), M.lens, 0, cy, wz - hl / 2 + 0.002);
+  if (op === 'holo') {   // EOTech EXPS3-size holo (the kind Rainbow Six uses): 96 mm long, 30 x 23 mm window in a 70 mm hood tunnel, 4 mm walls
+    const cy = coEye !== null ? coEye : ry + 0.035, wW = 0.030, wH = 0.023, t = 0.004, L = 0.096, hl = 0.07, hz = oz - L / 2 + hl / 2, bot = cy - wH / 2 - 0.003;
+    add(new THREE.BoxGeometry(0.036, bot - u.railY, L), M.dark, 0, u.railY + (bot - u.railY) / 2, oz);                 // body + mount under the window
+    for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.005, 0.012, 0.016), M.poly, s * 0.0195, bot - 0.008, oz + 0.026);   // side buttons
+    add(new THREE.BoxGeometry(0.03, 0.006, 0.03), M.poly, 0, u.railY + 0.003, oz - 0.02);                               // QD lever
+    for (const s of [-1, 1]) add(new THREE.BoxGeometry(t, wH + t, hl), M.dark, s * (wW + t) / 2, cy + t / 2 - 0.0005, hz);  // hood sides
+    add(new THREE.BoxGeometry(wW + 2 * t, t, hl), M.dark, 0, cy + wH / 2 + t / 2, hz);                                  // hood top
+    add(new THREE.PlaneGeometry(wW, wH), M.lens, 0, cy, hz - hl / 2 + 0.003);                                           // front glass
+    for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.004, 0.008, 0.012), M.dark, s * 0.009, bot + 0.004, oz + L / 2 - 0.008);   // rear buttons
   }
   if (op === 'reflex') {
     add(new THREE.BoxGeometry(0.03, 0.01, 0.04), M.dark, 0, ry + 0.005, oz);
@@ -6101,9 +6103,9 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   }
   // aim points: the dot (and the holo ring) at eye height, and a front post under it when the irons are folded away
   if (coEye !== null) {
-    const dz = op === 'reddot' ? oz + 0.03 : op === 'holo' ? oz - 0.02 : oz - 0.015;
+    const dz = op === 'reddot' ? oz + 0.03 : op === 'holo' ? oz - 0.012 : oz - 0.015;
     const dm = new THREE.Mesh(new THREE.CircleGeometry(op === 'holo' ? 0.0008 : 0.0016, 12), M.dotTop); dm.position.set(0, coEye, dz); dm.renderOrder = 20; grp.add(dm); u.dots.push(dm);
-    if (op === 'holo') { const rg = new THREE.Mesh(new THREE.RingGeometry(0.0044, 0.0050, 40), M.dotTop); rg.position.set(0, coEye, dz); rg.renderOrder = 20; grp.add(rg); u.dots.push(rg); }
+    if (op === 'holo') { const rg = new THREE.Mesh(new THREE.RingGeometry(0.0043, 0.0049, 48), M.dotTop); rg.position.set(0, coEye, dz); rg.renderOrder = 20; grp.add(rg); u.dots.push(rg); }
     if (!u.sightInfo.hasFront) {
       const fz = u.sightInfo.frontZ, py = coEye - 0.0028, base = Math.min(u.railY, py - 0.012);
       add(new THREE.BoxGeometry(0.018, 0.008, 0.016), M.dark, 0, base + 0.004, fz);
