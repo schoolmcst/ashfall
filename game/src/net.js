@@ -239,7 +239,7 @@ function netTick(dt) {
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
         else { statKillAt(R.x, R.z, head); perkOnKill(); }
         if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
-      } else if (botBy(R.kb)) { const ke = botBy(R.kb); ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> ${nameHtml(R.entry)}`); }
+      } else if (botBy(R.kb)) { const ke = botBy(R.kb); try { brainHumanKilled(ke.bot, R.x, R.z); } catch (err) {} ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> ${nameHtml(R.entry)}`); }
       else if (R.kb && NET.rem.get(R.kb)) feedLine(`${netFeedName(NET.rem.get(R.kb))} <span class="fw">✦</span> ${nameHtml(R.entry)}${head ? ' <span class="ft">HEADSHOT</span>' : ''}`);
       netDropBot(R, true, head);
     }

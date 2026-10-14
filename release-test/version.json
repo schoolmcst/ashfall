@@ -1,6 +1,8 @@
 {
- "version": "1.2.6",
+ "version": "1.2.7",
  "notes": [
+  "BOTS THAT LEARN: bots learn from every gunfight - which tactics win on each map, the range real players fight at, where players hang out and where bots keep dying - and get smarter and more human the more they play. It carries over to every next game",
+  "MORE HUMAN BOTS: real reaction times, aim that settles instead of snapping, short bursts at range, they stop to check corners, look around, peek from cover and have a harder time hitting you while you're on the move",
   "RECOIL: assault rifles kick 35% more, SMGs 30% more and LMGs 80% more, and every automatic climbs harder the longer you hold the trigger (LMGs most), with a sideways pull",
   "SMARTER BOTS: they remember where they last saw you and push there, hear gunshots (suppressors keep you quiet), call out your position to teammates, flank, turn on you the moment you shoot them, back off to heal when hurt, throw grenades at you behind cover, pre-aim corners and reload when it's safe",
   "BOTS: new ELITE skill, better aim and headshots at every skill, and the default bots are now Veteran (Hardened on the hard setting)",
@@ -17,6 +19,6 @@
   "DEAD SILENCE: fixed, it now turns on for other players as soon as you pick it",
   "SCAVENGER: kills (bots or players) now really top up a magazine of reserve ammo"
  ],
- "sha256": "ab339b2a6f8b590666a8bb91f308012c9250bd64f43d69e7848a5bf9c9479cf3",
+ "sha256": "4e7382f213207360764b2d30bcd8e17bb65a9a65eec98e5676e30fda179091f5",
  "minApp": "1.0.0"
 }

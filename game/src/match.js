@@ -124,6 +124,7 @@ function spawnBot(en, pos) {
     hold: rnd(9, 20), think: rnd(0, 0.3), tgt: null, goal: null, goalT: 0, role: en.role || 'hunt', act: 0, seenT: -9, lastShotT: -9,
     iq: sk.iq || 0.5, hs: sk.hs || 0.12, lkp: null, lkpT: -99, hitT: -99, nades: Math.random() < (sk.iq || 0.5) ? 2 : 1, nadeT: M.t + rnd(4, 10), flankT: 0 });
   e.group.rotation.y = Math.atan2(-pos.x, -pos.z); e.group.position.y = pos.y || 0; e.spawnProt = 1.5;
+  try { brainBoost(e); } catch (err) {}
   if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
   en.bot = e; en.alive = true; enemies.push(e);
   if (M.mode === 'gun') botGunProfile(e, GUN_LADDER[Math.min(en.level || 0, GUN_LADDER.length - 1)]);
@@ -227,6 +228,7 @@ function nameHtml(en) {
 // called for every bot death (killer: 'player', a bot, or a string for barrels/explosions)
 function matchBotKilled(e, by, head, boom) {
   if (!inMatch() || !e.entry) return;
+  try { brainBotKilled(e, by); } catch (err) {}
   const en = e.entry; en.deaths++; en.alive = false; en.bot = null;
   const ke = by === 'player' ? M.me : by && by.entry ? by.entry : null;
   if (ke && ke !== en) creditKill(ke, en);
@@ -248,6 +250,7 @@ function creditKill(ke, victim) {
 function matchPlayerKilled(killer) {
   if (!inMatch()) return;
   M.me.deaths++; M.me.alive = false;
+  try { if (killer && killer.entry) brainHumanKilled(killer, P.x, P.z); } catch (err) {}
   const ke = killer && killer.entry ? killer.entry : null;
   if (ke) { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> <b>YOU</b>`); }
   dropCtfFlag('player');
@@ -279,9 +282,10 @@ function botThink(e) {
   cands.sort((a, b) => a[1] - b[1]);
   let tgt = null;
   for (let i = 0; i < Math.min(4, cands.length); i++) { if (cands[i][1] > 60) break; if (losTo(e, cands[i][0])) { tgt = cands[i][0]; break; } }
+  if (tgt && tgt !== e.tgt) { try { brainEngage(e, tgt); } catch (err) {} e.reactT = rnd(0.16, 0.42) * (1.25 - 0.5 * (e.hum || 0.4)); e.engageT = M.t + e.reactT; }   // human reaction time before they start aiming
   if (tgt !== e.tgt) { const pre = !!(e.lkp && M.t - e.lkpT < 3 && tgt); e.tgt = tgt; if (tgt) e.aim = Math.min(e.aim, pre ? 0.45 + e.iq * 0.25 : 0.2); }   // pre-aimed where they expected you
   if (tgt) { e.seenT = M.t; botRemember(e, tgt); if (Math.random() < e.iq) botCallout(e, tgt); }
-  e.retreat = !!(tgt && e.hp < e.maxHp * 0.35 && (e.retreat || Math.random() < e.iq + 0.15));
+  e.retreat = !!(tgt && e.hp < e.maxHp * (e.tac === 'heal' ? 0.55 : 0.35) && (e.retreat || Math.random() < e.iq + 0.15));
   e.goal = botGoal(e, cands);
 }
 // memory: where a target was last seen / heard
@@ -311,8 +315,11 @@ function botWasHit(e, by) {
 }
 // a flank point: off to the side of the line between us and them, snapped to a real floor spot
 function botFlank(e, p) {
-  const ex = e.group.position.x, ez = e.group.position.z, dx = p.x - ex, dz = p.z - ez, l = Math.hypot(dx, dz) || 1, side = Math.random() < 0.5 ? 1 : -1;
-  const fx = p.x - dx / l * 6 + (-dz / l) * 13 * side, fz = p.z - dz / l * 6 + (dx / l) * 13 * side;
+  const ex = e.group.position.x, ez = e.group.position.z, dx = p.x - ex, dz = p.z - ez, l = Math.hypot(dx, dz) || 1;
+  const fp = s => [p.x - dx / l * 6 + (-dz / l) * 13 * s, p.z - dz / l * 6 + (dx / l) * 13 * s];
+  let side = Math.random() < 0.5 ? 1 : -1;
+  try { const a = fp(1), b = fp(-1), da = brainDanger(a[0], a[1]), db = brainDanger(b[0], b[1]); if (da !== db && Math.random() < (e.iq || 0.5)) side = da < db ? 1 : -1; } catch (err) {}   // learned: go round the side where bots don't die
+  const [fx, fz] = fp(side);
   let best = null, bd = 1e9; for (const s of buildSpawns()) { const d = Math.hypot(s.x - fx, s.z - fz); if (d < bd) { bd = d; best = s; } }
   return best && bd < 10 ? { x: best.x, z: best.z, y: best.y || 0 } : null;
 }
@@ -360,14 +367,20 @@ function botGoal(e, cands) {
   }
   if (keep) return e.goal;
   if (cands.length && Math.random() < 0.8) { const c = cands[0][0], p = tpos(c); return set(near(p, 5)); }
+  if (Math.random() < (e.iq || 0.5) * 0.6) { const h = brainHotSpot(); if (h) return set(near(h, 3), rnd(4, 7)); }   // learned: where players like to fight
   const sp = buildSpawns(); return set(sp[(Math.random() * sp.length) | 0], rnd(5, 9));
+}
+// a human's aim settles: the first shots of a fight miss more, running and gunning is less accurate
+function botSettle(e) {
+  const hum = e.hum || 0.4, on = M.t - (e.engageT || -9);
+  return clamp(0.5 + on * (0.5 + hum * 0.6), 0.5, 1) * (1 - 0.3 * (1 - hum * 0.6) * Math.min(1, (e.moveSp || 0) / 4));
 }
 function botShoot(e, t, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
   botsHear(e.group.position.x, e.group.position.z, e.team, 40, e);
   e.lastShotT = M.t; if (e.entry) e.entry.sh = (e.entry.sh || 0) + 1;
   if (t === 'P') { G.killer = e; if (!(G.spawnProt > 0)) enemyShoot(e, dist); return; }
-  const chance = clamp(e.acc - dist * 0.008 - (t.crouchK || 0) * 0.06, 0.06, 0.65), hit = Math.random() < chance;
+  const chance = clamp((e.acc - dist * 0.008 - (t.crouchK || 0) * 0.06) * botSettle(e), 0.05, 0.7), hit = Math.random() < chance;
   targetPoint(t, _bd); const to = _bd.clone(); if (!hit) to.add(new THREE.Vector3(rnd(-1.4, 1.4), rnd(-0.6, 0.9), rnd(-1.4, 1.4)));
   addTracer(from, to, 0.05, 0.02);
   e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
@@ -388,6 +401,7 @@ function updateBots(dt) {
     const busy = sndBotAct(e, dt);
     if (tp) face = Math.atan2(tp.x - ex, tp.z - ez);
     else if (e.lkp && M.t - e.lkpT < 5) face = Math.atan2(e.lkp.x - ex, e.lkp.z - ez);   // pre-aim where they expect you
+    else if (e.lookYaw !== null && e.lookYaw !== undefined) face = e.lookYaw;   // checking around
     // health comes back after 5 s without being hit (like the player)
     if (M.t - e.hitT > 5 && e.hp < e.maxHp) e.hp = Math.min(e.maxHp, e.hp + 25 * dt);
     // grenade: target hiding (seen recently, no line of sight now) or sitting still
@@ -413,6 +427,18 @@ function updateBots(dt) {
     } else { holding = true; e.strafeT -= dt; if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = rnd(1, 3); } mx = Math.cos(e.phase0 + M.t * 0.3) * 0.4 * e.strafe; mz = Math.sin(e.phase0 + M.t * 0.3) * 0.4; }
     const ml = Math.hypot(mx, mz), stun = e.stunT > 0 ? 0.25 : 1;
     let sp = ml > 0.01 ? e.speed * (holding ? 0.5 : 1) * stun * ((e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.4 : 1) : 0;
+    // human habits while not fighting: stop now and then to check a corner, look around instead of staring ahead
+    const hum = e.hum || 0.4;
+    if (!tp && !busy) {
+      e.pauseT = (e.pauseT || 0) - dt; e.nextPause = (e.nextPause === undefined ? M.t + rnd(5, 11) : e.nextPause);
+      if (M.t > e.nextPause && Math.random() < hum) { e.pauseT = rnd(0.5, 1.3); e.nextPause = M.t + rnd(6, 13); e.lookYaw = g.rotation.y + rnd(-1.6, 1.6); }
+      if (e.pauseT > 0) sp *= 0.15;
+      e.lookT = (e.lookT || 0) - dt;
+      if (e.lookT <= 0) { e.lookT = rnd(1.2, 3.2); e.lookYaw = Math.random() < 0.5 ? null : (ml > 0.01 ? Math.atan2(mx, mz) : g.rotation.y) + rnd(-1.1, 1.1) * hum; }
+    }
+    // in a fight: peek - pop up and down from a crouch while holding an angle
+    if (tp && holding) { e.peekT = (e.peekT || 0) - dt; if (e.peekT <= 0) { e.peekT = rnd(0.7, 1.8); if (Math.random() < hum * 0.7) e.crouchy = !e.crouchy; } }
+    e.moveSp = ml > 0.01 ? sp : 0;
     if (ml > 0.01) { g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt; if (!face) face = Math.atan2(mx, mz); }
     if (e.stunT > 0) { e.stunT -= dt; e.aim = 0; }
     if (e.spawnProt > 0) e.spawnProt -= dt;
@@ -424,13 +450,14 @@ function updateBots(dt) {
     if (face !== null) { let dy = face - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 8); }
     e.chk -= dt;
     if (e.chk <= 0) { e.chk = 0.8; if (Math.hypot(g.position.x - e.lastX, g.position.z - e.lastZ) < 0.5 && !holding && goal) { e.avoidT = 1.0; e.avoidDir = Math.random() < 0.5 ? 1 : -1; } e.lastX = g.position.x; e.lastZ = g.position.z; }
-    e.aim += ((e.tgt && dist < 60 ? 1 : 0) - e.aim) * Math.min(1, dt * e.aimRate * 0.6 * (e.tgt === 'P' ? (WEAPONS[G.cur] ? WEAPONS[G.cur].spot || 1 : 1) * (perk('ghost') ? 0.7 : 1) : 1));
+    if (e.reactT > 0) e.reactT -= dt;
+    else e.aim += ((e.tgt && dist < 60 ? 1 : 0) - e.aim) * Math.min(1, dt * e.aimRate * 0.6 * (e.tgt === 'P' ? (WEAPONS[G.cur] ? WEAPONS[G.cur].spot || 1 : 1) * (perk('ghost') ? 0.7 : 1) : 1));
     e.holding = holding && !!tp;
     if (!tp && e.mag < e.magSize * 0.35 && !(e.reloadT > 0) && M.t - e.seenT > 2) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; }   // reload while it's quiet
     animEnemy(e, dt, sp);
     if (e.tgt && e.aim > 0.6 && !(e.reloadT > 0) && !busy && !(e.stunT > 0)) {
       e.cd -= dt;
-      if (e.cd <= 0) { botShoot(e, e.tgt, dist); if (--e.mag <= 0) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; } e.shots--; if (e.shots <= 0) { e.shots = Math.floor(rnd(e.burstMin || 3, e.burstMax || 7)); e.cd = rnd(0.35, 0.9) + (e.gap > 0.3 ? e.gap : 0); } else e.cd = e.gap || 0.11; }
+      if (e.cd <= 0) { botShoot(e, e.tgt, dist); if (--e.mag <= 0) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; } e.shots--; if (e.shots <= 0) { e.shots = e.burstMin ? Math.floor(rnd(e.burstMin, e.burstMax || 7)) : dist > 25 ? Math.floor(rnd(2, 5)) : Math.floor(rnd(4, 9)); e.cd = rnd(0.35, 0.9) + (e.gap > 0.3 ? e.gap : 0); } else e.cd = e.gap || 0.11; }
     }
   }
 }
@@ -715,6 +742,7 @@ function endMatch(winner) {
   finishMatchStats(won);
   try { rpFinish(won); } catch (e) {}
   showResults(winner, won);
+  try { brainMatchEnd(); } catch (e) {}   // bots' learning is saved silently
 }
 function showResults(winner, won) {
   const title = won > 0 ? 'VICTORY' : won < 0 ? 'DEFEAT' : 'DRAW';

@@ -8,7 +8,7 @@ const LOAD_TIPS = ['Aim down sights for a perfect first shot - keep firing and t
   'Each scope zoom has its own sensitivity in Settings > Controls.', 'Hold E (X on a controller) to plant or defuse in Search & Destroy.'];
 function matchHold(pick) {
   G.loadT = LOAD_SECS; G.holdT = LOAD_SECS + (pick ? PICK_SECS : 0); G.pickShown = false;
-  mouseDown = false; mouseAds = false; showLoadScreen(); try { rpStart(); } catch (e) {}
+  mouseDown = false; mouseAds = false; showLoadScreen(); try { rpStart(); } catch (e) {} try { brainMatchStart(); } catch (e) {}
 }
 function showLoadScreen() {
   const el = $('loadscr'); if (!el) return;
