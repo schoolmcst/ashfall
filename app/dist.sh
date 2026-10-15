@@ -16,14 +16,12 @@ python3 -c "import json;v=json.load(open('$HERE/../release/version.json'));json.
 # ---- Windows installer
 W=$OUT/win; mkdir -p "$W"; unzip -q "$DL/electron-win32-x64.zip" -d "$W"
 mv "$W/electron.exe" "$W/DARKZONE.exe"; rm -f "$W/resources/default_app.asar"; cp -r "$APPD" "$W/resources/app"
-find "$W/locales" -name "*.pak" ! -name "en-US.pak" -delete   # English only: smaller download
 NSISDIR="$T/nsis" "$T/nsis/linux/makensis" -V2 -DVERSION="$AV" -DSRC="$W" -DBRAND="$HERE/brand" -DOUTFILE="$OUT/DARKZONE-Setup-Windows.exe" "$HERE/installer/darkzone.nsi"
 # ---- Mac (Apple Silicon and Intel): renamed app, our icon, ad-hoc signed so it opens with right-click > Open
 for arch in arm64 x64; do
   M=$OUT/mac-$arch; mkdir -p "$M"; (cd "$M" && unzip -q "$DL/electron-darwin-$arch.zip")
   mv "$M/Electron.app" "$M/DARKZONE.app"; R="$M/DARKZONE.app/Contents"
   rm -f "$R/Resources/default_app.asar"; cp -r "$APPD" "$R/Resources/app"; cp "$HERE/brand/darkzone.icns" "$R/Resources/electron.icns"
-  find "$R/Frameworks/Electron Framework.framework/Versions/A/Resources" -maxdepth 1 -name "*.lproj" ! -name "en.lproj" ! -name "Base.lproj" -exec rm -rf {} +   # English only: keeps each Mac zip under GitHub's 100 MB file limit
   python3 - "$R/Info.plist" <<'PY'
 import plistlib,sys
 p=sys.argv[1]; d=plistlib.load(open(p,'rb'))
@@ -33,6 +31,6 @@ PY
   "$T/rcodesign" sign "$M/DARKZONE.app" >/dev/null 2>&1 || echo "warning: signing failed for $arch"
   printf 'DARKZONE for Mac\n\n1. Double-click the zip to unpack it, then drag DARKZONE into your Applications folder.\n2. The first time only: right-click DARKZONE and choose Open, then click Open again.\n   (macOS asks because the game is not from the App Store.)\n   If macOS says it is damaged, open Terminal and run:  xattr -cr /Applications/DARKZONE.app\n3. After that, open it like any other app. It downloads new patches by itself.\n' > "$M/READ ME FIRST.txt"
   NAME=$([ $arch = arm64 ] && echo AppleSilicon || echo Intel)
-  (cd "$M" && zip -9 -qry "$OUT/DARKZONE-Mac-$NAME.zip" DARKZONE.app "READ ME FIRST.txt")
+  (cd "$M" && zip -qry "$OUT/DARKZONE-Mac-$NAME.zip" DARKZONE.app "READ ME FIRST.txt")
 done
 ls -la "$OUT"/*.exe "$OUT"/*.zip
