@@ -1,7 +1,23 @@
 #!/bin/bash
 # Builds the ASHFALL desktop apps from the game build + the Electron runtimes (no npm needed).
 # usage: pack.sh <game version> [app version]
+#   CHANNEL=test pack.sh ...  -> the separate "TEST APP" app (Windows): reads release-test/, own saves, bundles release-test/ashfall.html
 set -e
+if [ "$CHANNEL" = test ]; then
+  HERE=$(cd "$(dirname "$0")" && pwd); DL=${DL:-$HERE/dl}; OUT=${OUT:-$HERE/dist-test}; EV=33.2.1
+  GV=$(python3 -c "import json;print(json.load(open('$HERE/../release-test/version.json'))['version'])"); AV=${2:-1.1.0}
+  mkdir -p "$DL"; [ -f "$DL/electron-win32-x64.zip" ] || curl -sSL -o "$DL/electron-win32-x64.zip" "https://github.com/electron/electron/releases/download/v$EV/electron-v$EV-win32-x64.zip"
+  rm -rf "$OUT"; APPD=$OUT/appsrc; mkdir -p "$APPD/game"; cp "$HERE/main.js" "$HERE/preload.js" "$APPD/"
+  printf '{ "name": "darkzone-test", "productName": "TEST APP", "version": "%s", "main": "main.js", "channel": "test", "description": "DARKZONE test build" }\n' "$AV" > "$APPD/package.json"
+  sed 's#https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js#three.min.js#' "$HERE/../release-test/ashfall.html" > "$APPD/game/ashfall.html"
+  cp "$HERE/../tools/three.min.js" "$APPD/game/three.min.js"
+  python3 -c "import json;v=json.load(open('$HERE/../release-test/version.json'));json.dump({'version':v['version'],'notes':v.get('notes',[])},open('$APPD/game/version.json','w'))"
+  W="$OUT/TEST APP"; mkdir -p "$W"; unzip -q "$DL/electron-win32-x64.zip" -d "$W"
+  mv "$W/electron.exe" "$W/TEST APP.exe"; rm -f "$W/resources/default_app.asar"; cp -r "$APPD" "$W/resources/app"
+  printf 'TEST APP\r\n\r\nThis is the TEST version of DARKZONE. It gets every new patch BEFORE players do, so you can try it first.\r\nIt keeps its own saves, separate from the real game.\r\n\r\nUnzip this folder anywhere (for example Documents) and double-click "TEST APP.exe".\r\nIf Windows shows "Windows protected your PC", click More info, then Run anyway.\r\n' > "$W/READ ME FIRST.txt"
+  (cd "$OUT" && zip -qry DARKZONE-TEST-Windows.zip "TEST APP")
+  ls -la "$OUT"/*.zip; exit 0
+fi
 GV=${1:?game version}; AV=${2:-1.0.0}
 HERE=$(cd "$(dirname "$0")" && pwd); DL=${DL:-$HERE/dl}; OUT=${OUT:-$HERE/dist}; GAME=$HERE/../game/ashfall.html; THREE=$HERE/../tools/three.min.js; EV=33.2.1
 mkdir -p "$DL"; for a in win32-x64 darwin-x64 darwin-arm64; do [ -f "$DL/electron-$a.zip" ] || curl -sSL -o "$DL/electron-$a.zip" "https://github.com/electron/electron/releases/download/v$EV/electron-v$EV-$a.zip"; done
