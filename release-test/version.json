@@ -1,13 +1,12 @@
 {
- "version": "1.2.11",
+ "version": "1.2.12",
  "notes": [
-  "Graphics settings overhaul: YOUR HARDWARE panel (graphics card, display and refresh rate, limits) and a benchmark button",
-  "Render scale up to 200% (supersampling) for a much sharper image on strong graphics cards",
-  "Frame rate limit: DISPLAY, 30, 60, 90, 120, 144, 165 or 240; dynamic resolution now aims for your limit, so high refresh monitors stay smooth",
-  "Shadow quality OFF to EXTREME (8K shadow maps on cards that support it) plus a shadow distance slider",
-  "Texture filtering 1x to 16x, texture quality, effects quality, grass density, anti-aliasing and which graphics card to use",
-  "Presets set everything at once; change any detail and the preset shows CUSTOM. Your current settings carry over"
+  "LEVELS: level 1 to 100 from XP for kills, headshots, objectives, finishing and winning matches (online +25%). XP and level ups show on the results screen",
+  "Every level pays DZ, every 5 levels unlocks a gun STICKER, and level 100 unlocks the DARKZONE GOLD skin",
+  "New LOCKER tab: 39 camos and skins in 4 rarities plus 19 stickers, a 3D preview, and equip on one gun or all weapons",
+  "New REWARDS tab: daily DZ reward with a 7 day streak, the level reward track, and CHANCE BOXES (500 DZ, odds shown: Common 60%, Rare 27%, Epic 10%, Legendary 3%). Camos only come from boxes; duplicates pay DZ back",
+  "Everyone starts with 500 DZ for a first box, and past matches count toward a starting level (up to 25)"
  ],
- "sha256": "cbcff84ef164c2827455b6bf7a88f544560e74b880593016ac0da74905a6ef85",
+ "sha256": "a500315629257580c8c01b20f0ce8e1c3b224f2727e7e49f9caaa119b128937f",
  "minApp": "1.0.0"
 }

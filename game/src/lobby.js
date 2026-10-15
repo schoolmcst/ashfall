@@ -10,7 +10,9 @@ function modeRules(k, cfg) {
 function openLobby() { G.state = G.state === 'over' ? 'menu' : G.state; renderLobby(); showScreen('lobby'); }
 function playerCard(st) {
   const kd = kdS(st.kills, st.deaths), nick = (typeof NET !== 'undefined' && NET.nick) || 'PLAYER';
-  return `<div class="em">${nick.slice(0, 1)}</div><div><div class="cs">${nick}</div><span>K/D<b>${kd}</b></span> &nbsp; <span>WINS<b>${st.wins}</b></span> &nbsp; <span>MATCHES<b>${st.matches}</b></span></div>`;
+  const pg = typeof lvlInfo === 'function' ? lvlInfo(PROG.xp) : null;
+  if (!pg) return `<div class="em">${nick.slice(0, 1)}</div><div><div class="cs">${nick}</div><span>K/D<b>${kd}</b></span> &nbsp; <span>WINS<b>${st.wins}</b></span> &nbsp; <span>MATCHES<b>${st.matches}</b></span></div>`;
+  return `<span class="pg-badge" title="Level ${pg.l}">${pg.l}</span><div class="pg-cardm" title="K/D ${kd} · WINS ${st.wins} · MATCHES ${st.matches}"><div class="cs">${nick}</div><div class="pg-bar sm pg-cardbar"><s style="width:${pg.frac * 100}%"></s></div></div><span class="pg-dz">${dzIcon()}${PROG.dz.toLocaleString()}</span>`;
 }
 function renderMenuCard() {
   const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true));

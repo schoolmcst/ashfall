@@ -755,6 +755,7 @@ function showResults(winner, won) {
   $('resBoard').innerHTML = scoreboardHtml();
   const kd = MS.deaths ? (MS.kills / MS.deaths).toFixed(2) : MS.kills.toFixed(2), acc = MS.shots ? Math.round(MS.hits / MS.shots * 100) : 0;
   $('resMine').innerHTML = [['KILLS', MS.kills], ['DEATHS', MS.deaths], ['K/D', kd], ['ACCURACY', acc + '%'], ['HEADSHOTS', MS.heads], ['BEST STREAK', MS.bestStreak], ['LONGEST KILL', Math.round(MS.longest) + ' M'], ['SCORE', M.me ? M.me.score : G.score]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
+  try { const g = PROG.lastGain, box = $('resXP') || (() => { const d = document.createElement('div'); d.id = 'resXP'; const m = $('resMine'), side = document.createElement('div'); side.className = 'res-side'; m.parentNode.insertBefore(side, m); side.append(m, d); return d; })(); box.innerHTML = g && Date.now() - g.t < 8000 ? progResultsHtml(g) : ''; } catch (e) {}
   M.nextT = M.online ? INTERMISSION_ON : INTERMISSION_OFF;
   $('resAgain').textContent = M.online ? 'READY' : 'PLAY NOW'; $('resAgain').style.display = M.online ? 'none' : '';
   $('resLobby').textContent = M.online ? 'LEAVE MATCH' : 'LOBBY';

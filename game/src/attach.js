@@ -168,7 +168,7 @@ function applyLoadout(wi) {
   const def = w.def, u = gunObjs[wi] ? gunObjs[wi].userData : null, s = computeStats(def, null, w.factory), oldMag = w.magSize;
   Object.assign(w, { dmg: s.dmg, pellets: s.pellets, head: s.head, interval: s.interval, spread: s.spread, adsSpread: s.adsSpread, recoil: s.recoil, reload: s.reload, blast: s.blast,
     magSize: s.magSize, eff: s.eff, fallMin: s.fallMin, range: s.range, adsTime: s.adsTime, move: s.move, spot: s.spot, vsHeavy: s.vsHeavy, adsFov: s.adsFov, stealth: s.stealth, laser: s.laser, overlay: s.overlay, optic: s.optic });
-  if (u) { sightInfo(gunObjs[wi]); w.sightY = sightFor(def, u, s.optic); w.adsZ = u.adsZ; w.len = u.len + s.lenAdd; buildAttachmentVisuals(wi); }
+  if (u) { sightInfo(gunObjs[wi]); w.sightY = sightFor(def, u, s.optic); w.adsZ = u.adsZ; w.len = u.len + s.lenAdd; buildAttachmentVisuals(wi); try { applyCamo(gunObjs[wi], camoFor(def.id)); applySticker(gunObjs[wi], stickerFor(def.id)); } catch (e) {} }
   if (w.magSize !== oldMag) { const extra = Math.max(0, w.ammo - w.magSize); w.ammo = Math.min(w.ammo, w.magSize); w.reserve = Math.min(w.reserveMax, w.reserve + extra); }
 }
 function initAttachments() { WEAPONS.forEach((w, i) => applyLoadout(i)); WEAPONS.forEach(w => { w.ammo = w.magSize; }); }
@@ -582,10 +582,12 @@ function loadoutTab(d) { selectClass(ACTIVE_CLASS + d); }
 
 /* ---------- 3D preview of the selected gun (rendered off-screen by the main renderer, copied to a 2D canvas) */
 const PV = { want: null, key: '', obj: null, scene: null, cam: null, rt: null, buf: null, img: null, t: 0, acc: 0 };
-function previewKey(w) { return w.def.id + '|' + JSON.stringify(ATTS[w.def.id] || {}) + '|' + (w.ovr ? w.ovr.id : ''); }
+const pvCamo = w => (w.camo !== undefined ? w.camo : (typeof camoFor === 'function' ? camoFor(w.def.id) : null));
+const pvStk = w => (w.stk !== undefined ? w.stk : (typeof stickerFor === 'function' ? stickerFor(w.def.id) : null));
+function previewKey(w) { return w.def.id + '|' + JSON.stringify(ATTS[w.def.id] || {}) + '|' + (w.ovr ? w.ovr.id : '') + '|' + pvCamo(w) + '|' + pvStk(w); }
 function updatePreview(dt) {
-  if (curScreen !== 'loadout' || !PV.want) return;
-  const cv = $('loPrev'); if (!cv || !cv.getContext) return;
+  if ((curScreen !== 'loadout' && curScreen !== 'locker') || !PV.want) return;
+  const cv = $(curScreen === 'locker' ? 'lkPrev' : 'loPrev'); if (!cv || !cv.getContext) return;
   PV.acc += dt; if (PV.acc < 1 / 30) return; PV.acc = 0; PV.t += 1 / 30;
   const W = 480, H = 200;
   if (!PV.scene) {
@@ -595,13 +597,15 @@ function updatePreview(dt) {
     const r = new THREE.DirectionalLight(0x9fc0ff, 1.6); r.position.set(-2, 0.5, -1); PV.scene.add(r);
     PV.cam = new THREE.PerspectiveCamera(28, W / H, 0.01, 10);
     PV.rt = new THREE.WebGLRenderTarget(W, H); PV.rt.texture.encoding = THREE.sRGBEncoding;
-    PV.buf = new Uint8Array(W * H * 4); cv.width = W; cv.height = H; PV.ctx = cv.getContext('2d'); PV.img = PV.ctx.createImageData(W, H);
+    PV.buf = new Uint8Array(W * H * 4);
   }
+  if (PV.cv !== cv) { PV.cv = cv; cv.width = W; cv.height = H; PV.ctx = cv.getContext('2d'); PV.img = PV.ctx.createImageData(W, H); }
   const key = previewKey(PV.want);
   if (key !== PV.key) {
     PV.key = key; if (PV.obj) PV.scene.remove(PV.obj);
     const def = PV.want.def, g = buildGunModel(def, true), st = computeStats(def, PV.want.ovr);
     attachVisuals(g, def, false, g.userData.len + st.lenAdd, PV.want.ovr);
+    try { applyCamo(g, pvCamo(PV.want)); applySticker(g, pvStk(PV.want)); } catch (e) {}
     g.traverse(o => { if (o.name && /^hand/.test(o.name)) o.visible = false; });
     if (g.userData.flash) g.userData.flash.visible = false;
     const holder = new THREE.Group(); holder.add(g); PV.scene.add(holder); PV.obj = holder;
