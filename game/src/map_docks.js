@@ -86,6 +86,12 @@ function buildDocks() {
 // the south half (s = 1) and its mirror (s = -1)
 function halfDocks(s) {
   const Z = z => z * s, N = s > 0 ? 'n' : 's', S = s > 0 ? 's' : 'n';
+  const house = o => building(Object.assign({}, o, { z: Z(o.z), doors: (o.doors || []).map(([sd, at]) => s > 0 ? [sd, at] : sd === 'n' ? ['s', at] : sd === 's' ? ['n', at] : [sd, o.d - at]) }));
+  // ---- close-quarters buildings: harbour office on the quay, customs shed by the crane, dock office in the truck yard
+  house({ x: -31, z: 35.5, w: 9, d: 8, floors: 2, fh: 3.2, key: 'brick', floor: 'concrete', roof: 'flat', doors: [['e', 4], ['n', 3], ['w', 4]] });
+  house({ x: -30.6, z: 10, w: 7, d: 6, fh: 3.2, key: 'concrete', floor: 'concrete', roof: 'flat', inner: false, doors: [['e', 3], ['n', 3.5], ['s', 3.5]] });
+  container(-17, Z(30), false, 0, 'paintBlue'); container(33, Z(36.5), true, 0, 'paintOrange'); container(33, Z(36.5), true, 2.6, 'paintWhite');
+  house({ x: 22, z: 35, w: 9, d: 8, floors: 2, fh: 3.2, key: 'brick', floor: 'concrete', roof: 'flat', stairSide: 'w', doors: [['w', 4], ['n', 6.5], ['e', 3]] });
   // gatehouse spawn: booth, barrier arms, trailers
   blk(-6, Z(39.5), 3, 2.6, 2.8, 'plaster', { walk: true });
   slab(-6, Z(39.5), 3.6, 3.2, 3.0, 'metal', 0.2);
@@ -101,9 +107,9 @@ function halfDocks(s) {
   rail(-34.2, Z(15.8), -27.8, Z(15.8), 3.25, { h: 0.9 }); rail(-34.2, Z(15.8), -34.2, Z(22.2), 3.25, { h: 0.9 });
   stairs(-26.6, Z(22.9), 'w', 1.3, 0, 3.25, 'concrete');
   // cargo on the quay
-  crate(-31, Z(8), 1.2); crate(-29.8, Z(8.4), 1.0); crate(-31, Z(8), 1.0, 1.2, 0.9);
+  crate(-25, Z(6), 1.2); crate(-23.8, Z(6.4), 1.0); crate(-25, Z(6), 1.0, 1.2, 0.9);
   crate(-25.5, Z(11), 1.4, 0, 1.4);
-  for (const [x, z] of [[-35.5, 30], [-34.4, 31.2], [-24.5, 33]]) crate(x, Z(z), 1.2);
+  for (const [x, z] of [[-36, 29.6], [-24.5, 33]]) crate(x, Z(z), 1.2);
   container(-33.2, Z(28), true, 0, 'paintOrange');
   forklift(-26.5, Z(26.5), 0, false);
   for (const z of [7, 13]) { batchAdd('wood', new THREE.CylinderGeometry(1.0, 1.0, 1.4, 16), mat4(-36, 1.0, Z(z), Math.PI / 2, 0, 0)); boxes.push(mkBox(-36, Z(z), 2.0, 1.4, 2.0, { walk: false })); rayAdd(new THREE.BoxGeometry(2, 2, 1.4), mat4(-36, 1, Z(z))); }   // cable reels
@@ -139,10 +145,10 @@ function dressDocks(s) {
   floodlight(-37.3, Z(21)); floodlight(15.2, Z(34)); floodlight(-17, Z(41.5));
   for (let z = 2; z < 42; z += 6) B('rubber', 0.35, 0.9, 1.4, -39.25, -0.35, Z(z));                       // quay fenders
   for (const [x, z] of [[-36.6, 6], [-36.6, 25]]) beam('dark', -38.2, 0.5, Z(z - 1), -40, -0.9, Z(z - 1.5), 0.05, 0.05, false);   // mooring lines
-  pallet(13.4, Z(20.4), 0, 4); pallet(18.5, Z(38.5), 0, 3, false); pallet(-20, Z(34.5), 0, 2); pallet(-35, Z(34.5), 0, 5, false);
+  pallet(13.4, Z(20.4), 0, 4); pallet(29, Z(38.5), 0, 3, false); pallet(-20, Z(34.5), 0, 2); pallet(-37, Z(26), 0, 5, false);
   palletLoad(14.4, Z(5), 1.2, 1.0, 'cloth2'); palletLoad(14.6, Z(11.5), 1.2, 1.2, 'cloth1');
   palletLoad(29, Z(4), 0, 1.3); palletLoad(31, Z(14.5), 0, 0.9, 'cloth2');
-  tirePile(-36.6, Z(23)); tirePile(27, Z(39)); gasBottles(42.6, Z(20.5)); gasBottles(-34.6, Z(13.6));
+  tirePile(-36.6, Z(23)); tirePile(30.5, Z(40)); gasBottles(42.6, Z(20.5)); gasBottles(-34.6, Z(13.6));
   for (const [x, z] of [[-20.2, 15.4], [-22.6, 15.6], [-19.4, 13]]) cone(x, Z(z));
   for (const [x, z] of [[2.6, 23], [3.6, 24.4], [-16, 2.5]]) cone(x, Z(z));
   lampPost(-6, Z(24.5), 0, 6.5, 0, -s); lampPost(11.6, Z(27), 0, 6.5, -1, 0); lampPost(-24, Z(39.5), 0, 6.5, 0, -s);
@@ -179,5 +185,5 @@ defineMap({
   },
   menu: { x: -3, z: 0, r: 9, y: 1.9 },
   navPts: [{ x: -29, z: 3.5, y: 7.5 }, { x: 38, z: 0, y: 3.6 }, { x: 9.2, z: 9, y: 2.6 }, { x: -8, z: -6.5, y: 2.6 }, { x: -31, z: 19, y: 3.25 }, { x: 38, z: -15, y: 3.6 }],
-  views: [[0, 1.7, 33, 0, 1.4, 0], [-30, 1.7, 30, -28, 3, -4], [-29, 9.2, 3.5, 0, 0, 14], [24, 1.7, 15, 36, 2.5, -8], [37, 5.3, 10, 20, 1.5, -4], [-12, 4.3, 7, 10, 1, -14]],
+  views: [[0, 1.7, 33, 0, 1.4, 0], [-33.5, 4.9, 37, -24, 2, 30], [-28.5, 1.7, 9, -33, 1.6, 11], [24.5, 4.9, 37.5, 10, 1.5, 30], [20, 1.7, 33, 25, 1.6, 37], [-12, 4.3, 7, 10, 1, -14]],
 });

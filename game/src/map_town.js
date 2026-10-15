@@ -41,6 +41,8 @@ function buildTown() {
 }
 function halfTown(s) {
   const Z = z => z * s, N = s > 0 ? 'n' : 's';
+  // an enterable building written for the north half; mirrored for the south half (z, door sides)
+  const house = o => building(Object.assign({}, o, { z: Z(o.z), doors: (o.doors || []).map(([sd, at]) => s > 0 ? [sd, at] : sd === 'n' ? ['s', at] : sd === 's' ? ['n', at] : [sd, o.d - at]) }));
   const fill = (x0, x1, z0, z1, h) => { blk((x0 + x1) / 2, Z((z0 + z1) / 2), x1 - x0, z1 - z0, h, 'stone', { walk: true }); floorQuad((x0 + x1) / 2, Z((z0 + z1) / 2), x1 - x0, z1 - z0, h, h >= 3 && x1 <= 16 ? 'tileFloor' : 'concrete', h >= 3 ? 2.5 : 3); };
   // terraces
   fill(-12, 16, 1.5, 14, 3.0); fill(-22, -12, 1.5, 14, 3.0);
@@ -65,11 +67,10 @@ function halfTown(s) {
   wall(-22, Z(24), -14, Z(24), 3.4, 'plasterRose', { y: y1, holes: [{ at: 4, w: 1.2, b: 1.0, h: 1.0 }] });
   slab(-18, Z(20.5), 8.4, 7.4, y1 + 3.7, 'terracotta', 0.3);
   blk(-19.5, Z(21), 1.6, 0.8, 0.8, 'wood', { y: y1, walk: false });
-  blk(10, Z(19.5), 8, 7, 5, 'plasterOchre', { y: y1, walk: false });           // H2 (solid)
-  blk(-3, Z(20.5), 6, 5, 4, 'plaster', { y: y1, walk: false });                // H3 (solid)
-  houseTrim(10, Z(19.5), 8, 7, y1 + 5); houseTrim(-3, Z(20.5), 6, 5, y1 + 4);
+  house({ x: 10, z: 19.5, w: 8, d: 7, y: y1, fh: 3.6, key: 'plasterOchre', floor: 'tileFloor', roof: 'tile', doors: [['w', 3.5], ['s', 4], ['n', 2]] });   // H2: shop
+  house({ x: -3, z: 20.5, w: 6, d: 5, y: y1, fh: 3.4, key: 'plaster', floor: 'wood', roof: 'tile', inner: false, doors: [['e', 2.5], ['w', 2.5]] });                 // H3: cottage
   // ---- houses on the piazza (3 m)
-  blk(-18.5, Z(10), 7, 8, 5, 'plaster', { y: 3, walk: false }); houseTrim(-18.5, Z(10), 7, 8, 8);   // H4 (solid)
+  house({ x: -18.5, z: 10, w: 7, d: 8, y: 3, floors: 2, fh: 3.0, key: 'plaster', floor: 'wood', roof: 'tile', stairSide: 'w', doors: [['e', 4], ['s', 3.5]] });   // H4: two storeys over the piazza
   // H5: two storeys, enterable, stair inside, upper windows over the piazza and the gardens
   const y5 = 3, zA = Z(3), zB = Z(13);
   wall(9, zA, 9, zB, 6.4, 'plasterOchre', { y: y5, holes: [{ at: 5, w: 1.4, b: 0, h: 2.3 }, { at: 2, w: 1.2, b: 4.2, h: 1.2 }, { at: 5.5, w: 1.2, b: 4.2, h: 1.2 }, { at: 8.5, w: 1.2, b: 4.2, h: 1.2 }] });
@@ -97,7 +98,11 @@ function halfTown(s) {
   for (const [x0, x1, h, key] of [[-42, -26, 7, 'plasterRose'], [-26, -10, 10, 'plaster'], [-10, 8, 8, 'plasterOchre'], [8, 26, 11, 'plaster'], [26, 44, 7, 'plasterRose']]) {
     blk((x0 + x1) / 2, Z(43.4), x1 - x0, 1.6, h, key, { walk: false }); houseTrim((x0 + x1) / 2, Z(43.4), x1 - x0, 1.6, h, s);
   }
-  carWreck(-30, Z(31), false); carWreck(-36, Z(18), false);
+  carWreck(-34.5, Z(31), false);
+  // houses on the lower square and along the lower road (close fights at the spawns' edges)
+  house({ x: -25, z: 34, w: 8, d: 7, fh: 3.6, key: 'plasterRose', floor: 'tileFloor', roof: 'tile', doors: [['e', 3.5], ['w', 2.5], ['s', 4]] });             // bakery
+  house({ x: 28.5, z: 32.5, w: 8, d: 8, floors: 2, fh: 3.2, key: 'plaster', floor: 'wood', roof: 'tile', stairSide: 'w', doors: [['w', 4], ['n', 4], ['s', 6]] });   // farmhouse
+  house({ x: -33, z: 17, w: 8, d: 9, floors: 2, fh: 3.2, key: 'plasterOchre', floor: 'wood', roof: 'tile', doors: [['n', 4], ['s', 4], ['e', 2], ['w', 6.5]] });    // road house
   // ---- the lower road: olives, low walls, a parked cart
   for (const z of [10, 25, 36]) tree(-40, Z(z), false, 0.75);
   blk(-30, Z(26), 3, 0.6, 0.9, 'stone', { walk: false }); blk(-26.5, Z(11), 0.6, 3.4, 0.9, 'stone', { walk: false });
@@ -105,12 +110,12 @@ function halfTown(s) {
   // ---- east gardens: low walls, olives, pergola, loggia with its roof
   blk(26, Z(8), 6, 0.5, 0.8, 'stone', { y: 3, walk: false }); blk(20, Z(5), 0.5, 4, 0.8, 'stone', { y: 3, walk: false });
   blk(29, Z(17), 0.5, 5, 0.8, 'stone', { y: 1.5, walk: false }); blk(38, Z(15.5), 5, 0.5, 0.8, 'stone', { y: 1.5, walk: false });
-  for (const [x, z, y] of [[24, 10, 3], [34, 9.5, 3], [25.5, 19.5, 1.5], [40.5, 19, 1.5], [21, 33, 0], [33, 30, 0], [40, 37, 0]]) treeAt(x, Z(z), y, 0.7);
+  for (const [x, z, y] of [[24, 10, 3], [34, 9.5, 3], [25.5, 19.5, 1.5], [40.5, 19, 1.5], [21, 33, 0], [35.5, 25.5, 0], [41, 38.5, 0]]) treeAt(x, Z(z), y, 0.7);
   for (let x = 30; x <= 38; x += 4) for (const dz of [0, 4]) batchAdd('wood', new THREE.BoxGeometry(0.2, 2.6, 0.2), mat4(x, 1.5 + 1.3, Z(14.3 + dz)), false);
   for (const dz of [0, 4]) batchAdd('wood', new THREE.BoxGeometry(8.6, 0.16, 0.16), mat4(34, 4.1, Z(14.3 + dz)), false);
   for (let x = 30; x <= 38; x += 1) batchAdd('wood', new THREE.BoxGeometry(0.1, 0.12, 4.4), mat4(x, 4.25, Z(16.3)), false);
-  blk(37, Z(31), 6, 4.5, 3.2, 'stone', { walk: false }); slab(37, Z(31), 6.6, 5, 3.4, 'terracotta', 0.2, { walk: false });   // garden shed
-  blk(24, Z(28), 0.5, 7, 0.9, 'stone', { walk: false }); blk(29, Z(37), 8, 0.5, 0.9, 'stone', { walk: false });
+  house({ x: 37, z: 31, w: 6, d: 5, fh: 3.0, key: 'stone', floor: 'concrete', roof: 'tile', inner: false, doors: [['w', 2.5], ['n', 3]] });   // garden shed (enterable)
+  blk(23, Z(26), 0.5, 5, 0.9, 'stone', { walk: false });
   // loggia: columns, roof terrace reached by the outside stair
   for (let z = 0; z <= 6; z += 3) blk(38.4, Z(z), 0.5, 0.5, 3.2, 'stone', { y: 3, walk: false });
   slab(40.2, Z(3), 4.4, 6, 6.6, 'stone', 0.4);
@@ -168,8 +173,8 @@ function dressTown(s) {
   for (const [x, z, y] of [[21, 9.5, 3], [27.5, 10.5, 3], [34, 13.5, 1.5], [41, 13.5, 1.5]]) { CYL('terracotta', 0.4, 0.3, 0.7, 12, x, y + 0.35, Z(z)); batchAdd('leaf', new THREE.IcosahedronGeometry(0.5, 0), mat4(x, y + 0.95, Z(z)), false); PZ(x, y, Z(z), 0.8, 0.7, 0.8); }
   blk(33, Z(10.8), 2.2, 0.6, 0.5, 'stone', { y: 3, walk: false }); cafeTable(35.5, Z(19), 1.5);
   // roofs: chimneys, a water tank, an aerial
-  blk(12, Z(18), 0.7, 0.7, 1.2, 'plaster', { y: 6.5, walk: false, noRay: true }); blk(-2, Z(19.5), 0.6, 0.6, 1, 'plaster', { y: 5.5, walk: false, noRay: true });
-  CYL('paintWhite', 0.6, 0.6, 1.2, 12, -19.5, 9.2, Z(9)); beam('dark', 13, 9.7, Z(10), 13, 11.5, Z(10), 0.04, 0.04, false);
+  blk(12, Z(18), 0.7, 0.7, 1.4, 'plaster', { y: 5.4, walk: false, noRay: true }); blk(-2, Z(19.5), 0.6, 0.6, 1, 'plaster', { y: 5.2, walk: false, noRay: true });
+  beam('dark', 13, 9.7, Z(10), 13, 11.5, Z(10), 0.04, 0.04, false);
   // a few loose stones on the lower road and in the tunnel
   rubbleScatter(-33, Z(20), 0, 1.5, 5); rubbleScatter(-20, Z(0.6), 0, 1, 3);
 }
@@ -187,5 +192,5 @@ defineMap({
   },
   menu: { x: 0, z: 6, r: 7.5, y: 1.9, by: 3 },
   navPts: [{ x: 40, z: 3, y: 6.6 }, { x: 12, z: -8, y: 6.2 }, { x: -18, z: 20.5, y: 1.5 }, { x: -19, z: 0, y: 0 }, { x: 12, z: 8, y: 3 }],
-  views: [[0, 1.7, 36, 0, 2, 10], [-4, 3.2, 24.5, -4, 4, 0], [-8, 4.7, 8, 14, 4, -6], [-38, 1.7, 30, -30, 2, -6], [26, 4.7, 14, 34, 6, -4], [40, 8.3, -5, 0, 2, 10]],
+  views: [[0, 1.7, 36, 0, 2, 10], [-35.5, 4.9, 19, -24, 2, 14], [-27.5, 1.7, 35.5, -21, 1.5, 32], [-21, 7.7, 9, 2, 4, 8], [26.5, 1.7, 30, 31, 1.6, 35], [-39.5, 1.7, 32, -36, 1.8, 10]],
 });

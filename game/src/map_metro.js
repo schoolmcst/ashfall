@@ -28,6 +28,7 @@ function buildMetro() {
 }
 function halfMetro(s) {
   const Z = z => z * s, N = s > 0 ? 'n' : 's', S = s > 0 ? 's' : 'n';
+  const house = o => building(Object.assign({}, o, { z: Z(o.z), doors: (o.doors || []).map(([sd, at]) => s > 0 ? [sd, at] : sd === 'n' ? ['s', at] : sd === 's' ? ['n', at] : [sd, o.d - at]) }));
   const fill = (x0, x1, z0, z1, h, key = 'concrete') => blk((x0 + x1) / 2, Z((z0 + z1) / 2), x1 - x0, z1 - z0, h, key, { walk: true });
   // solid ground under the street everywhere the station is not
   fill(-44, -14, 0, 44, MSY); fill(14, 44, 0, 44, MSY); fill(-14, 14, 20, 44, MSY);
@@ -72,10 +73,14 @@ function halfMetro(s) {
   blk(-27, Z(8.5), 2.6, 11, 2.9, 'paintOrange', { y: MSY + 0.25, walk: false });
   batchAdd('dark', new THREE.BoxGeometry(2.66, 0.9, 10), mat4(-27, MSY + 2.1, Z(8.5)), false);
   for (const dz of [-3.5, 3.5]) for (const dx of [-1.3, 1.3]) batchAdd('tire', new THREE.CylinderGeometry(0.5, 0.5, 0.3, 14), mat4(-27 + dx, MSY + 0.5, Z(8.5 + dz), 0, 0, Math.PI / 2));
-  carWreck(-31.5, Z(18), false, null, MSY); carWreck(-23, Z(27), false, null, MSY); carWreck(-33, Z(31), true, null, MSY);
+  carWreck(-31.5, Z(18), false, null, MSY); carWreck(-23, Z(27), false, null, MSY); carWreck(-30.5, Z(31.5), true, null, MSY);
   jersey(-29, Z(2.5), true, MSY); jersey(-24.5, Z(14.5), true, MSY); jersey(-35.5, Z(12), false, MSY + 0.15);
   sandbags(-20, Z(9), 4, false, 3, MSY + 0.15);
-  for (const z of [6, 20, 34]) lampPost(-37.2, Z(z), MSY + 0.15, 6.5, 1, 0);
+  for (const z of [13, 26]) lampPost(-34.6, Z(z), MSY + 0.15, 6.5, 1, 0);
+  // shops along the avenue: a pharmacy and a pawn shop on the far side, a two-storey bank on the square's side
+  house({ x: -38.5, z: 6, w: 7, d: 9, y: MSY + 0.15, floors: 2, fh: 3.3, key: 'brick', floor: 'tileFloor', roof: 'flat', doors: [['e', 3], ['n', 3.5], ['s', 3.5]] });
+  house({ x: -38.5, z: 32, w: 7, d: 9, y: MSY + 0.15, fh: 3.6, key: 'concrete', floor: 'tileFloor', roof: 'flat', doors: [['e', 4.5], ['n', 3.5], ['s', 3.5]] });
+  house({ x: -17.5, z: 20.5, w: 7, d: 9, y: MSY + 0.15, floors: 2, fh: 3.3, key: 'plaster', floor: 'tileFloor', roof: 'flat', stairSide: 'w', doors: [['w', 4.5], ['e', 3], ['s', 3.5]] });
   // corner café on the far side of the avenue (enterable)
   const cy = MSY + 0.15;
   wall(-42, Z(16), -42, Z(25), 3.4, 'plasterOchre', { y: cy });
@@ -157,15 +162,15 @@ function dressMetro(s) {
   for (const x of [-8.5, 8.5]) { B('dark', 2.4, 0.5, 0.08, x, 3.45, Z(7.5), 0, 0, 0, false); B('signal', 2.2, 0.34, 0.1, x, 3.45, Z(7.5), 0, 0, 0, false); for (const o of [-1, 1]) B('dark', 0.03, 0.4, 0.03, x + o, 3.85, Z(7.5), 0, 0, 0, false); }
   paperScatter(-1.5, Z(12), 0, 1.5, 6); puddle(-1.6, Z(5), 0, 0.9); rubbleScatter(-2, Z(17), 0, 0.8, 3);
   // the square: bollards on the avenue edge, benches, bins
-  for (const z of [5, 8, 11, 14, 17]) { CYL('dark', 0.11, 0.13, 0.9, 10, -14.35, y + 0.45, Z(z)); PZ(-14.35, y, Z(z), 0.26, 0.9, 0.26, { noRay: true }); }
+  for (const z of [5, 8, 11, 14]) { CYL('dark', 0.11, 0.13, 0.9, 10, -14.35, y + 0.45, Z(z)); PZ(-14.35, y, Z(z), 0.26, 0.9, 0.26, { noRay: true }); }
   bench(-6.5, Z(12), y, false); bench(6.5, Z(12), y, false); trashBin(-3.9, Z(10), y, 'dark'); trashBin(3.9, Z(19), y, 'dark');
   puddle(1.5, Z(15.5), y, 1.3);
   // the avenue: crossing, lamps, hydrants, bins, dumpster, traffic lights, cones by the bus, manholes, puddles
   stripes(-28, Z(23.8), y, false, 14);
   lampPost(-20.6, Z(13), sw, 6.5, -1, 0); lampPost(-20.6, Z(33), sw, 6.5, -1, 0);
-  hydrant(-21.3, Z(18), sw); hydrant(-36.2, Z(28.5), sw);
-  trashBin(-36.5, Z(8.5), sw, 'paintGreen'); trashBin(-20.8, Z(29.5), sw, 'paintGreen');
-  dumpster(-41.6, Z(29.5), sw, false, 'paintGreen'); blk(-20.7, Z(21), 0.5, 0.5, 1.05, 'paintBlue', { y: sw, walk: false });
+  hydrant(-21.6, Z(27.6), sw); hydrant(-33.9, Z(37.8), sw);
+  trashBin(-34.4, Z(11.4), sw, 'paintGreen'); trashBin(-20.8, Z(29.5), sw, 'paintGreen');
+  dumpster(-41.4, Z(39), sw, false, 'paintGreen'); blk(-21.6, Z(14.6), 0.5, 0.5, 1.05, 'paintBlue', { y: sw, walk: false });
   trafficLight(-21.4, Z(25.4), sw, s > 0 ? 's' : 'n'); trafficLight(-34.6, Z(25.4), sw, s > 0 ? 's' : 'n');
   for (const [x, z] of [[-29.4, 3.6], [-29.8, 5.2], [-24.6, 14.2], [-25.2, 15.4]]) cone(x, Z(z), y);
   for (const [x, z] of [[-28, 16], [-25, 33], [10, 31]]) manhole(x, Z(z), y);
@@ -197,5 +202,5 @@ defineMap({
   },
   menu: { x: 0, z: 30, r: 8, y: 1.9, by: MSY },
   navPts: [{ x: 30, z: 6, y: 10.8 }, { x: 1.6, z: 3, y: 1 }, { x: -1.5, z: -10, y: 0 }, { x: -38.5, z: 20.5, y: MSY + 0.15 }, { x: 30, z: -10, y: 7.6 }],
-  views: [[0, MSY + 1.7, 33, 0, MSY, 5], [-9, 2.7, 3, 6, 1.5, -10], [-1.5, 1.7, 14, 2, 1.5, -10], [-36, MSY + 1.9, 30, -26, MSY + 1, -4], [22, L2V + 1.7, 15, 34, L2V, -6], [38, 10.8 + 1.7, -11, 0, MSY, 6]],
+  views: [[0, MSY + 1.7, 33, 0, MSY, 5], [-40, MSY + 5.2, 4, -28, MSY + 1, 10], [-37, MSY + 1.9, 34, -40, MSY + 1.5, 29], [-19, MSY + 5.2, 18, -6, MSY + 1, 10], [-1.5, 1.7, 14, 2, 1.5, -10], [22, L2V + 1.7, 15, 34, L2V, -6]],
 });

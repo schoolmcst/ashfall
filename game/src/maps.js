@@ -126,6 +126,77 @@ function rail(x0, z0, x1, z1, y = 0, o = {}) {
   for (let i = 0; i <= n; i++) { const f = i / n - 0.5; parts.push({ g: new THREE.BoxGeometry(0.05, hh, 0.05), m: mat4(cx + (alongX ? f * L : 0), y + hh / 2, cz + (alongX ? 0 : f * L)) }); }
   batchAdd(o.key || 'dark', mergeGeos(parts), null, false);
 }
+// ---- enterable building: outer walls with doors and open windows, rooms, an inside stair to every upper floor,
+// floors, a roof (flat with a parapet, or tiled) and some furniture. Close-quarters spaces for the maps.
+//   o: { x, z, w, d, y, floors (1-3), fh (floor height), key (wall material), floor (floor material), roof: 'flat'|'tile'|'none',
+//        doors: [[side 'n'|'s'|'e'|'w', metres from the side's west/north end]], inner (room wall), win (0-1 window chance),
+//        stairSide: 'e'|'w', furnish, ruined (broken wall tops, no roof) }
+function building(o) {
+  // seeded from the position so every player builds exactly the same building (colliders must match online)
+  let seed = Math.abs(Math.round(o.x * 73 + o.z * 151 + (o.y || 0) * 17)) % 233280 + 1;
+  const R = () => (seed = (seed * 9301 + 49297) % 233280) / 233280, RR = (a, b) => a + R() * (b - a);
+  const x = o.x, z = o.z, w = o.w, d = o.d, y = o.y || 0, fl = Math.max(1, o.floors || 1), fh = o.fh || 3.4, H = fl * fh, key = o.key || 'plaster', t = 0.35;
+  const x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2, win = o.win === undefined ? 0.8 : o.win;
+  const doors = o.doors || [['s', w / 2], ['n', w / 2]];
+  const run = 0.42, nStep = Math.ceil(fh / 0.27), SL = nStep * run, SW = 1.15;
+  const sideSpec = { n: [x0, z0, x1, z0, w], s: [x0, z1, x1, z1, w], w: [x0, z0, x0, z1, d], e: [x1, z0, x1, z1, d] };
+  // outer walls, one storey at a time (so windows stack cleanly above each other and above the doors)
+  for (const side of ['n', 's', 'w', 'e']) {
+    const [ax, az, bx, bz, L] = sideSpec[side], myDoors = doors.filter(q => q[0] === side).map(q => q[1]);
+    for (let f = 0; f < fl; f++) {
+      const holes = f === 0 ? myDoors.map(at => ({ at, w: 1.4, b: 0, h: 2.35 })) : [];
+      for (let at = 1.7; at < L - 1.2; at += 3.1) {
+        if (f === 0 && myDoors.some(dd => Math.abs(dd - at) < 1.6)) continue;
+        if (R() > win * (f === 0 ? 0.8 : 1)) continue;
+        holes.push({ at, w: 1.15, b: 1.05, h: 1.15 });
+      }
+      const top = f === fl - 1 && o.ruined ? fh - R() * 1.2 : fh;
+      wall(ax, az, bx, bz, top, key, { y: y + f * fh, t, holes, glass: false });
+    }
+  }
+  if (o.ruined) for (let i = 0; i < 4; i++) { const a = R() * w, b = R() < 0.5; batchAdd(key, scaledBox(RR(0.6, 1.4), RR(0.3, 0.9), RR(0.6, 1.2), 2), mat4(x0 + a, y + H + 0.2, b ? z0 : z1, 0, R(), R() * 0.4), false); }
+  // floors and stairs (flights alternate sides so they never sit under each other's opening)
+  const fkey = o.floor || 'wood';
+  floorQuad(x, z, w - 2 * t, d - 2 * t, y, fkey === 'wood' ? 'wood' : fkey, 2.5);
+  let side0 = o.stairSide || 'e';
+  for (let f = 1; f < fl; f++) {
+    const sideE = (f % 2 === 1) === (side0 === 'e'), sx = sideE ? x1 - t / 2 - SW / 2 - 0.05 : x0 + t / 2 + SW / 2 + 0.05;
+    // leave room at the foot of the flight to walk onto it head-on (bots only climb stairs straight on)
+    const inner = d - t, gap = Math.max(0.6, Math.min(1.4, inner - SL - 1.0));
+    const goN = sideE, sz = goN ? z1 - t / 2 - gap : z0 + t / 2 + gap;   // east flights climb north, west flights climb south
+    const yA = y + (f - 1) * fh, yB = y + f * fh;
+    stairs(sx, sz, goN ? 'n' : 's', SW, yA, yB, 'wood', { run, rails: false });
+    // the floor above, with an opening over this flight
+    const hx0 = sx - SW / 2 - 0.05, hx1 = sx + SW / 2 + 0.05, hz0 = goN ? sz - SL - 0.1 : sz - 0.2, hz1 = goN ? sz + 0.2 : sz + SL + 0.1;
+    const ix0 = x0 + t / 2, ix1 = x1 - t / 2, iz0 = z0 + t / 2, iz1 = z1 - t / 2;
+    const slabR = (a, b, c, e) => { if (b - a > 0.1 && e - c > 0.1) slab((a + b) / 2, (c + e) / 2, b - a, e - c, yB, fkey, 0.25); };
+    slabR(ix0, hx0, iz0, iz1); slabR(hx1, ix1, iz0, iz1); slabR(hx0, hx1, iz0, hz0); slabR(hx0, hx1, hz1, iz1);
+    rail(sideE ? hx0 : hx1, Math.max(iz0, hz0), sideE ? hx0 : hx1, Math.min(iz1, hz1) - (goN ? 1.3 : 0), yB, { h: 1.0 });
+    floorQuad(x, z, w - 2 * t, d - 2 * t, yB + 0.005, fkey === 'wood' ? 'wood' : fkey, 2.5);
+  }
+  // a room wall on the ground floor with a doorway (leaves the stair lane free)
+  if (o.inner !== false && w > 7 && d > 7) {
+    const zz = z + RR(-0.8, 0.8), sE = (o.stairSide || 'e') === 'e', xa = fl > 1 && !sE ? x0 + t / 2 + SW + 0.3 : x0 + t / 2, xb = fl > 1 && sE ? x1 - t / 2 - SW - 0.3 : x1 - t / 2;
+    wall(xa, zz, xb, zz, fh, key, { y, t: 0.25, holes: [{ at: (xb - xa) * RR(0.3, 0.7), w: 1.3, b: 0, h: 2.3 }], glass: false });
+  }
+  // roof
+  if (!o.ruined && o.roof !== 'none') {
+    if (o.roof === 'tile') { slab(x, z, w + 0.6, d + 0.6, y + H + 0.3, 'terracotta', 0.3); batchAdd('terracotta', new THREE.ConeGeometry(Math.max(w, d) * 0.62, 1.6, 4), mat4(x, y + H + 1.1, z, 0, Math.PI / 4, 0, w / Math.max(w, d), 1, d / Math.max(w, d)), true); }
+    else { slab(x, z, w, d, y + H + 0.25, 'concrete', 0.25); for (const [ax, az, bx, bz] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) wall(ax, az, bx, bz, 0.8, key, { y: y + H + 0.25, t: 0.3 }); }
+  }
+  // furniture: tables, shelves, crates against the walls (away from doors and the stair)
+  if (o.furnish !== false) for (let f = 0; f < fl; f++) {
+    const fx0 = fl > 1 && (o.stairSide || 'e') === 'w' ? x1 - 1.0 : x0 + 1.0;   // keep the stair lane clear
+    const fy = y + f * fh, spots = [[fx0, z0 + 1.0], [fx0, z1 - 1.0], [x + RR(-1, 1), z + RR(-1.5, 1.5)]];
+    for (const [fx, fz] of spots) {
+      if (R() < 0.35) continue;
+      const r = R();
+      if (r < 0.4) { blk(fx, fz, 1.3, 0.8, 0.78, 'wood', { y: fy, walk: false }); }
+      else if (r < 0.7) crate(fx, fz, 0.9, fy);
+      else blk(fx, fz, 0.5, 1.6, 1.8, 'wood', { y: fy, walk: false });
+    }
+  }
+}
 // shipping container (6 x 2.6 x 2.4); `alongX` lays it east-west; colour key paintX
 function container(x, z, alongX, y = 0, col = 'paintRed', o = {}) {
   const L = o.len || 6, W = 2.4, H = 2.6, w = alongX ? L : W, d = alongX ? W : L;
@@ -266,7 +337,7 @@ function rotationMap(n) { const pool = MAP_ORDER.filter(id => !MAPS[id].hidden);
 
 /* ---------- the original map */
 defineMap({
-  id: 'ruins', name: 'ASH RUINS', place: 'Bombed-out town square', desc: 'Open ruins around a crossroads. Five shells of buildings, a lot of open ground: long fights, flanks everywhere.',
+  id: 'ruins', name: 'ASH RUINS', place: 'Bombed-out village crossroads', desc: 'A ruined village around a crossroads: houses you can fight through room by room, two-storey firing positions, broken walls and burnt-out shells on every flank.',
   build: () => buildWorld(), env: {},
   grass: { avoid: (x, z) => Math.abs(z - 2) < 3.4 || (Math.abs(x) < 3.4 && z > -24 && z < 44) },
   layout: {
@@ -276,4 +347,5 @@ defineMap({
     sites: [{ x: -22, z: -24, n: 'A' }, { x: 24, z: -30, n: 'B' }],
   },
   menu: { x: 0, z: 0, r: 12.5, y: 2.1 },
+  views: [[0, 1.7, 33, 0, 1.4, 0], [-10, 5.1, -9, 4, 1.5, -2], [13, 1.7, -11, 9, 1.4, -16], [-14, 1.7, 16, -10, 1.5, 12], [-33, 1.7, -8, -37, 1.5, -12], [30, 5.1, 34, 14, 1.5, 22]],
 });

@@ -153,6 +153,32 @@ function groundAt(x, z, feetY) {
 
 /* ------------------------------------------------------------------ the map */
 const fires = [];
+// new buildings and walls on the Ruins map (x, z = centre; see building() in maps.js)
+const RUIN_NB = [
+  { house: 1, x: -12, z: -12, w: 9, d: 8, floors: 2, key: 'brick', floor: 'wood', doors: [['s', 4.5], ['e', 4], ['n', 2]], roof: 'flat' },
+  { house: 1, x: 12, z: -13, w: 10, d: 8, floors: 1, key: 'concrete', floor: 'concrete', doors: [['n', 5], ['w', 4], ['s', 7.5]], roof: 'flat' },
+  { house: 1, x: 13, z: 14, w: 9, d: 9, floors: 2, key: 'brick', doors: [['n', 4.5], ['w', 6], ['s', 2]], roof: 'flat', stairSide: 'w' },
+  { house: 1, x: -13, z: 14, w: 10, d: 8, floors: 1, key: 'concrete', floor: 'concrete', doors: [['n', 3], ['e', 4], ['s', 6.5]], roof: 'flat' },
+  { house: 1, x: -35, z: -10, w: 8, d: 8, ruined: 1, key: 'brick', floor: 'concrete', doors: [['e', 4], ['n', 2.5], ['s', 5]] },
+  { house: 1, x: -36, z: 12, w: 7, d: 8, ruined: 1, key: 'concrete', floor: 'concrete', doors: [['e', 3], ['s', 3.5], ['n', 3.5]] },
+  { house: 1, x: 37, z: -17, w: 8, d: 9, floors: 2, key: 'concrete', doors: [['w', 4.5], ['n', 4], ['s', 2]], roof: 'flat', stairSide: 'w' },
+  { house: 1, x: 37, z: 8, w: 7, d: 8, ruined: 1, key: 'brick', floor: 'concrete', doors: [['w', 4], ['s', 3.5], ['n', 3.5]] },
+  { house: 1, x: -30, z: 34, w: 8, d: 8.5, floors: 2, key: 'brick', doors: [['e', 3.5], ['s', 2], ['w', 3.5]], roof: 'flat', stairSide: 'w' },
+  { house: 1, x: 30, z: 34, w: 8, d: 8.5, floors: 2, key: 'concrete', doors: [['w', 3.5], ['s', 6], ['e', 3.5]], roof: 'flat' },
+  { house: 1, x: -34.5, z: -35, w: 8, d: 7, ruined: 1, key: 'concrete', floor: 'concrete', doors: [['e', 3.5], ['n', 4]] },
+  { house: 1, x: 34.5, z: -35, w: 8, d: 7, ruined: 1, key: 'brick', floor: 'concrete', doors: [['w', 3.5], ['n', 4]] },
+];
+// broken walls [x0, z0, x1, z1, height, material, doorway at]
+const RUIN_WALLS = [
+  [-26, 8, -18, 8, 2.2, 'brick', 4], [20, -4.5, 29, -4.5, 1.7, 'concrete', 0], [6, 27, 14, 27, 2.4, 'brick', 2.5], [-14, -27, -6, -27, 1.8, 'concrete', 0],
+  [21, 28, 21, 37, 2.2, 'concrete', 5], [-21, -30, -21, -38, 2.2, 'brick', 4], [-6, 30, -6, 38, 1.6, 'brick', 0], [6, -32, 6, -40, 1.6, 'concrete', 0],
+  [-30, -1.8, -22, -1.8, 1.4, 'brick', 0], [22, 7.8, 30, 7.8, 1.4, 'brick', 0],
+];
+function ruinBlocked(x, z, r) {
+  for (const b of RUIN_NB) if (x > b.x - b.w / 2 - r && x < b.x + b.w / 2 + r && z > b.z - b.d / 2 - r && z < b.z + b.d / 2 + r) return true;
+  for (const [x0, z0, x1, z1] of RUIN_WALLS) if (x > Math.min(x0, x1) - r - 0.3 && x < Math.max(x0, x1) + r + 0.3 && z > Math.min(z0, z1) - r - 0.3 && z < Math.max(z0, z1) + r + 0.3) return true;
+  return false;
+}
 function buildWorld() {
   // ground + roads
   const ground = new THREE.Mesh(new THREE.PlaneGeometry(ARENA * 2 + 60, ARENA * 2 + 60), MAT.ground);
@@ -178,7 +204,7 @@ function buildWorld() {
   }
 
   // ruined buildings
-  const building = (cx, cz, w, d, h, key) => {
+  const ruinHouse = (cx, cz, w, d, h, key) => {
     const t = 0.6, gap = 3.2;
     addBox(cx, cz + d / 2, w, t, h, key);
     addBox(cx - w / 2, cz, t, d, h, key);
@@ -211,11 +237,15 @@ function buildWorld() {
     // rubble spilling out of the doorways
     rubble(cx, cz - d / 2 - 1.6, 6); rubble(cx + w / 2 + 1.6, cz, 6);
   };
-  building(-24, -22, 14, 11, 4.2, 'brick');
-  building(24, -26, 12, 12, 4.2, 'concrete');
-  building(-26, 20, 12, 10, 4.2, 'concrete');
-  building(26, 18, 14, 10, 4.2, 'brick');
-  building(0, -30, 10, 8, 4.2, 'brick');
+  ruinHouse(-24, -22, 14, 11, 4.2, 'brick');
+  ruinHouse(24, -26, 12, 12, 4.2, 'concrete');
+  ruinHouse(-26, 20, 12, 10, 4.2, 'concrete');
+  ruinHouse(26, 18, 14, 10, 4.2, 'brick');
+  ruinHouse(0, -30, 10, 8, 4.2, 'brick');
+  // ---- close-quarters village: enterable houses (two-storey ones have stairs and upper windows), ruined shells and
+  // broken walls that cut the open fields into lanes. Props that would sit inside them are skipped (blocked()).
+  for (const b of RUIN_NB) if (b.house) building(b);
+  for (const [x0, z0, x1, z1, h, key, door] of RUIN_WALLS) wall(x0, z0, x1, z1, h, key, { t: 0.45, holes: door ? [{ at: door, w: 1.4, b: 0, h: 2.1 }] : [], glass: false });
 
   // cover: crates and steel containers
   const cover = [
@@ -225,7 +255,7 @@ function buildWorld() {
     [-34, 2, 2, 2, 2], [34, -2, 2, 2, 2], [-2, 34, 3, 2, 1.2], [3, -38, 3, 2, 1.2], [20, 30, 2, 2, 1.0],
     [-20, 34, 2, 2, 1.0], [32, 34, 6, 1, 1.4], [-34, -34, 6, 1, 1.4], [38, -10, 1, 8, 1.4], [-38, 12, 1, 8, 1.4],
   ];
-  cover.forEach(([x, z, w, d, h]) => {
+  cover.filter(([x, z, w, d]) => !ruinBlocked(x, z, Math.max(w, d) / 2 + 0.6)).forEach(([x, z, w, d, h]) => {
     const metal = h > 1.5 || w * d > 6;
     if (hasModel('props', metal ? 'container' : 'crate')) { proxyCollider(x, z, w, d, h); placeProp(metal ? 'container' : 'crate', mat4(x, 0, z, 0, 0, 0, w, h, d)); return; }
     const m = addBox(x, z, w, d, h, metal ? 'metal' : 'wood');
@@ -242,6 +272,7 @@ function buildWorld() {
 
   // barrels (some burning), sandbags, barriers, wrecks
   const barrel = (x, z, col = 'red') => {
+    if (ruinBlocked(x, z, 0.8)) return;
     if (col === 'red' && addExplosiveBarrel(x, z)) return;
     if (placeProp('barrel', mat4(x, 0, z, 0, Math.random() * TAU, 0), { paint: 'barrel_' + col, steel: 'metal' })) return proxyCollider(x, z, 0.62, 0.62, 0.9);
     const m = deco(new THREE.CylinderGeometry(0.3, 0.3, 0.9, 14), MAT.barrel[col], x, 0.45, z);
@@ -250,12 +281,14 @@ function buildWorld() {
   };
   [[-11, -2, 'red'], [-11.7, -1.2, 'blue'], [12, 8, 'green'], [11, 8.9, 'red'], [-4, 28, 'blue'], [21, -8, 'red'], [-22, 4, 'green'], [-21.2, 4.8, 'red'], [30, 4, 'blue'], [4, -20, 'red']].forEach(b => barrel(b[0], b[1], b[2]));
   const fire = (x, z) => {
+    if (ruinBlocked(x, z, 0.8)) return;
     const light = new THREE.PointLight(C(0xff8a3a), 1.2, 11, 2); light.position.set(x, 1.5, z); scene.add(light);
     fires.push({ x, z, light, t: Math.random() * 10, sprites: [] });
   };
   fire(-10.3, -2); fire(12.8, 8.2);
 
   const sandWall = (cx, cz, len, alongX, rows = 3) => {
+    if (ruinBlocked(cx, cz, len / 2 + 0.5)) return;
     if (hasModel('props', 'sandbag')) {
       const n = Math.floor(len / 0.62);
       for (let r = 0; r < rows; r++) for (let i = 0; i < n - (r % 2); i++) {
@@ -275,6 +308,7 @@ function buildWorld() {
   sandWall(-3, 8, 4.4, true); sandWall(5, 20, 4.4, true, 2); sandWall(-18, -2, 4, false); sandWall(18, 2.5, 3.7, false, 2); sandWall(10, -22, 5, true); sandWall(-8, -26, 4, true, 2);
 
   const barrier = (x, z, alongX) => {
+    if (ruinBlocked(x, z, 2)) return;
     if (placeProp('barrier', mat4(x, 0, z, 0, alongX ? 0 : Math.PI / 2, 0))) { proxyCollider(x, z, alongX ? 3 : 0.7, alongX ? 0.7 : 3, 0.95); return; }
     const parts = [{ g: new THREE.BoxGeometry(alongX ? 3 : 0.7, 0.45, alongX ? 0.7 : 3), m: mat4(x, 0.225, z) }, { g: new THREE.BoxGeometry(alongX ? 3 : 0.4, 0.5, alongX ? 0.4 : 3), m: mat4(x, 0.7, z) }];
     const m = deco(mergeGeos(parts), MAT.concrete, 0, 0, 0); addCollider(x, z, alongX ? 3 : 0.7, alongX ? 0.7 : 3, 0.95, m);
@@ -282,6 +316,7 @@ function buildWorld() {
   [[-5, 5, true], [-2, 5, true], [4, 5.5, true], [7, 5.5, true], [13, -3, false], [13, -6, false], [-14, 12, false], [-14, 15, false]].forEach(b => barrier(b[0], b[1], b[2]));
 
   const wreck = (x, z, yaw, sx = 4.4, sz = 1.9) => {
+    if (ruinBlocked(x, z, 2.6)) return;
     const alongX = Math.abs(Math.sin(yaw)) < 0.7, W = alongX ? sx : sz, D = alongX ? sz : sx;
     if (placeProp('car', mat4(x, 0, z, 0, alongX ? 0 : Math.PI / 2, 0))) { proxyCollider(x, z, W, D, 1.5); return; }
     const g = new THREE.Group(); g.position.set(x, 0, z); g.rotation.y = alongX ? 0 : Math.PI / 2;
@@ -298,7 +333,7 @@ function buildWorld() {
 
   // trees: dead and living
   const trees = [[-40, -14, 1], [40, 6, 0], [-30, -40, 0], [30, -42, 1], [14, 38, 0], [-12, 40, 1], [41, 34, 0], [-41, -30, 1], [8, -22, 1], [-6, 28, 0], [-40, 40, 0], [36, -36, 1], [-24, 8, 1], [23, 6, 0]];
-  trees.forEach(([x, z, dead]) => {
+  trees.filter(([x, z]) => !ruinBlocked(x, z, 1.2)).forEach(([x, z, dead]) => {
     if (hasModel('props', 'treeA')) { const h = 4.5 + Math.random() * 2.5, s = h / 5.6; placeProp(dead ? 'treeD' : 'treeA', mat4(x, 0, z, 0, Math.random() * TAU, 0, s * (0.85 + Math.random() * 0.3), s, s * (0.85 + Math.random() * 0.3))); proxyCollider(x, z, 0.6, 0.6, h); return; }
     const h = 4.5 + Math.random() * 2.5, trunk = [{ g: new THREE.CylinderGeometry(0.1, 0.26, h, 8), m: mat4(0, h / 2, 0) }];
     const leaves = [];
@@ -314,6 +349,7 @@ function buildWorld() {
   // rocks and scattered debris
   for (let i = 0; i < 46; i++) {
     const x = rnd(-ARENA + 2, ARENA - 2), z = rnd(-ARENA + 2, ARENA - 2), s = 0.15 + Math.random() * (i < 8 ? 0.8 : 0.3);
+    if (ruinBlocked(x, z, 0.5)) continue;
     const rm = mat4(x, s * 0.25, z, (Math.random() - 0.5) * 0.6, Math.random() * TAU, (Math.random() - 0.5) * 0.6, s * 2 * (1 + Math.random() * 0.5), s * 2 * (0.6 + Math.random() * 0.4), s * 2 * (1 + Math.random() * 0.5));
     if (!placeProp('rock' + (i % 3), rm)) batchAdd('rock', new THREE.DodecahedronGeometry(s, 0), mat4(x, s * 0.4, z, Math.random() * 3, Math.random() * 3, Math.random() * 3, 1 + Math.random() * 0.5, 0.6 + Math.random() * 0.4, 1 + Math.random() * 0.5));
   }
