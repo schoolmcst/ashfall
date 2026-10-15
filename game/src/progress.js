@@ -11,6 +11,7 @@ const RAR = [
   { name: 'RARE', col: '#4aa3ff', odds: 27, refund: 150 },
   { name: 'EPIC', col: '#b46cff', odds: 10, refund: 400 },
   { name: 'LEGENDARY', col: '#f2b84b', odds: 3, refund: 1000 },
+  { name: 'SECRET', col: '#ff2a4a', odds: 0.5, refund: 5000 },
 ];
 // kind: camo = pattern, skin = finish. lvl: unlocked at that level, else found in chance boxes
 const COSM = [
@@ -18,23 +19,23 @@ const COSM = [
   { id: 'woodland', name: 'WOODLAND', kind: 'camo', r: 0, g: { t: 'blobs', c: [0x4a5a32, 0x2f3b22, 0x6b6a3e, 0x1d211a] } },
   { id: 'desert', name: 'DESERT', kind: 'camo', r: 0, g: { t: 'blobs', c: [0xc2a878, 0x9c8158, 0xd8c49a, 0x6e5a3e] } },
   { id: 'arctic', name: 'ARCTIC', kind: 'camo', r: 0, g: { t: 'blobs', c: [0xdfe5ea, 0xb7c0c8, 0xf5f7f9, 0x8d98a3] } },
-  { id: 'olive', name: 'OLIVE DRAB', kind: 'skin', r: 0, g: { t: 'solid', c: [0x4b5233] }, m: { rough: 0.75, metal: 0.05 } },
+  { id: 'olive', name: 'OLIVE DRAB', kind: 'skin', r: 0, g: { t: 'solid', c: [0x4b5233], fx: 'grain' }, m: { rough: 0.75, metal: 0.05 } },
   { id: 'dragon', name: 'DRAGON SCALE', kind: 'camo', r: 2, g: { t: 'hex', c: [0x5a0f0c, 0x8e1a12, 0xc23a18, 0xf2b84b], line: 0xf2b84b }, m: { rough: 0.35, metal: 0.6 } },
   { id: 'urban', name: 'URBAN', kind: 'camo', r: 0, g: { t: 'blobs', c: [0x7d8288, 0x5a5f66, 0xa4a9ad, 0x34383d] } },
-  { id: 'blackops', name: 'BLACK OPS', kind: 'skin', r: 0, g: { t: 'solid', c: [0x16171a] }, m: { rough: 0.8, metal: 0.1 } },
+  { id: 'blackops', name: 'BLACK OPS', kind: 'skin', r: 0, g: { t: 'solid', c: [0x16171a], fx: 'grain' }, m: { rough: 0.8, metal: 0.1 } },
   { id: 'tiger', name: 'TIGER STRIPE', kind: 'camo', r: 1, g: { t: 'tiger', c: [0x5d6a3c, 0x1c2216, 0x8a8250] } },
   { id: 'hexolive', name: 'HEX OLIVE', kind: 'camo', r: 1, g: { t: 'hex', c: [0x3e4a2c, 0x4f5c37, 0x5f6b42, 0x2b3320], line: 0x1d2416 } },
-  { id: 'rosegold', name: 'ROSE GOLD', kind: 'skin', r: 3, g: { t: 'solid', c: [0xd8957a] }, m: { rough: 0.18, metal: 1 } },
-  { id: 'cobalt', name: 'COBALT', kind: 'skin', r: 1, g: { t: 'solid', c: [0x1f4fa8] }, m: { rough: 0.3, metal: 0.75 } },
+  { id: 'rosegold', name: 'ROSE GOLD', kind: 'skin', r: 3, g: { t: 'solid', c: [0xd8957a], fx: 'engrave' }, m: { rough: 0.18, metal: 1 } },
+  { id: 'cobalt', name: 'COBALT', kind: 'skin', r: 1, g: { t: 'solid', c: [0x1f4fa8], fx: 'brushed' }, m: { rough: 0.3, metal: 0.75 } },
   { id: 'redtiger', name: 'RED TIGER', kind: 'camo', r: 1, g: { t: 'tiger', c: [0x8e1d16, 0x1a0b09, 0xc24a2a] } },
   { id: 'digurban', name: 'DIGITAL URBAN', kind: 'camo', r: 1, g: { t: 'digital', c: [0x80858b, 0x55595f, 0xb0b4b8, 0x2d3034] } },
   { id: 'carbon', name: 'CARBON FIBER', kind: 'skin', r: 2, g: { t: 'carbon', c: [0x15171a, 0x3a3f46] }, m: { rough: 0.25, metal: 0.3 } },
   { id: 'inferno', name: 'INFERNO', kind: 'skin', r: 3, g: { t: 'marble', c: [0x120605, 0x2a0d08], glow: 0xff5a14, vein: 0.16 }, m: { rough: 0.45, metal: 0.2, anim: 'scroll', emis: 2.2 } },
   { id: 'damascus', name: 'DAMASCUS STEEL', kind: 'skin', r: 2, g: { t: 'damascus', c: [0x3a3d42, 0x9aa1a8] }, m: { rough: 0.22, metal: 1 } },
   { id: 'icemarble', name: 'ICE MARBLE', kind: 'skin', r: 2, g: { t: 'marble', c: [0xdfeef6, 0x7fb8d8], vein: 0.06 }, m: { rough: 0.15, metal: 0.1 } },
-  { id: 'chrome', name: 'CHROME', kind: 'skin', r: 2, g: { t: 'solid', c: [0xd6dbe0] }, m: { rough: 0.06, metal: 1 } },
-  { id: 'obsidian', name: 'OBSIDIAN', kind: 'skin', r: 2, g: { t: 'solid', c: [0x0b0b0e] }, m: { rough: 0.08, metal: 0.5 } },
-  { id: 'dzgold', name: 'DARKZONE GOLD', kind: 'skin', r: 3, lvl: 100, g: { t: 'solid', c: [0xe9b949] }, m: { rough: 0.14, metal: 1 } },
+  { id: 'chrome', name: 'CHROME', kind: 'skin', r: 2, g: { t: 'solid', c: [0xd6dbe0], fx: 'bands' }, m: { rough: 0.06, metal: 1 } },
+  { id: 'obsidian', name: 'OBSIDIAN', kind: 'skin', r: 2, g: { t: 'solid', c: [0x0b0b0e], fx: 'bands' }, m: { rough: 0.08, metal: 0.5 } },
+  { id: 'dzgold', name: 'DARKZONE GOLD', kind: 'skin', r: 3, lvl: 100, g: { t: 'solid', c: [0xe9b949], fx: 'engrave' }, m: { rough: 0.14, metal: 1 } },
   { id: 'jungle', name: 'JUNGLE', kind: 'camo', r: 0, g: { t: 'blobs', c: [0x2c4a26, 0x1b2e17, 0x46663a, 0x0f1a0d] } },
   { id: 'night', name: 'NIGHT OPS', kind: 'camo', r: 0, g: { t: 'blobs', c: [0x2a3346, 0x1a2130, 0x3e4a63, 0x0e121b] } },
   { id: 'dwoods', name: 'DIGITAL WOODS', kind: 'camo', r: 0, g: { t: 'digital', c: [0x4c5a34, 0x323d24, 0x6f7448, 0x1f241a] } },
@@ -44,18 +45,70 @@ const COSM = [
   { id: 'digarctic', name: 'DIGITAL ARCTIC', kind: 'camo', r: 1, g: { t: 'digital', c: [0xe3e8ec, 0xaeb8c1, 0xffffff, 0x7d8a96] } },
   { id: 'splred', name: 'RED SPLINTER', kind: 'camo', r: 1, g: { t: 'splinter', c: [0x7a1c18, 0x4a100d, 0xa63326, 0x220807] } },
   { id: 'hexgrey', name: 'HEX STEEL', kind: 'camo', r: 1, g: { t: 'hex', c: [0x50555b, 0x62676e, 0x757a80, 0x3c4045], line: 0x22252a }, m: { rough: 0.4, metal: 0.55 } },
-  { id: 'crimson', name: 'CRIMSON', kind: 'skin', r: 1, g: { t: 'solid', c: [0x9e1b1f] }, m: { rough: 0.3, metal: 0.7 } },
+  { id: 'crimson', name: 'CRIMSON', kind: 'skin', r: 1, g: { t: 'solid', c: [0x9e1b1f], fx: 'brushed' }, m: { rough: 0.3, metal: 0.7 } },
   { id: 'leopard', name: 'LEOPARD', kind: 'camo', r: 1, g: { t: 'leopard', c: [0xc59a5a, 0x7a5228, 0x1e140b] } },
   { id: 'marble', name: 'WHITE MARBLE', kind: 'skin', r: 1, g: { t: 'marble', c: [0xe8e6e1, 0x5d5a55], vein: 0.05 }, m: { rough: 0.2, metal: 0.05 } },
   { id: 'sakura', name: 'SAKURA', kind: 'camo', r: 1, g: { t: 'blobs', c: [0xf0c9d4, 0xd98aa3, 0xfbe6ec, 0x9c4d66] } },
   { id: 'hexneon', name: 'NEON HEX', kind: 'camo', r: 2, g: { t: 'hex', c: [0x0d1117, 0x111821, 0x16202b, 0x0a0d12], line: 0x2ee6ff, glowLine: true }, m: { rough: 0.35, metal: 0.4, anim: 'pulse', emis: 2.4 } },
   { id: 'toxic', name: 'TOXIC', kind: 'camo', r: 2, g: { t: 'splinter', c: [0x1c2318, 0x2a3324, 0x0f130d, 0x7dff3a], glowIdx: 3 }, m: { rough: 0.5, metal: 0.1, anim: 'pulse', emis: 1.8 } },
   { id: 'magma', name: 'MAGMA', kind: 'skin', r: 2, g: { t: 'marble', c: [0x1a1412, 0x2c211c], glow: 0xff7a1a, vein: 0.09 }, m: { rough: 0.6, metal: 0.1, emis: 1.8 } },
-  { id: 'diamond', name: 'DIAMOND', kind: 'skin', r: 3, g: { t: 'stars', c: [0xcfe6f2, 0xffffff], dense: 0.03, light: true }, m: { rough: 0.05, metal: 0.6, anim: 'twinkle', emis: 1.6 } },
+  { id: 'diamond', name: 'DIAMOND', kind: 'skin', r: 3, g: { t: 'facets', c: [0x1d4f7a, 0xe6f6ff] }, m: { rough: 0.06, metal: 0.25, anim: 'twinkle', emis: 1.5 } },
   { id: 'plasma', name: 'PLASMA', kind: 'skin', r: 3, g: { t: 'plasma', c: [0x1a0638, 0x7a2cff, 0xff3cf0] }, m: { rough: 0.3, metal: 0.2, anim: 'scroll', emis: 2.0 } },
   { id: 'circuit', name: 'CIRCUIT', kind: 'skin', r: 3, g: { t: 'circuit', c: [0x0a1410, 0x39ff9c] }, m: { rough: 0.35, metal: 0.4, anim: 'scroll', emis: 2.6 } },
   { id: 'void', name: 'VOID', kind: 'skin', r: 3, g: { t: 'stars', c: [0x05040b, 0xffffff], dense: 0.012, nebula: 0x3a1c7a }, m: { rough: 0.25, metal: 0.3, anim: 'twinkle', emis: 2.0 } },
 ];
+// ---- 100 more camos (chance boxes): [name, pattern, rarity, colours, extra pattern options, material options]
+const CAMO_PACK = [
+  ['FOREST FLECK', 'fleck', 0, [0x5b6b3a, 0x3b4a26, 0x7a7a48, 0x22281a]], ['DESERT FLECK', 'fleck', 0, [0xc4a97c, 0x9e8259, 0xdcc79c, 0x6d593c]], ['SNOW FLECK', 'fleck', 0, [0xe6ebef, 0xbcc5cd, 0x96a2ad, 0x6f7b86]],
+  ['MULTI TERRAIN', 'multicam', 0, [0x8a7d5c, 0x6b6a45, 0x4e5636, 0xb7a77f]], ['ALPINE MULTI', 'multicam', 0, [0xdfe4e8, 0xb8c1c9, 0x8e9aa5, 0xffffff]], ['BLACK MULTI', 'multicam', 0, [0x2b2d30, 0x1a1b1d, 0x3c3f43, 0x0f1011]],
+  ['DRY GRASS', 'brush', 0, [0xb9a46e, 0x8f7c4c, 0xd2c08a, 0x6a5a36]], ['RIVER REED', 'brush', 0, [0x5d6b45, 0x3f4a2e, 0x7d8a5c, 0x2a3220]], ['ASH', 'brush', 0, [0x6e6e6e, 0x4c4c4c, 0x8f8f8f, 0x2e2e2e]],
+  ['MUD SPLAT', 'splat', 0, [0x6b5a42, 0x4a3d2c, 0x8a7558, 0x2d251a]], ['CONCRETE', 'splat', 0, [0x9a9a96, 0x7c7c78, 0xb5b5b1, 0x5a5a57]], ['GREY STRIPE', 'stripes', 0, [0x5a5f66, 0x3b3f45]],
+  ['SAND STRIPE', 'stripes', 0, [0xc2a878, 0xa38b5f]], ['OLIVE CHECK', 'check', 0, [0x4b5233, 0x3a4027]], ['DUSK WAVES', 'waves', 0, [0x3a3f52, 0x4e5470, 0x2a2e3d]],
+  ['TAN WAVES', 'waves', 0, [0xc8b48a, 0xb09a6c, 0x8f7c55]], ['TOPO GREEN', 'topo', 0, [0x55623f, 0x2f3824, 0x6b784f]], ['TOPO SAND', 'topo', 0, [0xc9b38a, 0x7a6544, 0xb39c70]],
+  ['CRACKED EARTH', 'cracked', 0, [0x9c7b55, 0x4a3826, 0xb6956c]], ['SLATE TRI', 'tri', 0, [0x50565e, 0x5f666f, 0x434950, 0x6c737c]], ['FIELD TRI', 'tri', 0, [0x4c5a34, 0x5d6b42, 0x3d4a2a, 0x6b7650]],
+  ['STONE SCALES', 'scales', 0, [0x77797c, 0x5a5c5f, 0x3a3c3e]], ['DARK FOREST', 'blobs', 0, [0x223321, 0x152214, 0x34482f, 0x0b130b]], ['AUTUMN', 'blobs', 0, [0x8a5a2b, 0x5e3a1a, 0xb07a3a, 0x3a2410]],
+  ['SWAMP', 'blobs', 0, [0x4a4f2e, 0x2f3320, 0x666b3f, 0x1d2014]], ['COASTAL', 'blobs', 0, [0x7f8f96, 0x5d6c73, 0xa6b4ba, 0x3c484e]], ['MARSH', 'digital', 0, [0x5a5f3c, 0x3c4029, 0x787d52, 0x252818]],
+  ['RUST DIGITAL', 'digital', 0, [0x8a4b2a, 0x5e321b, 0xa86a43, 0x3a1d0e]], ['NAVY DIGITAL', 'digital', 0, [0x2a3a55, 0x1b273b, 0x3e5172, 0x0f1622]], ['SAND SPLINTER', 'splinter', 0, [0xb8a27a, 0x8f7a55, 0xd0bd96, 0x655537]],
+  ['GREEN SPLINTER', 'splinter', 0, [0x4f5d37, 0x37422a, 0x6a774b, 0x232b1a]], ['TAN DOTS', 'dots', 0, [0xbca57a, 0x8f7a55]], ['GREY ZEBRA', 'zebra', 0, [0x9a9ea3, 0x3a3d41]],
+  ['GUNMETAL', 'solid', 0, [0x4a4f55], { fx: 'brushed' }, { rough: 0.35, metal: 0.8 }], ['DARK EARTH', 'solid', 0, [0x7d6a4f], { fx: 'grain' }, { rough: 0.8, metal: 0.05 }],
+  ['TIGER ZEBRA', 'zebra', 1, [0xd9a441, 0x1c140a]], ['WHITE TIGER', 'zebra', 1, [0xeeeeee, 0x202020]], ['ICE MULTI', 'multicam', 1, [0xcfe8f5, 0x9cc8e0, 0x6aa3c4, 0xffffff]],
+  ['RED FLECK', 'fleck', 1, [0x8e2a22, 0x5e1a14, 0xb5453a, 0x2e0b08]], ['BLUE FLECK', 'fleck', 1, [0x2c4f7c, 0x1c3555, 0x4a74a8, 0x0e1a2c]], ['PURPLE WAVES', 'waves', 1, [0x4a2a6a, 0x6b3f96, 0x2e1a44]],
+  ['SUNSET WAVES', 'waves', 1, [0xe0703a, 0xf0a23c, 0xa83a4a, 0x5a1e3a]], ['OCEAN WAVES', 'waves', 1, [0x1f5f8b, 0x2f86b5, 0x174466, 0x7fc7e3]], ['MINT CHECK', 'check', 1, [0x8fd9b6, 0x4fa384]],
+  ['RACING CHECK', 'check', 1, [0xf2f2f2, 0x111111]], ['CANDY STRIPE', 'stripes', 1, [0xf2f2f2, 0xd62e3a]], ['HAZARD', 'stripes', 1, [0xf2c230, 0x151515]],
+  ['BLUE TRI', 'tri', 1, [0x1e3a6b, 0x2c5291, 0x16294a, 0x3f6fb8]], ['AMBER TRI', 'tri', 1, [0xb06a1c, 0xd38a2e, 0x7e4a12, 0xe8a84a]], ['COPPER SCALES', 'scales', 1, [0xc07a46, 0x8a4f26, 0x4a2a12], {}, { rough: 0.3, metal: 0.8 }],
+  ['JADE SCALES', 'scales', 1, [0x3f9b74, 0x256b4f, 0x123a2a]], ['POP SPLAT', 'splat', 1, [0xf2f2f2, 0xe63946, 0x1d70b8, 0xf4c430]], ['INK SPLAT', 'splat', 1, [0xe8e4da, 0x111111, 0x333333]],
+  ['TOPO RED', 'topo', 1, [0x6a1e1a, 0xe0a080, 0x8a2a22]], ['TOPO BLUE', 'topo', 1, [0x1a2f4a, 0x8ec5ff, 0x24406a]], ['BRUSH RED', 'brush', 1, [0x7a1c18, 0x4a100d, 0xa63326, 0x220807]],
+  ['BRUSH BLUE', 'brush', 1, [0x1f3b63, 0x132640, 0x2f5a94, 0x0b1525]], ['PINK DIGITAL', 'digital', 1, [0xf0b6c8, 0xd6829f, 0xfbe2ea, 0x9c4d66]], ['LIME DIGITAL', 'digital', 1, [0x9fd13a, 0x6a9a1e, 0xc8ef6a, 0x3a5a0e]],
+  ['AQUA FADE', 'fade', 1, [0x1fa3a3, 0x8a3ad6]], ['FIRE FADE', 'fade', 1, [0xd62e1f, 0xf2c230]], ['POLKA', 'dots', 1, [0x151515, 0xf2f2f2]],
+  ['CRACKED ICE', 'cracked', 1, [0xcfeaf7, 0x5aa6cf, 0xeaf7ff]], ['HONEY GOLD', 'honey', 1, [0xd99a2b, 0xf2c25a, 0x6a4210], {}, { rough: 0.3, metal: 0.6 }], ['GRAPHITE HONEY', 'honey', 1, [0x3a3d42, 0x5a5e64, 0x1a1c1f], {}, { rough: 0.35, metal: 0.6 }],
+  ['NEON WAVES', 'waves', 2, [0x0b0d1a, 0x1a1f3a, 0x00e5ff], { glowIdx: 2 }, { anim: 'scroll', emis: 2 }], ['NEON STRIPES', 'stripes', 2, [0x0b0b10, 0xff2fd6], { glowIdx: 1 }, { anim: 'pulse', emis: 2 }],
+  ['LAVA CRACK', 'cracked', 2, [0x1a0d08, 0xff6a14, 0x2a140c], { glow: 1 }, { anim: 'pulse', emis: 2.2 }], ['TOXIC HONEY', 'honey', 2, [0x111a10, 0x1c2a1a, 0x7dff3a], { glow: 1 }, { anim: 'pulse', emis: 2 }],
+  ['CYBER TRI', 'tri', 2, [0x0d1220, 0x16203a, 0x1f2d52, 0x00b8d9]], ['GLITCH', 'glitch', 2, [0x0b0c10, 0x1a1d26, 0xff2fd6, 0x00e5ff], { glow: 1 }, { anim: 'scroll', emis: 2 }],
+  ['RGB GLITCH', 'glitch', 2, [0x0d0d0d, 0xff3030, 0x30ff60, 0x3080ff], { glow: 1 }, { emis: 1.8 }], ['SYNTHWAVE', 'fade', 2, [0xff2fd6, 0x2a1aa8], { glow: 1 }, { anim: 'scroll', emis: 1.2 }],
+  ['AURORA', 'fade', 2, [0x1fd6a3, 0x5a2ad6], { glow: 1 }, { anim: 'scroll', emis: 1.2 }], ['TOPO NEON', 'topo', 2, [0x07120f, 0x39ff9c, 0x0d1f1a], { glow: 1 }, { anim: 'pulse', emis: 2.2 }],
+  ['GOLD SCALES', 'scales', 2, [0xe6b84a, 0xa07820, 0x5a3e0a], {}, { rough: 0.22, metal: 0.85 }], ['DRAGON FLECK', 'fleck', 2, [0x5a0f0c, 0xc23a18, 0xf2b84b, 0x220504]],
+  ['CAMO GOLD', 'multicam', 2, [0xc9a24a, 0x8a6a24, 0x5e4614, 0xf2d27a], {}, { rough: 0.3, metal: 0.7 }], ['CHROME TIGER', 'zebra', 2, [0xdfe4e8, 0x2a2d31], {}, { rough: 0.1, metal: 0.9 }],
+  ['BLOOD SPLAT', 'splat', 2, [0x1a1a1a, 0x8e0f12, 0xc21a1f]], ['MIDNIGHT DOTS', 'dots', 2, [0x0b0f1f, 0x7fa8ff], { glow: 1 }, { anim: 'twinkle', emis: 1.8 }],
+  ['ARCTIC CRACK', 'cracked', 2, [0xeaf4fa, 0x4aa8e0, 0xd0e6f2], { glow: 1 }, { anim: 'pulse', emis: 1.4 }], ['DUNE HONEY', 'honey', 2, [0xb89a6a, 0xd2b98a, 0x5a4428]],
+  ['COBRA', 'scales', 2, [0x2a4a1a, 0x1a2e10, 0xd9c23a]], ['NEON BRUSH', 'brush', 2, [0x0d0d14, 0x2a1a44, 0xff2fd6, 0x00e5ff]],
+  ['PIXEL STORM', 'digital', 2, [0x2a1a44, 0x4a2a7a, 0x00e5ff, 0x0d0a18]], ['HOLOFOIL', 'holo', 2, [0x000000], { dark: 0.1 }, { anim: 'scroll', emis: 0.8, rough: 0.2, metal: 0.5 }],
+  ['PRISM', 'holo', 3, [0x000000], { dark: 0 }, { anim: 'scroll', emis: 1.3, rough: 0.12, metal: 0.6 }], ['BLACK HOLO', 'holo', 3, [0x050505], { dark: 0.55 }, { anim: 'scroll', emis: 1.4, rough: 0.15, metal: 0.6 }],
+  ['SOLAR FLARE', 'plasma', 3, [0x2a0600, 0xff5a14, 0xffe14d], {}, { anim: 'scroll', emis: 2 }], ['OCEANIC', 'plasma', 3, [0x021a2a, 0x0aa3c4, 0x9ef0ff], {}, { anim: 'scroll', emis: 2 }],
+  ['VENOM', 'plasma', 3, [0x061a06, 0x39d61a, 0xc8ff3a], {}, { anim: 'scroll', emis: 2 }], ['NEON CIRCUIT', 'circuit', 3, [0x0a0612, 0xff2fd6], {}, { anim: 'scroll', emis: 2.6 }],
+  ['GOLD CIRCUIT', 'circuit', 3, [0x120d04, 0xf2c14e], {}, { anim: 'scroll', emis: 2.2, metal: 0.6 }], ['STARFALL', 'stars', 3, [0x05060f, 0xffffff], { dense: 0.02, nebula: 0x1a4a8a }, { anim: 'twinkle', emis: 2 }],
+  ['MOLTEN GOLD', 'marble', 3, [0x3a2a0a, 0x6a4e14], { glow: 0xffd23f, vein: 0.12 }, { anim: 'scroll', emis: 2, metal: 0.5 }], ['FROSTBITE', 'facets', 3, [0x3a6f9a, 0xf2fbff], {}, { anim: 'twinkle', emis: 1.4, rough: 0.05, metal: 0.5 }],
+  ['EMERALD', 'facets', 3, [0x0e5a3a, 0x7af2c0], {}, { anim: 'twinkle', emis: 1.4, rough: 0.05, metal: 0.5 }], ['RUBY', 'facets', 3, [0x6a0a16, 0xff8aa0], {}, { anim: 'twinkle', emis: 1.4, rough: 0.05, metal: 0.5 }],
+  ['OBSIDIAN FLAME', 'cracked', 3, [0x08080a, 0xff4a14, 0x18181c], { glow: 1 }, { anim: 'pulse', emis: 2.4 }],
+];
+// ---- SECRET set: never shown anywhere until you own one, 0.5% from any box, locked to the gun it dropped for
+const SECRET_PACK = [
+  ['BLOODLINE', 'plasma', [0x0a0000, 0x8e0000, 0xff2a2a], {}, { anim: 'scroll', emis: 2.4 }], ['ECLIPSE', 'stars', [0x000000, 0xffd27a], { dense: 0.025, nebula: 0x5a3a00 }, { anim: 'twinkle', emis: 2.2 }],
+  ['SPECTRE', 'holo', [0x000000], { dark: 0.3 }, { anim: 'scroll', emis: 2, rough: 0.1, metal: 0.7 }], ['ABYSS', 'marble', [0x020208, 0x0a0a1a], { glow: 0x3a5aff, vein: 0.1 }, { anim: 'scroll', emis: 2.4 }],
+  ['ARCHANGEL', 'facets', [0xd9c08a, 0xffffff], {}, { anim: 'twinkle', emis: 1.6, rough: 0.05, metal: 0.9 }], ['REAPER', 'circuit', [0x050505, 0xff1a1a], {}, { anim: 'scroll', emis: 2.8 }],
+];
+const slug = n => n.toLowerCase().replace(/[^a-z0-9]+/g, '_');
+for (const [name, t, r, c, gx, mx] of CAMO_PACK) COSM.push({ id: 'c_' + slug(name), name, kind: 'camo', r, g: Object.assign({ t, c }, gx || {}), m: mx });
+for (const [name, t, c, gx, mx] of SECRET_PACK) COSM.push({ id: 'x_' + slug(name), name, kind: 'camo', r: 4, secret: true, g: Object.assign({ t, c }, gx || {}), m: mx });
 // ---- gun STICKERS: one every 5 levels (level 100 is the DARKZONE GOLD skin above)
 const STICKER_DEFS = [
   [5, 'gg', 'GG', 0, 'text', ['#ffffff', '#16a34a'], 'GG'], [10, 'star', 'LONE STAR', 0, 'star', ['#f2c94c', '#8a5a00']], [15, 'bolt', 'LIGHTNING', 0, 'bolt', ['#ffe14d', '#1f2937']], [20, 'target', 'BULLSEYE', 0, 'target', ['#ef4444', '#ffffff']],
@@ -66,7 +119,7 @@ const STICKER_DEFS = [
 for (const [lvl, id, name, r, d, c, txt] of STICKER_DEFS) COSM.push({ id: 'st_' + id, name, kind: 'sticker', r, lvl, g: { t: 'sticker', d, c, txt } });
 const COS = Object.fromEntries(COSM.map(c => [c.id, c]));
 const LEVEL_ITEM = Object.fromEntries(COSM.filter(c => c.lvl).map(c => [c.lvl, c.id]));
-const BOX_POOL = COSM.filter(c => !c.lvl && c.kind !== 'sticker');
+const BOX_POOL = COSM.filter(c => !c.lvl && c.kind !== 'sticker' && !c.secret);
 
 /* ---------- saved progress */
 const progBlank = () => ({ v: 1, xp: 0, dz: 0, owned: {}, equip: { all: null, guns: {} }, stk: { all: null, guns: {} }, daily: { last: '', streak: 0 }, boxes: 0, drops: [], lastGain: null, init: false });
@@ -190,9 +243,66 @@ function cosmPaint(c, N) {
   } else if (g.t === 'circuit') {
     const P = 16, h = [], vv = [], pads = []; for (let i = 0; i < P * P; i++) { h.push(R() < 0.45); vv.push(R() < 0.4); pads.push(R() < 0.12); }
     fn = (u, v) => { const cx = Math.floor(u * P), cy = Math.floor(v * P), fu = u * P - cx, fv = v * P - cy, i = cy * P + cx; let on = (h[i] && Math.abs(fv - 0.5) < 0.07) || (vv[i] && Math.abs(fu - 0.5) < 0.07); if (pads[i] && Math.hypot(fu - 0.5, fv - 0.5) < 0.18) on = true; const col = on ? C[1] : C[0]; return [col[0], col[1], col[2], on ? 1 : 0]; };
-  } else {   // solid finish with a faint brushed grain
-    const n = tileNoise(64, R, 4);
-    fn = (u, v) => { const k = 0.94 + n(u, v) * 0.1; return [C[0][0] * k, C[0][1] * k, C[0][2] * k, 0]; };
+  } else if (g.t === 'facets') {   // cut gem: flat facets lit from one side, bright edges, sparkles
+    const p = wrapPts(R, 34), sh = p.map(() => Math.pow(R(), 1.6) * 1.1), sp = fbmT(R, 32, 1);
+    fn = (u, v) => { const r = nearest(p, u, v, false), k = sh[r.k], edge = r.d2 - r.d1 < 0.012; let col = mix(C[0], C[1], Math.min(1, k)); if (k > 0.95) col = mix(col, [255, 255, 255], (k - 0.95) * 3); if (edge) col = mix(col, [255, 255, 255], 0.75); const s2 = sp(u, v) > 0.83 ? (sp(u, v) - 0.83) * 6 : 0; if (s2) col = mix(col, [255, 255, 255], Math.min(1, s2)); return [col[0], col[1], col[2], Math.min(1, (edge ? 0.35 : 0) + s2)]; };
+  } else if (g.t === 'zebra') {
+    const n = fbmT(R, 3, 4);
+    fn = (u, v) => { const s2 = Math.sin((u * 6 + n(u, v) * 2.6) * Math.PI * 2); const col = s2 > 0.1 ? C[1] : C[0]; return [col[0], col[1], col[2], 0]; };
+  } else if (g.t === 'fleck') {   // flecktarn: clusters of small dots
+    const a = fbmT(R, 16, 2), b = fbmT(R, 20, 2), c2 = fbmT(R, 24, 2), m = fbmT(R, 3, 2);
+    fn = (u, v) => { let col = C[0]; if (a(u, v) > 0.6 && m(u, v) > 0.4) col = C[1]; if (b(u, v) > 0.62) col = C[2]; if (c2(u, v) > 0.66 && m(v, u) > 0.45) col = C[3]; return [col[0], col[1], col[2], 0]; };
+  } else if (g.t === 'multicam') {   // soft blended blobs with small brush marks
+    const a = fbmT(R, 3, 4), b = fbmT(R, 5, 3), c2 = fbmT(R, 12, 2);
+    fn = (u, v) => { const t1 = Math.min(1, Math.max(0, (a(u, v) - 0.45) * 5)), t2 = Math.min(1, Math.max(0, (b(u, v) - 0.55) * 6)); let col = mix(mix(C[0], C[1], t1), C[2], t2); if (c2(u, v) > 0.7) col = C[3]; return [col[0], col[1], col[2], 0]; };
+  } else if (g.t === 'waves') {
+    const n = fbmT(R, 2, 3), k = C.length;
+    fn = (u, v) => { const t = ((v * 4 + Math.sin(u * Math.PI * 2 * 2) * 0.35 + n(u, v) * 0.6) % 1 + 1) % 1, col = C[Math.floor(t * k) % k]; return [col[0], col[1], col[2], g.glowIdx !== undefined && Math.floor(t * k) % k === g.glowIdx ? 1 : 0]; };
+  } else if (g.t === 'glitch') {   // horizontal bars and offset blocks
+    const rows = 48, bars = []; for (let i = 0; i < rows; i++) bars.push([R(), (R() * C.length) | 0, R() * 0.5]);
+    fn = (u, v) => { const i = Math.floor(v * rows), b = bars[i], seg = Math.floor(((u + b[2]) % 1) * 6), on = (seg + i) % 3 === 0 && b[0] > 0.45, col = on ? C[b[1]] : C[0]; return [col[0], col[1], col[2], on && b[1] === C.length - 1 && g.glow ? 1 : 0]; };
+  } else if (g.t === 'tri') {   // triangle grid
+    const P = 8, sh = []; for (let i = 0; i < P * P * 2; i++) sh.push((R() * C.length) | 0);
+    fn = (u, v) => { const X = u * P, Y = v * P, cx = Math.floor(X), cy = Math.floor(Y), up = (X - cx) + (Y - cy) < 1 ? 0 : 1, idx = sh[(cy * P + cx) * 2 + up], col = C[idx]; return [col[0], col[1], col[2], 0]; };
+  } else if (g.t === 'honey') {   // bevelled honeycomb
+    const cols = 10, rows = 12;
+    fn = (u, v) => { const X = u * cols, Y = v * rows; let d1 = 9, d2 = 9, cxB = 0, cyB = 0; for (let j = Math.floor(Y) - 1; j <= Math.floor(Y) + 1; j++) for (let i = Math.floor(X) - 1; i <= Math.floor(X) + 1; i++) { const cx = i + 0.5 + (((j % 2) + 2) % 2) * 0.5, cy = j + 0.5, d = Math.hypot(X - cx, (Y - cy) * 1.15); if (d < d1) { d2 = d1; d1 = d; cxB = X - cx; cyB = Y - cy; } else if (d < d2) d2 = d; } const e = d2 - d1, bev = e < 0.1 ? 0 : e < 0.22 ? 0.5 + (cxB - cyB) * 0.8 : 0.8; const col = e < 0.1 ? C[2] : mix(C[0], C[1], Math.min(1, Math.max(0, bev))); return [col[0], col[1], col[2], e < 0.1 && g.glow ? 1 : 0]; };
+  } else if (g.t === 'brush') {   // long brush strokes
+    const a = tileNoise(3, R, 40), b = tileNoise(4, R, 48), c2 = tileNoise(5, R, 56);
+    fn = (u, v) => { let col = C[0]; if (a(u, v) > 0.6) col = C[1]; if (b(u, v) > 0.64) col = C[2]; if (c2(u, v) > 0.7) col = C[3] || C[1]; return [col[0], col[1], col[2], 0]; };
+  } else if (g.t === 'fade') {   // two-tone fade with grain
+    const n = fbmT(R, 4, 3);
+    fn = (u, v) => { const t = Math.min(1, Math.max(0, 0.5 + 0.5 * Math.sin(u * Math.PI * 2) + (n(u, v) - 0.5) * 0.5)), col = mix(C[0], C[1], t); return [col[0], col[1], col[2], g.glow ? t * 0.8 : 0]; };
+  } else if (g.t === 'check') {
+    const n = fbmT(R, 3, 3);
+    fn = (u, v) => { const P = 8, w = (n(u, v) - 0.5) * 0.25, on = (Math.floor((u + w) * P) + Math.floor((v - w) * P)) & 1, col = on ? C[1] : C[0]; return [col[0], col[1], col[2], 0]; };
+  } else if (g.t === 'dots') {
+    fn = (u, v) => { const P = 10, fu = u * P % 1 - 0.5, fv = (v * P + (Math.floor(u * P) & 1) * 0.5) % 1 - 0.5, on = Math.hypot(fu, fv) < 0.28, col = on ? C[1] : C[0]; return [col[0], col[1], col[2], on && g.glow ? 1 : 0]; };
+  } else if (g.t === 'splat') {   // paint splatter
+    const p = wrapPts(R, 40), rs = p.map(() => 0.012 + R() * 0.05);
+    fn = (u, v) => { let col = C[0]; for (let i = 0; i < p.length; i++) { let dx = Math.abs(u - p[i][0]), dy = Math.abs(v - p[i][1]); if (dx > 0.5) dx = 1 - dx; if (dy > 0.5) dy = 1 - dy; if (dx * dx + dy * dy < rs[i] * rs[i]) { col = C[1 + (p[i][2] % (C.length - 1))]; break; } } return [col[0], col[1], col[2], 0]; };
+  } else if (g.t === 'stripes') {
+    fn = (u, v) => { const t = ((u + v) * 6 % 1 + 1) % 1, k = C.length, col = C[Math.floor(t * k)]; return [col[0], col[1], col[2], g.glowIdx !== undefined && Math.floor(t * k) === g.glowIdx ? 1 : 0]; };
+  } else if (g.t === 'topo') {   // contour lines
+    const n = fbmT(R, 3, 4);
+    fn = (u, v) => { const h = n(u, v) * 14, line = Math.abs(h - Math.round(h)) < 0.08, col = line ? C[1] : mix(C[0], C[2] || C[0], (h % 2) / 2); return [col[0], col[1], col[2], line && g.glow ? 1 : 0]; };
+  } else if (g.t === 'scales') {
+    fn = (u, v) => { const P = 10, y = v * P, row = Math.floor(y), x = u * P + (row & 1) * 0.5, fx = x % 1 - 0.5, fy = y - row, d = Math.hypot(fx, fy), rim = d > 0.42 && d < 0.5, col = rim ? C[2] : mix(C[0], C[1], Math.min(1, d * 1.6)); return [col[0], col[1], col[2], rim && g.glow ? 1 : 0]; };
+  } else if (g.t === 'cracked') {   // voronoi cracks (lava, dry earth)
+    const p = wrapPts(R, 30), n = fbmT(R, 6, 2);
+    fn = (u, v) => { const r = nearest(p, u, v, false), crack = r.d2 - r.d1 < 0.018, col = crack ? C[1] : mix(C[0], C[2] || C[0], n(u, v) * 0.7); return [col[0], col[1], col[2], crack && g.glow ? 1 : 0]; };
+  } else if (g.t === 'holo') {   // shifting rainbow foil
+    const n = fbmT(R, 3, 3), hsl = (h, l) => { const f = (k) => { const a = 0.9 * Math.min(l, 1 - l), kk = (k + h * 12) % 12; return 255 * (l - a * Math.max(-1, Math.min(kk - 3, 9 - kk, 1))); }; return [f(0), f(8), f(4)]; };
+    fn = (u, v) => { const h = ((Math.sin(u * Math.PI * 2) * 0.25 + Math.sin(v * Math.PI * 2) * 0.25 + n(u, v) * 1.2) % 1 + 1) % 1, col = mix(hsl(h, 0.55), C[0] || [0, 0, 0], g.dark || 0); return [col[0], col[1], col[2], 0.6]; };
+  } else {   // solid finishes: brushed metal, engraving or chrome-like reflection bands (never flat)
+    const n = tileNoise(64, R, 4), br = tileNoise(3, R, 160), sc = fbmT(R, 3, 4), fx = g.fx || 'grain';
+    fn = (u, v) => {
+      let k = 0.94 + n(u, v) * 0.1;
+      if (fx === 'brushed' || fx === 'engrave') k = 0.82 + br(u, v) * 0.3;
+      if (fx === 'engrave') { const t = Math.abs(Math.sin((u * 3 + v * 2 + sc(u, v) * 2.6) * Math.PI * 2)); if (t < 0.07) k *= 0.55; else if (t < 0.12) k *= 1.18; }
+      if (fx === 'bands') k = 0.55 + 0.6 * Math.pow(0.5 + 0.5 * Math.sin((v * 3 + sc(u, v) * 0.8) * Math.PI * 2), 2) + br(u, v) * 0.08;
+      return [Math.min(255, C[0][0] * k), Math.min(255, C[0][1] * k), Math.min(255, C[0][2] * k), 0];
+    };
   }
   const cc = document.createElement('canvas'); cc.width = cc.height = N;
   const cx = cc.getContext('2d'), img = cx.createImageData(N, N);
@@ -293,6 +403,7 @@ function cosmMat(id) {
 }
 let cosT = 0;
 function cosmTick(dt) {
+  try { thumbTick(); } catch (e) {}
   if (!COS_ANIM.length) return; cosT += dt;
   for (const a of COS_ANIM) {
     if (a.anim === 'scroll') { a.mat.map.offset.x = (cosT * 0.03) % 1; a.mat.map.offset.y = (cosT * 0.012) % 1; }
@@ -317,22 +428,69 @@ function applyCamo(g, id) {
   g.userData.camo = id || null;
 }
 // which cosmetic a gun wears: its own pick, else the all-weapons pick (only if owned)
-function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; return id && PROG.owned[id] && COS[id] ? id : null; }
+// which camo a gun wears: its own pick, else the all-weapons pick (owned only). Secret camos only on the gun they dropped for
+const secretKey = (id, gun) => id + '@' + gun;
+function ownsFor(id, gunId) { const c = COS[id]; return !!c && (c.secret ? !!PROG.owned[secretKey(id, gunId)] : !!PROG.owned[id]); }
+function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; if (!id || !COS[id]) return null; if (COS[id].secret && own !== id) return null; return ownsFor(id, gunId) ? id : null; }
 function refreshHeldCamos() { try { (WEAPONS || []).forEach((w, i) => { if (gunObjs[i] && w && w.def) { applyCamo(gunObjs[i], camoFor(w.def.id)); applySticker(gunObjs[i], stickerFor(w.def.id)); } }); } catch (e) {} }
+const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]]).length;
+const publicCount = () => COSM.filter(c => !c.secret).length;
 
-/* ---------- chance box and daily reward */
-function rollBox() {
-  let r = Math.random() * 100, rar = 0; for (let i = 0; i < RAR.length; i++) { if (r < RAR[i].odds) { rar = i; break; } r -= RAR[i].odds; rar = i; }
-  let pool = BOX_POOL.filter(c => c.r === rar); if (!pool.length) pool = BOX_POOL;
-  return pool[(Math.random() * pool.length) | 0];
+/* ---------- weapon pictures for the Locker (rendered one per frame, cached per gun + camo + sticker) */
+const THUMB = { cache: {}, q: [], scene: null, cam: null, rt: null, buf: null };
+const thumbKey = id => id + '|' + camoFor(id) + '|' + stickerFor(id);
+function gunThumb(id) { const k = thumbKey(id); if (THUMB.cache[k]) return THUMB.cache[k]; if (!THUMB.q.includes(id)) THUMB.q.push(id); return null; }
+function thumbTick() {
+  if (curScreen !== 'locker' || !THUMB.q.length) return;
+  const id = THUMB.q.shift(), def = ARM[id]; if (!def) return;
+  const W = 300, H = 120;
+  try {
+    if (!THUMB.scene) {
+      THUMB.scene = new THREE.Scene(); THUMB.scene.environment = scene.environment || null;
+      THUMB.scene.add(new THREE.HemisphereLight(0xdfe8ff, 0x3a3226, 1.7)); const d1 = new THREE.DirectionalLight(0xfff2e0, 3.2); d1.position.set(1, 2, 2); THUMB.scene.add(d1);
+      THUMB.cam = new THREE.PerspectiveCamera(24, W / H, 0.01, 10); THUMB.rt = new THREE.WebGLRenderTarget(W, H); THUMB.rt.texture.encoding = THREE.sRGBEncoding; THUMB.buf = new Uint8Array(W * H * 4);
+    }
+    const g = buildGunModel(def, true), st = computeStats(def, null);
+    attachVisuals(g, def, false, g.userData.len + st.lenAdd, null); applyCamo(g, camoFor(id)); applySticker(g, stickerFor(id));
+    g.traverse(o => { if (o.name && /^hand/.test(o.name)) o.visible = false; }); if (g.userData.flash) g.userData.flash.visible = false;
+    const holder = new THREE.Group(); holder.add(g); THUMB.scene.add(holder); g.updateMatrixWorld(true);
+    const box = new THREE.Box3(); g.traverse(o => { if (o.isMesh && !(o.material && o.material.blending === THREE.AdditiveBlending)) { let vis = true; for (let p = o; p; p = p.parent) if (!p.visible) vis = false; if (vis) box.expandByObject(o); } });
+    const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3()); g.position.sub(c);
+    holder.rotation.set(0.08, -Math.PI / 2, 0);
+    const size = Math.max(sz.z, sz.y * 2.5, 0.2), hf = Math.atan(Math.tan(12 * Math.PI / 180) * THUMB.cam.aspect);
+    THUMB.cam.position.set(0, 0, size / (2 * Math.tan(hf)) * 1.08); THUMB.cam.lookAt(0, 0, 0);
+    const prevT = renderer.getRenderTarget(), prevCC = renderer.getClearColor(new THREE.Color()), prevCA = renderer.getClearAlpha();
+    renderer.setRenderTarget(THUMB.rt); renderer.setClearColor(0x000000, 0); renderer.clear(); updateGunShader(); renderer.render(THUMB.scene, THUMB.cam);
+    renderer.readRenderTargetPixels(THUMB.rt, 0, 0, W, H, THUMB.buf); renderer.setRenderTarget(prevT); renderer.setClearColor(prevCC, prevCA);
+    THUMB.scene.remove(holder);
+    const cv = document.createElement('canvas'); cv.width = W; cv.height = H; const cx = cv.getContext('2d'), img = cx.createImageData(W, H), row = W * 4;
+    for (let y = 0; y < H; y++) img.data.set(THUMB.buf.subarray((H - 1 - y) * row, (H - y) * row), y * row);
+    cx.putImageData(img, 0, 0); const url = cv.toDataURL(); THUMB.cache[thumbKey(id)] = url;
+    const el = document.querySelector('#lkBody [data-thumb="' + id + '"]'); if (el) el.innerHTML = `<img src="${url}" alt="">`;
+  } catch (e) {}
 }
-function openBox() {
-  if (PROG.dz < BOX_COST) return null;
-  PROG.dz -= BOX_COST; PROG.boxes++;
-  const it = rollBox(), dup = !!PROG.owned[it.id], refund = dup ? RAR[it.r].refund : 0;
-  if (dup) PROG.dz += refund; else PROG.owned[it.id] = Date.now();
-  PROG.drops.unshift({ id: it.id, dup, t: Date.now() }); PROG.drops = PROG.drops.slice(0, 8);
-  saveProg(); return { it, dup, refund };
+
+/* ---------- chance boxes and daily reward */
+const BOXES = [
+  { id: 'std', name: 'STANDARD', cost: 500, odds: [59.5, 27, 10, 3, 0.5], col: '#9aa3a9', desc: 'Every camo and skin can drop.' },
+  { id: 'elite', name: 'ELITE', cost: 1200, odds: [25, 52, 17, 5.5, 0.5], col: '#4aa3ff', desc: 'Mostly rare, better epic and legendary odds.' },
+  { id: 'prestige', name: 'PRESTIGE', cost: 2500, odds: [0, 50, 38, 11.5, 0.5], col: '#f2b84b', desc: 'No commons. The best legendary odds.' },
+];
+const BOXK = Object.fromEntries(BOXES.map(b => [b.id, b])), SECRET_POOL = COSM.filter(c => c.secret);
+const pickR = a => a[(Math.random() * a.length) | 0];
+function rollRarity(box) { let r = Math.random() * 100, last = 0; for (let i = 0; i < box.odds.length; i++) { if (box.odds[i] <= 0) continue; last = i; if (r < box.odds[i]) return i; r -= box.odds[i]; } return last; }
+function rollBox(boxId) {
+  const box = BOXK[boxId] || BOXES[0], rar = rollRarity(box);
+  if (rar === 4) return { it: pickR(SECRET_POOL), gun: pickR(lockerGuns()).id };
+  return { it: pickR(BOX_POOL.filter(c => c.r === rar)) };
+}
+function openBox(boxId) {
+  const box = BOXK[boxId] || BOXES[0]; if (PROG.dz < box.cost) return null;
+  PROG.dz -= box.cost; PROG.boxes++;
+  const roll = rollBox(box.id), it = roll.it, key = it.secret ? secretKey(it.id, roll.gun) : it.id, dup = !!PROG.owned[key], refund = dup ? RAR[it.r].refund : 0;
+  if (dup) PROG.dz += refund; else PROG.owned[key] = Date.now();
+  PROG.drops.unshift({ id: it.id, gun: roll.gun || null, dup, t: Date.now() }); PROG.drops = PROG.drops.slice(0, 8);
+  saveProg(); return { it, gun: roll.gun || null, dup, refund, box };
 }
 const dayKey = d => { const x = d || new Date(); return x.getFullYear() + '-' + String(x.getMonth() + 1).padStart(2, '0') + '-' + String(x.getDate()).padStart(2, '0'); };
 const dailyAmount = streak => 100 + 25 * (Math.min(7, Math.max(1, streak)) - 1);
@@ -343,87 +501,129 @@ function dailyState() {
 }
 function claimDaily() { const s = dailyState(); if (!s.ready) return 0; PROG.daily = { last: dayKey(), streak: s.streak }; PROG.dz += s.amount; saveProg(); return s.amount; }
 
-/* ---------- LOCKER screen */
-const LK = { gun: null, sel: null, filter: 'all', ret: 'lobby' };
+/* ---------- LOCKER: pick a gun, then its camos (owned only), with a separate OTHER COSMETICS page for stickers */
+const LK = { view: 'guns', gun: null, sel: null, tab: 'camo', ret: 'lobby' };
 const cosmSwatch = (id, N = 64) => { try { return cosmCanvas(id, N).cc.toDataURL(); } catch (e) { return ''; } };
 const SWATCH = {};
 function swatchUrl(id) { return SWATCH[id] || (SWATCH[id] = cosmSwatch(id, 72)); }
 function lockerGuns() { return ARMORY.filter(d => CATS[d.cat] && (CATS[d.cat].slot === 'primary' || CATS[d.cat].slot === 'secondary')); }
+function howToGet(c) { return c.lvl ? 'REACH LEVEL ' + c.lvl : 'FOUND IN CHANCE BOXES'; }
+const kindName = c => c.secret ? 'CAMO' : c.kind === 'camo' ? 'CAMO' : c.kind === 'skin' ? 'SKIN' : 'STICKER';
 function openLocker() {
   if (curScreen !== 'locker' && curScreen !== 'rewards') LK.ret = curScreen || 'lobby';
-  const c = activeClass(); if (!LK.gun || !ARM[LK.gun]) LK.gun = c.p;
-  LK.sel = camoFor(LK.gun) || stickerFor(LK.gun); renderLocker(); showScreen('locker'); focusFirst('#lkGrid .on, #lkGrid button');
+  LK.view = 'guns'; if (!LK.gun || !ARM[LK.gun]) LK.gun = activeClass().p;
+  renderLocker(); showScreen('locker'); focusFirst('#lkBody [data-lkgun="' + LK.gun + '"]');
 }
-function howToGet(c) { return c.lvl ? 'REACH LEVEL ' + c.lvl : 'FOUND IN CHANCE BOXES'; }
-const kindName = c => c.kind === 'camo' ? 'CAMO' : c.kind === 'skin' ? 'SKIN' : 'STICKER';
+function lockerBack() { if (curScreen === 'locker' && LK.view === 'gun') { LK.view = 'guns'; renderLocker(); focusFirst('#lkBody [data-lkgun="' + LK.gun + '"]'); } else progBack(); }
+// items a gun can wear on this page
+function gunItems(gunId, tab) {
+  if (tab === 'other') return COSM.filter(c => c.kind === 'sticker' && PROG.owned[c.id]);
+  return COSM.filter(c => (c.kind === 'camo' || c.kind === 'skin') && ownsFor(c.id, gunId)).sort((a, b) => (b.r - a.r) || a.name.localeCompare(b.name));
+}
+function tileHtml(c, on, eq, extra) {
+  return `<button class="lk-t${on ? ' on' : ''}${eq ? ' eq' : ''}${c.secret ? ' sec' : ''}" data-lk="${c.id}" style="--rc:${RAR[c.r].col}"><span class="lk-sw${c.kind === 'sticker' ? ' stk' : ''}" style="background-image:url(${swatchUrl(c.id)})"></span><b>${c.name}</b><small>${eq ? 'EQUIPPED' : extra || RAR[c.r].name + ' ' + kindName(c)}</small></button>`;
+}
 function renderLocker() {
-  const d = ARM[LK.gun], cur = camoFor(LK.gun), curS = stickerFor(LK.gun), sel = LK.sel && COS[LK.sel] ? COS[LK.sel] : null, owned = Object.keys(PROG.owned).filter(k => COS[k]).length;
-  const isStk = sel && sel.kind === 'sticker', on = sel && (isStk ? curS === sel.id : cur === sel.id);
-  const list = COSM.filter(c => LK.filter === 'all' || (LK.filter === 'owned' ? PROG.owned[c.id] : c.kind === LK.filter)).sort((a, b) => (!!PROG.owned[b.id] - !!PROG.owned[a.id]) || (b.r - a.r) || ((a.lvl || 999) - (b.lvl || 999)));
   $('lkTop').innerHTML = progCardHtml();
-  $('lkCount').textContent = `${owned} / ${COSM.length} COLLECTED`;
-  $('lkFilters').innerHTML = [['all', 'ALL'], ['owned', 'OWNED'], ['camo', 'CAMOS'], ['skin', 'SKINS'], ['sticker', 'STICKERS']].map(([k, n]) => `<button class="cod-tab${LK.filter === k ? ' on' : ''}" data-lkf="${k}">${n}</button>`).join('');
-  $('lkGun').innerHTML = `<button class="mini" data-act="lk-gun-" aria-label="Previous weapon">&lsaquo;</button><b>${d.name}</b><button class="mini" data-act="lk-gun+" aria-label="Next weapon">&rsaquo;</button>`;
-  $('lkInfo').innerHTML = sel ? `<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} ${kindName(sel)}</small><b>${sel.name}</b></div>${PROG.owned[sel.id]
-    ? `<div class="lk-acts"><button class="btn primary" data-act="lk-apply"${on ? ' disabled' : ''}>${on ? 'EQUIPPED' : 'EQUIP ON ' + d.name}</button><button class="btn" data-act="lk-all">EQUIP ON ALL WEAPONS</button></div>`
-    : `<div class="lk-lock">LOCKED · ${howToGet(sel)}</div>`}` : `<div class="lk-name"><small>NO CAMO</small><b>FACTORY FINISH</b></div>`;
-  $('lkActs2').innerHTML = `<button class="btn" data-act="lk-clear"${!cur ? ' disabled' : ''}>REMOVE CAMO</button><button class="btn" data-act="lk-clear-stk"${!curS ? ' disabled' : ''}>REMOVE STICKER</button>`;
-  $('lkGrid').innerHTML = `<button class="lk-t${!LK.sel ? ' on' : ''}" data-lk=""><span class="lk-sw0">—</span><b>FACTORY</b><small>DEFAULT</small></button>` + list.map(c => {
-    const own = !!PROG.owned[c.id], eq = c.kind === 'sticker' ? curS === c.id : cur === c.id;
-    return `<button class="lk-t${LK.sel === c.id ? ' on' : ''}${own ? '' : ' locked'}${eq ? ' eq' : ''}" data-lk="${c.id}" style="--rc:${RAR[c.r].col}"><span class="lk-sw${c.kind === 'sticker' ? ' stk' : ''}" style="background-image:url(${swatchUrl(c.id)})"></span><b>${c.name}</b><small>${own ? (eq ? 'EQUIPPED' : RAR[c.r].name + ' ' + kindName(c)) : (c.lvl ? 'LEVEL ' + c.lvl : 'CHANCE BOX')}</small></button>`;
-  }).join('');
+  const body = $('lkBody');
+  if (LK.view === 'guns') {
+    $('lkFilters').innerHTML = `<span class="lk-crumb">SELECT A WEAPON</span>`;
+    const cats = []; for (const d of lockerGuns()) { if (!cats.includes(d.cat)) cats.push(d.cat); }
+    body.className = 'lk-guns';
+    body.innerHTML = `<div class="lk-count">${ownedCount()} / ${publicCount()} COLLECTED${Object.keys(PROG.owned).some(k => k.includes('@')) ? ' · + SECRET' : ''}</div>` + cats.map(cat => `<div class="lk-cat"><small>${CATS[cat].name}</small><div class="lk-gg">${lockerGuns().filter(d => d.cat === cat).map(d => {
+      const cm = camoFor(d.id), st = stickerFor(d.id), n = gunItems(d.id, 'camo').length;
+      const th = gunThumb(d.id);
+      return `<button class="lk-gun" data-lkgun="${d.id}" style="${cm ? `--rc:${RAR[COS[cm].r].col}` : ''}"><em>${n} CAMO${n === 1 ? '' : 'S'}</em><span class="lk-gimg" data-thumb="${d.id}">${th ? `<img src="${th}" alt="">` : ''}</span><b>${d.name}</b><small>${cm ? COS[cm].name : 'FACTORY'}${st ? ' · ' + COS[st].name : ''}</small></button>`;
+    }).join('')}</div></div>`).join('');
+    for (const b of body.querySelectorAll('[data-lkgun]')) b.onclick = () => { LK.gun = b.dataset.lkgun; LK.view = 'gun'; LK.tab = 'camo'; LK.sel = camoFor(LK.gun); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on, #lkGrid button'); };
+    PV.want = null; return;
+  }
+  // one gun: preview + its camos, or its other cosmetics
+  const d = ARM[LK.gun], cur = camoFor(LK.gun), curS = stickerFor(LK.gun), items = gunItems(LK.gun, LK.tab), other = LK.tab === 'other';
+  const sel = LK.sel && COS[LK.sel] ? COS[LK.sel] : null, isStk = sel && sel.kind === 'sticker', on = sel && (isStk ? curS === sel.id : cur === sel.id);
+  $('lkFilters').innerHTML = `<button class="cod-tab" data-act="lk-back">&lsaquo; WEAPONS</button><button class="cod-tab${!other ? ' on' : ''}" data-lktab="camo">CAMOS</button><button class="cod-tab${other ? ' on' : ''}" data-lktab="other">OTHER COSMETICS</button>`;
+  body.className = 'lk-body';
+  body.innerHTML = `<div class="lk-left"><div class="lk-gun-h"><small>${CATS[d.cat].name}</small><b>${d.name}</b></div><canvas id="lkPrev" width="480" height="200"></canvas><div id="lkInfo"></div><div class="lk-acts" id="lkActs2"></div></div><div class="lk-right"><div class="lk-sub">${other ? 'STICKERS · ONE PER GUN' : 'CAMOS & SKINS · YOU OWN ' + items.length}</div><div class="lk-grid" id="lkGrid"></div></div>`;
+  $('lkInfo').innerHTML = sel ? `<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} ${kindName(sel)}</small><b>${sel.name}</b></div>${sel.secret ? `<div class="lk-secret">SECRET · ONLY FOR THE ${d.name}</div>` : ''}
+<div class="lk-acts"><button class="btn primary" data-act="lk-apply"${on ? ' disabled' : ''}>${on ? 'EQUIPPED' : 'EQUIP ON ' + d.name}</button>${sel.secret ? '' : `<button class="btn" data-act="lk-all">EQUIP ON ALL WEAPONS</button>`}</div>`
+    : `<div class="lk-name"><small>${other ? 'NO STICKER' : 'NO CAMO'}</small><b>${other ? 'NONE' : 'FACTORY FINISH'}</b></div>`;
+  $('lkActs2').innerHTML = other ? `<button class="btn" data-act="lk-clear-stk"${!curS ? ' disabled' : ''}>REMOVE STICKER</button>` : `<button class="btn" data-act="lk-clear"${!cur ? ' disabled' : ''}>REMOVE CAMO</button>`;
+  $('lkGrid').innerHTML = `<button class="lk-t${!LK.sel ? ' on' : ''}" data-lk=""><span class="lk-sw0">—</span><b>${other ? 'NONE' : 'FACTORY'}</b><small>DEFAULT</small></button>` +
+    items.map(c => tileHtml(c, LK.sel === c.id, other ? curS === c.id : cur === c.id)).join('') +
+    (items.length ? '' : `<div class="lk-empty">${other ? 'Level up to earn stickers: one every 5 levels.' : 'No camos yet. Open chance boxes in REWARDS to get some.'}<button class="btn" data-act="rewards">GO TO REWARDS</button></div>`);
   for (const b of $('lkGrid').querySelectorAll('[data-lk]')) b.onclick = () => { LK.sel = b.dataset.lk || null; sfx.ui(); renderLocker(); focusFirst('#lkGrid [data-lk="' + (LK.sel || '') + '"]'); };
-  for (const b of $('lkFilters').querySelectorAll('[data-lkf]')) b.onclick = () => { LK.filter = b.dataset.lkf; sfx.ui(); renderLocker(); focusFirst('#lkFilters .on'); };
-  // the 3D preview shows the selected item (even a locked one) with whatever else the gun wears
-  PV.want = { def: d, ovr: null, camo: isStk ? cur : (LK.sel || null), stk: isStk ? sel.id : curS };
+  for (const b of $('lkFilters').querySelectorAll('[data-lktab]')) b.onclick = () => { LK.tab = b.dataset.lktab; LK.sel = LK.tab === 'other' ? curS : cur; sfx.ui(); renderLocker(); focusFirst('#lkFilters .on'); };
+  PV.key = ''; PV.want = { def: d, ovr: null, camo: isStk ? cur : (other ? cur : (LK.sel || null)), stk: isStk ? sel.id : curS };
 }
 function lockerAct(act) {
-  const L = lockerGuns(), i = Math.max(0, L.findIndex(d => d.id === LK.gun));
-  if (act === 'lk-gun-' || act === 'lk-gun+') { LK.gun = L[(i + (act === 'lk-gun+' ? 1 : L.length - 1)) % L.length].id; LK.sel = camoFor(LK.gun); sfx.ui(); renderLocker(); focusFirst('#lkGun [data-act="' + act + '"]'); return true; }
   const slot = LK.sel && COS[LK.sel] && COS[LK.sel].kind === 'sticker' ? PROG.stk : PROG.equip;
-  if (act === 'lk-apply' && LK.sel && PROG.owned[LK.sel]) { slot.guns[LK.gun] = LK.sel; saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('[data-act="lk-all"]'); return true; }
-  if (act === 'lk-all' && LK.sel && PROG.owned[LK.sel]) { slot.all = LK.sel; slot.guns = {}; saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('[data-act="lk-all"]'); toast2('EQUIPPED ON ALL WEAPONS'); return true; }
-  if (act === 'lk-clear-stk') { PROG.stk.guns[LK.gun] = 'none'; saveProg(); if (LK.sel && COS[LK.sel] && COS[LK.sel].kind === 'sticker') LK.sel = null; refreshHeldCamos(); sfx.ui(); renderLocker(); return true; }
+  if (act === 'lk-apply' && LK.sel && ownsFor(LK.sel, LK.gun)) { slot.guns[LK.gun] = LK.sel; saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on'); return true; }
+  if (act === 'lk-all' && LK.sel && PROG.owned[LK.sel] && !COS[LK.sel].secret) {
+    slot.all = LK.sel; for (const g in slot.guns) if (!(COS[slot.guns[g]] && COS[slot.guns[g]].secret)) delete slot.guns[g];   // secret picks stay on their gun
+    saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on'); toast2('EQUIPPED ON ALL WEAPONS'); return true;
+  }
+  if (act === 'lk-clear-stk') { PROG.stk.guns[LK.gun] = 'none'; saveProg(); LK.sel = null; refreshHeldCamos(); sfx.ui(); renderLocker(); return true; }
   if (act === 'lk-clear') { PROG.equip.guns[LK.gun] = 'none'; saveProg(); LK.sel = null; refreshHeldCamos(); sfx.ui(); renderLocker(); return true; }
-  if (act === 'lk-back' || act === 'rw-back') { progBack(); return true; }
+  if (act === 'lk-back') { lockerBack(); return true; }
+  if (act === 'rw-back') { progBack(); return true; }
   if (act === 'locker') { openLocker(); return true; }
   if (act === 'rewards') { openRewards(); return true; }
-  if (act === 'rw-daily') { const n = claimDaily(); if (n) { sfx.streak && sfx.streak(); toast2('+' + n + ' DZ DAILY REWARD'); } renderRewards(); focusFirst('[data-act="rw-box"]'); return true; }
-  if (act === 'rw-box') { boxOpen(); return true; }
+  if (act === 'rw-daily') { const n = claimDaily(); if (n) { try { sfx.streak(); } catch (e) {} toast2('+' + n + ' DZ DAILY REWARD'); } renderRewards(); focusFirst('[data-act^="rw-box-"]'); return true; }
+  if (/^rw-box-(std|elite|prestige)$/.test(act)) { boxOpen(act.slice(7)); return true; }
+  if (/^rw-see-(std|elite|prestige)$/.test(act)) { boxContents(act.slice(7)); return true; }
+  if (act === 'rw-see-close') { const o = $('boxSee'); if (o) o.remove(); focusFirst('[data-act^="rw-box-"]'); return true; }
   if (act === 'rw-box-close') { boxClose(); return true; }
-  if (act === 'rw-box-equip') { const r = BOXV.res; if (r && !r.dup) { PROG.equip.all = r.it.id; PROG.equip.guns = {}; saveProg(); refreshHeldCamos(); toast2(r.it.name + ' ON ALL WEAPONS'); } boxClose(); return true; }
+  if (act === 'rw-box-equip') {
+    const r = BOXV.res;
+    if (r && !r.dup) { if (r.it.secret) { PROG.equip.guns[r.gun] = r.it.id; toast2(r.it.name + ' ON ' + ARM[r.gun].name); } else { PROG.equip.all = r.it.id; for (const g in PROG.equip.guns) if (!(COS[PROG.equip.guns[g]] && COS[PROG.equip.guns[g]].secret)) delete PROG.equip.guns[g]; toast2(r.it.name + ' ON ALL WEAPONS'); } saveProg(); refreshHeldCamos(); }
+    boxClose(); return true;
+  }
   return false;
 }
 function progBack() { if (LK.ret === 'lobby') toLobby(); else showScreen(LK.ret || 'menu'); }
 function toast2(t) { try { const el = document.createElement('div'); el.className = 'pg-toast'; el.textContent = t; document.body.appendChild(el); setTimeout(() => el.classList.add('out'), 1800); setTimeout(() => el.remove(), 2400); } catch (e) {} }
 
 /* ---------- REWARDS screen */
-function openRewards() { if (curScreen !== 'locker' && curScreen !== 'rewards') LK.ret = curScreen || 'lobby'; renderRewards(); showScreen('rewards'); focusFirst(dailyState().ready ? '[data-act="rw-daily"]' : '[data-act="rw-box"]'); }
+function openRewards() { if (curScreen !== 'locker' && curScreen !== 'rewards') LK.ret = curScreen || 'lobby'; renderRewards(); showScreen('rewards'); focusFirst(dailyState().ready ? '[data-act="rw-daily"]' : '[data-act="rw-box-std"]'); }
+const oddsHtml = box => RAR.map((r, i) => box.odds[i] > 0 && i < 4 ? `<span style="--rc:${r.col}"><i></i>${r.name}<b>${box.odds[i]}%</b></span>` : '').join('');
 function renderRewards() {
   const ds = dailyState(), info = lvlInfo(PROG.xp);
   $('rwTop').innerHTML = progCardHtml();
   $('rwDaily').innerHTML = `<small>DAILY REWARD</small><b>${dzIcon()}${ds.amount}</b><div class="rw-days">${[1, 2, 3, 4, 5, 6, 7].map(n => `<i class="${n < ds.streak || (!ds.ready && n <= ds.streak) ? 'got' : n === ds.streak && ds.ready ? 'now' : ''}">${dailyAmount(n)}</i>`).join('')}</div>
 <span>${ds.ready ? `DAY ${ds.streak} OF YOUR STREAK · COME BACK TOMORROW FOR MORE` : `CLAIMED TODAY · DAY ${ds.streak} STREAK · BACK TOMORROW`}</span><button class="btn primary" data-act="rw-daily"${ds.ready ? '' : ' disabled'}>${ds.ready ? 'CLAIM' : 'CLAIMED'}</button>`;
-  $('rwBox').innerHTML = `<small>CHANCE BOX</small><div class="rw-boximg"><div class="rw-crate"><span>DZ</span></div></div>
-<button class="btn primary" data-act="rw-box"${PROG.dz < BOX_COST ? ' disabled' : ''}>OPEN · ${dzIcon()}${BOX_COST}</button>
-<div class="rw-odds">${RAR.map(r => `<span style="--rc:${r.col}"><i></i>${r.name}<b>${r.odds}%</b></span>`).join('')}</div>
-<p>Contains all ${BOX_POOL.filter(c => c.kind === 'camo').length} camos and ${BOX_POOL.filter(c => c.kind === 'skin').length} skins. Camos only come from boxes. A duplicate pays DZ back (${RAR.map(r => r.refund).join(' / ')}).</p>
-${PROG.drops.length ? `<div class="rw-drops"><small>LAST OPENED</small>${PROG.drops.slice(0, 6).map(d => COS[d.id] ? `<span style="--rc:${RAR[COS[d.id].r].col}"><img src="${swatchUrl(d.id)}" alt="">${COS[d.id].name}${d.dup ? ' <em>DUPLICATE</em>' : ''}</span>` : '').join('')}</div>` : ''}`;
+  $('rwBox').innerHTML = `<small>CHANCE BOXES · CAMOS ONLY COME FROM BOXES</small><div class="rw-boxes">${BOXES.map(b => `<div class="rw-bx" style="--bc:${b.col}"><div class="rw-boximg"><div class="rw-crate"><span>${b.name.slice(0, 1)}</span></div></div><b>${b.name}</b><p>${b.desc}</p>
+<div class="rw-odds">${oddsHtml(b)}</div><button class="btn primary" data-act="rw-box-${b.id}"${PROG.dz < b.cost ? ' disabled' : ''}>OPEN · ${dzIcon()}${b.cost.toLocaleString()}</button><button class="btn" data-act="rw-see-${b.id}">VIEW CONTENTS</button></div>`).join('')}</div>
+<p>A duplicate pays DZ back (${RAR.slice(0, 4).map(r => r.refund.toLocaleString()).join(' / ')}).</p>
+${PROG.drops.length ? `<div class="rw-drops"><small>LAST OPENED</small>${PROG.drops.slice(0, 6).map(d => COS[d.id] ? `<span style="--rc:${RAR[COS[d.id].r].col}"><img src="${swatchUrl(d.id)}" alt="">${COS[d.id].name}${d.gun ? ' · ' + ARM[d.gun].name : ''}${d.dup ? ' <em>DUPLICATE</em>' : ''}</span>` : '').join('')}</div>` : ''}`;
   const rows = []; for (let l = Math.min(MAXLVL, info.l + 1), n = 0; l <= MAXLVL && n < 12; l++, n++) rows.push(l);
   $('rwTrack').innerHTML = `<small>LEVEL REWARDS · LEVEL ${info.l}${info.l < MAXLVL ? ` · ${(info.need - info.into).toLocaleString()} XP TO NEXT` : ''}</small>` + (info.l >= MAXLVL ? '<div class="rw-lv max">MAX LEVEL REACHED</div>' : rows.map(l => {
     const it = LEVEL_ITEM[l] && COS[LEVEL_ITEM[l]];
     return `<div class="rw-lv${it ? ' item' : ''}"${it ? ` style="--rc:${RAR[it.r].col}"` : ''}><span class="pg-badge">${l}</span><span class="rw-dz">${dzIcon()}${levelDz(l)}</span>${it ? `<span class="rw-it"><img src="${swatchUrl(it.id)}" alt=""><b>${it.name}</b><small>${RAR[it.r].name} ${kindName(it)}</small></span>` : ''}</div>`;
   }).join('')) + `<div class="rw-how">XP: kill 100 · headshot +50 · objective 250 · match 500 · win +1000 · online +25%</div>`;
 }
-// box opening: a reel of items spins and stops on the prize
+// everything a box can drop (secret ones stay hidden)
+function boxContents(id) {
+  const box = BOXK[id] || BOXES[0], old = $('boxSee'); if (old) old.remove();
+  const ov = document.createElement('div'); ov.id = 'boxSee';
+  ov.innerHTML = `<div class="bs-in" style="--bc:${box.col}"><div class="bs-h"><div><small>CONTENTS</small><b>${box.name} BOX</b></div><span>${dzIcon()}${box.cost.toLocaleString()}</span><button class="btn" data-act="rw-see-close">CLOSE</button></div><div class="bs-body">` +
+    RAR.map((r, i) => {
+      if (!(box.odds[i] > 0)) return '';
+      if (i === 4) return '';   // the secret set is never listed
+      const list = BOX_POOL.filter(c => c.r === i);
+      return `<div class="bs-sec" style="--rc:${r.col}"><h4>${r.name} · ${box.odds[i]}% · ${list.length} ITEMS</h4><div class="bs-grid">${list.map(c => `<div class="bs-t${PROG.owned[c.id] ? ' own' : ''}"><img src="${swatchUrl(c.id)}" alt=""><b>${c.name}</b><small>${kindName(c)}${PROG.owned[c.id] ? ' · OWNED' : ''}</small></div>`).join('')}</div></div>`;
+    }).join('') + `</div></div>`;
+  document.body.appendChild(ov); setTimeout(() => focusFirst('#boxSee button'), 30);
+}
+// box opening: a reel of items spins and stops on the prize (a secret shows as ??? until it lands)
 const BOXV = { res: null };
-function boxOpen() {
-  const res = openBox(); if (!res) return; BOXV.res = res;
-  const reel = []; for (let i = 0; i < 34; i++) reel.push(i === 29 ? res.it : rollBox());
+function boxOpen(id) {
+  const res = openBox(id); if (!res) return; BOXV.res = res;
+  const show = c => c.secret ? `<div class="bx-c sec" style="--rc:${RAR[4].col}"><span class="bx-q">?</span><b>???</b></div>` : `<div class="bx-c" style="--rc:${RAR[c.r].col}"><img src="${swatchUrl(c.id)}" alt=""><b>${c.name}</b></div>`;
+  const reel = []; for (let i = 0; i < 34; i++) { if (i === 29) { reel.push(res.it); continue; } let c = rollBox(id).it; if (c.secret) c = pickR(BOX_POOL.filter(x => x.r === 3)); reel.push(c); }
   const ov = document.createElement('div'); ov.id = 'boxOv';
-  ov.innerHTML = `<div class="bx-in"><small>CHANCE BOX</small><div class="bx-win"><div class="bx-reel" id="bxReel">${reel.map(c => `<div class="bx-c" style="--rc:${RAR[c.r].col}"><img src="${swatchUrl(c.id)}" alt=""><b>${c.name}</b></div>`).join('')}</div><i class="bx-mark"></i></div>
-<div class="bx-res hide" id="bxRes" style="--rc:${RAR[res.it.r].col}"><small>${RAR[res.it.r].name} ${kindName(res.it)}</small><b>${res.it.name}</b><span>${res.dup ? `DUPLICATE · +${res.refund} DZ BACK` : 'NEW · ADDED TO YOUR LOCKER'}</span>
-<div class="bx-acts">${res.dup ? '' : '<button class="btn primary" data-act="rw-box-equip">EQUIP ON ALL WEAPONS</button>'}<button class="btn" data-act="rw-box-close">${res.dup ? 'OK' : 'LATER'}</button></div></div></div>`;
+  ov.innerHTML = `<div class="bx-in"><small>${res.box.name} BOX</small><div class="bx-win"><div class="bx-reel" id="bxReel">${reel.map(show).join('')}</div><i class="bx-mark"></i></div>
+<div class="bx-res hide" id="bxRes" style="--rc:${RAR[res.it.r].col}"><small>${RAR[res.it.r].name} ${kindName(res.it)}${res.gun ? ' · FOR THE ' + ARM[res.gun].name : ''}</small><div class="bx-big"><img src="${swatchUrl(res.it.id)}" alt=""></div><b>${res.it.name}</b><span>${res.dup ? `DUPLICATE · +${res.refund.toLocaleString()} DZ BACK` : res.it.secret ? 'SECRET FIND · ONLY YOUR ' + ARM[res.gun].name + ' CAN WEAR IT' : 'NEW · ADDED TO YOUR LOCKER'}</span>
+<div class="bx-acts">${res.dup ? '' : `<button class="btn primary" data-act="rw-box-equip">${res.it.secret ? 'EQUIP ON ' + ARM[res.gun].name : 'EQUIP ON ALL WEAPONS'}</button>`}<button class="btn" data-act="rw-box-close">${res.dup ? 'OK' : 'LATER'}</button></div></div></div>`;
   document.body.appendChild(ov); try { sfx.ui(); } catch (e) {}
   const el = ov.querySelector('#bxReel'), cw = 132;
   requestAnimationFrame(() => { el.style.transition = 'transform 4.2s cubic-bezier(.12,.72,.1,1)'; el.style.transform = `translateX(${-(29 * cw) + (el.parentNode.clientWidth / 2 - cw / 2) - (Math.random() * 60 - 30)}px)`; });
@@ -431,16 +631,15 @@ function boxOpen() {
   setTimeout(() => { const r = ov.querySelector('#bxRes'); if (!r) return; r.classList.remove('hide'); ov.classList.add('done', 'r' + res.it.r); try { (res.it.r >= 2 ? sfx.streak : sfx.ui)(); } catch (e) {} const f = r.querySelector('button'); if (f) f.focus(); }, 4400);
   BOXV.ov = ov;
 }
-function boxClose() { if (BOXV.ov) BOXV.ov.remove(); BOXV.ov = null; BOXV.res = null; if (curScreen === 'rewards') { renderRewards(); focusFirst('[data-act="rw-box"]'); } }
+function boxClose() { if (BOXV.ov) BOXV.ov.remove(); BOXV.ov = null; BOXV.res = null; if (curScreen === 'rewards') { renderRewards(); focusFirst('[data-act^="rw-box-"]'); } }
 
 /* ---------- screens and styles */
 (() => {
   const mk = (id, html) => { const d = document.createElement('div'); d.id = id; d.className = 'screen cod pg-scr hide'; d.innerHTML = html; document.body.appendChild(d); };
   mk('locker', `<div class="cod-top"><div class="cod-title"><small>COSMETICS</small><b>LOCKER</b></div><nav class="cod-nav" id="lkFilters"></nav><div class="cod-card" id="lkTop"></div></div>
-<div class="lk-body"><div class="lk-left"><div class="lk-gun" id="lkGun"></div><canvas id="lkPrev" width="480" height="200"></canvas><div id="lkInfo"></div><div class="lk-acts" id="lkActs2"></div><div class="lk-count" id="lkCount"></div></div>
-<div class="lk-grid" id="lkGrid"></div></div><div class="cod-foot"><button class="btn" data-act="lk-back">&lsaquo; BACK</button><span class="padhint">B BACK</span></div>`);
+<div id="lkBody" class="lk-guns"></div><div class="cod-foot"><button class="btn" data-act="lk-back">&lsaquo; BACK</button><span class="padhint">B BACK</span></div>`);
   mk('rewards', `<div class="cod-top"><div class="cod-title"><small>DZ · LEVELS · BOXES</small><b>REWARDS</b></div><div style="flex:1"></div><div class="cod-card" id="rwTop"></div></div>
-<div class="rw-body"><div class="rw-col"><div class="rw-card" id="rwDaily"></div><div class="rw-card" id="rwBox"></div></div><div class="rw-card rw-track" id="rwTrack"></div></div>
+<div class="rw-body rw2"><div class="rw-col"><div class="rw-card" id="rwDaily"></div><div class="rw-card rw-track" id="rwTrack"></div></div><div class="rw-card" id="rwBox"></div></div>
 <div class="cod-foot"><button class="btn" data-act="rw-back">&lsaquo; BACK</button><span class="padhint">B BACK</span></div>`);
   const s = document.createElement('style');
   s.textContent = `
@@ -482,10 +681,33 @@ function boxClose() { if (BOXV.ov) BOXV.ov.remove(); BOXV.ov = null; BOXV.res = 
 .bx-win{position:relative;margin:18px 0;height:150px;overflow:hidden;border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:rgba(0,0,0,.45)}.bx-reel{display:flex;gap:0;height:100%;align-items:center}
 .bx-c{flex:0 0 120px;margin:0 6px;height:126px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);border-bottom:4px solid var(--rc);background:rgba(15,17,19,.95)}.bx-c img{width:72px;height:72px}.bx-c b{font-size:10px;letter-spacing:.1em;color:#fff}
 .bx-mark{position:absolute;left:50%;top:0;bottom:0;width:2px;background:var(--accent);box-shadow:0 0 14px var(--accent)}
-.bx-res{animation:pgPop .5s both}.bx-res small{display:block;font-size:12px;letter-spacing:.4em;color:var(--rc)}.bx-res b{display:block;font-size:40px;letter-spacing:.14em;color:#fff;text-shadow:0 0 30px var(--rc)}.bx-res span{display:block;margin:6px 0 16px;font-size:12px;letter-spacing:.24em;color:var(--dim)}
+.bx-res{animation:pgZoom .5s}@keyframes pgZoom{from{transform:scale(.85)}}.bx-res small{display:block;font-size:12px;letter-spacing:.4em;color:var(--rc)}.bx-res b{display:block;font-size:40px;letter-spacing:.14em;color:#fff;text-shadow:0 0 30px var(--rc)}.bx-res span{display:block;margin:6px 0 16px;font-size:12px;letter-spacing:.24em;color:var(--dim)}
 .bx-acts{display:flex;justify-content:center;gap:12px}.bx-acts .btn{width:auto;padding:12px 22px}
 #boxOv.done.r3 .bx-win{box-shadow:0 0 60px rgba(242,184,75,.35) inset}#boxOv.done.r2 .bx-win{box-shadow:0 0 50px rgba(180,108,255,.3) inset}
 .pg-toast{position:fixed;left:50%;top:14%;transform:translateX(-50%);z-index:260;padding:10px 20px;background:var(--accent);color:#0b0c0d;font-weight:800;letter-spacing:.24em;font-size:13px;transition:opacity .5s}.pg-toast.out{opacity:0}
+#lkBody{flex:1;min-height:0;overflow:auto;pointer-events:auto;padding:16px 3vw}
+.lk-guns{display:flex;flex-direction:column;gap:16px}.lk-crumb{align-self:center;padding:0 0 14px;font-size:12px;letter-spacing:.34em;color:var(--dim)}
+.lk-cat>small{display:block;font-size:11px;letter-spacing:.34em;color:var(--accent);margin-bottom:8px}.lk-gg{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px}
+.lk-gun{position:relative;display:flex;flex-direction:column;gap:5px;padding:10px;border:1px solid var(--line);border-bottom:3px solid var(--rc,#3a3f45);background:rgba(10,12,13,.78);color:#fff;text-align:left;font-family:inherit;cursor:pointer}
+.lk-gun:focus,.lk-gun:hover{outline:2px solid var(--accent);outline-offset:1px}.lk-gun b{font-size:13px;letter-spacing:.14em}.lk-gun small{font-size:9px;letter-spacing:.16em;color:var(--rc,var(--dim))}.lk-gun em{position:absolute;right:10px;top:8px;font-style:normal;font-size:9px;letter-spacing:.16em;color:var(--dim)}.lk-gimg{display:block;height:76px;margin-top:8px}.lk-gimg img{width:100%;height:100%;object-fit:contain}
+.lk-gsw{display:flex;align-items:center;justify-content:center;height:44px;background:#16191c center/72px;font-size:9px;letter-spacing:.3em;color:var(--dim);border:1px solid rgba(0,0,0,.4)}
+.lk-body{display:grid;grid-template-columns:minmax(320px,500px) 1fr;gap:24px;align-items:start}.lk-right{min-width:0}.lk-sub{font-size:11px;letter-spacing:.3em;color:var(--dim);margin-bottom:10px}
+.lk-gun-h small{display:block;font-size:10px;letter-spacing:.34em;color:var(--accent)}.lk-gun-h b{font-size:30px;letter-spacing:.14em;color:#fff}
+.lk-secret{padding:8px 10px;border:1px solid #ff2a4a;color:#ff6a7f;font-size:11px;letter-spacing:.2em;background:rgba(255,42,74,.08)}
+.lk-empty{grid-column:1/-1;padding:18px;border:1px dashed var(--line);color:var(--dim);font-size:12px;letter-spacing:.08em;display:flex;align-items:center;justify-content:space-between;gap:12px}.lk-empty .btn{width:auto;padding:10px 16px;font-size:11px}
+.lk-t.sec{background:linear-gradient(160deg,rgba(255,42,74,.18),rgba(10,12,13,.85));animation:pgSec 2.2s ease-in-out infinite}@keyframes pgSec{50%{box-shadow:0 0 18px rgba(255,42,74,.45)}}
+.rw-boxes{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.rw-bx{display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);border-top:3px solid var(--bc);background:rgba(0,0,0,.35)}.rw-bx>b{font-size:16px;letter-spacing:.24em;color:var(--bc)}.rw-bx p{min-height:30px}
+.rw-bx .btn{width:100%;justify-content:center;padding:9px 8px;font-size:11px}.rw-bx .rw-odds{grid-template-columns:1fr;gap:3px;font-size:10px}.rw-bx .rw-crate{width:84px;height:64px;border-color:var(--bc)}.rw-bx .rw-crate::before{background:var(--bc)}.rw-bx .rw-crate span{font-size:18px;color:#fff}
+#boxSee{position:fixed;inset:0;z-index:235;display:flex;align-items:center;justify-content:center;background:rgba(3,4,5,.9);animation:hcIn .25s both}.bs-in{width:min(1100px,94vw);max-height:90vh;display:flex;flex-direction:column;border:1px solid var(--line);border-top:3px solid var(--bc);background:#0b0d0e}
+.bs-h{display:flex;align-items:center;gap:18px;padding:14px 18px;border-bottom:1px solid var(--line)}.bs-h small{display:block;font-size:10px;letter-spacing:.34em;color:var(--dim)}.bs-h b{font-size:22px;letter-spacing:.2em;color:var(--bc)}.bs-h span{margin-left:auto;display:flex;align-items:center;gap:6px;font-weight:800;color:#fff}.bs-h .btn{width:auto;padding:10px 18px}
+.bs-body{overflow:auto;padding:14px 18px;display:flex;flex-direction:column;gap:16px}.bs-sec h4{margin:0 0 8px;font-size:11px;letter-spacing:.3em;color:var(--rc)}.bs-sec p{margin:6px 0 0;font-size:11px;color:var(--dim)}
+.bs-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(104px,1fr));gap:6px}.bs-t{display:flex;flex-direction:column;gap:4px;padding:6px;border:1px solid var(--line);border-bottom:2px solid var(--rc);background:rgba(255,255,255,.02)}.bs-t img{width:100%;height:48px;object-fit:cover}.bs-t b{font-size:9px;letter-spacing:.1em;color:#fff}.bs-t small{font-size:8px;letter-spacing:.14em;color:var(--dim)}.bs-t.own small{color:var(--accent)}
+.bs-t.hid{align-items:center;justify-content:center;min-height:80px;background:repeating-linear-gradient(45deg,#14080a 0 8px,#1c0a0e 8px 16px)}.bs-t.hid span{font-size:28px;font-weight:900;color:#ff2a4a}.bs-t.hid b{color:#ff6a7f}
+.bx-c.sec{background:repeating-linear-gradient(45deg,#14080a 0 8px,#1c0a0e 8px 16px)}.bx-q{font-size:44px;font-weight:900;color:#ff2a4a;line-height:72px}
+.bx-big{display:flex;justify-content:center;margin:8px 0}.bx-big img{width:120px;height:120px;border:2px solid var(--rc);box-shadow:0 0 30px var(--rc)}
+#boxOv.done.r4 .bx-win{box-shadow:0 0 80px rgba(255,42,74,.55) inset}#boxOv.done.r4{animation:pgShake .5s 1}@keyframes pgShake{20%{transform:translateX(-8px)}40%{transform:translateX(8px)}60%{transform:translateX(-5px)}80%{transform:translateX(5px)}}
+.rw2{grid-template-columns:minmax(300px,420px) 1fr;align-items:start}.rw2 #rwBox{align-self:start}
+@media (max-width:900px){.rw2{grid-template-columns:1fr}.lk-body{grid-template-columns:1fr}.rw-boxes{grid-template-columns:1fr}}
 @media (max-width:900px){.lk-body,.rw-body{grid-template-columns:1fr}}`;
   document.head.appendChild(s);
 })();
