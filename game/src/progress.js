@@ -484,10 +484,11 @@ function rollBox(boxId) {
   if (rar === 4) return { it: pickR(SECRET_POOL), gun: pickR(lockerGuns()).id };
   return { it: pickR(BOX_POOL.filter(c => c.r === rar)) };
 }
+let BOX_FORCE = null;   // tests only (#debug): the next box gives this { it, gun }
 function openBox(boxId) {
   const box = BOXK[boxId] || BOXES[0]; if (PROG.dz < box.cost) return null;
   PROG.dz -= box.cost; PROG.boxes++;
-  const roll = rollBox(box.id), it = roll.it, key = it.secret ? secretKey(it.id, roll.gun) : it.id, dup = !!PROG.owned[key], refund = dup ? RAR[it.r].refund : 0;
+  const roll = BOX_FORCE ? (() => { const r = BOX_FORCE; BOX_FORCE = null; return r; })() : rollBox(box.id), it = roll.it, key = it.secret ? secretKey(it.id, roll.gun) : it.id, dup = !!PROG.owned[key], refund = dup ? RAR[it.r].refund : 0;
   if (dup) PROG.dz += refund; else PROG.owned[key] = Date.now();
   PROG.drops.unshift({ id: it.id, gun: roll.gun || null, dup, t: Date.now() }); PROG.drops = PROG.drops.slice(0, 8);
   saveProg(); return { it, gun: roll.gun || null, dup, refund, box };
