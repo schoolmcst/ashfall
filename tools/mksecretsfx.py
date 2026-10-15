@@ -129,8 +129,31 @@ def reaper():
     put(b, chord([55, 58.3, 82.4], 1.8, 0.004, soft=False) * env(1.8, 0.01, 1.7, 2), T(72), 0.4)   # dissonant sting
     return reverb(b, 1.6, 0.35)
 
+def prime_extra(buf):
+    # PRIME: the same track plus a gold shimmer and a bright chord on the title, and a rising sweep into it
+    b = buf.copy()
+    put(b, whoosh(0.9, 400, 9000), T(64), 0.35)
+    put(b, chord([1046.5, 1318.5, 1568, 2093], 2.2, 0.01) * env(2.2, 0.01, 2.1, 2.2), T(72), 0.4)
+    for k in range(10): put(b, bell(2093 * (1, 1.25, 1.5, 2)[k % 4], 0.9), T(73) + k * 0.07, 0.12, ((k % 5) - 2) / 2)
+    return reverb(b, 1.8, 0.25)
+
+ORB_NOTES = {'bloodline': 220, 'eclipse': 293.7, 'spectre': 392, 'abyss': 246.9, 'archangel': 523.3, 'reaper': 164.8}
+def prime_vault(mine):
+    # shared PRIME reveal: a chime per secret orb as it appears, a rising swirl as they spiral in, impact, gold chord + bells
+    b = silence()
+    put(b, lp(chord([55, 82.4], DUR, 0.005, soft=False), 400) * np.linspace(0.2, 1, N), 0, 0.22)
+    for k, n in enumerate(['bloodline', 'eclipse', 'spectre', 'abyss', 'archangel', 'reaper']):
+        f = ORB_NOTES[n]; put(b, mixl(bell(f * 2, 1.6), sine(f, 1.0) * env(1.0, 0.01, 0.9, 3) * 0.5), T(4 + k * 6), 0.3, (k - 2.5) / 3)
+    put(b, whoosh(1.2, 200, 6000), T(38), 0.6); t = tt(1.1); put(b, np.sin(2 * np.pi * np.cumsum(np.geomspace(120, 900, len(t))) / SR) * np.linspace(0, 1, len(t)) ** 2, T(40), 0.3)
+    put(b, boom(2.6, 120, 26), T(70), 1.3); put(b, hp(noise(0.6), 2500) * env(0.6, 0.002, 0.5, 5), T(70), 0.5)
+    put(b, chord([261.6, 329.6, 392, 523.3, 659.3], 2.4, 0.007) * env(2.4, 0.05, 2.3, 1.6), T(72), 0.5)
+    for k in range(12): put(b, bell(1046.5 * (1, 1.25, 1.5, 2)[k % 4], 1.0), T(74) + k * 0.06, 0.12, ((k % 5) - 2) / 2)
+    put(b, bell(ORB_NOTES[mine] * 2, 2.2), T(76), 0.5)   # the one you got rings out last
+    return reverb(b, 2.4, 0.4)
+
 if __name__ == '__main__':
     out = sys.argv[1] if len(sys.argv) > 1 else '.'
     from scipy.io import wavfile
     for name, fn in [('bloodline', bloodline), ('eclipse', eclipse), ('spectre', spectre), ('abyss', abyss), ('archangel', archangel), ('reaper', reaper)]:
-        x = master(fn()); wavfile.write(os.path.join(out, 'secret_%s.wav' % name), SR, (x * 32767).astype(np.int16)); print('wrote', name)
+        raw = fn(); x = master(raw.copy()); wavfile.write(os.path.join(out, 'secret_%s.wav' % name), SR, (x * 32767).astype(np.int16))
+        xp = master(prime_vault(name)); wavfile.write(os.path.join(out, 'secret_%s_prime.wav' % name), SR, (xp * 32767).astype(np.int16)); print('wrote', name, '+ prime')

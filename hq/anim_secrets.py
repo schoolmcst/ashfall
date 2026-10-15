@@ -135,8 +135,52 @@ def reaper():
     for k, f in enumerate(range(72, 90, 2)): kf(t, 'location', f, (R.uniform(-0.25, 0.25) if k % 2 else 0, -3.2, -0.2 + (R.uniform(-0.08, 0.08) if k % 3 == 0 else 0)))
     return sc
 
+
+# ---- the PRIME reveal: all six secrets as orbs in a ring, spiralling into one gold core, then the PRIME you got
+SECRET_LOOK = [('BLOODLINE', (1.0, 0.05, 0.05)), ('ECLIPSE', (1.0, 0.75, 0.3)), ('SPECTRE', (0.7, 0.95, 1.0)), ('ABYSS', (0.15, 0.4, 1.0)), ('ARCHANGEL', (1.0, 0.9, 0.7)), ('REAPER', (1.0, 0.06, 0.3))]
+def prime_vault(base):
+    sc = new_scene('prime_' + base, world=(0.004, 0.003, 0.002))
+    cam = camera(sc, (0, -13, 0.4), (0, 0, 0.4), 38); kf(cam, 'location', 1, (0, -13, 0.4)); kf(cam, 'location', 70, (0, -10.5, 0.4)); kf(cam, 'location', FRAMES, (0, -11.5, 0.4))
+    for i in range(140):   # dust
+        m = emis('dust%d' % (i % 4), (1, 0.85, 0.6), 1 + i % 4); d = mesh(sc, 'ico', 'dust', m, r=R.uniform(0.01, 0.03)); d.location = (R.uniform(-14, 14), R.uniform(4, 16), R.uniform(-8, 8))
+    mine = [n for n, c in SECRET_LOOK].index(base.upper())
+    for k, (name, col) in enumerate(SECRET_LOOK):
+        om = emis('orb%d' % k, col, 0.0); orb = mesh(sc, 'sphere', 'orb', om, r=0.42, seg=32, rings=16)
+        rm = emis('orbring%d' % k, col, 0.0); ring = mesh(sc, 'torus', 'orbring', rm, R=0.7, r=0.022, seg=64, sides=6); ring.parent = orb
+        kf(ring, 'rotation_euler', 1, (0.4 * k, 0.9, 0)); kf(ring, 'rotation_euler', FRAMES, (0.4 * k + 6, 0.9 + 4, 2))
+        lm = emis('lab%d' % k, col, 0.0); lab = text(sc, name, lm, size=0.2, loc=(0, 0, 0), extrude=0.0); lab.parent = orb; lab.location = (0, -0.1, -0.75)
+        f0 = 4 + k * 6
+        kf_strength(om, f0 - 1, 0); kf_strength(om, f0 + 3, 6); kf_strength(om, f0 + 10, 2.6); kf_strength(rm, f0, 0); kf_strength(rm, f0 + 6, 3.5)
+        kf_strength(lm, f0 + 2, 0); kf_strength(lm, f0 + 8, 4); kf_strength(lm, 40, 4); kf_strength(lm, 50, 0)
+        if name == 'SPECTRE':
+            for j, f in enumerate(range(1, FRAMES, 12)): kf_color(om, f, colorsys.hsv_to_rgb((j * 0.13) % 1, 0.45, 1.0))
+        # ring position: slow turn, then a fast spiral into the centre
+        for f in range(1, 73, 3):
+            spin = 0.012 * f + (max(0, f - 38) / 34) ** 2 * 7.0; rad = 3.3 * (1 - (max(0, f - 40) / 32) ** 1.6) if f < 72 else 0
+            a = TAU * k / 6 + spin; kf(orb, 'location', f, (math.cos(a) * rad, 0, math.sin(a) * rad * 0.82 + 0.4))
+        kf(orb, 'scale', 1, (0.001,) * 3); kf(orb, 'scale', f0 - 1, (0.001,) * 3); kf(orb, 'scale', f0 + 4, (1.15,) * 3); kf(orb, 'scale', f0 + 9, (1, 1, 1))
+        kf(orb, 'scale', 64, (0.8, 0.8, 0.8)); kf(orb, 'scale', 72, (0.001,) * 3)
+    # fusion: gold core flash, ring burst and sparks, then a core in the colour of the PRIME you got
+    gm = emis('core', (1.0, 0.8, 0.35), 0.0); core = mesh(sc, 'sphere', 'core', gm, r=1.0, seg=48, rings=24); core.location = (0, 0.6, 0.4)
+    kf(core, 'scale', 1, (0.001,) * 3); kf(core, 'scale', 64, (0.001,) * 3); kf(core, 'scale', 70, (0.5, 0.5, 0.5)); kf(core, 'scale', 73, (2.2, 2.2, 2.2)); kf(core, 'scale', 82, (0.9, 0.9, 0.9)); kf(core, 'scale', FRAMES, (1.0, 1.0, 1.0))
+    kf_strength(gm, 64, 0); kf_strength(gm, 71, 60); kf_strength(gm, 80, 8); kf_color(gm, 72, (1.0, 0.82, 0.4)); kf_color(gm, 84, SECRET_LOOK[mine][1])
+    core.location = (0, 1.6, 1.9)
+    bm = emis('burst', (1.0, 0.85, 0.45), 0.0); burst = mesh(sc, 'torus', 'burst', bm, R=0.5, r=0.05, seg=96, sides=8); burst.location = (0, 0.5, 0.4); burst.rotation_euler = (math.pi / 2, 0, 0)
+    kf(burst, 'scale', 1, (0.001, 0.001, 1)); kf(burst, 'scale', 68, (0.001, 0.001, 1)); kf(burst, 'scale', 69, (0.1, 0.1, 1)); kf(burst, 'scale', 84, (22, 22, 1)); kf(burst, 'scale', 85, (0.001, 0.001, 1)); kf_strength(bm, 69, 0); kf_strength(bm, 71, 40); kf_strength(bm, 84, 2)
+    sm = emis('spark', (1.0, 0.85, 0.45), 16.0)
+    for i in range(70):
+        a = R.uniform(0, TAU); dd = R.uniform(3, 9); sp = mesh(sc, 'ico', 'spark', sm, r=R.uniform(0.02, 0.05))
+        kf(sp, 'location', 1, (0, 0.5, 0.4)); kf(sp, 'location', 70, (0, 0.5, 0.4)); kf(sp, 'location', 70 + R.randint(14, 30), (math.cos(a) * dd, 0.5 + R.uniform(-2, 2), math.sin(a) * dd * 0.7 + 0.4))
+        kf(sp, 'scale', 1, (0.001,) * 3); kf(sp, 'scale', 69, (0.001,) * 3); kf(sp, 'scale', 71, (1, 1, 1)); kf(sp, 'scale', FRAMES, (0.001,) * 3)
+    wm = emis('whiteout', (1.0, 0.9, 0.7), 0.0); wo = mesh(sc, 'sphere', 'whiteout', wm, r=1.0, seg=32, rings=16); wo.location = (0, 0.5, 0.4)   # flash: a light ball that swells past the camera
+    kf(wo, 'scale', 1, (0.001,) * 3); kf(wo, 'scale', 69, (0.001,) * 3); kf(wo, 'scale', 72, (9, 9, 9)); kf(wo, 'scale', 76, (14, 14, 14)); kf(wo, 'scale', 77, (0.001,) * 3)
+    kf_strength(wm, 69, 30); kf_strength(wm, 72, 8); kf_strength(wm, 76, 3)
+    title(sc, SECRET_LOOK[mine][0], SECRET_LOOK[mine][1], start=74)
+    return sc
+
 BUILD = {'bloodline': bloodline, 'eclipse': eclipse, 'spectre': spectre, 'abyss': abyss, 'archangel': archangel, 'reaper': reaper}
-_sc = BUILD[NAME]()
+PRIME = NAME.endswith('_prime')   # PRIME versions use the shared vault reveal with all six secrets
+_sc = prime_vault(NAME.replace('_prime', '')) if PRIME else BUILD[NAME]()
 ease_all(_sc)
 render(_sc, NAME)
 cleanup(_sc)

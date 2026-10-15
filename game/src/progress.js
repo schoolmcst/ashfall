@@ -12,6 +12,7 @@ const RAR = [
   { name: 'EPIC', col: '#b46cff', odds: 10, refund: 400 },
   { name: 'LEGENDARY', col: '#f2b84b', odds: 3, refund: 1000 },
   { name: 'SECRET', col: '#ff2a4a', odds: 0.5, refund: 5000 },
+  { name: 'PRIME', col: '#ffd84a', odds: 0.25, refund: 10000 },
 ];
 // kind: camo = pattern, skin = finish. lvl: unlocked at that level, else found in chance boxes
 const COSM = [
@@ -109,6 +110,9 @@ const SECRET_PACK = [
 const slug = n => n.toLowerCase().replace(/[^a-z0-9]+/g, '_');
 for (const [name, t, r, c, gx, mx] of CAMO_PACK) COSM.push({ id: 'c_' + slug(name), name, kind: 'camo', r, g: Object.assign({ t, c }, gx || {}), m: mx });
 for (const [name, t, c, gx, mx] of SECRET_PACK) COSM.push({ id: 'x_' + slug(name), name, kind: 'camo', r: 4, secret: true, g: Object.assign({ t, c }, gx || {}), m: mx });
+// PRIME: a universal version of each secret (any gun), half as likely, with a gold shimmer and a stronger glow
+for (const [name, t, c, gx, mx] of SECRET_PACK) COSM.push({ id: 'x_' + slug(name) + '_prime', name: name + ' PRIME', kind: 'camo', r: 5, secret: true, universal: true,
+  g: Object.assign({ t, c, prime: true }, gx || {}), m: Object.assign({}, mx || {}, { emis: ((mx && mx.emis) || 1.5) * 1.35, metal: Math.min(1, ((mx && mx.metal) || 0.12) + 0.15) }) });
 // ---- gun STICKERS: one every 5 levels (level 100 is the DARKZONE GOLD skin above)
 const STICKER_DEFS = [
   [5, 'gg', 'GG', 0, 'text', ['#ffffff', '#16a34a'], 'GG'], [10, 'star', 'LONE STAR', 0, 'star', ['#f2c94c', '#8a5a00']], [15, 'bolt', 'LIGHTNING', 0, 'bolt', ['#ffe14d', '#1f2937']], [20, 'target', 'BULLSEYE', 0, 'target', ['#ef4444', '#ffffff']],
@@ -304,6 +308,13 @@ function cosmPaint(c, N) {
       return [Math.min(255, C[0][0] * k), Math.min(255, C[0][1] * k), Math.min(255, C[0][2] * k), 0];
     };
   }
+  if (g.prime) {   // PRIME: gold sheen lines and sparkles over the secret pattern
+    const base = fn, sp = tileNoise(48, R), G0 = [255, 214, 96];
+    fn = (u, v) => { const r = base(u, v), sh = 0.5 + 0.5 * Math.sin((u + v) * Math.PI * 2 * 5), s2 = sp(u, v); let col = [r[0], r[1], r[2]], gl = r[3];
+      if (sh > 0.965) { const k = (sh - 0.965) / 0.035; col = mix(col, G0, 0.75 * k); gl = Math.max(gl, 0.9 * k); }
+      if (s2 > 0.9) { const k = Math.min(1, (s2 - 0.9) * 12); col = mix(col, [255, 240, 180], k); gl = Math.max(gl, k); }
+      return [col[0], col[1], col[2], gl]; };
+  }
   const cc = document.createElement('canvas'); cc.width = cc.height = N;
   const cx = cc.getContext('2d'), img = cx.createImageData(N, N);
   let ec = null, eimg = null, glowAny = false;
@@ -430,8 +441,8 @@ function applyCamo(g, id) {
 // which cosmetic a gun wears: its own pick, else the all-weapons pick (only if owned)
 // which camo a gun wears: its own pick, else the all-weapons pick (owned only). Secret camos only on the gun they dropped for
 const secretKey = (id, gun) => id + '@' + gun;
-function ownsFor(id, gunId) { const c = COS[id]; return !!c && (c.secret ? !!PROG.owned[secretKey(id, gunId)] : !!PROG.owned[id]); }
-function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; if (!id || !COS[id]) return null; if (COS[id].secret && own !== id) return null; return ownsFor(id, gunId) ? id : null; }
+function ownsFor(id, gunId) { const c = COS[id]; return !!c && (c.secret && !c.universal ? !!PROG.owned[secretKey(id, gunId)] : !!PROG.owned[id]); }
+function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; if (!id || !COS[id]) return null; if (COS[id].secret && !COS[id].universal && own !== id) return null; return ownsFor(id, gunId) ? id : null; }
 function refreshHeldCamos() { try { (WEAPONS || []).forEach((w, i) => { if (gunObjs[i] && w && w.def) { applyCamo(gunObjs[i], camoFor(w.def.id)); applySticker(gunObjs[i], stickerFor(w.def.id)); } }); } catch (e) {} }
 const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]]).length;
 const publicCount = () => COSM.filter(c => !c.secret).length;
@@ -472,23 +483,32 @@ function thumbTick() {
 
 /* ---------- chance boxes and daily reward */
 const BOXES = [
-  { id: 'std', name: 'STANDARD', cost: 500, odds: [59.5, 27, 10, 3, 0.5], col: '#9aa3a9', desc: 'Every camo and skin can drop.' },
-  { id: 'elite', name: 'ELITE', cost: 1200, odds: [25, 52, 17, 5.5, 0.5], col: '#4aa3ff', desc: 'Mostly rare, better epic and legendary odds.' },
-  { id: 'prestige', name: 'PRESTIGE', cost: 2500, odds: [0, 50, 38, 11.5, 0.5], col: '#f2b84b', desc: 'No commons. The best legendary odds.' },
+  { id: 'std', name: 'STANDARD', cost: 500, odds: [59.25, 27, 10, 3, 0.5, 0.25], col: '#9aa3a9', desc: 'Every camo and skin can drop.' },
+  { id: 'elite', name: 'ELITE', cost: 1200, odds: [24.75, 52, 17, 5.5, 0.5, 0.25], col: '#4aa3ff', desc: 'Mostly rare, better epic and legendary odds.' },
+  { id: 'prestige', name: 'PRESTIGE', cost: 2500, odds: [0, 49.75, 38, 11.5, 0.5, 0.25], col: '#f2b84b', desc: 'No commons. The best legendary odds.' },
 ];
-const BOXK = Object.fromEntries(BOXES.map(b => [b.id, b])), SECRET_POOL = COSM.filter(c => c.secret);
+const BOXK = Object.fromEntries(BOXES.map(b => [b.id, b])), SECRET_POOL = COSM.filter(c => c.secret && !c.universal), PRIME_POOL = COSM.filter(c => c.universal);
 const pickR = a => a[(Math.random() * a.length) | 0];
 function rollRarity(box) { let r = Math.random() * 100, last = 0; for (let i = 0; i < box.odds.length; i++) { if (box.odds[i] <= 0) continue; last = i; if (r < box.odds[i]) return i; r -= box.odds[i]; } return last; }
+// secrets never repeat: a secret roll picks a camo + gun pair you don't own, a PRIME roll a PRIME you don't own;
+// when one set is complete the roll moves to the other, and when both are complete it becomes a Legendary
+function secretPairs() { const out = []; for (const c of SECRET_POOL) for (const d of lockerGuns()) if (!PROG.owned[secretKey(c.id, d.id)]) out.push([c, d.id]); return out; }
 function rollBox(boxId) {
-  const box = BOXK[boxId] || BOXES[0], rar = rollRarity(box);
-  if (rar === 4) return { it: pickR(SECRET_POOL), gun: pickR(lockerGuns()).id };
+  const box = BOXK[boxId] || BOXES[0]; let rar = rollRarity(box);
+  if (rar >= 4) {
+    const pairs = secretPairs(), primes = PRIME_POOL.filter(c => !PROG.owned[c.id]);
+    if (rar === 5 && !primes.length) rar = 4;
+    if (rar === 4 && !pairs.length) rar = primes.length ? 5 : 3;
+    if (rar === 5) return { it: pickR(primes) };
+    if (rar === 4) { const [c, gun] = pickR(pairs); return { it: c, gun }; }
+  }
   return { it: pickR(BOX_POOL.filter(c => c.r === rar)) };
 }
 let BOX_FORCE = null;   // tests only (#debug): the next box gives this { it, gun }
 function openBox(boxId) {
   const box = BOXK[boxId] || BOXES[0]; if (PROG.dz < box.cost) return null;
   PROG.dz -= box.cost; PROG.boxes++;
-  const roll = BOX_FORCE ? (() => { const r = BOX_FORCE; BOX_FORCE = null; return r; })() : rollBox(box.id), it = roll.it, key = it.secret ? secretKey(it.id, roll.gun) : it.id, dup = !!PROG.owned[key], refund = dup ? RAR[it.r].refund : 0;
+  const roll = BOX_FORCE ? (() => { const r = BOX_FORCE; BOX_FORCE = null; return r; })() : rollBox(box.id), it = roll.it, key = it.secret && !it.universal ? secretKey(it.id, roll.gun) : it.id, dup = !!PROG.owned[key], refund = dup ? RAR[it.r].refund : 0;
   if (dup) PROG.dz += refund; else PROG.owned[key] = Date.now();
   PROG.drops.unshift({ id: it.id, gun: roll.gun || null, dup, t: Date.now() }); PROG.drops = PROG.drops.slice(0, 8);
   saveProg(); return { it, gun: roll.gun || null, dup, refund, box };
@@ -522,7 +542,7 @@ function gunItems(gunId, tab) {
   return COSM.filter(c => (c.kind === 'camo' || c.kind === 'skin') && ownsFor(c.id, gunId)).sort((a, b) => (b.r - a.r) || a.name.localeCompare(b.name));
 }
 function tileHtml(c, on, eq, extra) {
-  return `<button class="lk-t${on ? ' on' : ''}${eq ? ' eq' : ''}${c.secret ? ' sec' : ''}" data-lk="${c.id}" style="--rc:${RAR[c.r].col}"><span class="lk-sw${c.kind === 'sticker' ? ' stk' : ''}" style="background-image:url(${swatchUrl(c.id)})"></span><b>${c.name}</b><small>${eq ? 'EQUIPPED' : extra || RAR[c.r].name + ' ' + kindName(c)}</small></button>`;
+  return `<button class="lk-t${on ? ' on' : ''}${eq ? ' eq' : ''}${c.secret ? (c.universal ? ' sec prime' : ' sec') : ''}" data-lk="${c.id}" style="--rc:${RAR[c.r].col}"><span class="lk-sw${c.kind === 'sticker' ? ' stk' : ''}" style="background-image:url(${swatchUrl(c.id)})"></span><b>${c.name}</b><small>${eq ? 'EQUIPPED' : extra || RAR[c.r].name + ' ' + kindName(c)}</small></button>`;
 }
 function renderLocker() {
   $('lkTop').innerHTML = progCardHtml();
@@ -545,8 +565,8 @@ function renderLocker() {
   $('lkFilters').innerHTML = `<button class="cod-tab" data-act="lk-back">&lsaquo; WEAPONS</button><button class="cod-tab${!other ? ' on' : ''}" data-lktab="camo">CAMOS</button><button class="cod-tab${other ? ' on' : ''}" data-lktab="other">OTHER COSMETICS</button>`;
   body.className = 'lk-body';
   body.innerHTML = `<div class="lk-left"><div class="lk-gun-h"><small>${CATS[d.cat].name}</small><b>${d.name}</b></div><canvas id="lkPrev" width="480" height="200"></canvas><div id="lkInfo"></div><div class="lk-acts" id="lkActs2"></div></div><div class="lk-right"><div class="lk-sub">${other ? 'STICKERS · ONE PER GUN' : 'CAMOS & SKINS · YOU OWN ' + items.length}</div><div class="lk-grid" id="lkGrid"></div></div>`;
-  $('lkInfo').innerHTML = sel ? `<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} ${kindName(sel)}</small><b>${sel.name}</b></div>${sel.secret ? `<div class="lk-secret">SECRET · ONLY FOR THE ${d.name}${typeof SECRET_VID !== 'undefined' && SECRET_VID[sel.id] ? ' <button class="mini lk-rv" data-act="lk-reveal">▶ PLAY REVEAL</button>' : ''}</div>` : ''}
-<div class="lk-acts"><button class="btn primary" data-act="lk-apply"${on ? ' disabled' : ''}>${on ? 'EQUIPPED' : 'EQUIP ON ' + d.name}</button>${sel.secret ? '' : `<button class="btn" data-act="lk-all">EQUIP ON ALL WEAPONS</button>`}</div>`
+  $('lkInfo').innerHTML = sel ? `<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} ${kindName(sel)}</small><b>${sel.name}</b></div>${sel.secret ? `<div class="lk-secret${sel.universal ? ' prime' : ''}">${sel.universal ? 'SECRET PRIME · WORKS ON EVERY GUN' : 'SECRET · ONLY FOR THE ' + d.name}${typeof SECRET_VID !== 'undefined' && SECRET_VID[sel.id] ? ' <button class="mini lk-rv" data-act="lk-reveal">▶ PLAY REVEAL</button>' : ''}</div>` : ''}
+<div class="lk-acts"><button class="btn primary" data-act="lk-apply"${on ? ' disabled' : ''}>${on ? 'EQUIPPED' : 'EQUIP ON ' + d.name}</button>${sel.secret && !sel.universal ? '' : `<button class="btn" data-act="lk-all">EQUIP ON ALL WEAPONS</button>`}</div>`
     : `<div class="lk-name"><small>${other ? 'NO STICKER' : 'NO CAMO'}</small><b>${other ? 'NONE' : 'FACTORY FINISH'}</b></div>`;
   $('lkActs2').innerHTML = other ? `<button class="btn" data-act="lk-clear-stk"${!curS ? ' disabled' : ''}>REMOVE STICKER</button>` : `<button class="btn" data-act="lk-clear"${!cur ? ' disabled' : ''}>REMOVE CAMO</button>`;
   $('lkGrid').innerHTML = `<button class="lk-t${!LK.sel ? ' on' : ''}" data-lk=""><span class="lk-sw0">—</span><b>${other ? 'NONE' : 'FACTORY'}</b><small>DEFAULT</small></button>` +
@@ -559,7 +579,7 @@ function renderLocker() {
 function lockerAct(act) {
   const slot = LK.sel && COS[LK.sel] && COS[LK.sel].kind === 'sticker' ? PROG.stk : PROG.equip;
   if (act === 'lk-apply' && LK.sel && ownsFor(LK.sel, LK.gun)) { slot.guns[LK.gun] = LK.sel; saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on'); return true; }
-  if (act === 'lk-all' && LK.sel && PROG.owned[LK.sel] && !COS[LK.sel].secret) {
+  if (act === 'lk-all' && LK.sel && PROG.owned[LK.sel] && (!COS[LK.sel].secret || COS[LK.sel].universal)) {
     slot.all = LK.sel; for (const g in slot.guns) if (!(COS[slot.guns[g]] && COS[slot.guns[g]].secret)) delete slot.guns[g];   // secret picks stay on their gun
     saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on'); toast2('EQUIPPED ON ALL WEAPONS'); return true;
   }
@@ -577,7 +597,7 @@ function lockerAct(act) {
   if (act === 'rw-box-close') { boxClose(); return true; }
   if (act === 'rw-box-equip') {
     const r = BOXV.res;
-    if (r && !r.dup) { if (r.it.secret) { PROG.equip.guns[r.gun] = r.it.id; toast2(r.it.name + ' ON ' + ARM[r.gun].name); } else { PROG.equip.all = r.it.id; for (const g in PROG.equip.guns) if (!(COS[PROG.equip.guns[g]] && COS[PROG.equip.guns[g]].secret)) delete PROG.equip.guns[g]; toast2(r.it.name + ' ON ALL WEAPONS'); } saveProg(); refreshHeldCamos(); }
+    if (r && !r.dup) { if (r.it.secret && !r.it.universal) { PROG.equip.guns[r.gun] = r.it.id; toast2(r.it.name + ' ON ' + ARM[r.gun].name); } else { PROG.equip.all = r.it.id; for (const g in PROG.equip.guns) if (!(COS[PROG.equip.guns[g]] && COS[PROG.equip.guns[g]].secret)) delete PROG.equip.guns[g]; toast2(r.it.name + ' ON ALL WEAPONS'); } saveProg(); refreshHeldCamos(); }
     boxClose(); return true;
   }
   return false;
@@ -636,12 +656,12 @@ function playSecretReveal(id, done) {
 const BOXV = { res: null };
 function boxOpen(id) {
   const res = openBox(id); if (!res) return; BOXV.res = res;
-  const show = c => c.secret ? `<div class="bx-c sec" style="--rc:${RAR[4].col}"><span class="bx-q">?</span><b>???</b></div>` : `<div class="bx-c" style="--rc:${RAR[c.r].col}"><img src="${swatchUrl(c.id)}" alt=""><b>${c.name}</b></div>`;
+  const show = c => c.secret ? `<div class="bx-c sec" style="--rc:${RAR[c.r].col}"><span class="bx-q">?</span><b>???</b></div>` : `<div class="bx-c" style="--rc:${RAR[c.r].col}"><img src="${swatchUrl(c.id)}" alt=""><b>${c.name}</b></div>`;
   const reel = []; for (let i = 0; i < 34; i++) { if (i === 29) { reel.push(res.it); continue; } let c = rollBox(id).it; if (c.secret) c = pickR(BOX_POOL.filter(x => x.r === 3)); reel.push(c); }
   const ov = document.createElement('div'); ov.id = 'boxOv';
   ov.innerHTML = `<div class="bx-in"><small>${res.box.name} BOX</small><div class="bx-win"><div class="bx-reel" id="bxReel">${reel.map(show).join('')}</div><i class="bx-mark"></i></div>
-<div class="bx-res hide" id="bxRes" style="--rc:${RAR[res.it.r].col}"><small>${RAR[res.it.r].name} ${kindName(res.it)}${res.gun ? ' · FOR THE ' + ARM[res.gun].name : ''}</small><div class="bx-big"><img src="${swatchUrl(res.it.id)}" alt=""></div><b>${res.it.name}</b><span>${res.dup ? `DUPLICATE · +${res.refund.toLocaleString()} DZ BACK` : res.it.secret ? 'SECRET FIND · ONLY YOUR ' + ARM[res.gun].name + ' CAN WEAR IT' : 'NEW · ADDED TO YOUR LOCKER'}</span>
-<div class="bx-acts">${res.dup ? '' : `<button class="btn primary" data-act="rw-box-equip">${res.it.secret ? 'EQUIP ON ' + ARM[res.gun].name : 'EQUIP ON ALL WEAPONS'}</button>`}<button class="btn" data-act="rw-box-close">${res.dup ? 'OK' : 'LATER'}</button></div></div></div>`;
+<div class="bx-res hide" id="bxRes" style="--rc:${RAR[res.it.r].col}"><small>${RAR[res.it.r].name} ${kindName(res.it)}${res.gun ? ' · FOR THE ' + ARM[res.gun].name : ''}</small><div class="bx-big"><img src="${swatchUrl(res.it.id)}" alt=""></div><b>${res.it.name}</b><span>${res.dup ? `DUPLICATE · +${res.refund.toLocaleString()} DZ BACK` : res.it.universal ? 'SECRET PRIME · WORKS ON EVERY GUN' : res.it.secret ? 'SECRET FIND · ONLY YOUR ' + ARM[res.gun].name + ' CAN WEAR IT' : 'NEW · ADDED TO YOUR LOCKER'}</span>
+<div class="bx-acts">${res.dup ? '' : `<button class="btn primary" data-act="rw-box-equip">${res.it.secret && !res.it.universal ? 'EQUIP ON ' + ARM[res.gun].name : 'EQUIP ON ALL WEAPONS'}</button>`}<button class="btn" data-act="rw-box-close">${res.dup ? 'OK' : 'LATER'}</button></div></div></div>`;
   document.body.appendChild(ov); try { sfx.ui(); } catch (e) {}
   const el = ov.querySelector('#bxReel'), cw = 132;
   requestAnimationFrame(() => { el.style.transition = 'transform 4.2s cubic-bezier(.12,.72,.1,1)'; el.style.transform = `translateX(${-(29 * cw) + (el.parentNode.clientWidth / 2 - cw / 2) - (Math.random() * 60 - 30)}px)`; });
@@ -728,6 +748,7 @@ function boxClose() { if (BOXV.ov) BOXV.ov.remove(); BOXV.ov = null; BOXV.res = 
 .rw2{grid-template-columns:minmax(300px,420px) 1fr;align-items:start}.rw2 #rwBox{align-self:start}
 #secVid{position:fixed;inset:0;z-index:250;background:#000;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .35s}#secVid.out{opacity:0}#secVid video{width:100%;height:100%;object-fit:contain}#secVid span{position:absolute;right:24px;bottom:18px;font-size:10px;letter-spacing:.3em;color:rgba(255,255,255,.45)}
 .lk-rv{margin-left:10px;width:auto;padding:4px 10px;font-size:10px;letter-spacing:.2em}
+.lk-t.sec.prime{background:linear-gradient(160deg,rgba(255,216,74,.22),rgba(255,42,74,.14) 55%,rgba(10,12,13,.85));animation:pgPrime 2.4s ease-in-out infinite}@keyframes pgPrime{50%{box-shadow:0 0 22px rgba(255,216,74,.55)}}.lk-secret.prime{border-color:#ffd84a;color:#ffe48a;background:rgba(255,216,74,.08)}#boxOv.done.r5 .bx-win{box-shadow:0 0 90px rgba(255,216,74,.6) inset}#boxOv.done.r5{animation:pgShake .5s 1}
 @media (max-width:900px){.rw2{grid-template-columns:1fr}.lk-body{grid-template-columns:1fr}.rw-boxes{grid-template-columns:1fr}}
 @media (max-width:900px){.lk-body,.rw-body{grid-template-columns:1fr}}`;
   document.head.appendChild(s);

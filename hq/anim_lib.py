@@ -128,12 +128,28 @@ def ease_all(sc):
                         for k in fc.keyframe_points: k.interpolation = 'BEZIER'
                 except Exception: pass
 
+PRIME = False   # set by the job for the PRIME (universal) versions: name + PRIME, gold burst
 def title(sc, name, col, start=72):
+    if PRIME: return title_prime(sc, name, col, start)
+    return title_base(sc, name, col, start)
+def title_prime(sc, name, col, start=72):
+    t = title_base(sc, name + ' PRIME', col, start, size=0.62, sub='SECRET PRIME  ·  UNIVERSAL')
+    gold = (1.0, 0.78, 0.25)
+    rm = emis('pr_ring', gold, 0.0); ring = mesh(sc, 'torus', 'pr_ring', rm, R=0.3, r=0.03, seg=96, sides=8); ring.parent = t; ring.location = (0, 0.1, -0.05)
+    kf(ring, 'scale', start - 1, (0.1, 0.1, 1)); kf(ring, 'scale', start + 14, (16, 9, 1)); kf_strength(rm, start - 1, 0); kf_strength(rm, start + 1, 30); kf_strength(rm, start + 16, 0)
+    sm = emis('pr_spark', gold, 14.0)
+    for i in range(46):
+        a = 2 * math.pi * i / 46; d = 2.5 + (i % 5) * 0.7; sp = mesh(sc, 'ico', 'pr_spark', sm, r=0.035); sp.parent = t
+        kf(sp, 'location', 1, (0, 0, 0)); kf(sp, 'location', start, (0, 0, 0)); kf(sp, 'location', start + 22, (math.cos(a) * d * 1.6, math.sin(a) * d * 0.7, 0.2))
+        kf(sp, 'scale', 1, (0.001,) * 3); kf(sp, 'scale', start, (1, 1, 1)); kf(sp, 'scale', start + 30, (0.001,) * 3)
+    return t
+
+def title_base(sc, name, col, start=72, size=0.82, sub='SECRET CAMO'):
     # the camo name: scales in with a flash, plus a small SECRET CAMO line
-    tm = emis('tm_' + name, col, 0.0); t = text(sc, name, tm, size=0.82, loc=(0, -3.2, -0.2))
+    tm = emis('tm_' + name, col, 0.0); t = text(sc, name, tm, size=size, loc=(0, -3.2, -0.2))
     kf(t, 'scale', 1, (0.001, 0.001, 0.001)); kf(t, 'scale', start - 2, (0.001, 0.001, 0.001)); kf(t, 'scale', start - 1, (0.6, 0.6, 0.6)); kf(t, 'scale', start + 10, (1.08, 1.08, 1.08)); kf(t, 'scale', FRAMES, (1.0, 1.0, 1.0))
     kf_strength(tm, start - 1, 0.0); kf_strength(tm, start + 4, 40.0); kf_strength(tm, start + 16, 9.0); kf_strength(tm, FRAMES, 8.0)
-    sm = emis('sm_' + name, (1, 1, 1), 0.0); s = text(sc, 'SECRET CAMO', sm, size=0.28, loc=(0, -3.2, -0.95), extrude=0.0)
+    sm = emis('sm_' + name, (1, 1, 1), 0.0); s = text(sc, sub, sm, size=0.28, loc=(0, -3.2, -0.95), extrude=0.0)
     kf(s, 'scale', 1, (0.001, 0.001, 0.001)); kf(s, 'scale', start + 5, (0.001, 0.001, 0.001)); kf(s, 'scale', start + 6, (1, 1, 1))
     kf_strength(sm, start + 6, 0.0); kf_strength(sm, start + 20, 3.0)
     return t

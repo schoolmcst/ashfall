@@ -5,8 +5,8 @@ Each clip is re-encoded small (VP9, 960x540, no audio) and embedded as a data: U
 import sys, os, glob, base64, subprocess, tempfile, json
 src = sys.argv[1]; snd = sys.argv[2] if len(sys.argv) > 2 else None; here = os.path.dirname(os.path.abspath(__file__)); out = os.path.join(here, '..', 'game', 'src', 'secretvids.js')
 vids = {}
-for name in ['bloodline', 'eclipse', 'spectre', 'abyss', 'archangel', 'reaper']:
-    files = sorted(glob.glob(os.path.join(src, 'secret_%s*.webm' % name)))
+for name in [n + p for p in ('', '_prime') for n in ['bloodline', 'eclipse', 'spectre', 'abyss', 'archangel', 'reaper']]:
+    files = sorted(glob.glob(os.path.join(src, 'secret_%s_0*.webm' % name)))
     frames = sorted(glob.glob(os.path.join(src, 'secret_%s' % name, 'f_*.jpg')))
     if not files and not frames: print('missing', name); continue
     tmp = tempfile.mktemp(suffix='.webm')
