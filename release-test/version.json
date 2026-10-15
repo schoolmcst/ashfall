@@ -1,11 +1,8 @@
 {
- "version": "1.2.13",
+ "version": "1.2.14",
  "notes": [
-  "100 NEW CAMOS: fleck, multicam, zebra, waves, glitch, honeycomb, holographic foil, gems and more, from Common to Legendary",
-  "Three chance boxes: STANDARD (500 DZ), ELITE (1,200 DZ) and PRESTIGE (2,500 DZ) with better odds, each with a VIEW CONTENTS list",
-  "New LOCKER: pick a weapon (with pictures of every gun), then its camos; stickers are under OTHER COSMETICS. Only the things you own are shown",
-  "Diamond is now a cut gem with sparkles, and the metal finishes have brushed and engraved detail"
+  "Chance boxes: rare finds now get their own reveal"
  ],
- "sha256": "b1e48eef2ed81475b771f46df3c6ed9114faff5bebffea1d85ada7d554cddcc6",
+ "sha256": "b23427d967b1942a0e71320caf867af5850569e80e3c7b46291ea52dd4f9c9d7",
  "minApp": "1.0.0"
 }

@@ -70,7 +70,7 @@ def abyss():
     sc = new_scene('abyss', world=(0.0, 0.0, 0.004))
     cam = camera(sc, (0, -6, 0), (0, 10, 0), 30)
     kf(cam, 'location', 1, (0, -6, 0)); kf(cam, 'location', 92, (0, 86, 0)); kf(cam, 'location', FRAMES, (0, 87.2, 0))
-    kf(cam, 'rotation_euler', 1, (math.pi / 2, 0, 0)); kf(cam, 'rotation_euler', 92, (math.pi / 2, 1.4, 0)); kf(cam, 'rotation_euler', FRAMES, (math.pi / 2, 1.5, 0))
+    kf(cam, 'rotation_euler', 1, (math.pi / 2, 0, 0)); kf(cam, 'rotation_euler', 60, (math.pi / 2, 1.6, 0)); kf(cam, 'rotation_euler', 90, (math.pi / 2, 0, 0)); kf(cam, 'rotation_euler', FRAMES, (math.pi / 2, 0, 0))
     for i in range(46):
         m = emis('ab%d' % (i % 4), (0.08, 0.35, 1.0) if i % 4 else (0.4, 0.8, 1.0), [3, 6, 4, 10][i % 4])
         t = mesh(sc, 'torus', 'ring', m, R=2.3, r=0.05, seg=64, sides=6, arc=R.choice([1.0, 0.75, 0.5])); t.location = (0, i * 2.0, 0)
@@ -78,7 +78,7 @@ def abyss():
     sm = emis('streak', (0.5, 0.85, 1.0), 6.0)
     for i in range(60):
         a, rr = R.uniform(0, TAU), R.uniform(0.6, 1.9); c = mesh(sc, 'cube', 'streak', sm, s=1); c.scale = (0.02, R.uniform(1.5, 4), 0.02); c.location = (math.cos(a) * rr, R.uniform(0, 90), math.sin(a) * rr)
-    core = mesh(sc, 'sphere', 'core', emis('core', (0.15, 0.4, 1.0), 25.0), r=1.2); core.location = (0, 100, 0)
+    core = mesh(sc, 'sphere', 'core', emis('core', (0.15, 0.4, 1.0), 25.0), r=0.6); core.location = (0, 120, 2.2)
     title(sc, 'ABYSS', (0.25, 0.55, 1.0))
     t = [o for o in sc.objects if o.name.startswith('t_ABYSS')][0]; t.location = (0, 91, -0.1)
     s = [o for o in sc.objects if o.name.startswith('t_SECRET')][0]; s.location = (0, 91, -0.95)
@@ -87,23 +87,26 @@ def abyss():
 def archangel():
     sc = new_scene('archangel', world=(0.025, 0.02, 0.012))
     cam = camera(sc, (0, -11, 1.4), (0, 0, 0.9), 36); kf(cam, 'location', 1, (0, -9, 1.2)); kf(cam, 'location', FRAMES, (0, -12.5, 1.6))
-    core = mesh(sc, 'sphere', 'core', emis('core', (1.0, 0.92, 0.75), 25.0), r=0.5); core.location = (0, 1, 1.0)
-    hm = emis('halo', (1.0, 0.8, 0.4), 0.0); halo = mesh(sc, 'torus', 'halo', hm, R=0.9, r=0.05, seg=64, sides=8); halo.location = (0, 1, 2.6)
+    core = mesh(sc, 'sphere', 'core', emis('core', (1.0, 0.92, 0.75), 25.0), r=0.45); core.location = (0, 1, 1.35)
+    hm = emis('halo', (1.0, 0.8, 0.4), 0.0); halo = mesh(sc, 'torus', 'halo', hm, R=0.9, r=0.05, seg=64, sides=8); halo.location = (0, 1, 2.35)
     kf_strength(hm, 40, 0); kf_strength(hm, 56, 18); kf(halo, 'scale', 40, (0.2, 0.2, 0.2)); kf(halo, 'scale', 58, (1, 1, 1))
-    fm = [emis('feather%d' % k, c, s) for k, (c, s) in enumerate([((1.0, 0.95, 0.85), 3.5), ((1.0, 0.82, 0.5), 5.0), ((1.0, 0.9, 0.7), 2.5)])]
+    fm = [emis('feather%d' % k, c, st) for k, (c, st) in enumerate([((1.0, 0.95, 0.85), 3.5), ((1.0, 0.82, 0.5), 5.0), ((1.0, 0.9, 0.7), 2.5)])]
+    def feather(base, ang, ln, wd, mat):
+        # a tapered feather in the XZ plane (facing the camera); origin at its root so it grows outward
+        me = bpy.data.meshes.new('feather'); dx, dz = math.sin(ang), math.cos(ang); px, pz = -dz, dx
+        v = [(0, 0, 0), (dx * ln * 0.35 + px * wd, 0, dz * ln * 0.35 + pz * wd), (dx * ln, 0, dz * ln), (dx * ln * 0.35 - px * wd, 0, dz * ln * 0.35 - pz * wd)]
+        me.from_pydata(v, [], [(0, 1, 2, 3)]); me.materials.append(mat)
+        ob = link(sc, bpy.data.objects.new('feather', me)); ob.location = base; return ob
     for side in (-1, 1):
         for row in range(3):
-            for i in range(10):
-                th = math.radians(20 + i * 11); ln = 1.1 + row * 0.9 + i * 0.12
-                p = mesh(sc, 'plane', 'feather', fm[(i + row) % 3], s=1)
-                tgt = (side * (0.4 + math.sin(th) * ln), 1.2 + row * 0.05, 1.0 + math.cos(th) * ln * 0.9 - row * 0.15)
-                rot = (math.pi / 2, side * (math.pi / 2 - th) * -1, 0); f0 = 6 + i * 2 + row * 5
-                p.rotation_euler = rot
-                kf(p, 'location', f0, (0, 1.2, 1.0)); kf(p, 'location', f0 + 16, tgt)
-                kf(p, 'scale', f0, (0.001, 0.001, 1)); kf(p, 'scale', f0 + 16, (0.16 + row * 0.02, 0.9 + row * 0.35, 1))
+            for i in range(11):
+                th = math.radians(18 + i * 8.5); ln = 1.3 + row * 0.85 - abs(i - 6) * 0.03
+                p = feather((side * 0.35, 1.2 - row * 0.02, 1.35), side * th, ln, 0.13 + row * 0.03, fm[(i + row) % 3])
+                f0 = 6 + i * 2 + row * 5
+                kf(p, 'scale', 1, (0.001,) * 3); kf(p, 'scale', f0, (0.001,) * 3); kf(p, 'scale', f0 + 14, (1.05, 1.05, 1.05)); kf(p, 'scale', f0 + 20, (1, 1, 1))
     rm = emis('rays', (1.0, 0.85, 0.55), 1.2)
     for i in range(14):
-        p = mesh(sc, 'plane', 'ray', rm, s=1); p.location = (0, 3, 1.0); a = TAU * i / 14
+        p = mesh(sc, 'plane', 'ray', rm, s=1); p.location = (0, 3, 1.35); a = TAU * i / 14
         p.rotation_euler = (math.pi / 2, a, 0); kf(p, 'scale', 1, (0.03, 0.001, 1)); kf(p, 'scale', 30, (0.03, 9, 1))
         kf(p, 'rotation_euler', 1, (math.pi / 2, a, 0)); kf(p, 'rotation_euler', FRAMES, (math.pi / 2, a + 0.5, 0))
     light(sc, 'POINT', (0, -1, 2), 600, (1, 0.9, 0.7))
@@ -127,6 +130,7 @@ def reaper():
     kf_strength(bm, 49, 0); kf_strength(bm, 52, 40); kf_strength(bm, 62, 30); kf_strength(bm, 72, 0)
     fm = emis('flash', (1.0, 0.6, 0.55), 0.0); fl = mesh(sc, 'plane', 'flash', fm, s=40); fl.location = (0, -4, 0); fl.rotation_euler = (math.pi / 2, 0, 0)
     kf_strength(fm, 58, 0); kf_strength(fm, 61, 2.5); kf_strength(fm, 67, 0)
+    kf(fl, 'scale', 1, (0.001, 0.001, 0.001)); kf(fl, 'scale', 57, (0.001, 0.001, 0.001)); kf(fl, 'scale', 58, (1, 1, 1)); kf(fl, 'scale', 67, (1, 1, 1)); kf(fl, 'scale', 68, (0.001, 0.001, 0.001))
     t = title(sc, 'REAPER', (1.0, 0.06, 0.06))
     for k, f in enumerate(range(72, 90, 2)): kf(t, 'location', f, (R.uniform(-0.25, 0.25) if k % 2 else 0, -3.2, -0.2 + (R.uniform(-0.08, 0.08) if k % 3 == 0 else 0)))
     return sc
