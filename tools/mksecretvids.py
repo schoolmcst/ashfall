@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 """Pack the Blender secret-camo reveal clips into game/src/secretvids.js.
-usage: mksecretvids.py <folder with secret_<name>*.webm or secret_<name>/f_####.jpg>
+usage: mksecretvids.py <folder with secret_<name>*.webm or secret_<name>/f_####.jpg> [folder with secret_<name>.wav]
 Each clip is re-encoded small (VP9, 960x540, no audio) and embedded as a data: URL keyed by camo id (x_<name>)."""
 import sys, os, glob, base64, subprocess, tempfile, json
-src = sys.argv[1]; here = os.path.dirname(os.path.abspath(__file__)); out = os.path.join(here, '..', 'game', 'src', 'secretvids.js')
+src = sys.argv[1]; snd = sys.argv[2] if len(sys.argv) > 2 else None; here = os.path.dirname(os.path.abspath(__file__)); out = os.path.join(here, '..', 'game', 'src', 'secretvids.js')
 vids = {}
 for name in ['bloodline', 'eclipse', 'spectre', 'abyss', 'archangel', 'reaper']:
     files = sorted(glob.glob(os.path.join(src, 'secret_%s*.webm' % name)))
@@ -11,7 +11,9 @@ for name in ['bloodline', 'eclipse', 'spectre', 'abyss', 'archangel', 'reaper']:
     if not files and not frames: print('missing', name); continue
     tmp = tempfile.mktemp(suffix='.webm')
     inp = ['-i', files[-1]] if files else ['-framerate', '30', '-i', os.path.join(src, 'secret_%s' % name, 'f_%04d.jpg')]
-    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', *inp, '-vf', 'scale=960:540', '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '36', '-row-mt', '1', '-an', tmp], check=True)
+    wav = os.path.join(snd, 'secret_%s.wav' % name) if snd else None
+    aud = ['-i', wav, '-map', '0:v', '-map', '1:a', '-c:a', 'libopus', '-b:a', '72k', '-af', 'loudnorm=I=-16:TP=-1.5', '-shortest'] if wav and os.path.exists(wav) else ['-an']
+    subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', *inp, *aud[:2], '-vf', 'scale=960:540', '-c:v', 'libvpx-vp9', '-b:v', '0', '-crf', '36', '-row-mt', '1', *aud[2:], tmp], check=True)
     data = open(tmp, 'rb').read(); os.remove(tmp)
     vids['x_' + name] = 'data:video/webm;base64,' + base64.b64encode(data).decode()
     print(name, len(data) // 1024, 'KB')

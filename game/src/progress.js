@@ -626,7 +626,7 @@ function playSecretReveal(id, done) {
   const end = () => { if (fin) return; fin = true; removeEventListener('keydown', key, true); ov.classList.add('out'); setTimeout(() => ov.remove(), 350); if (done) done(); };
   const key = e => { if (['Enter', 'Space', 'Escape'].includes(e.code)) { e.preventDefault(); e.stopPropagation(); end(); } };
   addEventListener('keydown', key, true); ov.onclick = end; v.onended = end; v.onerror = end;
-  v.src = src; v.volume = 0.8; const pl = v.play(); if (pl && pl.catch) pl.catch(() => { v.muted = true; v.play().catch(end); });
+  v.src = src; v.volume = Math.max(0, Math.min(1, (S.master / 100) * (S.sfx / 100)));   // follows MASTER and EFFECTS volume const pl = v.play(); if (pl && pl.catch) pl.catch(() => { v.muted = true; v.play().catch(end); });
   setTimeout(end, 9000);   // never get stuck
   const poll = () => { if (fin) return; const gp = navigator.getGamepads ? [...navigator.getGamepads()].find(g => g) : null; if (gp && gp.buttons[0] && gp.buttons[0].pressed && v.currentTime > 0.6) { end(); return; } requestAnimationFrame(poll); }; requestAnimationFrame(poll);
   return true;
