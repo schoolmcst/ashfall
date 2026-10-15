@@ -2,13 +2,7 @@
 const { app, BrowserWindow, ipcMain, Menu, shell } = require('electron');
 const path = require('path'), fs = require('fs'), crypto = require('crypto'), dgram = require('dgram');
 
-// the TEST app (packaged with "channel": "test") reads release-test/, keeps its own saves and says TEST everywhere
-let PKG = {}; try { PKG = require('./package.json'); } catch (e) {}
-const TEST = PKG.channel === 'test', APPNAME = TEST ? 'TEST APP' : 'DARKZONE';
-// public app: keep saves in the same folder the original ASHFALL app used, so nobody loses their stats
-if (!TEST) { try { app.setPath('userData', path.join(app.getPath('appData'), 'ASHFALL')); } catch (e) {} }
-const ICON = ['darkzone.ico', 'icon.png'].map(f => path.join(__dirname, f)).find(f => { try { return fs.existsSync(f); } catch (e) { return false; } });
-const UPDATE_BASE = process.env.ASHFALL_UPDATE_BASE || ('https://raw.githubusercontent.com/schoolmcst/ashfall/main/' + (TEST ? 'release-test/' : 'release/'));
+const UPDATE_BASE = process.env.ASHFALL_UPDATE_BASE || 'https://raw.githubusercontent.com/schoolmcst/ashfall/main/release/';
 const THREE_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
 const LAN_PORT = 41234;
 const bundledDir = path.join(__dirname, 'game');
@@ -47,11 +41,11 @@ async function checkUpdate(cur) {
 }
 
 function status(t) { if (win && !win.isDestroyed()) win.webContents.executeJavaScript(`document.getElementById('s')&&(document.getElementById('s').textContent=${JSON.stringify(t)})`).catch(() => {}); }
-const SPLASH = 'data:text/html;charset=utf-8,' + encodeURIComponent(`<!doctype html><html><body style="margin:0;background:#0d0f12;color:#e8e2d0;font:600 14px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:14px;letter-spacing:.2em"><div style="font-size:42px;letter-spacing:.35em;color:#ffd24a">${APPNAME}</div><div id="s">CHECKING FOR UPDATES…</div></body></html>`);
+const SPLASH = 'data:text/html;charset=utf-8,' + encodeURIComponent(`<!doctype html><html><body style="margin:0;background:#0d0f12;color:#e8e2d0;font:600 14px system-ui,sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;flex-direction:column;gap:14px;letter-spacing:.2em"><div style="font-size:42px;letter-spacing:.35em;color:#ffd24a">DARKZONE</div><div id="s">CHECKING FOR UPDATES…</div></body></html>`);
 
 async function start() {
   dataDir = path.join(app.getPath('userData'), 'game');
-  win = new BrowserWindow({ width: 1600, height: 900, minWidth: 960, minHeight: 540, backgroundColor: '#0d0f12', title: APPNAME, icon: ICON, autoHideMenuBar: true, show: false,
+  win = new BrowserWindow({ width: 1600, height: 900, minWidth: 960, minHeight: 540, backgroundColor: '#0d0f12', title: 'DARKZONE', autoHideMenuBar: true, show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   win.once('ready-to-show', () => win.show());
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
@@ -63,7 +57,7 @@ async function start() {
 }
 
 // ---- the game asks for these through preload.js
-ipcMain.on('app-info', e => { e.returnValue = { channel: TEST ? 'test' : 'public', version: current ? current.version : BUNDLED.version, appVersion: app.getVersion(), justUpdated, notes: current ? current.notes || [] : [] }; justUpdated = null; });
+ipcMain.on('app-info', e => { e.returnValue = { version: current ? current.version : BUNDLED.version, appVersion: app.getVersion(), justUpdated, notes: current ? current.notes || [] : [] }; justUpdated = null; });
 
 // ---- games on your Wi-Fi: hosts shout a short message on the local network every 2 s, everyone listens
 const lanGames = new Map(); let sock = null; const myId = crypto.randomBytes(6).toString('hex');
