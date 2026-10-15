@@ -15,7 +15,7 @@ def new_scene(name, world=(0.0, 0.0, 0.0)):
     except Exception: pass
     try: sc.eevee.use_bloom = True; sc.eevee.bloom_intensity = 0.08; sc.eevee.bloom_threshold = 0.9
     except Exception: pass
-    try: sc.view_settings.view_transform = 'AgX' if 'AgX' in [e.identifier for e in sc.view_settings.bl_rna.properties['view_transform'].enum_items] else 'Filmic'
+    try: sc.view_settings.view_transform = 'Standard'   # keeps neon colours saturated (AgX turns bright red pink)
     except Exception: pass
     w = bpy.data.worlds.new('w_' + name); w.use_nodes = True; sc.world = w
     bg = w.node_tree.nodes.get('Background')
@@ -24,16 +24,25 @@ def new_scene(name, world=(0.0, 0.0, 0.0)):
     return sc
 
 def glow(sc):
-    # compositor fog glow (bloom) for Blender versions without Eevee bloom
+    # compositor fog glow (bloom). Blender 5 keeps the compositor in a node group; older versions in scene.node_tree
     try:
-        sc.use_nodes = True; nt = sc.node_tree
-        for n in list(nt.nodes): nt.nodes.remove(n)
-        rl = nt.nodes.new('CompositorNodeRLayers'); gl = nt.nodes.new('CompositorNodeGlare'); co = nt.nodes.new('CompositorNodeComposite')
-        try: gl.glare_type = 'FOG_GLOW'
-        except Exception: pass
-        try: gl.threshold = 0.85; gl.size = 7
-        except Exception: pass
-        nt.links.new(rl.outputs[0], gl.inputs[0]); nt.links.new(gl.outputs[0], co.inputs[0])
+        if hasattr(sc, 'compositing_node_group'):
+            nt = bpy.data.node_groups.new('glow_' + sc.name, 'CompositorNodeTree'); sc.compositing_node_group = nt
+            try: nt.interface.new_socket('Image', in_out='OUTPUT', socket_type='NodeSocketColor')
+            except Exception: pass
+            rl = nt.nodes.new('CompositorNodeRLayers'); rl.scene = sc; gl = nt.nodes.new('CompositorNodeGlare'); out = nt.nodes.new('NodeGroupOutput')
+        else:
+            sc.use_nodes = True; nt = sc.node_tree
+            for n in list(nt.nodes): nt.nodes.remove(n)
+            rl = nt.nodes.new('CompositorNodeRLayers'); rl.scene = sc; gl = nt.nodes.new('CompositorNodeGlare'); out = nt.nodes.new('CompositorNodeComposite')
+        for k, v in (('glare_type', 'FOG_GLOW'), ('threshold', 0.85), ('size', 7)):
+            try: setattr(gl, k, v)
+            except Exception: pass
+        for k, v in (('Type', 'Fog Glow'), ('Threshold', 0.85), ('Size', 0.6), ('Strength', 1.0)):
+            try:
+                if k in gl.inputs: gl.inputs[k].default_value = v
+            except Exception: pass
+        nt.links.new(rl.outputs[0], gl.inputs[0]); nt.links.new(gl.outputs[0], out.inputs[0])
     except Exception as e:
         print('no compositor glow:', e)
 
@@ -121,27 +130,45 @@ def ease_all(sc):
 
 def title(sc, name, col, start=72):
     # the camo name: scales in with a flash, plus a small SECRET CAMO line
-    tm = emis('tm_' + name, col, 0.0); t = text(sc, name, tm, size=1.1, loc=(0, -3.2, -0.2))
-    kf(t, 'scale', start - 1, (0.6, 0.6, 0.6)); kf(t, 'scale', start + 10, (1.08, 1.08, 1.08)); kf(t, 'scale', FRAMES, (1.0, 1.0, 1.0))
+    tm = emis('tm_' + name, col, 0.0); t = text(sc, name, tm, size=0.82, loc=(0, -3.2, -0.2))
+    kf(t, 'scale', 1, (0.001, 0.001, 0.001)); kf(t, 'scale', start - 2, (0.001, 0.001, 0.001)); kf(t, 'scale', start - 1, (0.6, 0.6, 0.6)); kf(t, 'scale', start + 10, (1.08, 1.08, 1.08)); kf(t, 'scale', FRAMES, (1.0, 1.0, 1.0))
     kf_strength(tm, start - 1, 0.0); kf_strength(tm, start + 4, 40.0); kf_strength(tm, start + 16, 9.0); kf_strength(tm, FRAMES, 8.0)
-    sm = emis('sm_' + name, (1, 1, 1), 0.0); s = text(sc, 'SECRET CAMO', sm, size=0.28, loc=(0, -3.2, -1.05), extrude=0.0)
+    sm = emis('sm_' + name, (1, 1, 1), 0.0); s = text(sc, 'SECRET CAMO', sm, size=0.28, loc=(0, -3.2, -0.95), extrude=0.0)
+    kf(s, 'scale', 1, (0.001, 0.001, 0.001)); kf(s, 'scale', start + 5, (0.001, 0.001, 0.001)); kf(s, 'scale', start + 6, (1, 1, 1))
     kf_strength(sm, start + 6, 0.0); kf_strength(sm, start + 20, 3.0)
     return t
 
 def render(sc, name):
     has_ff = bool(getattr(bpy.app.build_options, 'codec_ffmpeg', False))
-    base = os.path.join(OUT, 'secret_' + name)
+    base = os.path.join(OUT, 'secret_' + name); im = sc.render.image_settings; done = 'jpeg'
     if has_ff:
-        sc.render.image_settings.file_format = 'FFMPEG'
-        ff = sc.render.ffmpeg; ff.format = 'WEBM'; ff.codec = 'WEBM'
-        try: ff.constant_rate_factor = 'HIGH'; ff.ffmpeg_preset = 'GOOD'
+        try:
+            try: im.media_type = 'VIDEO'          # Blender 5
+            except Exception: pass
+            im.file_format = 'FFMPEG'
+            ff = sc.render.ffmpeg; ff.format = 'WEBM'
+            for c in ('WEBM', 'VP9'):
+                try: ff.codec = c; break
+                except Exception: pass
+            try: ff.constant_rate_factor = 'HIGH'; ff.ffmpeg_preset = 'GOOD'
+            except Exception: pass
+            sc.render.filepath = base + '_'; done = 'ffmpeg'
+        except Exception as e:
+            print('video output not available:', e); has_ff = False
+    if not has_ff:
+        try: im.media_type = 'IMAGE'
         except Exception: pass
-        sc.render.filepath = base + '_'
-    else:
-        sc.render.image_settings.file_format = 'JPEG'; sc.render.image_settings.quality = 90
+        im.file_format = 'JPEG'; im.quality = 90
         os.makedirs(base, exist_ok=True); sc.render.filepath = os.path.join(base, 'f_####')
-    bpy.ops.render.render(animation=True, scene=sc.name)
-    open(base + '.done', 'w').write('ffmpeg' if has_ff else 'jpeg')
+    # render with the animation scene active in the window, then put the user's scene back
+    wm = bpy.context.window_manager; win = wm.windows[0] if wm.windows else None; old = win.scene if win else None
+    try:
+        if win: win.scene = sc
+        with bpy.context.temp_override(window=win, scene=sc) if win else bpy.context.temp_override(scene=sc):
+            bpy.ops.render.render(animation=True)
+    finally:
+        if win and old: win.scene = old
+    open(base + '.done', 'w').write(done)
 
 def cleanup(sc):
     objs = list(sc.objects)
