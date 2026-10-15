@@ -1,11 +1,12 @@
 {
- "version": "1.2.9",
+ "version": "1.2.10",
  "notes": [
   "MAPS: every map is less open, with buildings you can fight through - rooms, doorways, stairs to upper floors and windows to shoot from",
   "ASH RUINS: now a ruined village - 12 new houses and shells (five with two storeys) plus broken walls cutting up the open fields",
   "CASTELLMARE: the solid houses on the piazza and terrace are now enterable (one with two storeys), plus a bakery, a farmhouse and a road house at the edges, and an enterable garden shed",
   "KESSEL DOCKS: a two-storey harbour office on the quay, a customs shed by the crane, a two-storey dock office in the truck yard and more container cover",
   "VERNON SQUARE: a two-storey pharmacy and a pawn shop along the avenue and a two-storey bank on the square's corner",
+  "ATTACHMENTS: every part re-balanced so each one is a real trade-off - muzzle brake, compensator, grips, bipod and heavy barrel kick less hard, the laser now slows aiming a little, iron sights are less inaccurate, Armour Piercing gives more range, Subsonic and Hollow Point hurt less, the Full Choke and Mini Reflex are toned down",
   "REPLAY FIXED: online matches now save a replay at the end of every round (before, only offline matches did, so the Replay tab said you hadn't played). Quitting mid-match or closing the game also keeps the replay, and it's still there after a restart",
   "BOTS THAT LEARN: bots learn from every gunfight - which tactics win on each map, the range real players fight at, where players hang out and where bots keep dying - and get smarter and more human the more they play. It carries over to every next game",
   "MORE HUMAN BOTS: real reaction times, aim that settles instead of snapping, short bursts at range, they stop to check corners, look around, peek from cover and have a harder time hitting you while you're on the move",
@@ -25,6 +26,6 @@
   "DEAD SILENCE: fixed, it now turns on for other players as soon as you pick it",
   "SCAVENGER: kills (bots or players) now really top up a magazine of reserve ammo"
  ],
- "sha256": "a28bc5ddff6d7ac583098bbf5a63a658a18de8ff41546b48cfe0323327ccf56c",
+ "sha256": "667a98da0df6cf2bec9de723aefb7b5901c9471a56669d163dbe10cb16378e75",
  "minApp": "1.0.0"
 }
