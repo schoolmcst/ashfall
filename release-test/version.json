@@ -1,6 +1,7 @@
 {
- "version": "1.2.7",
+ "version": "1.2.8",
  "notes": [
+  "REPLAY FIXED: online matches now save a replay at the end of every round (before, only offline matches did, so the Replay tab said you hadn't played). Quitting mid-match or closing the game also keeps the replay, and it's still there after a restart",
   "BOTS THAT LEARN: bots learn from every gunfight - which tactics win on each map, the range real players fight at, where players hang out and where bots keep dying - and get smarter and more human the more they play. It carries over to every next game",
   "MORE HUMAN BOTS: real reaction times, aim that settles instead of snapping, short bursts at range, they stop to check corners, look around, peek from cover and have a harder time hitting you while you're on the move",
   "RECOIL: assault rifles kick 35% more, SMGs 30% more and LMGs 80% more, and every automatic climbs harder the longer you hold the trigger (LMGs most), with a sideways pull",
@@ -19,6 +20,6 @@
   "DEAD SILENCE: fixed, it now turns on for other players as soon as you pick it",
   "SCAVENGER: kills (bots or players) now really top up a magazine of reserve ammo"
  ],
- "sha256": "4e7382f213207360764b2d30bcd8e17bb65a9a65eec98e5676e30fda179091f5",
+ "sha256": "d1149e3fca63e0f9e87631a0ada030178016c8560bf20964d6ca74f569d10fbc",
  "minApp": "1.0.0"
 }

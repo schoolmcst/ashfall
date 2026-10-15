@@ -316,6 +316,7 @@ function netTick(dt) {
 
 // round won online: everyone sees the scoreboard for the intermission, nobody can be hurt, then a fresh round
 function netIntermission(won, txt) {
+  try { rpFinish(won); } catch (e) {}
   if (G.state === 'paused') showScreen(null);
   G.netPrevState = G.state; G.state = 'over'; mouseDown = false; mouseAds = false;
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}

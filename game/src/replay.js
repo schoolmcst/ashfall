@@ -29,7 +29,12 @@ function rpId(key, name, rel, me) {
   return id;
 }
 function rpTick(dt) {
-  if (!REC || !M || M.over || G.state === 'menu' || G.state === 'plobby') return;
+  if (!REC && M && M.def && G.state === 'playing' && !G.bench) rpStart();   // any match that started without the usual start screen still records
+  if (!REC || !M || M.over || G.state === 'menu' || G.state === 'plobby' || G.state === 'over') return;
+  // map picture once, while the loading screen still covers the hitch
+  if (!REC.planTried && REC.t > 0.3) { REC.planTried = true; try { REC.plan = rpPlanShot(); } catch (e) { REC.plan = null; } }
+  // keep a copy saved as the match goes, so quitting mid-match (or closing the game) still leaves a replay
+  REC.saveT = (REC.saveT || 0) + dt; if (REC.saveT > 30 && REC.frames.length >= RP_HZ * 5) { REC.saveT = 0; RPLAST = rpPack(0, true); sbPut('replay', RPLAST); }
   REC.t += dt; REC.acc += dt; if (REC.acc < 1 / RP_HZ || REC.frames.length >= RP_MAX) return;
   REC.acc = 0;
   const f = [Math.round(REC.t * 10)], q = v => Math.round(v * 10), hd = h => Math.round((((h % (2 * Math.PI)) + 2 * Math.PI) % (2 * Math.PI)) * 28);
@@ -56,12 +61,15 @@ function rpPlanShot() {
   finally { for (const g of hidden) g.visible = true; if (sc.fog) sc.fog.density = fog; r.setSize(W, H, false); r.setViewport(0, 0, W, H); }
   return url;
 }
+function rpPack(won, partial) {
+  return { v: 1, map: REC.map, mode: REC.mode, name: REC.name, online: REC.online, teams: REC.teams, date: REC.date, len: REC.t, ents: REC.ents.slice(), frames: REC.frames.slice(), feed: REC.feed.slice(), score: REC.score.slice(), obj: REC.obj, won: won | 0, plan: REC.plan || null, partial: !!partial };
+}
+// match over (or left): save it as the last match
 function rpFinish(won) {
-  if (!REC || REC.frames.length < RP_HZ * 5) { REC = null; return; }
-  const out = { v: 1, map: REC.map, mode: REC.mode, name: REC.name, online: REC.online, teams: REC.teams, date: REC.date, len: REC.t, ents: REC.ents, frames: REC.frames, feed: REC.feed, score: REC.score, obj: REC.obj, won: won | 0 };
-  try { out.plan = rpPlanShot(); } catch (e) { out.plan = null; }
-  RPLAST = out; REC = null; RV.img = null;
-  sbPut('replay', out);
+  if (!REC || REC.frames.length < RP_HZ * 3) { REC = null; return; }
+  if (!REC.plan) { try { REC.plan = rpPlanShot(); } catch (e) { REC.plan = null; } }
+  RPLAST = rpPack(won, false); REC = null; RV.img = null;
+  sbPut('replay', RPLAST);
 }
 
 /* ---------- viewer */
