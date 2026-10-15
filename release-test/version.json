@@ -1,12 +1,11 @@
 {
- "version": "1.2.12",
+ "version": "1.2.13",
  "notes": [
-  "LEVELS: level 1 to 100 from XP for kills, headshots, objectives, finishing and winning matches (online +25%). XP and level ups show on the results screen",
-  "Every level pays DZ, every 5 levels unlocks a gun STICKER, and level 100 unlocks the DARKZONE GOLD skin",
-  "New LOCKER tab: 39 camos and skins in 4 rarities plus 19 stickers, a 3D preview, and equip on one gun or all weapons",
-  "New REWARDS tab: daily DZ reward with a 7 day streak, the level reward track, and CHANCE BOXES (500 DZ, odds shown: Common 60%, Rare 27%, Epic 10%, Legendary 3%). Camos only come from boxes; duplicates pay DZ back",
-  "Everyone starts with 500 DZ for a first box, and past matches count toward a starting level (up to 25)"
+  "100 NEW CAMOS: fleck, multicam, zebra, waves, glitch, honeycomb, holographic foil, gems and more, from Common to Legendary",
+  "Three chance boxes: STANDARD (500 DZ), ELITE (1,200 DZ) and PRESTIGE (2,500 DZ) with better odds, each with a VIEW CONTENTS list",
+  "New LOCKER: pick a weapon (with pictures of every gun), then its camos; stickers are under OTHER COSMETICS. Only the things you own are shown",
+  "Diamond is now a cut gem with sparkles, and the metal finishes have brushed and engraved detail"
  ],
- "sha256": "a500315629257580c8c01b20f0ce8e1c3b224f2727e7e49f9caaa119b128937f",
+ "sha256": "b1e48eef2ed81475b771f46df3c6ed9114faff5bebffea1d85ada7d554cddcc6",
  "minApp": "1.0.0"
 }
