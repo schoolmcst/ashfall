@@ -1,5 +1,5 @@
+app/dl/
+app/dist/
+node_modules/
 *.png
 app/dist-test/
-app/dist/
-app/dl/
-node_modules/
