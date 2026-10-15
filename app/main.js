@@ -5,6 +5,9 @@ const path = require('path'), fs = require('fs'), crypto = require('crypto'), dg
 // the TEST app (packaged with "channel": "test") reads release-test/, keeps its own saves and says TEST everywhere
 let PKG = {}; try { PKG = require('./package.json'); } catch (e) {}
 const TEST = PKG.channel === 'test', APPNAME = TEST ? 'TEST APP' : 'DARKZONE';
+// public app: keep saves in the same folder the original ASHFALL app used, so nobody loses their stats
+if (!TEST) { try { app.setPath('userData', path.join(app.getPath('appData'), 'ASHFALL')); } catch (e) {} }
+const ICON = ['darkzone.ico', 'icon.png'].map(f => path.join(__dirname, f)).find(f => { try { return fs.existsSync(f); } catch (e) { return false; } });
 const UPDATE_BASE = process.env.ASHFALL_UPDATE_BASE || ('https://raw.githubusercontent.com/schoolmcst/ashfall/main/' + (TEST ? 'release-test/' : 'release/'));
 const THREE_CDN = 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js';
 const LAN_PORT = 41234;
@@ -48,7 +51,7 @@ const SPLASH = 'data:text/html;charset=utf-8,' + encodeURIComponent(`<!doctype h
 
 async function start() {
   dataDir = path.join(app.getPath('userData'), 'game');
-  win = new BrowserWindow({ width: 1600, height: 900, minWidth: 960, minHeight: 540, backgroundColor: '#0d0f12', title: APPNAME, autoHideMenuBar: true, show: false,
+  win = new BrowserWindow({ width: 1600, height: 900, minWidth: 960, minHeight: 540, backgroundColor: '#0d0f12', title: APPNAME, icon: ICON, autoHideMenuBar: true, show: false,
     webPreferences: { preload: path.join(__dirname, 'preload.js'), contextIsolation: true, nodeIntegration: false, backgroundThrottling: false } });
   win.once('ready-to-show', () => win.show());
   win.webContents.setWindowOpenHandler(({ url }) => { if (/^https:\/\//.test(url)) shell.openExternal(url); return { action: 'deny' }; });
