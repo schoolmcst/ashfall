@@ -1,8 +1,9 @@
 {
- "version": "1.2.15",
+ "version": "1.2.16",
  "notes": [
-  "Chance boxes: rare finds now get their own reveal, with sound"
+  "Chance boxes: improvements",
+  "Locker: improvements"
  ],
- "sha256": "6f49b9e0ead308d074e9649dbf7fbf35945b1ca6e858e1e4a2c69b517bbeb11e",
+ "sha256": "a22d3e642b176cc6f12eb139c3afbba4649dd29016a94fbf514af1805f844e07",
  "minApp": "1.0.0"
 }

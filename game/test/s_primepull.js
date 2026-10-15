@@ -1,0 +1,30 @@
+// forces a PRIME drop, checks the right reveal video plays and it equips on every gun
+const { chromium } = require('/home/claude/.npm-global/lib/node_modules/playwright');
+const fs = require('fs'), path = require('path');
+const OUT = process.argv[2] || '/tmp';
+(async () => {
+  const html = fs.readFileSync('/home/claude/repo/game/ashfall.html', 'utf8'), three = fs.readFileSync('/home/claude/repo/tools/three.min.js', 'utf8');
+  const b = await chromium.launch({ executablePath: '/opt/pw-browsers/chromium-1194/chrome-linux/chrome', args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'] });
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 720 } });
+  await ctx.addInitScript(() => { try { localStorage.setItem('dz_seen_update', '1.2.0'); localStorage.setItem('ashfall.prog.v1', JSON.stringify({ v: 1, xp: 64000, dz: 1700, owned: { woodland: 1 }, equip: { all: null, guns: {} }, stk: { all: null, guns: {} }, daily: { last: '', streak: 0 }, boxes: 3, drops: [], init: true })); } catch (e) {} });
+  const p = await ctx.newPage();
+  await p.route('**/*', r => { const u = r.request().url(); if (u.includes('three')) return r.fulfill({ body: three, contentType: 'application/javascript' }); if (u.startsWith('http://game.test/')) return r.fulfill({ body: html, contentType: 'text/html' }); return r.abort(); });
+  await p.goto('http://game.test/index.html#debug');
+  await p.waitForFunction(() => window.__A && window.__A.G.state === 'menu', null, { timeout: 120000 });
+  await p.evaluate(() => { const h = document.getElementById('hcSplash'); if (h) h.remove(); const A = window.__A, rr = A.renderer.render.bind(A.renderer); A.renderer.render = (s, c) => (s === A.scene ? undefined : rr(s, c)); A.toLobby(); });
+  await p.waitForTimeout(1000);
+  await p.evaluate(() => { document.querySelectorAll('.pn-ov,#patchNotes,#pnOv').forEach(e => e.remove()); window.__A.openRewards(); }); await p.waitForTimeout(1200);
+  await p.evaluate(() => window.__A.forceBox('x_reaper_prime'));
+  await p.click('[data-act="rw-box-std"]');
+  await p.waitForSelector('#secVid', { timeout: 15000 });
+  await p.waitForTimeout(2600);
+  const vid = await p.evaluate(() => { const v = document.querySelector('#secVid video'); return { prime: v && v.src === window.__A.SECRET_VID.x_reaper_prime, t: v && v.currentTime, dur: v && v.duration }; });
+  await p.screenshot({ path: path.join(OUT, 'pp_video.png') });
+  await p.waitForSelector('#secVid', { state: 'detached', timeout: 15000 });
+  await p.waitForTimeout(1500);
+  await p.screenshot({ path: path.join(OUT, 'pp_result.png') });
+  await p.click('[data-act="rw-box-equip"]'); await p.waitForTimeout(800);
+  const r = await p.evaluate(() => { const A = window.__A; return { owned: !!A.PROG.owned.x_reaper_prime, all: A.PROG.equip.all, guns: ['marc', 'kv47', 'talon'].map(g => A.ownsFor('x_reaper_prime', g)), drop: (A.PROG.drops[0] || {}).id }; });
+  await b.close();
+  console.log(JSON.stringify({ vid, r }));
+})();

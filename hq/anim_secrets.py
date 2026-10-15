@@ -150,7 +150,7 @@ def prime_vault(base):
         kf(ring, 'rotation_euler', 1, (0.4 * k, 0.9, 0)); kf(ring, 'rotation_euler', FRAMES, (0.4 * k + 6, 0.9 + 4, 2))
         lm = emis('lab%d' % k, col, 0.0); lab = text(sc, name, lm, size=0.2, loc=(0, 0, 0), extrude=0.0); lab.parent = orb; lab.location = (0, -0.1, -0.75)
         f0 = 4 + k * 6
-        kf_strength(om, f0 - 1, 0); kf_strength(om, f0 + 3, 6); kf_strength(om, f0 + 10, 2.6); kf_strength(rm, f0, 0); kf_strength(rm, f0 + 6, 3.5)
+        kf_strength(om, f0 - 1, 0); kf_strength(om, f0 + 3, 2.4); kf_strength(om, f0 + 10, 1.1); kf_strength(rm, f0, 0); kf_strength(rm, f0 + 6, 2.2)
         kf_strength(lm, f0 + 2, 0); kf_strength(lm, f0 + 8, 4); kf_strength(lm, 40, 4); kf_strength(lm, 50, 0)
         if name == 'SPECTRE':
             for j, f in enumerate(range(1, FRAMES, 12)): kf_color(om, f, colorsys.hsv_to_rgb((j * 0.13) % 1, 0.45, 1.0))
@@ -163,7 +163,7 @@ def prime_vault(base):
     # fusion: gold core flash, ring burst and sparks, then a core in the colour of the PRIME you got
     gm = emis('core', (1.0, 0.8, 0.35), 0.0); core = mesh(sc, 'sphere', 'core', gm, r=1.0, seg=48, rings=24); core.location = (0, 0.6, 0.4)
     kf(core, 'scale', 1, (0.001,) * 3); kf(core, 'scale', 64, (0.001,) * 3); kf(core, 'scale', 70, (0.5, 0.5, 0.5)); kf(core, 'scale', 73, (2.2, 2.2, 2.2)); kf(core, 'scale', 82, (0.9, 0.9, 0.9)); kf(core, 'scale', FRAMES, (1.0, 1.0, 1.0))
-    kf_strength(gm, 64, 0); kf_strength(gm, 71, 60); kf_strength(gm, 80, 8); kf_color(gm, 72, (1.0, 0.82, 0.4)); kf_color(gm, 84, SECRET_LOOK[mine][1])
+    kf_strength(gm, 64, 0); kf_strength(gm, 71, 40); kf_strength(gm, 80, 2.2); kf_color(gm, 72, (1.0, 0.82, 0.4)); kf_color(gm, 84, SECRET_LOOK[mine][1])
     core.location = (0, 1.6, 1.9)
     bm = emis('burst', (1.0, 0.85, 0.45), 0.0); burst = mesh(sc, 'torus', 'burst', bm, R=0.5, r=0.05, seg=96, sides=8); burst.location = (0, 0.5, 0.4); burst.rotation_euler = (math.pi / 2, 0, 0)
     kf(burst, 'scale', 1, (0.001, 0.001, 1)); kf(burst, 'scale', 68, (0.001, 0.001, 1)); kf(burst, 'scale', 69, (0.1, 0.1, 1)); kf(burst, 'scale', 84, (22, 22, 1)); kf(burst, 'scale', 85, (0.001, 0.001, 1)); kf_strength(bm, 69, 0); kf_strength(bm, 71, 40); kf_strength(bm, 84, 2)
