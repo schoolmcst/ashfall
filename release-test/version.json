@@ -1,8 +1,12 @@
 {
  "version": "1.2.16",
  "notes": [
-  "Chance boxes: improvements",
-  "Locker: improvements"
+  "THE EA UPDATE",
+  "100 NEW CAMOS: fleck, multicam, zebra, waves, glitch, honeycomb, holographic foil, gems and more, from Common to Legendary",
+  "Three chance boxes: STANDARD (500 DZ), ELITE (1,200 DZ) and PRESTIGE (2,500 DZ) with better odds, each with a VIEW CONTENTS list",
+  "New LOCKER: pick a weapon (with pictures of every gun), then its camos; stickers are under OTHER COSMETICS. Only the things you own are shown",
+  "Diamond is now a cut gem with sparkles, and the metal finishes have brushed and engraved detail",
+  "Chance boxes and Locker: more improvements"
  ],
  "sha256": "a22d3e642b176cc6f12eb139c3afbba4649dd29016a94fbf514af1805f844e07",
  "minApp": "1.0.0"
