@@ -1,7 +1,8 @@
 /* ================================================================== renderer, sky, lighting */
 // Fog is applied after tone mapping, so it takes a plain sRGB colour; materials and lights want linear colours.
 const C = hex => new THREE.Color(hex).convertSRGBToLinear();
-const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
+// anti-aliasing and which GPU to use are fixed when the page starts (Settings > VIDEO says 'applies on next launch')
+const renderer = new THREE.WebGLRenderer({ antialias: S.aa !== 'off', powerPreference: S.gpuPref === 'low' ? 'low-power' : 'high-performance' });
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;
@@ -17,8 +18,31 @@ try {
   if (/RTX|RX\s?[5-9]\d{3}|RX\s?[6-9]\d{2}\b|Radeon Pro W|Arc.*A7|Apple M\d (Pro|Max|Ultra)|GTX 1[0-9]80|GTX 1070/i.test(GPU_NAME)) AUTO_TIER = 'ultra';
   else if (/Intel|UHD|Iris|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic|Apple GPU/i.test(GPU_NAME)) AUTO_TIER = 'medium';
 } catch (e) {}
-if (NEED_AUTO_DERIVE && S.quality === 'auto') { const q = QUALITY[AUTO_TIER]; S.renderScale = q.scale; S.shadows = q.shadows; S.grain = q.grain; saveSettings(); }
+if (NEED_AUTO_DERIVE && S.quality === 'auto') { applyPreset(AUTO_TIER); saveSettings(); }
+else if (CFG5) {   // saved before 1.2.11: keep what they had, and fill the new detail settings from their preset
+  const k = qKey(), q = QUALITY[k] || QUALITY.high;
+  Object.assign(S, { anis: q.anis, grass: q.grass, fxQ: q.fx, texQ: q.tex >= 512 ? 'high' : 'low', shadowDist: 100 });
+  if (k === 'ultra' && S.shadows === 'high') S.shadows = 'ultra';   // ULTRA already had 4096 shadows
+  S.cfgVer = 5; saveSettings();
+}
 const MAXANIS = renderer.capabilities && renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 4;
+// what this computer can do (shown in Settings > VIDEO > YOUR HARDWARE, and used to cap the settings)
+const HW = { maxTex: 4096, maxRB: 4096, cores: 0, mem: 0, hz: 60, hzN: 0 };
+try { const gl = renderer.getContext(); HW.maxTex = gl.getParameter(gl.MAX_TEXTURE_SIZE) | 0; HW.maxRB = Math.min(gl.getParameter(gl.MAX_RENDERBUFFER_SIZE) | 0, (gl.getParameter(gl.MAX_VIEWPORT_DIMS) || [16384])[0] | 0); } catch (e) {}
+try { HW.cores = navigator.hardwareConcurrency | 0; HW.mem = +navigator.deviceMemory || 0; } catch (e) {}
+// shadow resolution this GPU can actually hold
+const shadowRes = k => Math.min((SHADOWQ[k] || SHADOWQ.high).res, HW.maxTex || 4096);
+// display refresh rate, measured from the frame timing while the menu is up (rounded to a common rate)
+const HZ_STD = [30, 48, 50, 60, 72, 75, 90, 100, 120, 144, 165, 170, 180, 200, 240, 280, 360, 500];
+let hzSamples = [];
+function sampleHz(raw) {
+  if (HW.hzN > 3 || raw <= 0 || raw > 0.05) return;
+  hzSamples.push(raw);
+  if (hzSamples.length < 90) return;
+  const s = hzSamples.sort((a, b) => a - b), med = s[s.length >> 1], hz = 1 / med; hzSamples = [];
+  const best = HZ_STD.reduce((a, b) => Math.abs(b - hz) < Math.abs(a - hz) ? b : a, 60);
+  if (Math.abs(best - hz) / best < 0.06) { if (best > HW.hz || HW.hzN === 0) HW.hz = best; HW.hzN++; }
+}
 
 const HORIZON_HEX = 0xb9c2c4, TOP_HEX = 0x5f86b4;
 let ENV_EXPOSURE = 1.05;   // per-map exposure (maps.js applyEnv)
@@ -106,23 +130,37 @@ addEventListener('resize', () => {
   renderer.setSize(innerWidth, innerHeight);
   camera.aspect = innerWidth / innerHeight; camera.updateProjectionMatrix();
   vmCamera.aspect = camera.aspect; vmCamera.updateProjectionMatrix();
+  try { if (typeof DR !== 'undefined') applyRes(); } catch (e) {}
 });
 
 /* ------------------------------------------------------------------ video settings */
 const FX = { mult: 1, grass: 1 };
 let grassMesh = null, grassMax = 0;
-function applyVideoSettings() {
-  const q = QUALITY[qKey()] || QUALITY.high;
-  SHEEN_U.value = clamp(S.sheen, 0, 150) / 100; setGunShader(S.gunShader);
-  const pr = Math.min(window.devicePixelRatio || 1, q.prCap) * clamp(S.renderScale, 40, 100) / 100;
-  DR.basePR = pr; applyPR();
+// render scale over 100% draws more pixels than the screen has (supersampling); capped by what the GPU can hold
+function maxPR() { const w = Math.max(innerWidth, innerHeight, 1); return Math.max(0.5, Math.min(4, (HW.maxRB || 4096) / w)); }
+let anisNow = -1;
+function applyAnisotropy() {
+  const a = Math.max(1, Math.min(S.anis | 0, MAXANIS)); if (a === anisNow) return; anisNow = a;
+  const seen = new Set(), fix = t => { if (t && t.isTexture && !seen.has(t)) { seen.add(t); if (t.anisotropy !== a) { t.anisotropy = a; t.needsUpdate = true; } } };
+  for (const sc of [scene, vmScene]) sc.traverse(o => { if (!o.material) return; for (const m of Array.isArray(o.material) ? o.material : [o.material]) for (const k of ['map', 'normalMap', 'bumpMap', 'roughnessMap', 'metalnessMap', 'aoMap']) fix(m[k]); });
+}
+function applyRes() {
+  const dpr = window.devicePixelRatio || 1, sc = clamp(S.renderScale, 40, 200) / 100;
+  const pr = sc > 1 ? dpr * sc : Math.min(dpr, qPreset().prCap || 2) * sc;
+  DR.basePR = Math.min(pr, maxPR()); applyPR();
   renderer.setSize(innerWidth, innerHeight);
-  const res = S.shadows === 'high' ? Math.max(2048, q.shadowRes) : 1024;
-  sun.castShadow = S.shadows !== 'off';
-  if (sun.shadow.mapSize.x !== res) { sun.shadow.mapSize.set(res, res); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
+}
+function applyVideoSettings() {
+  const q = qPreset();
+  SHEEN_U.value = clamp(S.sheen, 0, 150) / 100; setGunShader(S.gunShader);
+  applyRes();
+  const sq = SHADOWQ[S.shadows] ? S.shadows : 'high', res = shadowRes(sq);
+  sun.castShadow = sq !== 'off';
+  if (res && sun.shadow.mapSize.x !== res) { sun.shadow.mapSize.set(res, res); if (sun.shadow.map) { sun.shadow.map.dispose(); sun.shadow.map = null; } }
   renderer.toneMappingExposure = ENV_EXPOSURE * S.brightness / 100;
-  FX.mult = q.fx; FX.grass = q.grass;
-  if (grassMesh) grassMesh.count = Math.floor(grassMax * q.grass);
+  FX.mult = FXQ[S.fxQ] || 1; FX.grass = clamp(S.grass, 0, 100) / 100;
+  if (grassMesh) grassMesh.count = Math.floor(grassMax * FX.grass);
+  try { applyAnisotropy(); } catch (e) {}
   $('grain').style.display = S.grain ? 'block' : 'none';
   $('fps').style.display = S.showFps ? 'block' : 'none';
   $('radar').style.display = S.radar ? 'block' : 'none';

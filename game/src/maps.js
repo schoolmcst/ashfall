@@ -328,6 +328,7 @@ function loadMap(id) {
   MENU_VIEW = map.menu || { x: 0, z: 0, r: 12.5, y: 2.1 };
   try { realTexRepatch(); } catch (e) {}
   try { if (renderer.shadowMap) renderer.shadowMap.needsUpdate = true; } catch (e) {}
+  try { anisNow = -1; applyAnisotropy(); } catch (e) {}   // new map textures get the TEXTURE FILTERING setting
   MAP_BUILD_MS = Math.round(performance.now() - t0);
   return true;
 }

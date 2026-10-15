@@ -70,7 +70,7 @@ function finishBench() {
   window.__benchResult = res; try { console.log('ASHFALL BENCHMARK', JSON.stringify(res)); } catch (e) {}
   const verdict = avg >= 55 ? ['SMOOTH', 'ok'] : avg >= 40 ? ['PLAYABLE', 'mid'] : ['SLOW', 'bad'];
   let tip = '';
-  if (avg < 55) tip = S.shadows === 'high' ? 'Try SHADOWS: LOW or the MEDIUM preset, and leave DYNAMIC RESOLUTION on.' : S.renderScale > 80 ? 'Try a lower RENDER SCALE or the LOW preset.' : 'Close other tabs and apps that use the GPU, and check the browser is using hardware acceleration.';
+  if (avg < 55) tip = /^(high|ultra|extreme)$/.test(S.shadows) ? 'Try SHADOW QUALITY: LOW or the MEDIUM preset, and leave DYNAMIC RESOLUTION on.' : S.renderScale > 80 ? 'Try a lower RENDER SCALE or the LOW preset.' : 'Close other tabs and apps that use the GPU, and check the browser is using hardware acceleration.';
   $('benchVerdict').textContent = verdict[0]; $('benchVerdict').className = 'bv ' + verdict[1];
   $('benchStats').innerHTML = [
     ['AVERAGE', res.avgFps + ' FPS'], ['MEDIAN', res.medianFps + ' FPS'], ['1% LOW', res.low1Fps + ' FPS'], ['95% OF FRAMES UNDER', res.p95ms + ' MS'], ['WORST FRAME', res.maxMs + ' MS'],

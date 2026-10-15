@@ -2,6 +2,7 @@
 // dynamic resolution: drop the render scale when the frame rate sags, creep back up when there is headroom.
 // If lowering the resolution does not actually speed things up (frame-capped display, battery saver), it backs off.
 const DR = { scale: 1, prev: 1, ema: 1 / 60, slowT: 0, fastT: 0, basePR: 1, checkT: -1, emaBefore: 0, locked: false };
+const dynTarget = () => { const hz = HW.hz || 60; return S.fpsCap > 0 ? Math.min(S.fpsCap, hz) : hz; };
 function applyPR() { renderer.setPixelRatio(Math.max(0.4, DR.basePR * (S.dynRes ? DR.scale : 1))); }
 function setDynScale(s) { DR.prev = DR.scale; DR.scale = s; DR.emaBefore = DR.ema; DR.checkT = 2.5; applyPR(); }
 function updateDynRes(raw) {
@@ -13,8 +14,9 @@ function updateDynRes(raw) {
     return;
   }
   if (DR.locked) return;
-  DR.slowT = DR.ema > 1 / 48 ? DR.slowT + raw : 0;
-  DR.fastT = DR.ema < 1 / 57 ? DR.fastT + raw : 0;
+  const T = dynTarget();   // aim for the frame limit (or the display's refresh rate), not always 60
+  DR.slowT = DR.ema > 1 / (T * 0.8) ? DR.slowT + raw : 0;
+  DR.fastT = DR.ema < 1 / (T * 0.95) ? DR.fastT + raw : 0;
   if (DR.slowT > 1.2 && DR.scale > 0.6) { DR.slowT = 0; setDynScale(Math.max(0.6, DR.scale * 0.88)); }
   else if (DR.fastT > 4 && DR.scale < 1) { DR.fastT = 0; DR.prev = DR.scale; DR.scale = Math.min(1, DR.scale * 1.06); applyPR(); }
 }
@@ -23,7 +25,7 @@ function updateDynRes(raw) {
 let shadowLodT = 0;
 function updateShadowLod(dt) {
   if ((shadowLodT -= dt) > 0) return; shadowLodT = 0.2;
-  const far = S.shadows === 'high' ? (qKey() === 'ultra' ? 50 : 38) : 28, cx = camera.position.x, cz = camera.position.z;
+  const far = (SHADOWQ[S.shadows] || SHADOWQ.high).far * clamp(S.shadowDist, 50, 200) / 100, cx = camera.position.x, cz = camera.position.z;
   const apply = (rig, x, z, holder) => {
     const want = S.shadows !== 'off' && Math.hypot(x - cx, z - cz) < far;
     if (holder._sh === want) return; holder._sh = want;
@@ -39,7 +41,7 @@ function updateShadowLod(dt) {
 let sunR = 0;
 function updateSunFollow() {
   if (!sun.target || !sun.castShadow) return;
-  const R = S.shadows === 'high' ? (QUALITY[qKey()] || QUALITY.high).shadowR : 30, cam = sun.shadow.camera;
+  const R = Math.round((SHADOWQ[S.shadows] || SHADOWQ.high).R * clamp(S.shadowDist, 50, 200) / 100), cam = sun.shadow.camera;
   if (R !== sunR) { sunR = R; cam.left = -R; cam.right = R; cam.top = R; cam.bottom = -R; cam.updateProjectionMatrix && cam.updateProjectionMatrix(); }
   const texel = (2 * R) / (sun.shadow.mapSize.x || 2048);
   const cx = Math.round(camera.position.x / texel) * texel, cz = Math.round(camera.position.z / texel) * texel;

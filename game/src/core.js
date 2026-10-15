@@ -9,13 +9,23 @@ function setLoad(p, txt) { try { $('ldbar').style.width = Math.round(p * 100) + 
 
 /* ------------------------------------------------------------------ settings */
 const QUALITY = {
-  low:    { scale: 70,  shadows: 'off',  fx: 0.35, grass: 0,    anis: 1,  grain: false, tex: 256, shadowRes: 1024, prCap: 1.25, shadowR: 30 },
-  medium: { scale: 85,  shadows: 'low',  fx: 0.65, grass: 0.4,  anis: 4,  grain: false, tex: 256, shadowRes: 1024, prCap: 1.5,  shadowR: 30 },
-  high:   { scale: 100, shadows: 'high', fx: 1,    grass: 0.65, anis: 8,  grain: false, tex: 512, shadowRes: 2048, prCap: 1.5,  shadowR: 40 },
-  ultra:  { scale: 100, shadows: 'high', fx: 1.5,  grass: 1,    anis: 16, grain: false, tex: 512, shadowRes: 4096, prCap: 2,    shadowR: 50 },
+  low:    { scale: 70,  shadows: 'off',    fx: 'low',    grass: 0,   anis: 1,  grain: false, tex: 256, prCap: 1.25 },
+  medium: { scale: 85,  shadows: 'low',    fx: 'medium', grass: 40,  anis: 4,  grain: false, tex: 256, prCap: 1.5 },
+  high:   { scale: 100, shadows: 'high',   fx: 'high',   grass: 65,  anis: 8,  grain: false, tex: 512, prCap: 1.5 },
+  ultra:  { scale: 100, shadows: 'ultra',  fx: 'ultra',  grass: 100, anis: 16, grain: false, tex: 512, prCap: 2 },
 };
+// shadow quality: map resolution, how far around you the sun's shadow box reaches (m), soldiers casting shadows within (m)
+const SHADOWQ = {
+  off:     { res: 0,    R: 0,  far: 0 },
+  low:     { res: 1024, R: 30, far: 24 },
+  medium:  { res: 2048, R: 32, far: 32 },
+  high:    { res: 2048, R: 40, far: 38 },
+  ultra:   { res: 4096, R: 50, far: 50 },
+  extreme: { res: 8192, R: 64, far: 70 },
+};
+const FXQ = { low: 0.35, medium: 0.65, high: 1, ultra: 1.5 };
 const DEFAULTS = {
-  quality: 'auto', cfgVer: 4, dynRes: true, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
+  quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
   master: 80, sfx: 100, ambience: 60, music: 50,
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
@@ -25,14 +35,19 @@ const DEFAULTS = {
 const S = Object.assign({}, DEFAULTS);
 const STORE = 'ashfall.settings.v1', BEST = 'ashfall.best.v1';
 let NEED_AUTO_DERIVE = false;
-// AUTO resolves to a preset picked from the graphics card (set in gfx1 once the renderer exists)
-function qKey() { return S.quality === 'auto' ? (typeof AUTO_TIER !== 'undefined' ? AUTO_TIER : 'high') : S.quality; }
+// AUTO resolves to a preset picked from the graphics card (set in gfx1 once the renderer exists); CUSTOM = the player's own mix
+function qKey() { return S.quality === 'auto' ? (typeof AUTO_TIER !== 'undefined' ? AUTO_TIER : 'high') : S.quality === 'custom' ? 'custom' : S.quality; }
+const qPreset = () => QUALITY[qKey()] || QUALITY.high;
+// a preset sets every detail setting at once
+function applyPreset(k) { const q = QUALITY[k] || QUALITY.high; Object.assign(S, { renderScale: q.scale, shadows: q.shadows, grain: q.grain, anis: q.anis, grass: q.grass, fxQ: q.fx, texQ: q.tex >= 512 ? 'high' : 'low', shadowDist: 100 }); }
+let CFG5 = false;   // settings saved before the detailed graphics menu: fill the new settings from the old preset (gfx1)
 function loadSettings() {
   try {
     const raw = localStorage.getItem(STORE);
     if (raw) { const o = JSON.parse(raw); for (const k in DEFAULTS) if (k in o && typeof o[k] === typeof DEFAULTS[k]) S[k] = o[k];
       if ((o.cfgVer | 0) < 2) { S.quality = 'auto'; NEED_AUTO_DERIVE = true; }
       if ((o.cfgVer | 0) < 3) { S.grain = false; S.cfgVer = 3; saveSettings(); }
+      if ((o.cfgVer | 0) < 5) CFG5 = true;
       if ((o.cfgVer | 0) < 4) { if (o.padAimAssist === false) S.padAssist = 'off'; S.padDeadzone = Math.min(S.padDeadzone, 40); S.cfgVer = 4; saveSettings(); } }   // controller settings v2   // film grain is now off unless chosen   // older saves move to the auto preset once
     else NEED_AUTO_DERIVE = true;
   } catch (e) { NEED_AUTO_DERIVE = true; }

@@ -19,7 +19,7 @@ function fbm(rand, base, oct) {
 const mix3 = (a, b, t) => [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t, a[2] + (b[2] - a[2]) * t];
 const hex3 = h => [(h >> 16) & 255, (h >> 8) & 255, h & 255];
 
-const TEX_SIZE = (QUALITY[qKey()] || QUALITY.high).tex;   // 512 on HIGH/ULTRA (applies at launch)
+const TEX_SIZE = S.texQ === 'low' ? 256 : 512;   // TEXTURE QUALITY (applies at launch)
 // fn(u, v, x, y) -> [r, g, b, height 0..1]; returns { map, bump }
 function paint(size, fn, after) {
   const cc = document.createElement('canvas'), bc = document.createElement('canvas');
@@ -38,7 +38,7 @@ function paint(size, fn, after) {
 function toTex(canvas, srgb, repeat) {
   const t = new THREE.CanvasTexture(canvas);
   t.wrapS = t.wrapT = THREE.RepeatWrapping;
-  t.anisotropy = Math.min((QUALITY[qKey()] || QUALITY.high).anis, MAXANIS);
+  t.anisotropy = Math.max(1, Math.min(S.anis | 0, MAXANIS));
   if (srgb) t.encoding = THREE.sRGBEncoding;
   if (repeat) t.repeat.set(repeat, repeat);
   return t;

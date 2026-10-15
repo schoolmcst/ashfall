@@ -17,15 +17,32 @@ const SCHEMA = {
     { t: 'info', name: 'FRIEND CODE', hint: 'Give this to friends: they add it in the lobby and press JOIN to join your party', val: () => MYCODE },
   ],
   VIDEO: [
-    { k: 'quality', t: 'seg', name: 'GRAPHICS PRESET', hint: 'AUTO picks ' + AUTO_TIER.toUpperCase() + ' for this graphics card. Texture detail changes apply on next launch', opts: [['auto', 'AUTO'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
-    { k: 'renderScale', t: 'range', name: 'RENDER SCALE', hint: 'Lower this if the game runs slowly', min: 50, max: 100, step: 5, fmt: pct },
-    { k: 'dynRes', t: 'toggle', name: 'DYNAMIC RESOLUTION', hint: 'Lowers the render scale automatically if the frame rate drops' },
-    { k: 'shadows', t: 'seg', name: 'SHADOWS', opts: [['off', 'OFF'], ['low', 'LOW'], ['high', 'HIGH']] },
+    { t: 'head', name: 'YOUR HARDWARE' },
+    { t: 'info', small: true, name: 'GRAPHICS CARD', hint: () => 'AUTO picks ' + AUTO_TIER.toUpperCase() + ' for this card', val: () => gpuShort() },
+    { t: 'info', small: true, name: 'DISPLAY', hint: () => HW.hzN ? 'Refresh rate measured while the menu is open' : 'Measuring refresh rate…', val: () => dispInfo() },
+    { t: 'info', small: true, name: 'LIMITS', hint: 'The highest settings this computer supports', val: () => `TEXTURES ${HW.maxTex} · FILTERING ${MAXANIS}× · ${HW.cores ? HW.cores + ' CPU THREADS' : 'CPU ?'}${HW.mem ? ' · ' + HW.mem + ' GB+' : ''}` },
+    { t: 'action', name: 'BENCHMARK', hint: 'A 25 second fly-through that measures your frame rate with the current settings', label: 'RUN BENCHMARK', act: 'bench' },
+    { t: 'head', name: 'PRESET' },
+    { k: 'quality', t: 'seg', name: 'GRAPHICS PRESET', hint: 'Sets everything below at once. Change any detail setting and this shows CUSTOM', opts: [['auto', 'AUTO'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA'], ['custom', 'CUSTOM']] },
+    { t: 'head', name: 'DISPLAY' },
+    { k: 'fpsCap', t: 'seg', name: 'FRAME RATE LIMIT', hint: () => 'DISPLAY runs at your monitor\u2019s refresh rate (' + HW.hz + ' Hz). A lower limit saves power and heat', opts: [[0, 'DISPLAY'], [30, '30'], [60, '60'], [90, '90'], [120, '120'], [144, '144'], [165, '165'], [240, '240']] },
+    { k: 'renderScale', t: 'range', name: 'RENDER SCALE', hint: 'Below 100% runs faster. Above 100% renders extra pixels and shrinks them down (supersampling): much sharper, needs a strong graphics card', min: 50, max: 200, step: 5, fmt: pct },
+    { k: 'dynRes', t: 'toggle', name: 'DYNAMIC RESOLUTION', hint: 'Lowers the render scale for a moment when the frame rate drops below your limit' },
+    { k: 'aa', t: 'seg', name: 'ANTI-ALIASING', hint: 'Smooths jagged edges (4× MSAA). Applies on next launch', opts: [['off', 'OFF'], ['msaa', 'MSAA']] },
+    { k: 'gpuPref', t: 'seg', name: 'GRAPHICS CARD TO USE', hint: 'Laptops with two GPUs: HIGH PERFORMANCE uses the gaming card. Applies on next launch', opts: [['high', 'HIGH PERFORMANCE'], ['low', 'POWER SAVING']] },
     { k: 'fov', t: 'range', name: 'FIELD OF VIEW', min: 60, max: 110, step: 1, fmt: v => v + '°' },
     { k: 'brightness', t: 'range', name: 'BRIGHTNESS', min: 60, max: 150, step: 5, fmt: pct },
-    { k: 'sheen', t: 'range', name: 'SURFACE SHEEN', hint: 'Fresnel glint on metal and wet surfaces at grazing angles', min: 0, max: 150, step: 10, fmt: pct },
-    { k: 'gunShader', t: 'toggle', name: 'CUSTOM GUN SHADER', hint: 'Physically based GGX shader on weapon metal. Turn off if guns look wrong' },
+    { t: 'head', name: 'QUALITY' },
+    { k: 'shadows', t: 'seg', name: 'SHADOW QUALITY', hint: () => 'Sharper, longer shadows. EXTREME uses an 8K shadow map' + (HW.maxTex < 8192 ? ' (not supported by this card)' : ''), opts: () => [['off', 'OFF'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA'], ...(HW.maxTex >= 8192 ? [['extreme', 'EXTREME']] : [])] },
+    { k: 'shadowDist', t: 'range', name: 'SHADOW DISTANCE', hint: 'How far from you shadows are drawn, and soldiers cast shadows. Longer is softer and slower', min: 50, max: 200, step: 10, fmt: pct },
+    { k: 'anis', t: 'seg', name: 'TEXTURE FILTERING', hint: 'Keeps the ground and walls sharp at an angle (anisotropic)', opts: () => [[1, '1×'], [2, '2×'], [4, '4×'], [8, '8×'], [16, '16×']].filter(o => o[0] <= Math.max(1, MAXANIS)) },
+    { k: 'texQ', t: 'seg', name: 'TEXTURE QUALITY', hint: 'Detail of the built-in textures. Applies on next launch', opts: [['low', 'LOW'], ['high', 'HIGH']] },
     { k: 'realTex', t: 'toggle', name: 'SCANNED TEXTURES', hint: 'Photo-scanned ground, brick, concrete, wood and metal from Poly Haven (CC0), downloaded once. Applies on next launch' },
+    { k: 'gunShader', t: 'toggle', name: 'CUSTOM GUN SHADER', hint: 'Physically based GGX shader on weapon metal. Turn off if guns look wrong' },
+    { k: 'sheen', t: 'range', name: 'SURFACE SHEEN', hint: 'Fresnel glint on metal and wet surfaces at grazing angles', min: 0, max: 150, step: 10, fmt: pct },
+    { t: 'head', name: 'EFFECTS' },
+    { k: 'fxQ', t: 'seg', name: 'EFFECTS QUALITY', hint: 'Sparks, debris, dust and smoke from shots and explosions', opts: [['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
+    { k: 'grass', t: 'range', name: 'GRASS DENSITY', min: 0, max: 100, step: 5, fmt: pct },
     { k: 'grain', t: 'toggle', name: 'FILM GRAIN' },
     { k: 'bob', t: 'toggle', name: 'VIEW BOBBING' },
     { k: 'shake', t: 'range', name: 'SCREEN SHAKE', min: 0, max: 150, step: 10, fmt: pct },
@@ -90,9 +107,15 @@ const SCHEMA = {
   ],
 };
 let curTab = 'VIDEO';
-const VIDEO_KEYS = new Set(['quality', 'renderScale', 'dynRes', 'shadows', 'fov', 'brightness', 'sheen', 'gunShader', 'grain', 'showFps', 'radar', 'crosshair', 'crosshairColor']);
+const VIDEO_KEYS = new Set(['quality', 'renderScale', 'dynRes', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'fov', 'brightness', 'sheen', 'gunShader', 'grain', 'showFps', 'radar', 'crosshair', 'crosshairColor']);
+// changing one of these by hand turns the preset into CUSTOM
+const DETAIL_KEYS = new Set(['renderScale', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'texQ', 'grain']);
+const gpuShort = () => { let n = String(GPU_NAME || 'UNKNOWN'); const m = /^ANGLE \((.*)\)$/.exec(n); if (m) { const p = m[1].split(/,\s*(?![^()]*\))/); n = p.length > 1 ? p[1] : p[0]; }
+  return n.replace(/^ANGLE Metal Renderer:\s*/i, '').replace(/\s*\(0x[0-9a-f]+\)/ig, '').replace(/\s*Direct3D.*$|\s*vs_\d.*$|\s*OpenGL.*$/i, '').trim().toUpperCase().slice(0, 48); };
+const dispInfo = () => { const d = window.devicePixelRatio || 1; return `${Math.round(screen.width * d)}×${Math.round(screen.height * d)} · ${HW.hz} HZ`; };
 function applySetting(k) {
-  if (k === 'quality') { const q = QUALITY[qKey()]; S.renderScale = q.scale; S.shadows = q.shadows; S.grain = q.grain; renderSettings(); }
+  if (k === 'quality') { if (S.quality !== 'custom') applyPreset(qKey()); renderSettings(); }
+  else if (DETAIL_KEYS.has(k) && S.quality !== 'custom') { S.quality = 'custom'; const seg = document.querySelector('#setBody .seg[data-k="quality"]'); if (seg) [...seg.children].forEach(c => c.classList.toggle('on', c.dataset.v === 'custom')); }
   if (VIDEO_KEYS.has(k)) applyVideoSettings();
   if (k === 'master' || k === 'sfx' || k === 'ambience') applyAudioSettings();
   if (k === 'difficulty') updateDiffUI();
@@ -110,16 +133,18 @@ function buildTabs() {
 function renderSettings() {
   const body = $('setBody'); body.innerHTML = '';
   for (const it of SCHEMA[curTab]) {
+    if (it.t === 'head') { const h = document.createElement('div'); h.className = 'sethead'; h.textContent = it.name; body.appendChild(h); continue; }
     const row = document.createElement('div'); row.className = 'setrow';
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name;
-    if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
+    const hint = typeof it.hint === 'function' ? it.hint() : it.hint;
+    if (hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = hint; nm.appendChild(h); }
     const ctl = document.createElement('div'); ctl.className = 'ctl';
     if (it.t === 'action') { const b = document.createElement('button'); b.className = 'bindbtn'; b.textContent = it.label; b.onclick = () => { sfx.ui(); actions(it.act); }; ctl.appendChild(b); }
     else if (it.t === 'padbind') {
       const b = document.createElement('button'); b.className = 'bindbtn'; b.textContent = PAD_NAMES[pb(it.a)] || ('BUTTON ' + pb(it.a));
       b.onclick = () => { b.textContent = 'PRESS A CONTROLLER BUTTON…'; b.classList.add('wait'); padCapture = btn => { const cur = pb(it.a), map = Object.assign({}, PAD_DEFAULT, S.padBinds || {}); for (const k in map) if (map[k] === btn && k !== it.a) map[k] = cur; map[it.a] = btn; S.padBinds = map; saveSettings(); renderSettings(); }; };
       ctl.appendChild(b);
-    } else if (it.t === 'info') { const v = document.createElement('span'); v.className = 'num'; v.style.letterSpacing = '.3em'; v.style.fontSize = '18px'; v.textContent = it.val(); ctl.appendChild(v); }
+    } else if (it.t === 'info') { const v = document.createElement('span'); v.className = 'num' + (it.small ? ' hwv' : ''); if (!it.small) { v.style.letterSpacing = '.3em'; v.style.fontSize = '18px'; } v.textContent = it.val(); ctl.appendChild(v); }
     else if (it.t === 'text') {
       const i = document.createElement('input'); i.className = 'set-text'; i.maxLength = 14; i.value = NET.nick; i.spellcheck = false; i.autocomplete = 'off';
       i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') i.blur(); }; i.onkeyup = e => e.stopPropagation();
@@ -149,8 +174,8 @@ function renderSettings() {
       };
       ctl.appendChild(b);
     } else {
-      const seg = document.createElement('div'); seg.className = 'seg';
-      for (const [val, label] of it.opts) { const b = document.createElement('button'); b.textContent = label; b.className = S[it.k] === val ? 'on' : ''; b.onclick = () => { S[it.k] = val; applySetting(it.k); if (it.k !== 'quality') [...seg.children].forEach(c => c.classList.toggle('on', c === b)); }; seg.appendChild(b); }
+      const seg = document.createElement('div'); seg.className = 'seg'; seg.dataset.k = it.k;
+      for (const [val, label] of (typeof it.opts === 'function' ? it.opts() : it.opts)) { const b = document.createElement('button'); b.textContent = label; b.dataset.v = val; b.className = S[it.k] === val ? 'on' : ''; b.onclick = () => { S[it.k] = val; applySetting(it.k); if (it.k !== 'quality') [...seg.children].forEach(c => c.classList.toggle('on', c === b)); }; seg.appendChild(b); }
       ctl.appendChild(seg);
     }
     row.append(nm, ctl); body.appendChild(row);
@@ -206,7 +231,7 @@ function actions(act) {
     case 'howto-back': showScreen(returnScreen); break;
     case 'credits': returnScreen = curScreen || 'menu'; showScreen('credits'); break;
     case 'credits-back': showScreen(returnScreen); break;
-    case 'reset-settings': if (curTab === 'KEYBINDS') S.binds = {}; if (curTab === 'BUTTONS') S.padBinds = null; for (const it of SCHEMA[curTab]) if (it.k) S[it.k] = DEFAULTS[it.k]; applyVideoSettings(); applyAudioSettings(); updateDiffUI(); saveSettings(); renderSettings(); break;
+    case 'reset-settings': if (curTab === 'KEYBINDS') S.binds = {}; if (curTab === 'BUTTONS') S.padBinds = null; for (const it of SCHEMA[curTab]) if (it.k) S[it.k] = DEFAULTS[it.k]; if (curTab === 'VIDEO') applyPreset(qKey()); applyVideoSettings(); applyAudioSettings(); updateDiffUI(); saveSettings(); renderSettings(); break;
     case 'resume': resumeGame(); break;
     case 'restart': restartMatch(); break;
     case 'tomenu': toMenu(); break;
@@ -593,8 +618,17 @@ function renderFrame() {
   renderer.clear(); renderer.render(scene, camera);
   if (showVm) { updateGunShader(); renderer.clearDepth(); renderer.render(vmScene, vmCamera); }
 }
+// FRAME RATE LIMIT: skip display refreshes until the next frame is due (the display's own rate is the ceiling)
+let lastRaf = 0, capDue = 0;
 function frame(now) {
   requestAnimationFrame(frame);
+  const rafDt = (now - lastRaf) / 1000; lastRaf = now;
+  if (curScreen && G.state !== 'playing') try { sampleHz(rafDt); } catch (e) {}
+  if (S.fpsCap > 0 && !G.bench && !G.noRender) {
+    const step = 1000 / S.fpsCap;
+    if (now < capDue - 1.5) return;                      // not due yet (1.5 ms slack so 60 on a 60 Hz screen never skips)
+    capDue += step; if (capDue < now - step) capDue = now + step;   // steady cadence; after a stall start fresh (no burst)
+  }
   const raw = (now - last) / 1000, dt = Math.min(raw, 0.05); last = now; NOW += dt;
   try { updateDynRes(raw); } catch (e) { reportError(e); }
   if (ready && G.bench) { try { benchPre(raw); } catch (e) { reportError(e); } }
@@ -638,7 +672,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
