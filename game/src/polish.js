@@ -30,7 +30,7 @@ function onKill(e, head, boom, bonusOnly) {
   if (G.multi >= 2) { const b = 50 * G.multi; extra += b; multiTxt = MULTI[Math.min(G.multi, 5)]; sfx.multi(G.multi); }
   G.streak = (G.streak || 0) + 1;
   if (G.streak % 5 === 0) { const b = G.streak * 20; extra += b; showBanner(`${G.streak} KILL STREAK`, `+${b} bonus`); sfx.streak(); }
-  G.score += extra; stkAdd(pts + extra);
+  G.score += extra; if (!(boom && e.killedBy === 'strike')) stkAdd(pts + Math.min(extra, 100));   // streak kills don't feed streaks; bonuses count up to +100
   popScore('+' + (pts + extra), multiTxt ? 'big' : head ? 'head' : '', [multiTxt, ...tags].filter(Boolean).join(' · '));
   feedLine(`<b>YOU</b> <span class="fw">${boom ? '✹' : WEAPONS[G.cur].name}</span> ${e.name ? `<span style="color:${isFriend(e) ? '#5aaeff' : '#ff5a4a'}">${e.name}</span>` : e.type.toUpperCase()}${tags.length ? ` <span class="ft">${tags.join(' · ')}</span>` : ''} <span class="fp">+${pts + extra}</span>`);
 }
@@ -129,3 +129,34 @@ function updatePolish(dt) {
   else if (G.state === 'deathcam') updateBarrels(dt * 0.32);
 }
 
+
+/* ---------- 1.2.17 clean HUD: one simple palette, solid colours (no see-through text), a dark outline on every letter so it
+   reads on bright sky and dark walls alike. White = info, yellow = something to act on, red = enemy/danger, blue = your team. */
+(() => {
+  const s = document.createElement('style'); s.id = 'hudClean';
+  s.textContent = `#hud{--hw:#ffffff;--hs:#d8d8d8;--hy:#ffd23a;--hr:#ff3b30;--hb:#4aa8ff;color:var(--hw)}
+#hud,#hud *{text-shadow:0 0 2px #000,0 1px 2px #000,0 0 6px rgba(0,0,0,.6)}
+#hud #health .lbl,#hud #wname{font-size:13px;letter-spacing:1.5px;opacity:1;color:var(--hs);font-weight:700}
+#hud #hpnum{font-size:36px;color:var(--hw)}
+#hud #health .bar{height:9px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.55)}
+#hud #mag{color:var(--hw)}#hud #mag small{opacity:1;color:var(--hs)}
+#hud #gren{opacity:1;color:var(--hw);letter-spacing:1.5px;font-weight:700}
+#hud #slots{opacity:1;color:var(--hs);letter-spacing:1.5px;font-size:13px;font-weight:600}#hud #slots b{color:var(--hy)}
+#hud #stats{letter-spacing:1.5px;color:var(--hw)}#hud #stats span{color:var(--hy)}
+#hud #banner{color:var(--hw);letter-spacing:4px}#hud #banner small{opacity:1;color:var(--hy);font-size:18px;letter-spacing:2px;font-weight:700}
+#hud #msg{color:var(--hw);letter-spacing:1.5px;font-weight:700;font-size:16px}
+#hud #prompt{color:var(--hw);letter-spacing:2px;font-size:14px}#hud #prompt.amber{color:var(--hy)}#hud #prompt.red{color:var(--hr)}
+#hud #pop div{color:var(--hw);letter-spacing:1.5px;font-size:15px}#hud #pop div.head{color:var(--hy)}#hud #pop div.big{color:var(--hy);font-size:18px}#hud #pop small{opacity:1;color:var(--hs);letter-spacing:1.5px;font-size:11px}
+#hud #feed{font-size:13px;letter-spacing:.5px;font-weight:600;color:var(--hw)}#hud #feed div{background:rgba(0,0,0,.35);padding:0 8px;margin-top:2px;display:inline-block;clear:both;float:right}
+#hud #feed b{color:var(--hb)}#hud #feed .fw{opacity:1;color:var(--hs);font-size:12px}#hud #feed .ft{color:var(--hy);font-size:12px}#hud #feed .fp{color:var(--hy)}
+#hud #mhud .ts.a{border-color:var(--hb);color:var(--hw)}#hud #mhud .ts.b{border-color:var(--hr);color:var(--hw)}
+#hud #mhud .tm small,#hud #mhud .minfo{opacity:1;color:var(--hs);letter-spacing:1.5px;font-weight:700}
+#hud #center b{color:var(--hw);letter-spacing:4px}#hud #center small{opacity:1;color:var(--hs);letter-spacing:1.5px;font-weight:700}
+#hud #ihold{color:var(--hw);letter-spacing:1.5px;font-weight:700}#hud #ihold i{background:var(--hy)}
+#hud #marks .mk small{letter-spacing:1px}
+#hud #stkHud .stk{border-color:rgba(255,255,255,.5);background:rgba(0,0,0,.55)}#hud #stkHud .stk span{font-size:11px;font-weight:700;color:var(--hw)}
+#hud #stkHud .stk.ready{border-color:var(--hy)}#hud #stkHud .stk.cd span{color:var(--hr)}
+#hud #stkHud .stk-uav{color:var(--hy);letter-spacing:1.5px;font-weight:700}#hud #stkHud .stk-pts{color:var(--hs);letter-spacing:1.5px;font-weight:700}
+#hud .stk-ic{color:var(--hw)}`;
+  document.head.appendChild(s);
+})();

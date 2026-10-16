@@ -236,10 +236,10 @@ function shoot(moving) {
   }
   // holding the trigger climbs: each shot of a spray kicks a bit more (LMGs most), with a steady sideways pull per gun
   const cat = w.def.cat, sprayN = G.sprayN = G.time - (G.lastKickT || -9) < Math.max(0.25, w.interval * 2.2) ? Math.min(14, (G.sprayN || 0) + 1) : 0; G.lastKickT = G.time;
-  const climb = 1 + sprayN * (cat === 'lmg' ? 0.06 : cat === 'smg' ? 0.035 : cat === 'ar' ? 0.045 : 0);
-  const kick = w.recoil * rnd(0.9, 1.1) * (G.adsOn ? 0.62 : 1) * climb, pull = (w.def.id.charCodeAt(0) % 3 - 1) * 0.45;
-  P.pitch = clamp(P.pitch + kick, -1.5, 1.5); P.recoilAcc += kick * (cat === 'lmg' ? 0.45 : 0.55); P.yaw += (rnd(-1, 1) + pull * Math.min(1, sprayN / 4)) * w.recoil * (G.adsOn ? 0.3 : 0.5) * (cat === 'lmg' ? 1.3 : 1);
-  G.kick = clamp(w.recoil / (w.def.recoil || w.recoil || 0.011), 0.5, 2.2); G.shake = Math.max(G.shake, w.pellets > 1 ? 0.01 : 0.003);   // the gun visibly kicks harder or softer with recoil attachments
+  const climb = 1 + sprayN * (cat === 'lmg' ? 0.07 : cat === 'smg' ? 0.05 : cat === 'ar' ? 0.06 : 0);
+  const kick = w.recoil * rnd(0.9, 1.1) * (G.adsOn ? 0.72 : 1) * climb, pull = (w.def.id.charCodeAt(0) % 3 - 1) * 0.45;
+  P.pitch = clamp(P.pitch + kick, -1.5, 1.5); P.recoilAcc += kick * (cat === 'lmg' ? 0.35 : 0.42); P.yaw += (rnd(-1, 1) + pull * Math.min(1, sprayN / 4)) * w.recoil * (G.adsOn ? 0.42 : 0.6) * (cat === 'lmg' ? 1.3 : 1);   // less snaps back on its own: you pull down
+  G.kick = clamp(w.recoil / ((w.def.recoil || w.recoil || 0.011) * recoilK(w.def)), 0.5, 2.2); G.shake = Math.max(G.shake, w.pellets > 1 ? 0.01 : 0.003);   // the gun visibly kicks harder or softer with recoil attachments
   // muzzle flash on the weapon, light on the world, smoke and a brass casing
   u.flash.visible = !w.stealth; const fs = rnd(0.22, 0.38) * (w.pellets > 1 ? 1.6 : 1) * (G.ads > 0.5 ? 0.38 : 1); u.flash.scale.set(fs, fs, 1); u.flash.material.rotation = rnd(0, 6.28); G.flashT = 0.045;
   vmFlashLight.position.set(viewmodel.position.x, viewmodel.position.y + 0.03, viewmodel.position.z - w.len - 0.1); vmFlashLight.intensity = w.stealth ? 0 : 2.2;

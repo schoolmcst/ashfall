@@ -11,12 +11,12 @@ const STK_ICON = {
   air: '<path d="M2 13 L22 9 L22 11 L14 13 L16 20 L13 20 L10 14 L4 15 Z"/>',
 };
 const STREAKS = {
-  uav:    { name: 'UAV', cost: 400, desc: 'A spy plane shows every enemy on your radar and screen for 30 seconds.' },
-  supply: { name: 'SUPPLY DROP', cost: 500, desc: 'Refills all your ammo and grenades and heals you to full.' },
-  armor:  { name: 'BODY ARMOR', cost: 600, desc: '+60 health until you die.' },
-  mortar: { name: 'MORTAR STRIKE', cost: 750, desc: 'Three mortar shells land on enemy positions.' },
-  vuav:   { name: 'ADVANCED UAV', cost: 1000, desc: 'Shows every enemy and the way they are facing for 45 seconds.' },
-  air:    { name: 'AIRSTRIKE', cost: 1200, desc: 'A jet carpet-bombs a line straight through the enemy.' },
+  uav:    { name: 'UAV', cost: 550, cd: 45, desc: 'A spy plane shows every enemy on your radar and screen for 25 seconds.' },
+  supply: { name: 'SUPPLY DROP', cost: 650, cd: 50, desc: 'Refills all your ammo and grenades and heals you to full.' },
+  armor:  { name: 'BODY ARMOR', cost: 850, cd: 60, desc: '+40 health until you die.' },
+  mortar: { name: 'MORTAR STRIKE', cost: 1050, cd: 70, desc: 'Three mortar shells land on enemy positions.' },
+  vuav:   { name: 'ADVANCED UAV', cost: 1400, cd: 80, desc: 'Shows every enemy and the way they are facing for 35 seconds.' },
+  air:    { name: 'AIRSTRIKE', cost: 1700, cd: 90, desc: 'A jet carpet-bombs a line straight through the enemy.' },
 };
 const STK_KEY = 'ashfall.streaks.v1';
 let STK_SEL = ['uav', 'mortar', 'air'];
@@ -24,14 +24,17 @@ try { const a = JSON.parse(localStorage.getItem(STK_KEY) || 'null'); if (Array.i
 const stkSave = () => { try { localStorage.setItem(STK_KEY, JSON.stringify(STK_SEL)); } catch (e) {} };
 const stkIcon = (id, cls = '') => `<svg class="stk-ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${STK_ICON[id] || ''}</svg>`;
 const stkOn = () => typeof M !== 'undefined' && M && inMatch() && M.mode !== 'gun' && M.mode !== 'snd' && !G.bench;
-const STK = { pts: 0, got: new Set(), have: [], uavT: 0, vuav: false, jobs: [] };
-function stkReset() { STK.pts = 0; STK.got.clear(); STK.have = []; STK.uavT = 0; STK.vuav = false; STK.jobs = []; stkHud(true); }
+// cooldowns: after you call in a streak you must wait STK_USE_CD seconds before calling another, and that streak can't be
+// earned again until its own cd (seconds) has passed
+const STK_USE_CD = 15;
+const STK = { pts: 0, got: new Set(), have: [], uavT: 0, vuav: false, jobs: [], useCd: 0, cd: {} };
+function stkReset() { STK.pts = 0; STK.got.clear(); STK.have = []; STK.uavT = 0; STK.vuav = false; STK.jobs = []; STK.useCd = 0; STK.cd = {}; stkHud(true); }
 function stkDeath() { STK.pts = 0; STK.got.clear(); stkHud(true); }
 function stkAdd(pts) {
   if (!stkOn()) return;
   STK.pts += pts * (perk('hard') ? 1.2 : 1);
   const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
-  for (const id of list) if (STK.pts >= STREAKS[id].cost && !STK.got.has(id)) {
+  for (const id of list) if (STK.pts >= STREAKS[id].cost && !STK.got.has(id) && !(STK.cd[id] > 0) && !STK.have.includes(id)) {
     STK.got.add(id); STK.have.push(id);
     showBanner(STREAKS[id].name + ' READY', `press ${keyName(bind('streak'))} to use it`); try { sfx.streakReady(); } catch (e) { sfx.streak(); }
   }
@@ -40,20 +43,21 @@ function stkAdd(pts) {
 }
 function stkUse() {
   if (!stkOn() || !STK.have.length || !(G.state === 'playing')) return;
+  if (STK.useCd > 0) { showBanner('SCORESTREAK COOLING DOWN', `ready in ${Math.ceil(STK.useCd)} s`); return; }
   const id = STK.have.pop(), en = () => enemies.filter(e => !isFriend(e) && (!e.entry || e.entry.alive !== false));
-  sfx.ui();
-  if (id === 'uav' || id === 'vuav') { STK.uavT = Math.max(STK.uavT, id === 'vuav' ? 45 : 30); STK.vuav = STK.vuav || id === 'vuav'; showBanner(STREAKS[id].name + ' ONLINE', 'enemies revealed'); stkRadio(); }
+  sfx.ui(); STK.useCd = STK_USE_CD; STK.cd[id] = STREAKS[id].cd;
+  if (id === 'uav' || id === 'vuav') { STK.uavT = Math.max(STK.uavT, id === 'vuav' ? 35 : 25); STK.vuav = STK.vuav || id === 'vuav'; showBanner(STREAKS[id].name + ' ONLINE', 'enemies revealed'); stkRadio(); }
   else if (id === 'supply') { for (const w of WEAPONS) if (w) { w.ammo = w.magSize; w.reserve = w.reserveMax; } G.grenades = EQUIP[G.equip].count; G.health = G.maxHp; showBanner('SUPPLY DROP', 'ammo, grenades and health refilled'); sfx.pickup(); }
-  else if (id === 'armor') { G.maxHp += 60; G.health = Math.min(G.maxHp, G.health + 60); showBanner('BODY ARMOR', '+60 health until you die'); sfx.pickup(); }
+  else if (id === 'armor') { G.maxHp += 40; G.health = Math.min(G.maxHp, G.health + 40); showBanner('BODY ARMOR', '+40 health until you die'); sfx.pickup(); }
   else if (id === 'mortar') {
     const t = stkTargets(en(), 3); showBanner('MORTAR STRIKE', 'shells inbound'); stkRadio();
-    t.forEach((p, i) => STK.jobs.push({ t: 1.4 + i * 0.6, whistle: true, fn: () => stkBoom(p.x + rnd(-1.5, 1.5), p.z + rnd(-1.5, 1.5), 7, 1.4) }));
+    t.forEach((p, i) => STK.jobs.push({ t: 1.4 + i * 0.6, whistle: true, fn: () => stkBoom(p.x + rnd(-2, 2), p.z + rnd(-2, 2), 6, 1.2) }));
   }
   else if (id === 'air') {
     const t = stkTargets(en(), 1)[0] || { x: P.x + 25 * -Math.sin(P.yaw), z: P.z + 25 * -Math.cos(P.yaw) };
     const a = Math.random() * TAU, dx = Math.cos(a), dz = Math.sin(a); showBanner('AIRSTRIKE', 'jet inbound'); stkRadio();
     STK.jobs.push({ t: 1.6, fn: () => stkJet(t.x, t.z, dx, dz) });
-    for (let k = -3; k <= 3; k++) { const x = t.x + dx * k * 3.6, z = t.z + dz * k * 3.6; if (Math.hypot(x - P.x, z - P.z) > 6) STK.jobs.push({ t: 2.3 + (k + 3) * 0.13, fn: () => stkBoom(x, z, 6.5, 1.25) }); }
+    for (let k = -3; k <= 3; k++) { const x = t.x + dx * k * 3.6, z = t.z + dz * k * 3.6; if (Math.hypot(x - P.x, z - P.z) > 6) STK.jobs.push({ t: 2.3 + (k + 3) * 0.13, fn: () => stkBoom(x, z, 5.5, 1.1) }); }
   }
   stkHud(true);
 }
@@ -73,6 +77,8 @@ function updateStreaks(dt) {
     if (j.whistle && !j.ws && j.t < 1.0) { j.ws = true; tone(1500, 1.0, 0.08, 'sine', 380); }
     if (j.t <= 0) { STK.jobs.splice(i, 1); try { j.fn(); } catch (e) { reportError(e); } }
   }
+  if (STK.useCd > 0) STK.useCd = Math.max(0, STK.useCd - dt);
+  for (const k in STK.cd) if (STK.cd[k] > 0) STK.cd[k] = Math.max(0, STK.cd[k] - dt);
   if (STK.uavT > 0) { STK.uavT -= dt; if (STK.uavT <= 0) { STK.uavT = 0; STK.vuav = false; } }
   stkMarks(); stkHud(false);
 }
@@ -100,12 +106,13 @@ function stkHud(force) {
   const on = stkOn() && (G.state === 'playing' || G.state === 'paused' || G.state === 'respawning' || G.state === 'deathcam');
   if (box._on !== on) { box._on = on; box.classList.toggle('hide', !on); }
   if (!on) return;
-  const key = STK_SEL.join() + '|' + STK.pts + '|' + STK.have.join() + '|' + Math.ceil(STK.uavT);
+  const key = STK_SEL.join() + '|' + STK.pts + '|' + STK.have.join() + '|' + Math.ceil(STK.uavT) + '|' + Math.ceil(STK.useCd) + '|' + STK_SEL.map(k => Math.ceil(STK.cd[k] || 0)).join();
   if (!force && box._k === key) return; box._k = key;
   const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
   box.innerHTML = list.map(id => {
-    const s = STREAKS[id], have = STK.have.includes(id), p = have ? 1 : STK.got.has(id) ? 0 : clamp(STK.pts / s.cost, 0, 1);
-    return `<div class="stk${have ? ' ready' : ''}"><div class="stk-fill" style="height:${(p * 100).toFixed(0)}%"></div>${stkIcon(id)}<span>${have ? keyName(bind('streak')) : s.cost}</span></div>`;
+    const s = STREAKS[id], have = STK.have.includes(id), cd = Math.ceil(STK.cd[id] || 0), p = have ? 1 : (STK.got.has(id) || cd) ? 0 : clamp(STK.pts / s.cost, 0, 1);
+    const wait = have && STK.useCd > 0;
+    return `<div class="stk${have && !wait ? ' ready' : ''}${cd && !have ? ' cd' : ''}"><div class="stk-fill" style="height:${(p * 100).toFixed(0)}%"></div>${stkIcon(id)}<span>${have ? (wait ? Math.ceil(STK.useCd) + 's' : keyName(bind('streak'))) : cd ? cd + 's' : s.cost}</span></div>`;
   }).join('') + (STK.uavT > 0 ? `<div class="stk-uav">${STK.vuav ? 'ADV UAV' : 'UAV'} ${Math.ceil(STK.uavT)}</div>` : '') + `<div class="stk-pts">${STK.pts}</div>`;
 }
 
@@ -131,6 +138,7 @@ function renderStreaks() {
 #stkHud .stk-fill{position:absolute;left:0;right:0;bottom:0;background:rgba(224,180,74,.28)}
 #stkHud .stk.ready{border-color:var(--accent);box-shadow:0 0 12px rgba(224,180,74,.55);animation:stkp 1.2s infinite}#stkHud .stk.ready .stk-fill{background:rgba(224,180,74,.45)}
 @keyframes stkp{50%{box-shadow:0 0 2px rgba(224,180,74,.2)}}
+#stkHud .stk.cd{opacity:.45}#stkHud .stk.cd span{color:#ff8a7a}
 #stkHud .stk span{position:absolute;right:2px;bottom:1px;font-size:9px;letter-spacing:.05em;color:#fff;text-shadow:0 0 3px #000}
 #stkHud .stk-uav,#stkHud .stk-pts{font-size:11px;letter-spacing:.2em;color:var(--accent);text-shadow:0 0 4px #000}#stkHud .stk-pts{color:rgba(255,255,255,.6)}
 .stk-ic{width:26px;height:26px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linejoin:round;color:#e9e6d8;position:relative}

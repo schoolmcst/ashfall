@@ -14,8 +14,10 @@ function playerCard(st) {
   if (!pg) return `<div class="em">${nick.slice(0, 1)}</div><div><div class="cs">${nick}</div><span>K/D<b>${kd}</b></span> &nbsp; <span>WINS<b>${st.wins}</b></span> &nbsp; <span>MATCHES<b>${st.matches}</b></span></div>`;
   return `<span class="pg-badge" title="Level ${pg.l}">${pg.l}</span><div class="pg-cardm" title="K/D ${kd} · WINS ${st.wins} · MATCHES ${st.matches}"><div class="cs">${nick}</div><div class="pg-bar sm pg-cardbar"><s style="width:${pg.frac * 100}%"></s></div></div><span class="pg-dz">${dzIcon()}${PROG.dz.toLocaleString()}</span>`;
 }
+// your banner behind your player card (menu and lobby)
+function cardBanner(el) { try { if (el && typeof bannerUrl === 'function') { el.style.backgroundImage = `linear-gradient(90deg,rgba(0,0,0,.6),rgba(0,0,0,.2)),url(${bannerUrl(bannerFor())})`; el.style.backgroundSize = 'cover'; el.style.backgroundPosition = 'center'; } } catch (e) {} }
 function renderMenuCard() {
-  const c = $('menuCard'); if (c) c.innerHTML = playerCard(careerOf(true));
+  const c = $('menuCard'); if (c) { c.innerHTML = playerCard(careerOf(true)); cardBanner(c); }
   const nb = $('newsBody'); if (nb && typeof NEWS !== 'undefined' && !nb._done) { nb._done = 1; nb.innerHTML = NEWS.map((v, i) => `<div class="cn-v"><b>${v.v} BETA${i === 0 ? '<em>NEW</em>' : ''}</b><small>${v.d}</small>${v.name ? `<div class="cn-name">${v.name}</div>` : ''}<ul>${v.n.map(n => `<li>${String(n).replace(/[<&]/g, ch => ch === '<' ? '&lt;' : '&amp;')}</li>`).join('')}</ul></div>`).join(''); }
   const q = $('quitBtn'); if (q) q.style.display = window.ASHFALL_APP ? '' : 'none';
   renderMenuClasses();
@@ -42,7 +44,7 @@ function renderLobby(focusSel) {
   const sel = LOBBY.mode, d = MODES[sel], online = !!d.online, st = careerOf(online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   if (online) LOBBY.lastOn = sel; else LOBBY.lastOff = sel;
   $('lobKind').textContent = 'MULTIPLAYER';
-  $('lobPlayer').innerHTML = playerCard(st);
+  $('lobPlayer').innerHTML = playerCard(st); cardBanner($('lobPlayer'));
   const gun = sel === 'gun', stk = sel !== 'surv' && !gun;
   const goTxt = online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH';
   const m = MAPS[LOBBY.map];

@@ -264,7 +264,7 @@ let radarT = 0;
 function updateHud() {
   const w = WEAPONS[G.cur], hp = Math.ceil(G.health);
   hudSet(el.hp, 't', hp); hudSet(el.fill, 'width', clamp(G.health, 0, 100).toFixed(1) + '%');
-  hudSet(el.fill, 'background', G.health > 60 ? '#9ec45f' : G.health > 30 ? '#e0b44a' : '#d65a4a');
+  hudSet(el.fill, 'background', G.health > 60 ? '#ffffff' : G.health > 30 ? '#ffd23a' : '#ff3b30');
   hudSet(el.mag, 't', `${w.ammo}<small> / ${w.reserve}</small>`, true);
   hudSet(el.name, 't', w.name + (G.reloading ? '  ·  RELOADING' : ''));
   hudSet(el.gren, 't', EQUIP[G.equip].name + ' ' + '● '.repeat(G.grenades).trim());

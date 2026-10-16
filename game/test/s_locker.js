@@ -19,7 +19,7 @@ module.exports = async p => {
   out.gunTiles = await p.evaluate(() => [...document.querySelectorAll('#lkGrid [data-lk]')].map(b => b.dataset.lk).filter(Boolean).length);
   await p.evaluate(() => window.__A.actions('lk-apply')); await p.waitForTimeout(300);
   out.secretEq = await p.evaluate(() => ({ marc: window.__A.camoFor('marc'), other: (() => { window.__A.PROG.equip.guns.kv47 = 'x_bloodline'; const r = window.__A.camoFor('kv47'); delete window.__A.PROG.equip.guns.kv47; return r; })() }));
-  await p.evaluate(() => document.querySelector('[data-lktab="other"]').click()); await p.waitForTimeout(400);
+  await p.evaluate(() => document.querySelector('[data-lktab="sticker"]').click()); await p.waitForTimeout(400);
   await p.evaluate(() => document.querySelector('#lkGrid [data-lk="st_wings"]').click()); await p.waitForTimeout(2200); await snap('lk2_other');
   // rewards + contents + opening
   await p.evaluate(() => window.__A.actions('rewards')); await p.waitForTimeout(800); await snap('rw2');

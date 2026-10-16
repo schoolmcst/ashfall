@@ -131,7 +131,7 @@ function netSelf() { for (const p of netPeers()) if (p.sameTab) return p.peer; r
 const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
-  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
+  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, bn: typeof bannerFor === 'function' ? bannerFor() : '', lv: typeof lvlInfo === 'function' ? lvlInfo(PROG.xp).l : 1, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
     a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
@@ -226,6 +226,7 @@ function netTick(dt) {
     R.entry.name = cleanNick(pr.n); R.host = !!pr.ho; R.sa = pr.sa; if (pr.ho && !pr.bot && !isHost && Array.isArray(pr.ob)) NET.ob = pr.ob; if (pr.ho && !pr.bot && NET.priv) privFromHost(pr.pc); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
     if (pr.ho && !pr.bot && !isHost && typeof pr.mp === 'string' && MAPS[pr.mp] && pr.mp !== curMap && !NET.mapBusy) { NET.mapBusy = true; setTimeout(() => { NET.mapBusy = false; if (NET.on) netSwitchMap(pr.mp); }, 0); }
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
+    R.bn = typeof pr.bn === 'string' && COS[pr.bn] && COS[pr.bn].kind === 'banner' ? pr.bn : ''; R.lv = netNum(pr.lv, 1, 100, 1);
     R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
     R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
     R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;

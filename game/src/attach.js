@@ -88,6 +88,9 @@ function relMods(a, def) {
 
 /* ---------- effective stats */
 // handling changes are amplified so attachments are clearly felt in play (the pros/cons text shows the same numbers)
+// 1.2.17 recoil pass: every class kicks harder than its base number (shown in the loadout stats too)
+const RECOIL_K = { ar: 1.35, smg: 1.4, lmg: 1.3, mr: 1.25, sr: 1.05, sg: 1.0, pi: 1.25, la: 1 };
+const recoilK = def => RECOIL_K[def && def.cat] || 1;
 const ATT_AMP = { recoil: 1.7, spread: 1.6, adsSpread: 1.6, ads: 1.5, move: 1.4, reload: 1.2, range: 1.3, spot: 1.3 };
 function computeStats(def, override, factory) {
   const b = def, m = { dmg: 0, rate: 0, spread: 0, adsSpread: 0, recoil: 0, reload: 0, mag: 0, magAdd: 0, range: 0, ads: 0, move: 0, spot: 0, pellets: 0, head: 0, vsHeavy: 0, len: 0, blast: 0, dmgX: 1 };
@@ -102,7 +105,7 @@ function computeStats(def, override, factory) {
   return {
     dmg: b.dmg * Math.max(0.2, 1 + m.dmg) * m.dmgX, pellets: Math.max(1, b.pellets + m.pellets), head: b.head * (1 + m.head),
     interval: b.interval / Math.max(0.2, 1 + m.rate), spread: b.spread * Math.max(0.05, 1 + m.spread), adsSpread: b.adsSpread * Math.max(0.05, 1 + m.adsSpread),
-    recoil: b.recoil * Math.max(0.2, 1 + m.recoil), reload: b.reload * Math.max(0.3, 1 + m.reload),
+    recoil: b.recoil * recoilK(b) * Math.max(0.2, 1 + m.recoil), reload: b.reload * Math.max(0.3, 1 + m.reload),
     magSize: Math.max(1, Math.round(b.mag * (1 + m.mag)) + m.magAdd), eff, fallMin: b.fallMin === undefined ? 0.6 : b.fallMin, range: Math.max(b.range, eff * 3.2),
     adsTime: b.ads * Math.max(0.4, 1 + m.ads), move: b.move * Math.max(0.7, 1 + m.move), spot: (b.spot || 1) * Math.max(0.3, 1 + m.spot), vsHeavy: (b.vsHeavy || 1) * Math.max(0.3, 1 + m.vsHeavy),
     blast: (b.blast || 0) * Math.max(0.3, 1 + m.blast), adsFov: zoom || b.adsFov, stealth, laser, overlay, optic, lenAdd: m.len, burst: b.burst || 0, burstGap: b.burstGap || 0,
@@ -168,7 +171,7 @@ function applyLoadout(wi) {
   const def = w.def, u = gunObjs[wi] ? gunObjs[wi].userData : null, s = computeStats(def, null, w.factory), oldMag = w.magSize;
   Object.assign(w, { dmg: s.dmg, pellets: s.pellets, head: s.head, interval: s.interval, spread: s.spread, adsSpread: s.adsSpread, recoil: s.recoil, reload: s.reload, blast: s.blast,
     magSize: s.magSize, eff: s.eff, fallMin: s.fallMin, range: s.range, adsTime: s.adsTime, move: s.move, spot: s.spot, vsHeavy: s.vsHeavy, adsFov: s.adsFov, stealth: s.stealth, laser: s.laser, overlay: s.overlay, optic: s.optic });
-  if (u) { sightInfo(gunObjs[wi]); w.sightY = sightFor(def, u, s.optic); w.adsZ = u.adsZ; w.len = u.len + s.lenAdd; buildAttachmentVisuals(wi); try { applyCamo(gunObjs[wi], camoFor(def.id)); applySticker(gunObjs[wi], stickerFor(def.id)); } catch (e) {} }
+  if (u) { sightInfo(gunObjs[wi]); w.sightY = sightFor(def, u, s.optic); w.adsZ = u.adsZ; w.len = u.len + s.lenAdd; buildAttachmentVisuals(wi); try { applyCamo(gunObjs[wi], camoFor(def.id)); applySticker(gunObjs[wi], stickerFor(def.id)); applyCharm(gunObjs[wi], charmFor(def.id)); } catch (e) {} }
   if (w.magSize !== oldMag) { const extra = Math.max(0, w.ammo - w.magSize); w.ammo = Math.min(w.ammo, w.magSize); w.reserve = Math.min(w.reserveMax, w.reserve + extra); }
 }
 function initAttachments() { WEAPONS.forEach((w, i) => applyLoadout(i)); WEAPONS.forEach(w => { w.ammo = w.magSize; }); }
@@ -584,6 +587,7 @@ function loadoutTab(d) { selectClass(ACTIVE_CLASS + d); }
 const PV = { want: null, key: '', obj: null, scene: null, cam: null, rt: null, buf: null, img: null, t: 0, acc: 0 };
 const pvCamo = w => (w.camo !== undefined ? w.camo : (typeof camoFor === 'function' ? camoFor(w.def.id) : null));
 const pvStk = w => (w.stk !== undefined ? w.stk : (typeof stickerFor === 'function' ? stickerFor(w.def.id) : null));
+const pvChm = w => (w.chm !== undefined ? w.chm : (typeof charmFor === 'function' ? charmFor(w.def.id) : null));
 function previewKey(w) { return w.def.id + '|' + JSON.stringify(ATTS[w.def.id] || {}) + '|' + (w.ovr ? w.ovr.id : '') + '|' + pvCamo(w) + '|' + pvStk(w); }
 function updatePreview(dt) {
   if ((curScreen !== 'loadout' && curScreen !== 'locker') || !PV.want) return;
@@ -605,7 +609,7 @@ function updatePreview(dt) {
     PV.key = key; if (PV.obj) PV.scene.remove(PV.obj);
     const def = PV.want.def, g = buildGunModel(def, true), st = computeStats(def, PV.want.ovr);
     attachVisuals(g, def, false, g.userData.len + st.lenAdd, PV.want.ovr);
-    try { applyCamo(g, pvCamo(PV.want)); applySticker(g, pvStk(PV.want)); } catch (e) {}
+    try { applyCamo(g, pvCamo(PV.want)); applySticker(g, pvStk(PV.want)); applyCharm(g, pvChm(PV.want), 1); } catch (e) {}
     g.traverse(o => { if (o.name && /^hand/.test(o.name)) o.visible = false; });
     if (g.userData.flash) g.userData.flash.visible = false;
     const holder = new THREE.Group(); holder.add(g); PV.scene.add(holder); PV.obj = holder;

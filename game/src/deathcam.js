@@ -19,11 +19,11 @@ function startDeathCam() {
     const hit = _dcRay.intersectObjects(wallMeshes, false)[0];
     if (hit) end.copy(_dcK).addScaledVector(_dcA, Math.max(0.8, hit.distance - 0.35));
     const name = (k.name || k.type || 'enemy').toUpperCase();
-    $('kcName').textContent = 'KILLED BY ' + name;
+    $('kcName').textContent = 'KILLED BY ' + name; kcBanner(k);
     $('kcSub').textContent = `${Math.round(dist)} M  ·  ${Math.max(0, Math.round(k.hp))} HP LEFT`;
   } else {
     end = E.clone().addScaledVector(fwd, -3.5); end.y = E.y + 3.2;
-    $('kcName').textContent = G.killer === 'grenade' ? 'KILLED BY YOUR OWN GRENADE' : G.killer === 'barrel' ? 'KILLED BY AN EXPLODING BARREL' : 'K.I.A.';
+    kcBanner(null); $('kcName').textContent = G.killer === 'grenade' ? 'KILLED BY YOUR OWN GRENADE' : G.killer === 'barrel' ? 'KILLED BY AN EXPLODING BARREL' : 'K.I.A.';
     $('kcSub').textContent = inMatch() ? `${M.me.kills} KILLS  ·  ${M.me.deaths} DEATHS` : `WAVE ${G.wave}  ·  ${G.kills} KILLS`;
   }
   focus = k ? null : new THREE.Vector3(E.x, 0.4, E.z);
@@ -53,3 +53,14 @@ function updateDeathCam(dt) {
   aimDeathCam(dt, dc.t / dc.dur);
   if (dc.t >= dc.dur + 0.8) { dc.done = true; finishDeath(); }
 }
+
+// the killer's banner on the death cam card: a real player's own pick, bots get one from their name
+function kcBanner(k) {
+  const card = document.querySelector('.kc-card'); if (!card) return;
+  if (!k || typeof bannerUrl !== 'function') { card.style.backgroundImage = ''; card.classList.remove('bn'); return; }
+  let id = '', lv = 0;
+  try { const R = k.net && NET.rem && NET.rem.get(k.net); if (R) { id = R.bn; lv = R.lv; } } catch (e) {}
+  if (!id) { const pool = COSM.filter(c => c.kind === 'banner' && !c.bp); id = pool[strHash(String(k.name || k.type)) % pool.length].id; }
+  card.style.backgroundImage = `linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.1)),url(${bannerUrl(id)})`; card.classList.add('bn');
+}
+(() => { const s = document.createElement('style'); s.textContent = '#killcam .kc-card.bn{padding:0 130px 0 22px;text-align:left;background-size:cover;background-position:center;min-width:420px;aspect-ratio:4/1;display:flex;flex-direction:column;justify-content:center;border:1px solid rgba(255,255,255,.25)}#killcam .kc-card.bn .kc-name,#killcam .kc-card.bn .kc-sub{text-shadow:0 1px 3px #000,0 0 8px #000}'; document.head.appendChild(s); })();
