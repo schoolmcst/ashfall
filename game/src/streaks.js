@@ -36,7 +36,7 @@ function stkAdd(pts) {
   const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
   for (const id of list) if (STK.pts >= STREAKS[id].cost && !STK.got.has(id) && !(STK.cd[id] > 0) && !STK.have.includes(id)) {
     STK.got.add(id); STK.have.push(id);
-    showBanner(STREAKS[id].name + ' READY', `press ${keyName(bind('streak'))} to use it`); try { sfx.streakReady(); } catch (e) { sfx.streak(); }
+    showBanner(STREAKS[id].name + ' READY', `press ${actName('streak')} to use it`); try { sfx.streakReady(); } catch (e) { sfx.streak(); }
   }
   if (list.every(id => STK.got.has(id))) { STK.pts = 0; STK.got.clear(); }   // the whole set earned: start again
   stkHud(true);
@@ -112,7 +112,7 @@ function stkHud(force) {
   box.innerHTML = list.map(id => {
     const s = STREAKS[id], have = STK.have.includes(id), cd = Math.ceil(STK.cd[id] || 0), p = have ? 1 : (STK.got.has(id) || cd) ? 0 : clamp(STK.pts / s.cost, 0, 1);
     const wait = have && STK.useCd > 0;
-    return `<div class="stk${have && !wait ? ' ready' : ''}${cd && !have ? ' cd' : ''}"><div class="stk-fill" style="height:${(p * 100).toFixed(0)}%"></div>${stkIcon(id)}<span>${have ? (wait ? Math.ceil(STK.useCd) + 's' : keyName(bind('streak'))) : cd ? cd + 's' : s.cost}</span></div>`;
+    return `<div class="stk${have && !wait ? ' ready' : ''}${cd && !have ? ' cd' : ''}"><div class="stk-fill" style="height:${(p * 100).toFixed(0)}%"></div>${stkIcon(id)}<span>${have ? (wait ? Math.ceil(STK.useCd) + 's' : actName('streak')) : cd ? cd + 's' : s.cost}</span></div>`;
   }).join('') + (STK.uavT > 0 ? `<div class="stk-uav">${STK.vuav ? 'ADV UAV' : 'UAV'} ${Math.ceil(STK.uavT)}</div>` : '') + `<div class="stk-pts">${STK.pts}</div>`;
 }
 

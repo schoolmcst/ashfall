@@ -50,8 +50,10 @@ function oskPad(press) {
   document.head.appendChild(s);
   // a clear gold ring on whatever the controller / arrow keys are on; the mouse turns it off again
   const r = document.createElement('style');
-  r.textContent = `body.padnav button:focus,body.padnav .sw:focus,body.padnav input:focus{outline:2px solid var(--accent)!important;outline-offset:2px;box-shadow:0 0 0 4px rgba(224,180,74,.18),0 0 18px rgba(224,180,74,.25)}`;
+  r.textContent = `body.padnav,body.padnav *{cursor:none!important}
+body.padnav button:focus,body.padnav .sw:focus,body.padnav input:focus{outline:2px solid var(--accent)!important;outline-offset:2px;box-shadow:0 0 0 4px rgba(224,180,74,.18),0 0 18px rgba(224,180,74,.25)}`;
   document.head.appendChild(r);
   addEventListener('mousemove', e => { if (Math.abs(e.movementX) + Math.abs(e.movementY) > 3) document.body.classList.remove('padnav'); });
-  addEventListener('keydown', e => { if (/^Arrow|^Tab$/.test(e.code)) document.body.classList.add('padnav'); });
+  addEventListener('keydown', e => { if (/^Arrow|^Tab$/.test(e.code) && curScreen) document.body.classList.add('padnav'); else inputMode('kb'); });
+  addEventListener('mousedown', () => inputMode('kb')); addEventListener('wheel', () => inputMode('kb'), { passive: true });
 })();

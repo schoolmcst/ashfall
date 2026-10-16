@@ -313,13 +313,15 @@ function progMatchXP(won, partial) {
   if (!sum) return null;
   const before = PROG.xp; PROG.xp = Math.min(XP_AT[MAXLVL], PROG.xp + sum);
   const g = grantLevels(before, PROG.xp), bp = typeof bpGain === 'function' ? bpGain(sum) : null;
-  PROG.lastGain = { xp: sum, rows, before, after: PROG.xp, from: g.from, to: g.to, dz: g.dz, items: g.items, bp, t: Date.now() };
+  // DZ for every finished match: 40, +2 a kill (up to +40), +30 for a win, online +25%
+  const mdz = partial ? 0 : Math.round((40 + Math.min(40, MS.kills * 2) + (won === 1 ? 30 : 0)) * (online ? 1.25 : 1)); PROG.dz += mdz;
+  PROG.lastGain = { xp: sum, rows, before, after: PROG.xp, from: g.from, to: g.to, dz: g.dz, mdz, items: g.items, bp, t: Date.now() };
   saveProg(); return PROG.lastGain;
 }
 function progResultsHtml(gain) {
   if (!gain) return '';
   const a = lvlInfo(gain.before), b = lvlInfo(gain.after), up = gain.to > gain.from;
-  return `<div class="pg-res"><div class="pg-res-h"><b>+${gain.xp.toLocaleString()} XP</b>${up ? `<em>LEVEL UP · ${gain.from} → ${gain.to}</em>` : ''}</div>
+  return `<div class="pg-res"><div class="pg-res-h"><b>+${gain.xp.toLocaleString()} XP</b>${gain.mdz ? `<em class="pg-mdz">${dzIcon()}+${gain.mdz} DZ</em>` : ''}${up ? `<em>LEVEL UP · ${gain.from} → ${gain.to}</em>` : ''}</div>
 <div class="pg-res-bar"><span class="pg-lv">${b.l}</span><div class="pg-bar"><i style="width:${(up ? 0 : a.frac) * 100}%"></i><s style="width:${b.frac * 100}%"></s></div><span class="pg-lv nx">${Math.min(MAXLVL, b.l + 1)}</span></div>
 <div class="pg-res-rows">${gain.rows.map(r => `<span>${r[0]}<b>+${r[1].toLocaleString()}</b></span>`).join('')}</div>
 ${up ? `<div class="pg-res-up">+${gain.dz} DZ${gain.items.map(id => ` · <i style="color:${RAR[COS[id].r].col}">${COS[id].name}</i> UNLOCKED`).join('')}</div>` : ''}${gain.bp && typeof bpResultsHtml === 'function' ? bpResultsHtml(gain.bp) : ''}</div>`;

@@ -132,7 +132,7 @@ function spawnBot(en, pos) {
 }
 function startMatch(mode, custom) {
   const cfg = matchCfg(mode, custom), def = MODES[mode];
-  initAudio(); clearMenuSoldiers();
+  initAudio(); clearMenuSoldiers(); try { chatNewMatch(); } catch (e) {}
   if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel); loadMap(cfg.map); }
   else if (!NET.app) loadMap('ruins');   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
@@ -686,8 +686,8 @@ function playerInteract(dt, held) {
   const bar = $('ihold'); let txt = '', prog = -1;
   if (M.mode === 'snd' && M.snd && playerAlive()) {
     const sn = M.snd, att = sn.att === M.myTeam;
-    if (att && !sn.bomb && sn.state === 'live') { const s = LAYOUT.sites.find(s => Math.hypot(s.x - P.x, s.z - P.z) < 3); if (s) { txt = `HOLD ${pad.on ? '(X)' : '[E]'} TO PLANT AT ${s.n}`; if (held) { sn.plant += dt; prog = sn.plant / 4; if (sn.plant >= 4) { sn.plant = 0; if (netHostNow()) plantBomb(s, M.me); else { NET.sa = ['p', LAYOUT.sites.indexOf(s), (NET.saN = (NET.saN || 0) + 1)]; MS.plants++; popScore('+200', 'big', 'BOMB PLANTED'); } } } else sn.plant = 0; } }
-    if (!att && sn.bomb && sn.state === 'planted' && Math.hypot(sn.bomb.x - P.x, sn.bomb.z - P.z) < 2) { txt = `HOLD ${pad.on ? '(X)' : '[E]'} TO DEFUSE`; if (held) { sn.defuse += dt; prog = sn.defuse / 6; if (sn.defuse >= 6) { sn.defuse = 0; if (netHostNow()) defuseBomb(M.me); else { NET.sa = ['d', 0, (NET.saN = (NET.saN || 0) + 1)]; MS.defuses++; popScore('+200', 'big', 'BOMB DEFUSED'); } } } else sn.defuse = 0; }
+    if (att && !sn.bomb && sn.state === 'live') { const s = LAYOUT.sites.find(s => Math.hypot(s.x - P.x, s.z - P.z) < 3); if (s) { txt = `HOLD ${usingPad() ? '(' + actName('reload') + ')' : '[E]'} TO PLANT AT ${s.n}`; if (held) { sn.plant += dt; prog = sn.plant / 4; if (sn.plant >= 4) { sn.plant = 0; if (netHostNow()) plantBomb(s, M.me); else { NET.sa = ['p', LAYOUT.sites.indexOf(s), (NET.saN = (NET.saN || 0) + 1)]; MS.plants++; popScore('+200', 'big', 'BOMB PLANTED'); } } } else sn.plant = 0; } }
+    if (!att && sn.bomb && sn.state === 'planted' && Math.hypot(sn.bomb.x - P.x, sn.bomb.z - P.z) < 2) { txt = `HOLD ${usingPad() ? '(' + actName('reload') + ')' : '[E]'} TO DEFUSE`; if (held) { sn.defuse += dt; prog = sn.defuse / 6; if (sn.defuse >= 6) { sn.defuse = 0; if (netHostNow()) defuseBomb(M.me); else { NET.sa = ['d', 0, (NET.saN = (NET.saN || 0) + 1)]; MS.defuses++; popScore('+200', 'big', 'BOMB DEFUSED'); } } } else sn.defuse = 0; }
   }
   G.interactTxt = txt;
   if (bar) { const on = !!txt; if (bar._on !== on) { bar._on = on; bar.classList.toggle('hide', !on); } if (on) { bar.firstChild.textContent = txt; bar.lastChild.firstChild.style.width = Math.max(0, prog) * 100 + '%'; } }
@@ -767,6 +767,7 @@ const INTERMISSION_OFF = 45, INTERMISSION_ON = 40;
 function updateResNext() { const el = $('resNext'); if (!el) return; const t = M.online ? NET.endT : M.nextT; el.textContent = t > 0 ? `NEXT MATCH IN ${Math.ceil(t)}s` : 'STARTING…'; }
 // offline: a fresh match of the same mode and settings (a random map choice picks a new map)
 function nextMatch() {
+  try { chatNewMatch(); } catch (e) {}
   if (M.mode === 'surv') { startMatch('surv', { map: M.cfg.mapSel === 'random' ? 'random' : curMap }); return; }
   startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: M.cfg.mapSel || curMap, mapSel: M.cfg.mapSel }));
 }

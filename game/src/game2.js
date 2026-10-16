@@ -336,7 +336,7 @@ function pauseGame() {
   G.pausedFrom = G.state; G.state = 'paused'; mouseDown = false; mouseAds = false;
   try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   $('pauseSub').textContent = `WAVE ${G.wave}  ·  KILLS ${G.kills}  ·  SCORE ${G.score}`;
-  showScreen('pause');
+  showScreen('pause'); try { renderPauseSide(); } catch (e) {}
 }
 function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom || 'playing'; showScreen(null); lockPointer(); }
 // Scavenger: every kill tops up one magazine of reserve ammo

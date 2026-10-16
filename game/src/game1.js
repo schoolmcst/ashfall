@@ -299,10 +299,67 @@ function throwGrenade() {
   if (!EQ_MAT[G.equip]) EQ_MAT[G.equip] = G.equip === 'frag' ? gMat : new THREE.MeshStandardMaterial({ color: C(eq.color), metalness: 0.4, roughness: 0.5, emissive: C(eq.glow || 0), emissiveIntensity: eq.glow ? 0.6 : 0 });
   G.grenades--; sfx.pin(); G.throwT = 0.6; G.inspectT = 0; rumble(0.15, 0.3, 80);
   const m = new THREE.Mesh(gGeo, EQ_MAT[G.equip]); m.castShadow = true;
-  const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  m.position.copy(camera.position).addScaledVector(dir, 0.5); scene.add(m);
-  const up = 0.28; dir.y += up; dir.normalize();
-  grenadesInFlight.push({ m, grav: 13, vx: dir.x * 17 + P.vx * 0.5, vy: dir.y * 17 + 1.2, vz: dir.z * 17 + P.vz * 0.5, fuse: eq.fuse, spin: rnd(6, 12), kind: G.equip, sticky: !!eq.sticky });
+  const L = nadeLaunch(); m.position.copy(L.p); scene.add(m);
+  grenadesInFlight.push({ m, grav: 13, vx: L.v.x, vy: L.v.y, vz: L.v.z, fuse: eq.fuse, spin: rnd(6, 12), kind: G.equip, sticky: !!eq.sticky });
+}
+// where a throw starts and how fast it goes. It starts just in front of you, but never on the far side of a wall you're
+// standing against (that is how grenades used to end up through walls and floors inside buildings)
+const _nl = new THREE.Raycaster();
+function nadeLaunch() {
+  const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), p = camera.position.clone();
+  _nl.set(p, dir); _nl.far = 0.7; const hit = _nl.intersectObjects(wallMeshes, false)[0];
+  p.addScaledVector(dir, hit ? Math.max(0, hit.distance - 0.25) : 0.5);
+  const v = dir.clone(); v.y += 0.28; v.normalize();
+  return { p, v: new THREE.Vector3(v.x * 17 + P.vx * 0.5, v.y * 17 + 1.2, v.z * 17 + P.vz * 0.5) };
+}
+// one physics step for a thrown grenade (also used to draw the aim arc). Boxes have a bottom now, so raised floors and
+// ceilings bounce it instead of teleporting it on top; small sub-steps stop it slipping through thin walls
+const NADE_R = 0.08;
+function nadeStep(g, pos, dt, sim) {
+  const n = Math.max(1, Math.ceil(Math.hypot(g.vx, g.vy, g.vz) * dt / 0.07)), h = dt / n; let hitAny = false;
+  for (let k = 0; k < n; k++) {
+    g.vy -= (g.grav || 20) * h;
+    let nx = pos.x + g.vx * h, ny = pos.y + g.vy * h, nz = pos.z + g.vz * h, hit = false;
+    for (const b of boxesNear(nx, nz)) {
+      if (!(nx > b.minx - NADE_R && nx < b.maxx + NADE_R && nz > b.minz - NADE_R && nz < b.maxz + NADE_R && ny < b.top && ny > (b.bot || 0) - NADE_R)) continue;
+      const wasX = pos.x > b.minx - NADE_R && pos.x < b.maxx + NADE_R, wasZ = pos.z > b.minz - NADE_R && pos.z < b.maxz + NADE_R;
+      if (pos.y >= b.top - 0.02) { ny = b.top + 0.09; g.vy = Math.abs(g.vy) * 0.35; g.vx *= 0.7; g.vz *= 0.7; if (Math.abs(g.vy) < 1) g.vy = 0; }
+      else if ((b.bot || 0) > 0.05 && pos.y <= (b.bot || 0) - NADE_R + 0.02) { ny = (b.bot || 0) - NADE_R - 0.01; g.vy = -Math.abs(g.vy) * 0.3; }   // a ceiling
+      else if (!wasX) { nx = pos.x; g.vx *= -0.45; } else if (!wasZ) { nz = pos.z; g.vz *= -0.45; } else { nx = pos.x; nz = pos.z; g.vx *= -0.3; g.vz *= -0.3; }
+      hit = true;
+    }
+    if (ny < 0.09) { ny = 0.09; g.vy = Math.abs(g.vy) * 0.38; g.vx *= 0.75; g.vz *= 0.75; if (Math.abs(g.vy) < 1) g.vy = 0; hit = hit || !sim; }
+    pos.set(nx, ny, nz); if (hit) { hitAny = true; if (g.sticky) { g.vx = g.vy = g.vz = 0; break; } }
+  }
+  return hitAny;
+}
+// hold the grenade button to aim: a dotted arc and a ring where it will land; let go to throw (a quick tap still throws)
+let nadeLine = null, nadeRing = null;
+function nadeHold(on) {
+  if (on) { if (G.grenades > 0 && G.state === 'playing' && !(G.holdT > 0) && G.nadeHold == null) G.nadeHold = G.time; return; }
+  if (G.nadeHold != null) { G.nadeHold = null; nadeAimShow(false); throwGrenade(); }
+}
+function nadeAimShow(on) { if (nadeLine) nadeLine.visible = on; if (nadeRing) nadeRing.visible = false; }   // just the dotted path
+function nadeAimTick() {
+  if (G.nadeHold == null || G.state !== 'playing' || G.grenades <= 0) { if (G.nadeHold != null && G.state !== 'playing') G.nadeHold = null; nadeAimShow(false); return; }
+  if (G.time - G.nadeHold < 0.12) return;
+  if (!nadeLine) {
+    const dc = document.createElement('canvas'); dc.width = dc.height = 32; const dx = dc.getContext('2d'); dx.fillStyle = '#fff'; dx.beginPath(); dx.arc(16, 16, 13, 0, 7); dx.fill();
+    nadeLine = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xfff6b0, size: 0.13, map: new THREE.CanvasTexture(dc), alphaTest: 0.4, sizeAttenuation: true, transparent: true, opacity: 1, depthTest: false, toneMapped: false }));
+    nadeLine.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3 * 90), 3)); nadeLine.renderOrder = 9; nadeLine.frustumCulled = false; scene.add(nadeLine);
+    nadeRing = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 32), new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: 0.85, depthTest: false, side: THREE.DoubleSide })); nadeRing.rotation.x = -Math.PI / 2; nadeRing.renderOrder = 9; scene.add(nadeRing);
+  }
+  camera.updateMatrixWorld();
+  const L = nadeLaunch(), eq = EQUIP[G.equip] || EQUIP.frag, g = { vx: L.v.x, vy: L.v.y, vz: L.v.z, grav: 13, sticky: !!eq.sticky }, pos = L.p.clone(), arr = nadeLine.geometry.attributes.position.array;
+  let n = 0, t = 0, still = 0;
+  while (t < Math.min(eq.fuse || 3, 4) && n < 90) {
+    const hit = nadeStep(g, pos, 1 / 30, true); t += 1 / 30;
+    if (n < 90 && pos.distanceTo(camera.position) > 1.4) { arr[n * 3] = pos.x; arr[n * 3 + 1] = pos.y; arr[n * 3 + 2] = pos.z; n++; }   // no dots right in your face
+    if ((g.sticky && hit) || Math.hypot(g.vx, g.vz) + Math.abs(g.vy) < 0.4 && ++still > 3) break;
+  }
+  nadeLine.geometry.setDrawRange(0, n); nadeLine.geometry.attributes.position.needsUpdate = true;
+  nadeRing.position.set(pos.x, pos.y - 0.07, pos.z); const R = (eq.radius || 6) * 0.15; nadeRing.scale.setScalar(Math.max(1, R));
+  nadeAimShow(true);
 }
 // launcher rounds: a rocket flies flat, a 40 mm shell arcs; both burst on contact
 let projGeo = null, projMat = null;
@@ -361,6 +418,7 @@ function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
   const rk = clamp(1 - dp / 30, 0, 1); if (rk > 0.05) rumble(rk, rk * 0.8, 120 + 300 * rk);
 }
 function updateGrenades(dt) {
+  try { nadeAimTick(); } catch (e) {}
   for (let i = grenadesInFlight.length - 1; i >= 0; i--) {
     const g = grenadesInFlight[i], m = g.m;
     if (g.proj) { if (updateProjectile(g, dt)) { scene.remove(m); grenadesInFlight.splice(i, 1); } continue; }
@@ -371,20 +429,8 @@ function updateGrenades(dt) {
     }
     if (g.sticky) for (const e of enemies) { const ep = e.group.position; if (Math.hypot(ep.x - m.position.x, ep.z - m.position.z) < 0.5 && m.position.y < 1.9) { g.stuck = true; g.on = e; g.off = new THREE.Vector3(m.position.x - ep.x, clamp(m.position.y, 0.9, 1.5), m.position.z - ep.z); sfx.thud(at(ep.x, ep.z, 10)); break; } }
     if (g.stuck) continue;
-    g.vy -= (g.grav || 20) * dt;
-    let nx = m.position.x + g.vx * dt, ny = m.position.y + g.vy * dt, nz = m.position.z + g.vz * dt;
-    for (const b of boxes) {
-      const inX = nx > b.minx - 0.1 && nx < b.maxx + 0.1, inZ = nz > b.minz - 0.1 && nz < b.maxz + 0.1;
-      if (inX && inZ && ny < b.top) {
-        const wasX = m.position.x > b.minx - 0.1 && m.position.x < b.maxx + 0.1, wasZ = m.position.z > b.minz - 0.1 && m.position.z < b.maxz + 0.1;
-        if (m.position.y >= b.top) { ny = b.top + 0.09; g.vy = Math.abs(g.vy) * 0.35; g.vx *= 0.7; g.vz *= 0.7; }
-        else if (!wasX) { nx = m.position.x; g.vx *= -0.45; } else if (!wasZ) { nz = m.position.z; g.vz *= -0.45; } else { nx = m.position.x; nz = m.position.z; g.vx *= -0.3; g.vz *= -0.3; }
-        sfx.thud(at(nx, nz, 10)); if (g.sticky) { g.stuck = true; g.vx = g.vy = g.vz = 0; }
-      }
-    }
-    if (ny < 0.09 && g.sticky) { ny = 0.09; g.stuck = true; }
-    if (ny < 0.09) { ny = 0.09; g.vy = Math.abs(g.vy) * 0.38; g.vx *= 0.75; g.vz *= 0.75; if (Math.abs(g.vy) < 1) g.vy = 0; }
-    m.position.set(nx, ny, nz); m.rotation.x += g.spin * dt; m.rotation.z += g.spin * 0.6 * dt;
+    const sp0 = Math.abs(g.vx) + Math.abs(g.vy) + Math.abs(g.vz);
+    if (nadeStep(g, m.position, dt, false)) { if (sp0 > 1.5) sfx.thud(at(m.position.x, m.position.z, 10)); if (g.sticky) { g.stuck = true; g.vx = g.vy = g.vz = 0; } } m.rotation.x += g.spin * dt; m.rotation.z += g.spin * 0.6 * dt;
     g.fuse -= dt;
     if (g.fuse <= 0) { detonate(g); scene.remove(m); grenadesInFlight.splice(i, 1); }
   }

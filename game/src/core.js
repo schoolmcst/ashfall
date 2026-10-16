@@ -59,6 +59,11 @@ const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', '
 const pb = a => (S.padBinds && S.padBinds[a] !== undefined ? S.padBinds[a] : PAD_DEFAULT[a]);
 const bind = a => (S.binds && S.binds[a]) || DEFAULT_BINDS[a];
 const kb = a => !!keys[bind(a)] || (a === 'sprint' && bind(a) === 'ShiftLeft' && !!keys.ShiftRight);
+// which input you're using right now: the controller hides the mouse cursor and shows pad buttons in prompts; touching
+// the mouse or keyboard switches straight back
+function inputMode(m) { const b = document.body; if (!b) return; const pad = m === 'pad'; if (b.classList.contains('padnav') !== pad) b.classList.toggle('padnav', pad); }
+const usingPad = () => !!(document.body && document.body.classList.contains('padnav'));
+function actName(a) { return usingPad() && typeof pb === 'function' ? (PAD_NAMES[pb(a)] || 'BUTTON ' + pb(a)) : keyName(bind(a)); }
 function keyName(c) { if (!c) return '—'; return c.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'NUM ').replace('ShiftLeft', 'LEFT SHIFT').replace('ShiftRight', 'RIGHT SHIFT').replace('ControlLeft', 'LEFT CTRL').replace('ControlRight', 'RIGHT CTRL').replace('AltLeft', 'LEFT ALT').replace('AltRight', 'RIGHT ALT').replace('Space', 'SPACE').replace('Arrow', '').toUpperCase(); }
 function saveSettings() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
 const best = { wave: 0, score: 0 };

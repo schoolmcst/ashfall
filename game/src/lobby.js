@@ -64,7 +64,7 @@ function rosterHtml(k) {
   const p = (n, cls = '', tag = '') => `<div class="ros-p ${cls}"><span class="lv">${cls === 'me' ? '★' : 'AI'}</span>${n}${tag ? `<em>${tag}</em>` : ''}</div>`;
   const info = `<div class="ros-info"><b>${d.name}</b>${d.desc}</div>`;
   if (k === 'surv') return `<div class="ros-h"><span>SQUAD</span><b>SOLO</b></div><div class="ros-team"><div class="tn">YOU</div>${p(me, 'me', 'READY')}</div>` + info;
-  if (d.online && NET.app) return `<div id="partyBox">${partyHtml()}</div>` + info;
+  if (d.online && NET.app) return `<div id="partyBox">${partyHtml()}</div>` + (typeof lobChatHtml === 'function' ? lobChatHtml() : '') + info;
   if (d.online) return `<div class="ros-h"><span>${NET.app ? 'QUICK PLAY' : 'ROOM'}</span><b>${d.teams ? '6 V 6' : 'FREE-FOR-ALL'}</b></div><div class="ros-team"><div class="tn">YOUR PARTY</div>${p(me, 'me', 'READY')}<div class="ros-p"><span class="lv">+</span>real players join here &middot; bots fill empty spots</div></div>` + info;
   if (d.teams) { const n = clamp(cfg.perTeam, 1, 8);
     return `<div class="ros-h"><span>LOBBY</span><b>${n} V ${n}</b></div>` +

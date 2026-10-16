@@ -88,9 +88,13 @@ const P2P = (() => {
     R.presence = patch => { for (const k in patch) { if (patch[k] === null) delete R.mine[k]; else R.mine[k] = patch[k]; } return Promise.resolve(); };
     R.onPeers = fn => { R.ls.add(fn); return () => R.ls.delete(fn); };
     R.connected = () => R.host || !!(R.hostLink && R.hostLink.open);
+    // voice frames: clients send theirs to the host, the host passes every frame on to everyone else
+    const vIn = (l, m) => { if (typeof voiceIn === 'function' && l !== me) { const p = l === me ? R.mine : R.snap.get(l); voiceIn(l, String((p && p.n) || 'PLAYER').slice(0, 16), m.d, m.s); } };
+    R.voice = (d, s) => { const m = JSON.stringify({ t: 'v', l: me, d, s }); if (R.host) { for (const [, L] of R.links) if (L.open) L.send(m); } else if (R.hostLink && R.hostLink.open) R.hostLink.send(m); };
 
     // ---- as host: accept offers on the slot id, collect states, send everyone the room ~20 Hz
     function hostMsg(L, m) {
+      if (m.t === 'v' && typeof m.d === 'string' && m.d.length < 3000 && L.label) { const raw = JSON.stringify({ t: 'v', l: L.label, d: m.d, s: m.s }); for (const [, L2] of R.links) if (L2 !== L && L2.open) L2.send(raw); vIn(L.label, m); return; }
       if (m.t === 'p' && m.l && typeof m.p === 'object') { L.label = String(m.l).slice(0, 16); L.pres = m.p; if (!R.order.includes(L.label)) R.order.push(L.label); }
     }
     function hostState(L, st) {
@@ -126,6 +130,7 @@ const P2P = (() => {
     // ---- as a client: connect to the slot's host, send my state, take the room from the host
     function clientMsg(L, m) {
       if (m.t === 'w') { L.welcome = m; return; }
+      if (m.t === 'v' && typeof m.d === 'string' && m.d.length < 3000) { vIn(String(m.l).slice(0, 24), m); return; }
       if (m.t === 's' && Array.isArray(m.a)) {
         R.lastSnap = performance.now(); R.order = Array.isArray(m.o) ? m.o.slice(0, 32) : R.order; R.hostLabel = m.h;
         const mp = new Map(); for (const e of m.a) if (Array.isArray(e) && typeof e[0] === 'string' && e[1] && typeof e[1] === 'object') mp.set(e[0].slice(0, 24), e[1]);

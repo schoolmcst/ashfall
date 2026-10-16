@@ -1,13 +1,12 @@
 {
- "version": "1.2.17",
+ "version": "1.2.18",
  "notes": [
-  "BATTLE PASS \u00b7 Season 1: AFTERSHOCK - 100 tiers. Free row: DZ, free chance boxes and cosmetics. Premium row: a pass-only cosmetic every tier (free during the beta)",
-  "NEW: gun CHARMS that hang off your gun and swing as you move, and account BANNERS behind your name (lobby and the death cam). Both come from chance boxes and the battle pass",
-  "LOCKER: tabs for Camos, Stickers and Charms on each gun, a Banners page, faster weapon pictures, the list no longer jumps to the top",
-  "SCORESTREAKS: cost more (UAV 550 to Airstrike 1700), 15 s between call-ins and a cooldown before each can be earned again, streak kills don't earn streaks, strikes hit a little softer",
-  "HUD: simpler, solid colours with an outline so every number and message is readable",
-  "RECOIL: every gun kicks harder and climbs more on a spray (assault rifles and SMGs most); less of it recovers on its own"
+  "CONTROLLER: pick your class with the controller before the match starts; the mouse cursor hides while you use a controller and comes back as soon as you touch the mouse or keyboard; button prompts show controller buttons",
+  "TEXT CHAT: Enter to chat in a match (Tab switches ALL / PARTY), party chat in the lobby, quick-chat buttons, mute players. Match chat clears when the next match starts",
+  "VOICE CHAT (desktop app): push to talk (V / D-pad left) or open mic, with volume, mic sensitivity and muting in the new pause menu panel",
+  "GRENADES: no longer pass through walls, floors and ceilings inside buildings; hold the grenade button to see a dotted path of where it will go, let go to throw",
+  "DZ: every finished match now pays DZ (40, +2 a kill, +30 for a win, online +25%)"
  ],
- "sha256": "4b6a6f1fb308df2c3b4048a831973daec6c0f134f124896e5a9ba951ca983686",
+ "sha256": "e1d4005b024a6c7c21e981dfef037ec148fd5f5dbf3073d6f354db6caab1d23e",
  "minApp": "1.0.0"
 }

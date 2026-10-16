@@ -188,6 +188,7 @@ function updateDiffUI() { $('diffVal').textContent = diff().name; }
 function cycleDiff(d) { const ks = Object.keys(DIFFS); S.difficulty = ks[(ks.indexOf(S.difficulty) + d + ks.length) % ks.length]; updateDiffUI(); saveSettings(); sfx.ui(); if (curTab === 'GAMEPLAY') renderSettings(); if (curScreen === 'lobby') renderLobby('.cod-row [data-act="diff' + (d > 0 ? '+' : '-') + '"]'); }
 
 function actions(act) {
+  if (/^(qc-|lqc-|pz-|vc-|vm-|lob-send$)/.test(act) && typeof commsAct === 'function' && commsAct(act)) return;
   if (/^(bp-|bpass$)/.test(act) && typeof bpAct === 'function' && bpAct(act)) return;
   if (/^(lk-|rw-|locker$|rewards$)/.test(act) && typeof lockerAct === 'function' && lockerAct(act)) return;
   switch (act) {
@@ -304,6 +305,11 @@ function adsSensMul() { const w = WEAPONS[G.cur], o = (w && w.overlay) || 0; ret
 let bindCapture = null, padCapture = null;   // Settings > KEYBINDS: waiting for the key to assign
 addEventListener('keydown', e => {
   if (bindCapture) { e.preventDefault(); const f = bindCapture; bindCapture = null; if (e.code !== 'Escape') f(e.code); else renderSettings(); return; }
+  if (typeof chatKey === 'function' && chatKey(e)) return;   // typing in the chat box
+  if (e.target && e.target.id === 'pzChatIn') { if (e.code === 'Enter') { e.preventDefault(); commsAct('pz-send'); } else if (e.code === 'Escape') e.target.blur(); return; }
+  if (e.target && e.target.id === 'lobChatIn') { if (e.code === 'Enter') { e.preventDefault(); chatSend(e.target.value, 'party'); e.target.value = ''; } return; }
+  if (e.code === 'KeyV' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) VOICE.ptt = true;
+  if ((e.code === 'Enter' || e.code === 'NumpadEnter') && G.state === 'playing' && !curScreen) { e.preventDefault(); chatOpen(); return; }
   keys[e.code] = true;
   if (G.state === 'deathcam') { if (G.dc && G.dc.t > 0.6 && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) finishDeath(); return; }
   if ((G.state === 'respawning' || G.state === 'spectate') && e.code === 'Escape') { pauseGame(); return; }
@@ -328,7 +334,7 @@ addEventListener('keydown', e => {
   const c = e.code;
   if (c === bind('reload')) startReload();
   if (c === bind('inspect') && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
-  if (c === bind('grenade')) throwGrenade();
+  if (c === bind('grenade') && !e.repeat) nadeHold(true);
   if (c === bind('melee')) melee();
   if (c === bind('streak')) stkUse();
   if (c === bind('prim')) switchWeapon(0);
@@ -336,7 +342,7 @@ addEventListener('keydown', e => {
   if (c === bind('swap')) cycleWeapon(1);
   if (c === 'Space' || c.startsWith('Arrow') || c === 'Tab' || c === bind('jump')) e.preventDefault();
 });
-addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('keyup', e => { if (e.code === 'KeyV') VOICE.ptt = false; if (CHAT.open) return; keys[e.code] = false; if (e.code === bind('grenade')) nadeHold(false); });
 addEventListener('blur', () => { if (G.bench || G.look) return; for (const k in keys) keys[k] = false; mouseDown = false; if (!S.toggleAds) mouseAds = false; pad.crouch = false; pauseGame(); });
 addEventListener('mousedown', e => {
   if (G.state === 'deathcam') { if (G.dc && G.dc.t > 0.6) finishDeath(); return; }
@@ -407,7 +413,9 @@ function pollPad(dt) {
   const [mx, my, mm] = stick(rawL[0], rawL[1], padCal.l), [lx, ly, lm] = stick(rawR[0], rawR[1], padCal.r);
   pad.mx = mx; pad.my = my; pad.mm = mm; pad.lx = lx; pad.ly = ly; pad.lm = lm;
   if (padCapture) { for (let i = 0; i < gp.buttons.length; i++) if (press(i) && i !== 9) { const f = padCapture; padCapture = null; f(i); break; } prevBtn = gp.buttons.map(b => b.pressed); return; }
-  const playing = G.state === 'playing';
+  // a screen open over a running match (the class pick before it starts) is a menu: the pad drives it, not the soldier
+  const playing = G.state === 'playing' && !curScreen;
+  if (gp.buttons.some(b => b.pressed) || Math.hypot(rawL[0], rawL[1]) > 0.4 || Math.hypot(rawR[0], rawR[1]) > 0.4) inputMode('pad');
   if (G.state === 'deathcam') { if ((press(0) || press(9)) && G.dc && G.dc.t > 0.6) finishDeath(); prevBtn = gp.buttons.map(b => b.pressed); return; }
   if (press(9)) { if (playing || G.state === 'respawning' || G.state === 'spectate') pauseGame(); else if (G.state === 'paused') resumeGame(); else if (curScreen === 'lobby') actions('lob-start'); else if (curScreen === 'menu') toLobby(); else if (G.state === 'dead') restartMatch(); }
   pad.board = down(pb('board')); pad.use = playing && down(pb('reload'));
@@ -424,7 +432,8 @@ function pollPad(dt) {
     if (S.padCrouch === 'hold') pad.crouch = down(pb('crouch')); else if (press(pb('crouch'))) pad.crouch = !pad.crouch;
     if (press(pb('reload')) && !G.interactTxt) startReload();
     if (press(pb('swap'))) cycleWeapon(1);
-    if (press(pb('grenade'))) throwGrenade();
+    VOICE.ptt = down(14);   // push to talk: D-pad left
+    if (press(pb('grenade'))) nadeHold(true); else if (!down(pb('grenade')) && prevBtn[pb('grenade')]) nadeHold(false);
     if (press(pb('inspect')) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
     if (press(pb('melee'))) melee();
     if (press(pb('streak'))) stkUse();
@@ -676,7 +685,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
