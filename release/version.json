@@ -1,13 +1,13 @@
 {
- "version": "1.2.16",
+ "version": "1.2.17",
  "notes": [
-  "THE EA UPDATE",
-  "100 NEW CAMOS: fleck, multicam, zebra, waves, glitch, honeycomb, holographic foil, gems and more, from Common to Legendary",
-  "Three chance boxes: STANDARD (500 DZ), ELITE (1,200 DZ) and PRESTIGE (2,500 DZ) with better odds, each with a VIEW CONTENTS list",
-  "New LOCKER: pick a weapon (with pictures of every gun), then its camos; stickers are under OTHER COSMETICS. Only the things you own are shown",
-  "Diamond is now a cut gem with sparkles, and the metal finishes have brushed and engraved detail",
-  "Chance boxes and Locker: more improvements"
+  "BATTLE PASS \u00b7 Season 1: AFTERSHOCK - 100 tiers. Free row: DZ, free chance boxes and cosmetics. Premium row: a pass-only cosmetic every tier (free during the beta)",
+  "NEW: gun CHARMS that hang off your gun and swing as you move, and account BANNERS behind your name (lobby and the death cam). Both come from chance boxes and the battle pass",
+  "LOCKER: tabs for Camos, Stickers and Charms on each gun, a Banners page, faster weapon pictures, the list no longer jumps to the top",
+  "SCORESTREAKS: cost more (UAV 550 to Airstrike 1700), 15 s between call-ins and a cooldown before each can be earned again, streak kills don't earn streaks, strikes hit a little softer",
+  "HUD: simpler, solid colours with an outline so every number and message is readable",
+  "RECOIL: every gun kicks harder and climbs more on a spray (assault rifles and SMGs most); less of it recovers on its own"
  ],
- "sha256": "a22d3e642b176cc6f12eb139c3afbba4649dd29016a94fbf514af1805f844e07",
+ "sha256": "4b6a6f1fb308df2c3b4048a831973daec6c0f134f124896e5a9ba951ca983686",
  "minApp": "1.0.0"
 }
