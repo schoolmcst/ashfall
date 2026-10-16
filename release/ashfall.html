@@ -507,6 +507,7 @@
   <button class="btn" data-act="settings">SETTINGS</button>
   <button class="btn" data-act="restart">RESTART</button>
   <button class="btn" data-act="tomenu">MAIN MENU</button>
+  <div class="pz-side" id="pzSide"></div>
 </div>
 
 <div id="flashW"></div>
@@ -758,6 +759,11 @@ const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', '
 const pb = a => (S.padBinds && S.padBinds[a] !== undefined ? S.padBinds[a] : PAD_DEFAULT[a]);
 const bind = a => (S.binds && S.binds[a]) || DEFAULT_BINDS[a];
 const kb = a => !!keys[bind(a)] || (a === 'sprint' && bind(a) === 'ShiftLeft' && !!keys.ShiftRight);
+// which input you're using right now: the controller hides the mouse cursor and shows pad buttons in prompts; touching
+// the mouse or keyboard switches straight back
+function inputMode(m) { const b = document.body; if (!b) return; const pad = m === 'pad'; if (b.classList.contains('padnav') !== pad) b.classList.toggle('padnav', pad); }
+const usingPad = () => !!(document.body && document.body.classList.contains('padnav'));
+function actName(a) { return usingPad() && typeof pb === 'function' ? (PAD_NAMES[pb(a)] || 'BUTTON ' + pb(a)) : keyName(bind(a)); }
 function keyName(c) { if (!c) return '—'; return c.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'NUM ').replace('ShiftLeft', 'LEFT SHIFT').replace('ShiftRight', 'RIGHT SHIFT').replace('ControlLeft', 'LEFT CTRL').replace('ControlRight', 'RIGHT CTRL').replace('AltLeft', 'LEFT ALT').replace('AltRight', 'RIGHT ALT').replace('Space', 'SPACE').replace('Arrow', '').toUpperCase(); }
 function saveSettings() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
 const best = { wave: 0, score: 0 };
@@ -4506,10 +4512,67 @@ function throwGrenade() {
   if (!EQ_MAT[G.equip]) EQ_MAT[G.equip] = G.equip === 'frag' ? gMat : new THREE.MeshStandardMaterial({ color: C(eq.color), metalness: 0.4, roughness: 0.5, emissive: C(eq.glow || 0), emissiveIntensity: eq.glow ? 0.6 : 0 });
   G.grenades--; sfx.pin(); G.throwT = 0.6; G.inspectT = 0; rumble(0.15, 0.3, 80);
   const m = new THREE.Mesh(gGeo, EQ_MAT[G.equip]); m.castShadow = true;
-  const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion);
-  m.position.copy(camera.position).addScaledVector(dir, 0.5); scene.add(m);
-  const up = 0.28; dir.y += up; dir.normalize();
-  grenadesInFlight.push({ m, grav: 13, vx: dir.x * 17 + P.vx * 0.5, vy: dir.y * 17 + 1.2, vz: dir.z * 17 + P.vz * 0.5, fuse: eq.fuse, spin: rnd(6, 12), kind: G.equip, sticky: !!eq.sticky });
+  const L = nadeLaunch(); m.position.copy(L.p); scene.add(m);
+  grenadesInFlight.push({ m, grav: 13, vx: L.v.x, vy: L.v.y, vz: L.v.z, fuse: eq.fuse, spin: rnd(6, 12), kind: G.equip, sticky: !!eq.sticky });
+}
+// where a throw starts and how fast it goes. It starts just in front of you, but never on the far side of a wall you're
+// standing against (that is how grenades used to end up through walls and floors inside buildings)
+const _nl = new THREE.Raycaster();
+function nadeLaunch() {
+  const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), p = camera.position.clone();
+  _nl.set(p, dir); _nl.far = 0.7; const hit = _nl.intersectObjects(wallMeshes, false)[0];
+  p.addScaledVector(dir, hit ? Math.max(0, hit.distance - 0.25) : 0.5);
+  const v = dir.clone(); v.y += 0.28; v.normalize();
+  return { p, v: new THREE.Vector3(v.x * 17 + P.vx * 0.5, v.y * 17 + 1.2, v.z * 17 + P.vz * 0.5) };
+}
+// one physics step for a thrown grenade (also used to draw the aim arc). Boxes have a bottom now, so raised floors and
+// ceilings bounce it instead of teleporting it on top; small sub-steps stop it slipping through thin walls
+const NADE_R = 0.08;
+function nadeStep(g, pos, dt, sim) {
+  const n = Math.max(1, Math.ceil(Math.hypot(g.vx, g.vy, g.vz) * dt / 0.07)), h = dt / n; let hitAny = false;
+  for (let k = 0; k < n; k++) {
+    g.vy -= (g.grav || 20) * h;
+    let nx = pos.x + g.vx * h, ny = pos.y + g.vy * h, nz = pos.z + g.vz * h, hit = false;
+    for (const b of boxesNear(nx, nz)) {
+      if (!(nx > b.minx - NADE_R && nx < b.maxx + NADE_R && nz > b.minz - NADE_R && nz < b.maxz + NADE_R && ny < b.top && ny > (b.bot || 0) - NADE_R)) continue;
+      const wasX = pos.x > b.minx - NADE_R && pos.x < b.maxx + NADE_R, wasZ = pos.z > b.minz - NADE_R && pos.z < b.maxz + NADE_R;
+      if (pos.y >= b.top - 0.02) { ny = b.top + 0.09; g.vy = Math.abs(g.vy) * 0.35; g.vx *= 0.7; g.vz *= 0.7; if (Math.abs(g.vy) < 1) g.vy = 0; }
+      else if ((b.bot || 0) > 0.05 && pos.y <= (b.bot || 0) - NADE_R + 0.02) { ny = (b.bot || 0) - NADE_R - 0.01; g.vy = -Math.abs(g.vy) * 0.3; }   // a ceiling
+      else if (!wasX) { nx = pos.x; g.vx *= -0.45; } else if (!wasZ) { nz = pos.z; g.vz *= -0.45; } else { nx = pos.x; nz = pos.z; g.vx *= -0.3; g.vz *= -0.3; }
+      hit = true;
+    }
+    if (ny < 0.09) { ny = 0.09; g.vy = Math.abs(g.vy) * 0.38; g.vx *= 0.75; g.vz *= 0.75; if (Math.abs(g.vy) < 1) g.vy = 0; hit = hit || !sim; }
+    pos.set(nx, ny, nz); if (hit) { hitAny = true; if (g.sticky) { g.vx = g.vy = g.vz = 0; break; } }
+  }
+  return hitAny;
+}
+// hold the grenade button to aim: a dotted arc and a ring where it will land; let go to throw (a quick tap still throws)
+let nadeLine = null, nadeRing = null;
+function nadeHold(on) {
+  if (on) { if (G.grenades > 0 && G.state === 'playing' && !(G.holdT > 0) && G.nadeHold == null) G.nadeHold = G.time; return; }
+  if (G.nadeHold != null) { G.nadeHold = null; nadeAimShow(false); throwGrenade(); }
+}
+function nadeAimShow(on) { if (nadeLine) nadeLine.visible = on; if (nadeRing) nadeRing.visible = false; }   // just the dotted path
+function nadeAimTick() {
+  if (G.nadeHold == null || G.state !== 'playing' || G.grenades <= 0) { if (G.nadeHold != null && G.state !== 'playing') G.nadeHold = null; nadeAimShow(false); return; }
+  if (G.time - G.nadeHold < 0.12) return;
+  if (!nadeLine) {
+    const dc = document.createElement('canvas'); dc.width = dc.height = 32; const dx = dc.getContext('2d'); dx.fillStyle = '#fff'; dx.beginPath(); dx.arc(16, 16, 13, 0, 7); dx.fill();
+    nadeLine = new THREE.Points(new THREE.BufferGeometry(), new THREE.PointsMaterial({ color: 0xfff6b0, size: 0.13, map: new THREE.CanvasTexture(dc), alphaTest: 0.4, sizeAttenuation: true, transparent: true, opacity: 1, depthTest: false, toneMapped: false }));
+    nadeLine.geometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(3 * 90), 3)); nadeLine.renderOrder = 9; nadeLine.frustumCulled = false; scene.add(nadeLine);
+    nadeRing = new THREE.Mesh(new THREE.RingGeometry(0.5, 0.62, 32), new THREE.MeshBasicMaterial({ color: 0xff3b30, transparent: true, opacity: 0.85, depthTest: false, side: THREE.DoubleSide })); nadeRing.rotation.x = -Math.PI / 2; nadeRing.renderOrder = 9; scene.add(nadeRing);
+  }
+  camera.updateMatrixWorld();
+  const L = nadeLaunch(), eq = EQUIP[G.equip] || EQUIP.frag, g = { vx: L.v.x, vy: L.v.y, vz: L.v.z, grav: 13, sticky: !!eq.sticky }, pos = L.p.clone(), arr = nadeLine.geometry.attributes.position.array;
+  let n = 0, t = 0, still = 0;
+  while (t < Math.min(eq.fuse || 3, 4) && n < 90) {
+    const hit = nadeStep(g, pos, 1 / 30, true); t += 1 / 30;
+    if (n < 90 && pos.distanceTo(camera.position) > 1.4) { arr[n * 3] = pos.x; arr[n * 3 + 1] = pos.y; arr[n * 3 + 2] = pos.z; n++; }   // no dots right in your face
+    if ((g.sticky && hit) || Math.hypot(g.vx, g.vz) + Math.abs(g.vy) < 0.4 && ++still > 3) break;
+  }
+  nadeLine.geometry.setDrawRange(0, n); nadeLine.geometry.attributes.position.needsUpdate = true;
+  nadeRing.position.set(pos.x, pos.y - 0.07, pos.z); const R = (eq.radius || 6) * 0.15; nadeRing.scale.setScalar(Math.max(1, R));
+  nadeAimShow(true);
 }
 // launcher rounds: a rocket flies flat, a 40 mm shell arcs; both burst on contact
 let projGeo = null, projMat = null;
@@ -4568,6 +4631,7 @@ function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
   const rk = clamp(1 - dp / 30, 0, 1); if (rk > 0.05) rumble(rk, rk * 0.8, 120 + 300 * rk);
 }
 function updateGrenades(dt) {
+  try { nadeAimTick(); } catch (e) {}
   for (let i = grenadesInFlight.length - 1; i >= 0; i--) {
     const g = grenadesInFlight[i], m = g.m;
     if (g.proj) { if (updateProjectile(g, dt)) { scene.remove(m); grenadesInFlight.splice(i, 1); } continue; }
@@ -4578,20 +4642,8 @@ function updateGrenades(dt) {
     }
     if (g.sticky) for (const e of enemies) { const ep = e.group.position; if (Math.hypot(ep.x - m.position.x, ep.z - m.position.z) < 0.5 && m.position.y < 1.9) { g.stuck = true; g.on = e; g.off = new THREE.Vector3(m.position.x - ep.x, clamp(m.position.y, 0.9, 1.5), m.position.z - ep.z); sfx.thud(at(ep.x, ep.z, 10)); break; } }
     if (g.stuck) continue;
-    g.vy -= (g.grav || 20) * dt;
-    let nx = m.position.x + g.vx * dt, ny = m.position.y + g.vy * dt, nz = m.position.z + g.vz * dt;
-    for (const b of boxes) {
-      const inX = nx > b.minx - 0.1 && nx < b.maxx + 0.1, inZ = nz > b.minz - 0.1 && nz < b.maxz + 0.1;
-      if (inX && inZ && ny < b.top) {
-        const wasX = m.position.x > b.minx - 0.1 && m.position.x < b.maxx + 0.1, wasZ = m.position.z > b.minz - 0.1 && m.position.z < b.maxz + 0.1;
-        if (m.position.y >= b.top) { ny = b.top + 0.09; g.vy = Math.abs(g.vy) * 0.35; g.vx *= 0.7; g.vz *= 0.7; }
-        else if (!wasX) { nx = m.position.x; g.vx *= -0.45; } else if (!wasZ) { nz = m.position.z; g.vz *= -0.45; } else { nx = m.position.x; nz = m.position.z; g.vx *= -0.3; g.vz *= -0.3; }
-        sfx.thud(at(nx, nz, 10)); if (g.sticky) { g.stuck = true; g.vx = g.vy = g.vz = 0; }
-      }
-    }
-    if (ny < 0.09 && g.sticky) { ny = 0.09; g.stuck = true; }
-    if (ny < 0.09) { ny = 0.09; g.vy = Math.abs(g.vy) * 0.38; g.vx *= 0.75; g.vz *= 0.75; if (Math.abs(g.vy) < 1) g.vy = 0; }
-    m.position.set(nx, ny, nz); m.rotation.x += g.spin * dt; m.rotation.z += g.spin * 0.6 * dt;
+    const sp0 = Math.abs(g.vx) + Math.abs(g.vy) + Math.abs(g.vz);
+    if (nadeStep(g, m.position, dt, false)) { if (sp0 > 1.5) sfx.thud(at(m.position.x, m.position.z, 10)); if (g.sticky) { g.stuck = true; g.vx = g.vy = g.vz = 0; } } m.rotation.x += g.spin * dt; m.rotation.z += g.spin * 0.6 * dt;
     g.fuse -= dt;
     if (g.fuse <= 0) { detonate(g); scene.remove(m); grenadesInFlight.splice(i, 1); }
   }
@@ -4954,7 +5006,7 @@ function pauseGame() {
   G.pausedFrom = G.state; G.state = 'paused'; mouseDown = false; mouseAds = false;
   try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   $('pauseSub').textContent = `WAVE ${G.wave}  ·  KILLS ${G.kills}  ·  SCORE ${G.score}`;
-  showScreen('pause');
+  showScreen('pause'); try { renderPauseSide(); } catch (e) {}
 }
 function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom || 'playing'; showScreen(null); lockPointer(); }
 // Scavenger: every kill tops up one magazine of reserve ammo
@@ -5374,7 +5426,7 @@ function spawnBot(en, pos) {
 }
 function startMatch(mode, custom) {
   const cfg = matchCfg(mode, custom), def = MODES[mode];
-  initAudio(); clearMenuSoldiers();
+  initAudio(); clearMenuSoldiers(); try { chatNewMatch(); } catch (e) {}
   if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel); loadMap(cfg.map); }
   else if (!NET.app) loadMap('ruins');   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
@@ -5928,8 +5980,8 @@ function playerInteract(dt, held) {
   const bar = $('ihold'); let txt = '', prog = -1;
   if (M.mode === 'snd' && M.snd && playerAlive()) {
     const sn = M.snd, att = sn.att === M.myTeam;
-    if (att && !sn.bomb && sn.state === 'live') { const s = LAYOUT.sites.find(s => Math.hypot(s.x - P.x, s.z - P.z) < 3); if (s) { txt = `HOLD ${pad.on ? '(X)' : '[E]'} TO PLANT AT ${s.n}`; if (held) { sn.plant += dt; prog = sn.plant / 4; if (sn.plant >= 4) { sn.plant = 0; if (netHostNow()) plantBomb(s, M.me); else { NET.sa = ['p', LAYOUT.sites.indexOf(s), (NET.saN = (NET.saN || 0) + 1)]; MS.plants++; popScore('+200', 'big', 'BOMB PLANTED'); } } } else sn.plant = 0; } }
-    if (!att && sn.bomb && sn.state === 'planted' && Math.hypot(sn.bomb.x - P.x, sn.bomb.z - P.z) < 2) { txt = `HOLD ${pad.on ? '(X)' : '[E]'} TO DEFUSE`; if (held) { sn.defuse += dt; prog = sn.defuse / 6; if (sn.defuse >= 6) { sn.defuse = 0; if (netHostNow()) defuseBomb(M.me); else { NET.sa = ['d', 0, (NET.saN = (NET.saN || 0) + 1)]; MS.defuses++; popScore('+200', 'big', 'BOMB DEFUSED'); } } } else sn.defuse = 0; }
+    if (att && !sn.bomb && sn.state === 'live') { const s = LAYOUT.sites.find(s => Math.hypot(s.x - P.x, s.z - P.z) < 3); if (s) { txt = `HOLD ${usingPad() ? '(' + actName('reload') + ')' : '[E]'} TO PLANT AT ${s.n}`; if (held) { sn.plant += dt; prog = sn.plant / 4; if (sn.plant >= 4) { sn.plant = 0; if (netHostNow()) plantBomb(s, M.me); else { NET.sa = ['p', LAYOUT.sites.indexOf(s), (NET.saN = (NET.saN || 0) + 1)]; MS.plants++; popScore('+200', 'big', 'BOMB PLANTED'); } } } else sn.plant = 0; } }
+    if (!att && sn.bomb && sn.state === 'planted' && Math.hypot(sn.bomb.x - P.x, sn.bomb.z - P.z) < 2) { txt = `HOLD ${usingPad() ? '(' + actName('reload') + ')' : '[E]'} TO DEFUSE`; if (held) { sn.defuse += dt; prog = sn.defuse / 6; if (sn.defuse >= 6) { sn.defuse = 0; if (netHostNow()) defuseBomb(M.me); else { NET.sa = ['d', 0, (NET.saN = (NET.saN || 0) + 1)]; MS.defuses++; popScore('+200', 'big', 'BOMB DEFUSED'); } } } else sn.defuse = 0; }
   }
   G.interactTxt = txt;
   if (bar) { const on = !!txt; if (bar._on !== on) { bar._on = on; bar.classList.toggle('hide', !on); } if (on) { bar.firstChild.textContent = txt; bar.lastChild.firstChild.style.width = Math.max(0, prog) * 100 + '%'; } }
@@ -6009,6 +6061,7 @@ const INTERMISSION_OFF = 45, INTERMISSION_ON = 40;
 function updateResNext() { const el = $('resNext'); if (!el) return; const t = M.online ? NET.endT : M.nextT; el.textContent = t > 0 ? `NEXT MATCH IN ${Math.ceil(t)}s` : 'STARTING…'; }
 // offline: a fresh match of the same mode and settings (a random map choice picks a new map)
 function nextMatch() {
+  try { chatNewMatch(); } catch (e) {}
   if (M.mode === 'surv') { startMatch('surv', { map: M.cfg.mapSel === 'random' ? 'random' : curMap }); return; }
   startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: M.cfg.mapSel || curMap, mapSel: M.cfg.mapSel }));
 }
@@ -6261,7 +6314,7 @@ function rosterHtml(k) {
   const p = (n, cls = '', tag = '') => `<div class="ros-p ${cls}"><span class="lv">${cls === 'me' ? '★' : 'AI'}</span>${n}${tag ? `<em>${tag}</em>` : ''}</div>`;
   const info = `<div class="ros-info"><b>${d.name}</b>${d.desc}</div>`;
   if (k === 'surv') return `<div class="ros-h"><span>SQUAD</span><b>SOLO</b></div><div class="ros-team"><div class="tn">YOU</div>${p(me, 'me', 'READY')}</div>` + info;
-  if (d.online && NET.app) return `<div id="partyBox">${partyHtml()}</div>` + info;
+  if (d.online && NET.app) return `<div id="partyBox">${partyHtml()}</div>` + (typeof lobChatHtml === 'function' ? lobChatHtml() : '') + info;
   if (d.online) return `<div class="ros-h"><span>${NET.app ? 'QUICK PLAY' : 'ROOM'}</span><b>${d.teams ? '6 V 6' : 'FREE-FOR-ALL'}</b></div><div class="ros-team"><div class="tn">YOUR PARTY</div>${p(me, 'me', 'READY')}<div class="ros-p"><span class="lv">+</span>real players join here &middot; bots fill empty spots</div></div>` + info;
   if (d.teams) { const n = clamp(cfg.perTeam, 1, 8);
     return `<div class="ros-h"><span>LOBBY</span><b>${n} V ${n}</b></div>` +
@@ -6749,7 +6802,7 @@ function stkAdd(pts) {
   const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
   for (const id of list) if (STK.pts >= STREAKS[id].cost && !STK.got.has(id) && !(STK.cd[id] > 0) && !STK.have.includes(id)) {
     STK.got.add(id); STK.have.push(id);
-    showBanner(STREAKS[id].name + ' READY', `press ${keyName(bind('streak'))} to use it`); try { sfx.streakReady(); } catch (e) { sfx.streak(); }
+    showBanner(STREAKS[id].name + ' READY', `press ${actName('streak')} to use it`); try { sfx.streakReady(); } catch (e) { sfx.streak(); }
   }
   if (list.every(id => STK.got.has(id))) { STK.pts = 0; STK.got.clear(); }   // the whole set earned: start again
   stkHud(true);
@@ -6825,7 +6878,7 @@ function stkHud(force) {
   box.innerHTML = list.map(id => {
     const s = STREAKS[id], have = STK.have.includes(id), cd = Math.ceil(STK.cd[id] || 0), p = have ? 1 : (STK.got.has(id) || cd) ? 0 : clamp(STK.pts / s.cost, 0, 1);
     const wait = have && STK.useCd > 0;
-    return `<div class="stk${have && !wait ? ' ready' : ''}${cd && !have ? ' cd' : ''}"><div class="stk-fill" style="height:${(p * 100).toFixed(0)}%"></div>${stkIcon(id)}<span>${have ? (wait ? Math.ceil(STK.useCd) + 's' : keyName(bind('streak'))) : cd ? cd + 's' : s.cost}</span></div>`;
+    return `<div class="stk${have && !wait ? ' ready' : ''}${cd && !have ? ' cd' : ''}"><div class="stk-fill" style="height:${(p * 100).toFixed(0)}%"></div>${stkIcon(id)}<span>${have ? (wait ? Math.ceil(STK.useCd) + 's' : actName('streak')) : cd ? cd + 's' : s.cost}</span></div>`;
   }).join('') + (STK.uavT > 0 ? `<div class="stk-uav">${STK.vuav ? 'ADV UAV' : 'UAV'} ${Math.ceil(STK.uavT)}</div>` : '') + `<div class="stk-pts">${STK.pts}</div>`;
 }
 
@@ -7743,9 +7796,13 @@ const P2P = (() => {
     R.presence = patch => { for (const k in patch) { if (patch[k] === null) delete R.mine[k]; else R.mine[k] = patch[k]; } return Promise.resolve(); };
     R.onPeers = fn => { R.ls.add(fn); return () => R.ls.delete(fn); };
     R.connected = () => R.host || !!(R.hostLink && R.hostLink.open);
+    // voice frames: clients send theirs to the host, the host passes every frame on to everyone else
+    const vIn = (l, m) => { if (typeof voiceIn === 'function' && l !== me) { const p = l === me ? R.mine : R.snap.get(l); voiceIn(l, String((p && p.n) || 'PLAYER').slice(0, 16), m.d, m.s); } };
+    R.voice = (d, s) => { const m = JSON.stringify({ t: 'v', l: me, d, s }); if (R.host) { for (const [, L] of R.links) if (L.open) L.send(m); } else if (R.hostLink && R.hostLink.open) R.hostLink.send(m); };
 
     // ---- as host: accept offers on the slot id, collect states, send everyone the room ~20 Hz
     function hostMsg(L, m) {
+      if (m.t === 'v' && typeof m.d === 'string' && m.d.length < 3000 && L.label) { const raw = JSON.stringify({ t: 'v', l: L.label, d: m.d, s: m.s }); for (const [, L2] of R.links) if (L2 !== L && L2.open) L2.send(raw); vIn(L.label, m); return; }
       if (m.t === 'p' && m.l && typeof m.p === 'object') { L.label = String(m.l).slice(0, 16); L.pres = m.p; if (!R.order.includes(L.label)) R.order.push(L.label); }
     }
     function hostState(L, st) {
@@ -7781,6 +7838,7 @@ const P2P = (() => {
     // ---- as a client: connect to the slot's host, send my state, take the room from the host
     function clientMsg(L, m) {
       if (m.t === 'w') { L.welcome = m; return; }
+      if (m.t === 'v' && typeof m.d === 'string' && m.d.length < 3000) { vIn(String(m.l).slice(0, 24), m); return; }
       if (m.t === 's' && Array.isArray(m.a)) {
         R.lastSnap = performance.now(); R.order = Array.isArray(m.o) ? m.o.slice(0, 32) : R.order; R.hostLabel = m.h;
         const mp = new Map(); for (const e of m.a) if (Array.isArray(e) && typeof e[0] === 'string' && e[1] && typeof e[1] === 'object') mp.set(e[0].slice(0, 24), e[1]);
@@ -8010,7 +8068,7 @@ function netSelf() { for (const p of netPeers()) if (p.sameTab) return p.peer; r
 const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
-  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, bn: typeof bannerFor === 'function' ? bannerFor() : '', lv: typeof lvlInfo === 'function' ? lvlInfo(PROG.xp).l : 1, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
+  NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, cm: typeof CHAT !== 'undefined' && CHAT.mine.all.length ? CHAT.mine.all.slice() : undefined, bn: typeof bannerFor === 'function' ? bannerFor() : '', lv: typeof lvlInfo === 'function' ? lvlInfo(PROG.xp).l : 1, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
     a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
@@ -8105,6 +8163,7 @@ function netTick(dt) {
     R.entry.name = cleanNick(pr.n); R.host = !!pr.ho; R.sa = pr.sa; if (pr.ho && !pr.bot && !isHost && Array.isArray(pr.ob)) NET.ob = pr.ob; if (pr.ho && !pr.bot && NET.priv) privFromHost(pr.pc); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
     if (pr.ho && !pr.bot && !isHost && typeof pr.mp === 'string' && MAPS[pr.mp] && pr.mp !== curMap && !NET.mapBusy) { NET.mapBusy = true; setTimeout(() => { NET.mapBusy = false; if (NET.on) netSwitchMap(pr.mp); }, 0); }
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
+    if (!pr.bot) chatIngest('all', p.peer, R.entry.name, pr.cm);
     R.bn = typeof pr.bn === 'string' && COS[pr.bn] && COS[pr.bn].kind === 'banner' ? pr.bn : ''; R.lv = netNum(pr.lv, 1, 100, 1);
     R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
     R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
@@ -8720,6 +8779,246 @@ function renderLeaderboard() {
 .fr-toast{position:fixed;right:20px;top:80px;z-index:60;width:300px;padding:14px;background:rgba(10,12,13,.95);border:1px solid var(--accent);display:flex;flex-direction:column;gap:6px;font-size:12px;letter-spacing:.06em;color:var(--ink);box-shadow:0 10px 40px rgba(0,0,0,.6)}
 .fr-toast b{font-size:11px;letter-spacing:.3em;color:var(--accent)}.fr-toast div{display:flex;gap:8px;margin-top:4px}.fr-toast .mini{width:auto;padding:0 12px;height:28px;pointer-events:auto}
 .lbp{width:min(1000px,94vw)}#lbBody{padding:6px 26px 10px;overflow:auto}#lbBody td:nth-child(2),#lbBody th:nth-child(2){text-align:left}#lbBody tr.me td{color:var(--accent)}`;
+  document.head.appendChild(s);
+})();
+/* ================================================================== text chat: ALL (everyone in your match) and PARTY
+   Messages ride in presence (cm: the last few [seq, text] I sent), so they work in the app (P2P) and on claude.ai alike.
+   The match chat is wiped when the next match starts; party chat stays while the party lasts. Enter opens chat (Tab
+   switches ALL / PARTY), Escape closes; on a controller it lives in the pause menu and the lobby (quick chat + the
+   on-screen keyboard). Mute anyone from the pause menu. Settings: chat on, party only, or off. */
+const CHAT = { log: [], seq: 0, mine: { all: [], party: [] }, seen: new Map(), open: false, ch: 'all', muted: new Set(), mode: 'on' };
+try { const o = JSON.parse(localStorage.getItem('ashfall.chat.v1') || 'null'); if (o) { CHAT.mode = ['on', 'party', 'off'].includes(o.mode) ? o.mode : 'on'; CHAT.muted = new Set((o.muted || []).slice(0, 50)); } } catch (e) {}
+const chatSave = () => { try { localStorage.setItem('ashfall.chat.v1', JSON.stringify({ mode: CHAT.mode, muted: [...CHAT.muted] })); } catch (e) {} };
+const QUICK_CHAT = ['Nice shot!', 'Thanks!', 'Need backup!', 'On my way', 'Enemy spotted', 'Push now!', 'Fall back', 'GG'];
+const chatClean = t => String(t || '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 90);
+const chatEsc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+// a new match: empty the match chat (party lines stay)
+function chatNewMatch() { CHAT.log = CHAT.log.filter(m => m.ch === 'party'); CHAT.mine.all = []; for (const k of [...CHAT.seen.keys()]) if (k.startsWith('all|')) CHAT.seen.delete(k); chatRender(); }
+function chatAdd(m) { CHAT.log.push(Object.assign({ t: performance.now() }, m)); if (CHAT.log.length > 60) CHAT.log.splice(0, CHAT.log.length - 60); chatRender(); try { if (!m.me) sfx.ui(); } catch (e) {} }
+function chatSend(txt, ch) {
+  txt = chatClean(txt); if (!txt) return;
+  ch = ch === 'party' && typeof PARTY !== 'undefined' && PARTY.room ? 'party' : 'all';
+  if (ch === 'all' && CHAT.mode !== 'on') { chatAdd({ ch: 'sys', who: '', txt: 'Match chat is off (Settings, or the pause menu)', me: true }); return; }
+  const s = ++CHAT.seq, arr = CHAT.mine[ch]; arr.push([s, txt]); if (arr.length > 4) arr.shift();
+  chatAdd({ ch, who: (typeof NET !== 'undefined' && NET.nick) || 'YOU', txt, me: true });
+  chatPublish();
+}
+// my recent lines go out with my presence (the match room and the party room)
+function chatPublish() {
+  try { if (typeof NET !== 'undefined' && NET.room && NET.on) NET.room.presence({ cm: CHAT.mine.all.length ? CHAT.mine.all.slice() : null }); } catch (e) {}
+  try { if (typeof PARTY !== 'undefined' && PARTY.room) PARTY.room.presence({ cm: CHAT.mine.party.length ? CHAT.mine.party.slice() : null }); } catch (e) {}
+}
+// someone's presence carried chat lines: show the ones we haven't seen
+function chatIngest(ch, peer, name, cm) {
+  const key = ch + '|' + peer, last = CHAT.seen.get(key);
+  if (!Array.isArray(cm)) { if (last === undefined) CHAT.seen.set(key, 0); return; }   // seen them with nothing said yet: their first line will show
+  let max = last || 0;
+  for (const e of cm) {
+    if (!Array.isArray(e)) continue; const s = +e[0] | 0, txt = chatClean(e[1]); if (!txt || s <= (last || 0)) continue;
+    max = Math.max(max, s);
+    if (last === undefined) continue;   // first time we see this player: don't replay their old lines
+    if (CHAT.muted.has(name) || (ch === 'all' && CHAT.mode !== 'on') || CHAT.mode === 'off') continue;
+    chatAdd({ ch, who: name, txt });
+  }
+  CHAT.seen.set(key, max);
+}
+setInterval(() => { try { chatPublish(); if (typeof PARTY !== 'undefined' && PARTY.room) for (const p of PARTY.room.peers()) if (!p.sameTab && p.presence) chatIngest('party', p.peer, cleanNick(p.presence.n), p.presence.cm); } catch (e) {} }, 400);
+
+/* ---------- the HUD chat box (bottom left) and the input */
+function chatRender() {
+  const box = $('chatLog'); if (!box) return;
+  const now = performance.now(), show = CHAT.log.slice(-7);
+  box.innerHTML = show.map(m => `<div class="cl ${m.ch}${CHAT.open || now - m.t < 10000 ? '' : ' old'}">${m.ch === 'sys' ? '' : `<em>[${m.ch === 'party' ? 'PARTY' : 'ALL'}]</em> <b>${chatEsc(m.who)}:</b> `}${chatEsc(m.txt)}</div>`).join('');
+  box.classList.toggle('open', CHAT.open);
+  const pz = $('pzChatLog'); if (pz) pz.innerHTML = chatLinesHtml(14);
+  const lb = $('lobChatLog'); if (lb) lb.innerHTML = chatLinesHtml(8, 'party');
+}
+const chatLinesHtml = (n, only) => CHAT.log.filter(m => !only || m.ch === only || m.ch === 'sys').slice(-n).map(m => `<div class="cl ${m.ch}">${m.ch === 'sys' ? '' : `<em>[${m.ch === 'party' ? 'PARTY' : 'ALL'}]</em> <b>${chatEsc(m.who)}:</b> `}${chatEsc(m.txt)}</div>`).join('') || '<div class="cl sys">No messages yet.</div>';
+setInterval(() => { if (CHAT.log.length && !CHAT.open) chatRender(); }, 2500);   // old lines fade
+function chatOpen(ch) {
+  if (CHAT.mode === 'off') { showMsg('CHAT IS OFF · TURN IT ON IN THE PAUSE MENU'); return; }
+  const inp = $('chatIn'); if (!inp) return;
+  CHAT.open = true; CHAT.ch = ch || (CHAT.mode === 'party' ? 'party' : 'all'); if (CHAT.ch === 'party' && !(typeof PARTY !== 'undefined' && PARTY.room)) CHAT.ch = 'all';
+  $('chatBar').classList.remove('hide'); $('chatCh').textContent = CHAT.ch === 'party' ? 'PARTY' : 'ALL'; inp.value = ''; for (const k in keys) keys[k] = false;
+  setTimeout(() => inp.focus(), 0); chatRender();
+}
+function chatClose() { CHAT.open = false; const inp = $('chatIn'); if (inp) inp.blur(); const b = $('chatBar'); if (b) b.classList.add('hide'); chatRender(); }
+// keys while the chat box is open; true = handled (the game ignores the key)
+function chatKey(e) {
+  if (!CHAT.open || document.activeElement !== $('chatIn')) return false;
+  if (e.code === 'Enter' || e.code === 'NumpadEnter') { e.preventDefault(); chatSend($('chatIn').value, CHAT.ch); chatClose(); }
+  else if (e.code === 'Escape') { e.preventDefault(); chatClose(); }
+  else if (e.code === 'Tab') { e.preventDefault(); if (typeof PARTY !== 'undefined' && PARTY.room) { CHAT.ch = CHAT.ch === 'all' ? 'party' : 'all'; $('chatCh').textContent = CHAT.ch === 'party' ? 'PARTY' : 'ALL'; } }
+  return true;
+}
+(() => {
+  const hud = document.getElementById('hud') || document.body, d = document.createElement('div');
+  d.id = 'chatWrap'; d.innerHTML = `<div id="chatLog"></div><div id="chatBar" class="hide"><span id="chatCh">ALL</span><input id="chatIn" maxlength="90" autocomplete="off" spellcheck="false" placeholder="Say something · Enter sends · Tab: all / party"></div>`;
+  hud.appendChild(d);
+  const s = document.createElement('style');
+  s.textContent = `#chatWrap{position:fixed;left:28px;bottom:120px;width:min(440px,40vw);z-index:6;pointer-events:none}
+#chatLog .cl,.pz-chat .cl,.lob-chat .cl{font-size:13px;line-height:1.45;color:#fff;text-shadow:0 0 2px #000,0 1px 2px #000;padding:1px 8px;background:rgba(0,0,0,.35);margin-top:2px;width:fit-content;max-width:100%;word-break:break-word;transition:opacity .6s}
+#chatLog .cl.old{opacity:0}#chatLog.open .cl{opacity:1}.cl em{font-style:normal;color:#d8d8d8;font-size:11px}.cl b{color:#4aa8ff}.cl.party b,.cl.party em{color:#7ef0a0}.cl.sys{color:#ffd23a}
+#chatBar{display:flex;margin-top:6px;pointer-events:auto;background:rgba(0,0,0,.7);border:1px solid rgba(255,255,255,.35)}#chatBar span{padding:8px 10px;font-size:12px;font-weight:700;letter-spacing:.1em;color:#111;background:#ffd23a}
+#chatIn{flex:1;min-width:0;background:none;border:0;outline:0;color:#fff;font:14px inherit;font-family:inherit;padding:8px 10px}`;
+  document.head.appendChild(s);
+})();
+/* ================================================================== voice chat (desktop app)
+   Your mic is encoded to Opus with WebCodecs in 20 ms frames and sent over the same WebRTC link the match already uses
+   (the host passes each frame on to everyone else, like the game state). Each speaker gets their own decoder and a
+   small jitter buffer. Modes: OFF, PUSH TO TALK (V on keyboard, D-pad LEFT on a controller) or OPEN MIC (sends while
+   you're louder than the sensitivity). Match voice goes to everyone in your match; in the lobby it goes to your party.
+   Options live in the pause menu (and Settings > Audio): mode, voice volume, mic sensitivity, mute players. */
+const VOICE = { mode: 'off', vol: 80, sens: 35, muted: new Set(), on: false, err: '', ptt: false, talking: false, level: 0, spk: new Map(), seq: 0 };
+try { const o = JSON.parse(localStorage.getItem('ashfall.voice.v1') || 'null'); if (o) { VOICE.mode = ['off', 'ptt', 'open'].includes(o.mode) ? o.mode : 'off'; VOICE.vol = clamp(+o.vol || 80, 0, 100); VOICE.sens = clamp(+o.sens || 35, 0, 100); VOICE.muted = new Set((o.muted || []).slice(0, 50)); } } catch (e) {}
+const voiceSave = () => { try { localStorage.setItem('ashfall.voice.v1', JSON.stringify({ mode: VOICE.mode, vol: VOICE.vol, sens: VOICE.sens, muted: [...VOICE.muted] })); } catch (e) {} };
+const voiceSupported = () => typeof AudioEncoder === 'function' && typeof AudioDecoder === 'function' && typeof MediaStreamTrackProcessor === 'function' && !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+// the room voice goes through: the match while in one, else the party
+const voiceRoom = () => (typeof NET !== 'undefined' && NET.on && NET.room && NET.room.voice ? NET.room : (typeof PARTY !== 'undefined' && PARTY.room && PARTY.room.voice ? PARTY.room : null));
+let vCtx = null, vEnc = null, vStream = null, vReader = null;
+function vAudio() { if (!vCtx) { try { vCtx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: 48000 }); } catch (e) { vCtx = null; } } if (vCtx && vCtx.state === 'suspended') vCtx.resume().catch(() => {}); return vCtx; }
+async function voiceStart() {
+  if (VOICE.on || VOICE.mode === 'off') return;
+  if (!voiceSupported()) { VOICE.err = 'Voice chat needs the desktop app'; return; }
+  try {
+    vStream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true, channelCount: 1 } });
+  } catch (e) { VOICE.err = 'No microphone (or permission denied)'; VOICE.mode = 'off'; voiceSave(); return; }
+  VOICE.err = ''; VOICE.on = true; vAudio();
+  vEnc = new AudioEncoder({ output: ch => { const b = new Uint8Array(ch.byteLength); ch.copyTo(b); voiceOut(b); }, error: () => {} });
+  vEnc.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1, bitrate: 24000, opus: { frameDuration: 20000 } });
+  const track = vStream.getAudioTracks()[0]; vReader = new MediaStreamTrackProcessor({ track }).readable.getReader();
+  (async () => {
+    let hang = 0;
+    while (VOICE.on) {
+      let r; try { r = await vReader.read(); } catch (e) { break; } if (r.done) break; const ad = r.value;
+      try {
+        // loudness (for open mic + the meter)
+        const n = ad.numberOfFrames, buf = new Float32Array(n); ad.copyTo(buf, { planeIndex: 0, format: 'f32-planar' });
+        let sum = 0; for (let i = 0; i < n; i += 4) sum += buf[i] * buf[i]; const lvl = Math.min(1, Math.sqrt(sum / (n / 4)) * 8); VOICE.level = VOICE.level * 0.7 + lvl * 0.3;
+        const want = VOICE.mode === 'ptt' ? VOICE.ptt : VOICE.mode === 'open' && (VOICE.level > (1 - VOICE.sens / 100) * 0.5 ? (hang = 15) : hang-- > 0);
+        VOICE.talking = !!want && !!voiceRoom();
+        if (VOICE.talking && vEnc.state === 'configured') vEnc.encode(ad);
+      } catch (e) {}
+      ad.close();
+    }
+  })();
+}
+function voiceStop() {
+  VOICE.on = false; VOICE.talking = false;
+  try { vReader && vReader.cancel(); } catch (e) {} vReader = null;
+  try { vStream && vStream.getTracks().forEach(t => t.stop()); } catch (e) {} vStream = null;
+  try { vEnc && vEnc.state !== 'closed' && vEnc.close(); } catch (e) {} vEnc = null;
+}
+function voiceSetMode(m) { VOICE.mode = m; voiceSave(); if (m === 'off') voiceStop(); else voiceStart(); }
+// one frame out: base64 over the room's unreliable channel
+function voiceOut(bytes) { const r = voiceRoom(); if (!r) return; let s = ''; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); r.voice(btoa(s), ++VOICE.seq); }
+// one frame in from `label`, with the speaker's name
+function voiceIn(label, name, d, seq) {
+  if (VOICE.mode === 'off' || !vAudio() || VOICE.muted.has(name)) return;
+  let S0 = VOICE.spk.get(label);
+  if (!S0) {
+    S0 = { name, next: 0, gain: vCtx.createGain(), t: 0 };
+    S0.gain.connect(vCtx.destination);
+    S0.dec = new AudioDecoder({ output: ad => { try { const n = ad.numberOfFrames, buf = vCtx.createBuffer(1, n, ad.sampleRate); const f = new Float32Array(n); ad.copyTo(f, { planeIndex: 0, format: 'f32-planar' }); buf.copyToChannel(f, 0);
+      const src = vCtx.createBufferSource(); src.buffer = buf; src.connect(S0.gain); const now = vCtx.currentTime; if (S0.next < now + 0.02 || S0.next > now + 0.5) S0.next = now + 0.08; src.start(S0.next); S0.next += buf.duration; } catch (e) {} ad.close(); }, error: () => {} });
+    S0.dec.configure({ codec: 'opus', sampleRate: 48000, numberOfChannels: 1 });
+    VOICE.spk.set(label, S0);
+  }
+  S0.name = name; S0.t = performance.now(); S0.gain.gain.value = VOICE.vol / 100 * 1.4;
+  try { const raw = atob(d), b = new Uint8Array(raw.length); for (let i = 0; i < raw.length; i++) b[i] = raw.charCodeAt(i); S0.dec.decode(new EncodedAudioChunk({ type: 'key', timestamp: (seq | 0) * 20000, data: b })); } catch (e) {}
+}
+// who is talking right now (top left of the HUD) + my own mic dot
+function voiceHud() {
+  const el = $('voiceHud'); if (!el) return;
+  const now = performance.now(), talk = [...VOICE.spk.values()].filter(s => now - s.t < 300).map(s => s.name);
+  const key = talk.join() + '|' + (VOICE.talking ? 1 : 0) + VOICE.mode;
+  if (el._k === key) return; el._k = key;
+  el.innerHTML = (VOICE.mode !== 'off' ? `<div class="vh me${VOICE.talking ? ' on' : ''}">${VOICE.mode === 'ptt' ? 'PUSH TO TALK · ' + (usingPad() ? 'D-PAD LEFT' : 'V') : 'OPEN MIC'}</div>` : '') + talk.map(n => `<div class="vh on">${chatEsc(n)}</div>`).join('');
+}
+setInterval(() => { try { voiceHud(); for (const [k, s] of VOICE.spk) if (performance.now() - s.t > 60000) { try { s.dec.close(); } catch (e) {} VOICE.spk.delete(k); } } catch (e) {} }, 120);
+if (VOICE.mode !== 'off') setTimeout(() => voiceStart(), 1500);
+(() => {
+  const hud = document.getElementById('hud') || document.body, d = document.createElement('div'); d.id = 'voiceHud'; hud.appendChild(d);
+  const s = document.createElement('style');
+  s.textContent = `#voiceHud{position:absolute;left:28px;top:84px;display:flex;flex-direction:column;gap:4px;pointer-events:none}
+#voiceHud .vh{font-size:12px;font-weight:700;letter-spacing:.06em;color:#fff;text-shadow:0 0 2px #000,0 1px 2px #000;padding:3px 8px 3px 22px;background:rgba(0,0,0,.4);position:relative;width:fit-content}
+#voiceHud .vh::before{content:"";position:absolute;left:8px;top:50%;width:8px;height:8px;margin-top:-4px;border-radius:50%;background:#777}#voiceHud .vh.on::before{background:#2fd16a;box-shadow:0 0 6px #2fd16a}
+#voiceHud .vh.me{color:#d8d8d8;font-weight:600}`;
+  document.head.appendChild(s);
+})();
+/* ================================================================== pause menu CHAT / VOICE panel + lobby party chat
+   Everything here is buttons, sliders and text boxes the controller can reach (A on a text box opens the on-screen
+   keyboard), so chat and voice work without a keyboard or mouse. */
+const PZV = { tab: 'chat' };
+function commsPlayers() {
+  const out = [];
+  try { if (M && M.online) for (const en of M.entries) if (en.netPeer && !en.botLabel && en.name) out.push(en.name); } catch (e) {}
+  try { if (typeof PARTY !== 'undefined' && PARTY.room) for (const m of partyMembers()) if (!m.me && m.name && !out.includes(m.name)) out.push(m.name); } catch (e) {}
+  return out.slice(0, 16);
+}
+function renderPauseSide() {
+  const el = $('pzSide'); if (!el) return;
+  const party = typeof PARTY !== 'undefined' && PARTY.room, players = commsPlayers();
+  const tabs = `<div class="pz-tabs"><button class="pz-tab${PZV.tab === 'chat' ? ' on' : ''}" data-act="pz-tab-chat">CHAT</button><button class="pz-tab${PZV.tab === 'voice' ? ' on' : ''}" data-act="pz-tab-voice">VOICE CHAT</button></div>`;
+  let body = '';
+  if (PZV.tab === 'chat') {
+    body = `<div class="pz-chat" id="pzChatLog">${chatLinesHtml(14)}</div>
+<div class="pz-row"><button class="btn mini" data-act="pz-ch">${CHAT.ch === 'party' && party ? 'PARTY' : 'ALL'}</button><input id="pzChatIn" maxlength="90" placeholder="Type a message" autocomplete="off"><button class="btn mini primary" data-act="pz-send">SEND</button></div>
+<div class="pz-qc">${QUICK_CHAT.map((q, i) => `<button class="btn mini" data-act="qc-${i}">${q}</button>`).join('')}</div>
+<div class="pz-row"><span>MATCH CHAT</span><button class="btn mini" data-act="pz-chatmode">${{ on: 'ON', party: 'PARTY ONLY', off: 'OFF' }[CHAT.mode]}</button></div>`;
+  } else {
+    const sup = voiceSupported();
+    body = `${!sup ? '<div class="pz-note">Voice chat needs the desktop app.</div>' : VOICE.err ? `<div class="pz-note">${VOICE.err}</div>` : ''}
+<div class="pz-row modes">${[['off', 'OFF'], ['ptt', 'PUSH TO TALK'], ['open', 'OPEN MIC']].map(([k, n]) => `<button class="btn mini${VOICE.mode === k ? ' primary on' : ''}" data-act="vc-${k}">${n}</button>`).join('')}</div>
+<div class="pz-note">${VOICE.mode === 'ptt' ? 'Hold V (keyboard) or D-PAD LEFT (controller) to talk.' : VOICE.mode === 'open' ? 'Your mic sends whenever you speak louder than the sensitivity.' : 'Turn voice on to hear and talk to the other players.'}</div>
+<label class="pz-sl">VOICE VOLUME <b id="vcVolV">${VOICE.vol}</b><input type="range" id="vcVol" min="0" max="100" value="${VOICE.vol}"></label>
+<label class="pz-sl">MIC SENSITIVITY <b id="vcSensV">${VOICE.sens}</b><input type="range" id="vcSens" min="0" max="100" value="${VOICE.sens}"></label>
+<div class="pz-meter"><i id="vcMeter"></i></div>`;
+  }
+  const mutes = players.length ? `<div class="pz-h">PLAYERS · MUTE TURNS OFF THEIR VOICE AND CHAT</div><div class="pz-pl">${players.map((n, i) => { const m = VOICE.muted.has(n) || CHAT.muted.has(n); return `<button class="btn mini${m ? ' on' : ''}" data-act="vm-${i}">${chatEsc(n)} · ${m ? 'MUTED' : 'MUTE'}</button>`; }).join('')}</div>` : '';
+  el.innerHTML = tabs + body + mutes; el._players = players;
+  const vv = $('vcVol'), vs = $('vcSens');
+  if (vv) vv.oninput = () => { VOICE.vol = +vv.value; $('vcVolV').textContent = vv.value; voiceSave(); };
+  if (vs) vs.oninput = () => { VOICE.sens = +vs.value; $('vcSensV').textContent = vs.value; voiceSave(); };
+}
+setInterval(() => { const m = $('vcMeter'); if (m && curScreen === 'pause') m.style.width = (VOICE.on ? Math.min(100, VOICE.level * 100) : 0).toFixed(0) + '%'; }, 80);
+function commsAct(act) {
+  const keep = sel => { renderPauseSide(); try { renderLobChat(); } catch (e) {} focusFirst(sel); };
+  if (act === 'pz-tab-chat' || act === 'pz-tab-voice') { PZV.tab = act.slice(7); keep(`[data-act="${act}"]`); return true; }
+  if (act === 'pz-send') { const i = $('pzChatIn'); if (i) { chatSend(i.value, CHAT.ch); i.value = ''; } keep('[data-act="pz-send"]'); return true; }
+  if (act === 'pz-ch') { CHAT.ch = CHAT.ch === 'party' ? 'all' : 'party'; keep('[data-act="pz-ch"]'); return true; }
+  if (act === 'pz-chatmode') { CHAT.mode = { on: 'party', party: 'off', off: 'on' }[CHAT.mode]; chatSave(); keep('[data-act="pz-chatmode"]'); return true; }
+  if (/^qc-\d$/.test(act)) { chatSend(QUICK_CHAT[+act.slice(3)], curScreen === 'lobby' ? 'party' : CHAT.ch); keep(`[data-act="${act}"]`); return true; }
+  if (/^lqc-\d$/.test(act)) { chatSend(QUICK_CHAT[+act.slice(4)], 'party'); keep(`[data-act="${act}"]`); return true; }
+  if (act === 'lob-send') { const i = $('lobChatIn'); if (i) { chatSend(i.value, 'party'); i.value = ''; } keep('[data-act="lob-send"]'); return true; }
+  if (/^vc-(off|ptt|open)$/.test(act)) { voiceSetMode(act.slice(3)); setTimeout(() => keep(`[data-act="${act}"]`), 300); return true; }
+  if (/^vm-\d+$/.test(act)) { const n = ($('pzSide')._players || [])[+act.slice(3)]; if (n) { const on = !(VOICE.muted.has(n) || CHAT.muted.has(n)); for (const s of [VOICE.muted, CHAT.muted]) on ? s.add(n) : s.delete(n); voiceSave(); chatSave(); } keep(`[data-act="${act}"]`); return true; }
+  return false;
+}
+// the lobby's party chat box (desktop app)
+function lobChatHtml() {
+  return `<div class="lob-chat"><div class="pz-h">PARTY CHAT</div><div class="pz-chat" id="lobChatLog">${chatLinesHtml(8, 'party')}</div>
+<div class="pz-row"><input id="lobChatIn" maxlength="90" placeholder="Message your party" autocomplete="off"><button class="btn mini primary" data-act="lob-send">SEND</button></div>
+<div class="pz-qc">${QUICK_CHAT.slice(0, 4).map((q, i) => `<button class="btn mini" data-act="lqc-${i}">${q}</button>`).join('')}</div></div>`;
+}
+function renderLobChat() { const l = $('lobChatLog'); if (l) l.innerHTML = chatLinesHtml(8, 'party'); }
+(() => {
+  const s = document.createElement('style');
+  s.textContent = `#pause{display:grid!important;grid-template-columns:minmax(260px,320px) minmax(320px,460px);grid-auto-rows:min-content;justify-content:center;align-content:center;column-gap:40px}
+#pause.hide{display:none!important}#pause>.big,#pause>.sub{grid-column:1}#pause>.btn{grid-column:1;width:100%;margin:6px 0}
+.pz-side{grid-column:2;grid-row:1/span 8;align-self:start;text-align:left;display:flex;flex-direction:column;gap:10px;padding:14px;border:1px solid rgba(255,255,255,.18);background:rgba(10,12,13,.82);min-width:0}
+.pz-tabs{display:flex;gap:4px}.pz-tab{flex:1;pointer-events:auto;cursor:pointer;font:700 12px inherit;font-family:inherit;letter-spacing:.16em;padding:10px;border:0;border-bottom:3px solid transparent;background:rgba(255,255,255,.04);color:#cfcfcf}
+.pz-tab.on,.pz-tab:focus{outline:0;color:#fff;border-bottom-color:var(--accent)}
+.pz-chat{height:200px;overflow:auto;display:flex;flex-direction:column;justify-content:flex-end;background:rgba(0,0,0,.35);padding:6px;border:1px solid rgba(255,255,255,.08)}
+.pz-row{display:flex;gap:6px;align-items:center}.pz-row input{flex:1;min-width:0;background:rgba(0,0,0,.5);border:1px solid rgba(255,255,255,.3);color:#fff;font:14px inherit;font-family:inherit;padding:9px 10px;pointer-events:auto}.pz-row span{flex:1;font-size:12px;letter-spacing:.14em;color:#d8d8d8}
+.pz-side .btn.mini,.lob-chat .btn.mini{width:auto;min-width:0;margin:0;padding:8px 12px;font-size:12px;letter-spacing:.06em}
+.pz-qc{display:flex;flex-wrap:wrap;gap:6px}.pz-row.modes .btn{flex:1}.pz-side .btn.on{background:rgba(224,180,74,.2);color:#fff}
+.pz-note{font-size:12px;line-height:1.45;color:#d8d8d8}.pz-h{font-size:11px;letter-spacing:.2em;color:var(--accent)}
+.pz-sl{display:flex;flex-wrap:wrap;align-items:center;gap:4px 10px;font-size:12px;letter-spacing:.12em;color:#fff}.pz-sl b{margin-left:auto}.pz-sl input{flex-basis:100%;pointer-events:auto;accent-color:var(--accent)}
+.pz-meter{height:6px;background:rgba(255,255,255,.12)}.pz-meter i{display:block;height:100%;width:0;background:#2fd16a;transition:width .08s}
+.pz-pl{display:flex;flex-wrap:wrap;gap:6px}
+.lob-chat{margin-top:10px;display:flex;flex-direction:column;gap:8px;padding:12px;border:1px solid var(--line);background:rgba(0,0,0,.42)}.lob-chat .pz-chat{height:120px}
+@media (max-width:820px){#pause{grid-template-columns:1fr}.pz-side{grid-column:1;grid-row:auto}}`;
   document.head.appendChild(s);
 })();
 /* ================================================================== match start: loading screen + class pick freeze
@@ -9396,13 +9695,15 @@ function progMatchXP(won, partial) {
   if (!sum) return null;
   const before = PROG.xp; PROG.xp = Math.min(XP_AT[MAXLVL], PROG.xp + sum);
   const g = grantLevels(before, PROG.xp), bp = typeof bpGain === 'function' ? bpGain(sum) : null;
-  PROG.lastGain = { xp: sum, rows, before, after: PROG.xp, from: g.from, to: g.to, dz: g.dz, items: g.items, bp, t: Date.now() };
+  // DZ for every finished match: 40, +2 a kill (up to +40), +30 for a win, online +25%
+  const mdz = partial ? 0 : Math.round((40 + Math.min(40, MS.kills * 2) + (won === 1 ? 30 : 0)) * (online ? 1.25 : 1)); PROG.dz += mdz;
+  PROG.lastGain = { xp: sum, rows, before, after: PROG.xp, from: g.from, to: g.to, dz: g.dz, mdz, items: g.items, bp, t: Date.now() };
   saveProg(); return PROG.lastGain;
 }
 function progResultsHtml(gain) {
   if (!gain) return '';
   const a = lvlInfo(gain.before), b = lvlInfo(gain.after), up = gain.to > gain.from;
-  return `<div class="pg-res"><div class="pg-res-h"><b>+${gain.xp.toLocaleString()} XP</b>${up ? `<em>LEVEL UP · ${gain.from} → ${gain.to}</em>` : ''}</div>
+  return `<div class="pg-res"><div class="pg-res-h"><b>+${gain.xp.toLocaleString()} XP</b>${gain.mdz ? `<em class="pg-mdz">${dzIcon()}+${gain.mdz} DZ</em>` : ''}${up ? `<em>LEVEL UP · ${gain.from} → ${gain.to}</em>` : ''}</div>
 <div class="pg-res-bar"><span class="pg-lv">${b.l}</span><div class="pg-bar"><i style="width:${(up ? 0 : a.frac) * 100}%"></i><s style="width:${b.frac * 100}%"></s></div><span class="pg-lv nx">${Math.min(MAXLVL, b.l + 1)}</span></div>
 <div class="pg-res-rows">${gain.rows.map(r => `<span>${r[0]}<b>+${r[1].toLocaleString()}</b></span>`).join('')}</div>
 ${up ? `<div class="pg-res-up">+${gain.dz} DZ${gain.items.map(id => ` · <i style="color:${RAR[COS[id].r].col}">${COS[id].name}</i> UNLOCKED`).join('')}</div>` : ''}${gain.bp && typeof bpResultsHtml === 'function' ? bpResultsHtml(gain.bp) : ''}</div>`;
@@ -10411,10 +10712,12 @@ function oskPad(press) {
   document.head.appendChild(s);
   // a clear gold ring on whatever the controller / arrow keys are on; the mouse turns it off again
   const r = document.createElement('style');
-  r.textContent = `body.padnav button:focus,body.padnav .sw:focus,body.padnav input:focus{outline:2px solid var(--accent)!important;outline-offset:2px;box-shadow:0 0 0 4px rgba(224,180,74,.18),0 0 18px rgba(224,180,74,.25)}`;
+  r.textContent = `body.padnav,body.padnav *{cursor:none!important}
+body.padnav button:focus,body.padnav .sw:focus,body.padnav input:focus{outline:2px solid var(--accent)!important;outline-offset:2px;box-shadow:0 0 0 4px rgba(224,180,74,.18),0 0 18px rgba(224,180,74,.25)}`;
   document.head.appendChild(r);
   addEventListener('mousemove', e => { if (Math.abs(e.movementX) + Math.abs(e.movementY) > 3) document.body.classList.remove('padnav'); });
-  addEventListener('keydown', e => { if (/^Arrow|^Tab$/.test(e.code)) document.body.classList.add('padnav'); });
+  addEventListener('keydown', e => { if (/^Arrow|^Tab$/.test(e.code) && curScreen) document.body.classList.add('padnav'); else inputMode('kb'); });
+  addEventListener('mousedown', () => inputMode('kb')); addEventListener('wheel', () => inputMode('kb'), { passive: true });
 })();
 /* ================================================================== UI: screens, settings, input, loop, boot */
 const SCREENS = ['menu', 'settings', 'howto', 'credits', 'pause', 'over', 'bench', 'loadout', 'lobby', 'custom', 'career', 'results', 'plobby', 'streaks', 'modes', 'playlist', 'classpick', 'leaderboard', 'replay', 'locker', 'rewards', 'bpass'];
@@ -10606,6 +10909,7 @@ function updateDiffUI() { $('diffVal').textContent = diff().name; }
 function cycleDiff(d) { const ks = Object.keys(DIFFS); S.difficulty = ks[(ks.indexOf(S.difficulty) + d + ks.length) % ks.length]; updateDiffUI(); saveSettings(); sfx.ui(); if (curTab === 'GAMEPLAY') renderSettings(); if (curScreen === 'lobby') renderLobby('.cod-row [data-act="diff' + (d > 0 ? '+' : '-') + '"]'); }
 
 function actions(act) {
+  if (/^(qc-|lqc-|pz-|vc-|vm-|lob-send$)/.test(act) && typeof commsAct === 'function' && commsAct(act)) return;
   if (/^(bp-|bpass$)/.test(act) && typeof bpAct === 'function' && bpAct(act)) return;
   if (/^(lk-|rw-|locker$|rewards$)/.test(act) && typeof lockerAct === 'function' && lockerAct(act)) return;
   switch (act) {
@@ -10722,6 +11026,11 @@ function adsSensMul() { const w = WEAPONS[G.cur], o = (w && w.overlay) || 0; ret
 let bindCapture = null, padCapture = null;   // Settings > KEYBINDS: waiting for the key to assign
 addEventListener('keydown', e => {
   if (bindCapture) { e.preventDefault(); const f = bindCapture; bindCapture = null; if (e.code !== 'Escape') f(e.code); else renderSettings(); return; }
+  if (typeof chatKey === 'function' && chatKey(e)) return;   // typing in the chat box
+  if (e.target && e.target.id === 'pzChatIn') { if (e.code === 'Enter') { e.preventDefault(); commsAct('pz-send'); } else if (e.code === 'Escape') e.target.blur(); return; }
+  if (e.target && e.target.id === 'lobChatIn') { if (e.code === 'Enter') { e.preventDefault(); chatSend(e.target.value, 'party'); e.target.value = ''; } return; }
+  if (e.code === 'KeyV' && !e.repeat && !(e.target && e.target.tagName === 'INPUT')) VOICE.ptt = true;
+  if ((e.code === 'Enter' || e.code === 'NumpadEnter') && G.state === 'playing' && !curScreen) { e.preventDefault(); chatOpen(); return; }
   keys[e.code] = true;
   if (G.state === 'deathcam') { if (G.dc && G.dc.t > 0.6 && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) finishDeath(); return; }
   if ((G.state === 'respawning' || G.state === 'spectate') && e.code === 'Escape') { pauseGame(); return; }
@@ -10746,7 +11055,7 @@ addEventListener('keydown', e => {
   const c = e.code;
   if (c === bind('reload')) startReload();
   if (c === bind('inspect') && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
-  if (c === bind('grenade')) throwGrenade();
+  if (c === bind('grenade') && !e.repeat) nadeHold(true);
   if (c === bind('melee')) melee();
   if (c === bind('streak')) stkUse();
   if (c === bind('prim')) switchWeapon(0);
@@ -10754,7 +11063,7 @@ addEventListener('keydown', e => {
   if (c === bind('swap')) cycleWeapon(1);
   if (c === 'Space' || c.startsWith('Arrow') || c === 'Tab' || c === bind('jump')) e.preventDefault();
 });
-addEventListener('keyup', e => { keys[e.code] = false; });
+addEventListener('keyup', e => { if (e.code === 'KeyV') VOICE.ptt = false; if (CHAT.open) return; keys[e.code] = false; if (e.code === bind('grenade')) nadeHold(false); });
 addEventListener('blur', () => { if (G.bench || G.look) return; for (const k in keys) keys[k] = false; mouseDown = false; if (!S.toggleAds) mouseAds = false; pad.crouch = false; pauseGame(); });
 addEventListener('mousedown', e => {
   if (G.state === 'deathcam') { if (G.dc && G.dc.t > 0.6) finishDeath(); return; }
@@ -10825,7 +11134,9 @@ function pollPad(dt) {
   const [mx, my, mm] = stick(rawL[0], rawL[1], padCal.l), [lx, ly, lm] = stick(rawR[0], rawR[1], padCal.r);
   pad.mx = mx; pad.my = my; pad.mm = mm; pad.lx = lx; pad.ly = ly; pad.lm = lm;
   if (padCapture) { for (let i = 0; i < gp.buttons.length; i++) if (press(i) && i !== 9) { const f = padCapture; padCapture = null; f(i); break; } prevBtn = gp.buttons.map(b => b.pressed); return; }
-  const playing = G.state === 'playing';
+  // a screen open over a running match (the class pick before it starts) is a menu: the pad drives it, not the soldier
+  const playing = G.state === 'playing' && !curScreen;
+  if (gp.buttons.some(b => b.pressed) || Math.hypot(rawL[0], rawL[1]) > 0.4 || Math.hypot(rawR[0], rawR[1]) > 0.4) inputMode('pad');
   if (G.state === 'deathcam') { if ((press(0) || press(9)) && G.dc && G.dc.t > 0.6) finishDeath(); prevBtn = gp.buttons.map(b => b.pressed); return; }
   if (press(9)) { if (playing || G.state === 'respawning' || G.state === 'spectate') pauseGame(); else if (G.state === 'paused') resumeGame(); else if (curScreen === 'lobby') actions('lob-start'); else if (curScreen === 'menu') toLobby(); else if (G.state === 'dead') restartMatch(); }
   pad.board = down(pb('board')); pad.use = playing && down(pb('reload'));
@@ -10842,7 +11153,8 @@ function pollPad(dt) {
     if (S.padCrouch === 'hold') pad.crouch = down(pb('crouch')); else if (press(pb('crouch'))) pad.crouch = !pad.crouch;
     if (press(pb('reload')) && !G.interactTxt) startReload();
     if (press(pb('swap'))) cycleWeapon(1);
-    if (press(pb('grenade'))) throwGrenade();
+    VOICE.ptt = down(14);   // push to talk: D-pad left
+    if (press(pb('grenade'))) nadeHold(true); else if (!down(pb('grenade')) && prevBtn[pb('grenade')]) nadeHold(false);
     if (press(pb('inspect')) && !G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6;
     if (press(pb('melee'))) melee();
     if (press(pb('streak'))) stkUse();
@@ -11094,7 +11406,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

@@ -1,6 +1,7 @@
 {
  "version": "1.2.18",
  "notes": [
+  "THE FREE SPEECH UPDATE",
   "CONTROLLER: pick your class with the controller before the match starts; the mouse cursor hides while you use a controller and comes back as soon as you touch the mouse or keyboard; button prompts show controller buttons",
   "TEXT CHAT: Enter to chat in a match (Tab switches ALL / PARTY), party chat in the lobby, quick-chat buttons, mute players. Match chat clears when the next match starts",
   "VOICE CHAT (desktop app): push to talk (V / D-pad left) or open mic, with volume, mic sensitivity and muting in the new pause menu panel",
