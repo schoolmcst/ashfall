@@ -49,6 +49,7 @@ for arch in arm64 x64; do
 import plistlib,sys
 p=sys.argv[1]; d=plistlib.load(open(p,'rb'))
 d['CFBundleName']='ASHFALL'; d['CFBundleDisplayName']='ASHFALL'; d['CFBundleIdentifier']='com.schoolmcst.ashfall'
+d['NSMicrophoneUsageDescription']='DARKZONE uses your microphone for voice chat with other players.'   # without this macOS never lets the app use the mic
 plistlib.dump(d, open(p,'wb'))
 PY
   cp "$HERE/README-Mac.txt" "$M/READ ME FIRST.txt"
