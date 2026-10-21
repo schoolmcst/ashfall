@@ -1,11 +1,11 @@
 {
- "version": "1.2.26",
+ "version": "1.2.27",
  "notes": [
-  "CAMO GRIND: every gun now has its own camo challenges - open the LOCKER, pick a gun and go to CHALLENGES. 8 military camos per gun, then GOLD, DIAMOND (whole class) and NOVA (every gun)",
-  "BOT LOADOUTS: bots carry real guns that fit their job, with random attachments and camos - you see them in their hands, the kill feed names the gun, and each gun fights like the real thing (suppressed bots show no tracers)",
-  "PLAY-PROOFING: you can no longer jump onto the Stackyard container tops from the tower, walk the Killhouse wall tops from the platform, or jump from the Whiteout radar deck onto the lab roof",
-  "FIXES: the main-menu NEWS now shows the latest patch notes; the top menu tabs all fit on smaller screens; private matches can't be set to a retired map; brand-new players no longer get an old update's splash screen; bots stutter less finding their way onto roofs and ridges"
+  "GOLD AND DIAMOND ARE EARNED NOW: the only gold and diamond camos left are GOLD and DIAMOND from the camo grind (Locker > pick a gun > CHALLENGES)",
+  "Removed from chance boxes: Rose Gold, Diamond, Honey Gold, Gold Scales, Camo Gold, Gold Circuit and Molten Gold. If you owned any, you got their full duplicate value back in DZ",
+  "Level 100 now gives DARKZONE ELITE (black with glowing orange facets) instead of Darkzone Gold - if you had Darkzone Gold, you now have Darkzone Elite",
+  "Battle pass: Quake Gold, Golden Ash and Tectonic Gold are now Quake Ember, White Ash and Tectonic Ember - anything you unlocked carries over"
  ],
- "sha256": "b9e704b70d185b91eb3f9850823b44f276dfa7ac3b74c1774a2be7c6979eab56",
+ "sha256": "5b120e1838ccfcf694dbb079c1080681a39a20f1fb143b7172e8815795c744ba",
  "minApp": "1.0.0"
 }

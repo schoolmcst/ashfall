@@ -1,6 +1,6 @@
 /* ================================================================== LEVELS, DZ, CAMOS & SKINS, LOCKER, REWARDS
    - Levels 1-100 from XP earned in matches (kills, headshots, objectives, finishing and winning; online x1.25)
-   - Every level pays DZ; every 5th level gives a gun STICKER; level 100 gives the DARKZONE GOLD skin
+   - Every level pays DZ; every 5th level gives a gun STICKER; level 100 gives the DARKZONE ELITE skin
    - Camos and the other skins only come from CHANCE BOXES (odds shown on screen), bought with DZ; duplicates pay
      DZ back. DZ is only ever earned in-game.
    - Camos (patterns), skins (finishes) and stickers are cosmetic only and work on every gun
@@ -16,7 +16,7 @@ const RAR = [
 ];
 // kind: camo = pattern, skin = finish. lvl: unlocked at that level, else found in chance boxes
 const COSM = [
-  // ---- DARKZONE GOLD is the max-level skin; everything else comes from chance boxes
+  // ---- DARKZONE ELITE is the max-level skin; everything else comes from chance boxes
   { id: 'woodland', name: 'WOODLAND', kind: 'camo', r: 0, g: { t: 'blobs', c: [0x4a5a32, 0x2f3b22, 0x6b6a3e, 0x1d211a] } },
   { id: 'desert', name: 'DESERT', kind: 'camo', r: 0, g: { t: 'blobs', c: [0xc2a878, 0x9c8158, 0xd8c49a, 0x6e5a3e] } },
   { id: 'arctic', name: 'ARCTIC', kind: 'camo', r: 0, g: { t: 'blobs', c: [0xdfe5ea, 0xb7c0c8, 0xf5f7f9, 0x8d98a3] } },
@@ -26,7 +26,6 @@ const COSM = [
   { id: 'blackops', name: 'BLACK OPS', kind: 'skin', r: 0, g: { t: 'solid', c: [0x16171a], fx: 'grain' }, m: { rough: 0.8, metal: 0.1 } },
   { id: 'tiger', name: 'TIGER STRIPE', kind: 'camo', r: 1, g: { t: 'tiger', c: [0x5d6a3c, 0x1c2216, 0x8a8250] } },
   { id: 'hexolive', name: 'HEX OLIVE', kind: 'camo', r: 1, g: { t: 'hex', c: [0x3e4a2c, 0x4f5c37, 0x5f6b42, 0x2b3320], line: 0x1d2416 } },
-  { id: 'rosegold', name: 'ROSE GOLD', kind: 'skin', r: 3, g: { t: 'solid', c: [0xd8957a], fx: 'engrave' }, m: { rough: 0.18, metal: 1 } },
   { id: 'cobalt', name: 'COBALT', kind: 'skin', r: 1, g: { t: 'solid', c: [0x1f4fa8], fx: 'brushed' }, m: { rough: 0.3, metal: 0.75 } },
   { id: 'redtiger', name: 'RED TIGER', kind: 'camo', r: 1, g: { t: 'tiger', c: [0x8e1d16, 0x1a0b09, 0xc24a2a] } },
   { id: 'digurban', name: 'DIGITAL URBAN', kind: 'camo', r: 1, g: { t: 'digital', c: [0x80858b, 0x55595f, 0xb0b4b8, 0x2d3034] } },
@@ -36,7 +35,7 @@ const COSM = [
   { id: 'icemarble', name: 'ICE MARBLE', kind: 'skin', r: 2, g: { t: 'marble', c: [0xdfeef6, 0x7fb8d8], vein: 0.06 }, m: { rough: 0.15, metal: 0.1 } },
   { id: 'chrome', name: 'CHROME', kind: 'skin', r: 2, g: { t: 'solid', c: [0xd6dbe0], fx: 'bands' }, m: { rough: 0.06, metal: 1 } },
   { id: 'obsidian', name: 'OBSIDIAN', kind: 'skin', r: 2, g: { t: 'solid', c: [0x0b0b0e], fx: 'bands' }, m: { rough: 0.08, metal: 0.5 } },
-  { id: 'dzgold', name: 'DARKZONE GOLD', kind: 'skin', r: 3, lvl: 100, g: { t: 'solid', c: [0xe9b949], fx: 'engrave' }, m: { rough: 0.14, metal: 1 } },
+  { id: 'dzelite', name: 'DARKZONE ELITE', kind: 'skin', r: 3, lvl: 100, g: { t: 'facets', c: [0x14161a, 0xff5a14] }, m: { rough: 0.12, metal: 0.6, anim: 'pulse', emis: 1.4 } },
   { id: 'jungle', name: 'JUNGLE', kind: 'camo', r: 0, g: { t: 'blobs', c: [0x2c4a26, 0x1b2e17, 0x46663a, 0x0f1a0d] } },
   { id: 'night', name: 'NIGHT OPS', kind: 'camo', r: 0, g: { t: 'blobs', c: [0x2a3346, 0x1a2130, 0x3e4a63, 0x0e121b] } },
   { id: 'dwoods', name: 'DIGITAL WOODS', kind: 'camo', r: 0, g: { t: 'digital', c: [0x4c5a34, 0x323d24, 0x6f7448, 0x1f241a] } },
@@ -53,7 +52,6 @@ const COSM = [
   { id: 'hexneon', name: 'NEON HEX', kind: 'camo', r: 2, g: { t: 'hex', c: [0x0d1117, 0x111821, 0x16202b, 0x0a0d12], line: 0x2ee6ff, glowLine: true }, m: { rough: 0.35, metal: 0.4, anim: 'pulse', emis: 2.4 } },
   { id: 'toxic', name: 'TOXIC', kind: 'camo', r: 2, g: { t: 'splinter', c: [0x1c2318, 0x2a3324, 0x0f130d, 0x7dff3a], glowIdx: 3 }, m: { rough: 0.5, metal: 0.1, anim: 'pulse', emis: 1.8 } },
   { id: 'magma', name: 'MAGMA', kind: 'skin', r: 2, g: { t: 'marble', c: [0x1a1412, 0x2c211c], glow: 0xff7a1a, vein: 0.09 }, m: { rough: 0.6, metal: 0.1, emis: 1.8 } },
-  { id: 'diamond', name: 'DIAMOND', kind: 'skin', r: 3, g: { t: 'facets', c: [0x1d4f7a, 0xe6f6ff] }, m: { rough: 0.06, metal: 0.25, anim: 'twinkle', emis: 1.5 } },
   { id: 'plasma', name: 'PLASMA', kind: 'skin', r: 3, g: { t: 'plasma', c: [0x1a0638, 0x7a2cff, 0xff3cf0] }, m: { rough: 0.3, metal: 0.2, anim: 'scroll', emis: 2.0 } },
   { id: 'circuit', name: 'CIRCUIT', kind: 'skin', r: 3, g: { t: 'circuit', c: [0x0a1410, 0x39ff9c] }, m: { rough: 0.35, metal: 0.4, anim: 'scroll', emis: 2.6 } },
   { id: 'void', name: 'VOID', kind: 'skin', r: 3, g: { t: 'stars', c: [0x05040b, 0xffffff], dense: 0.012, nebula: 0x3a1c7a }, m: { rough: 0.25, metal: 0.3, anim: 'twinkle', emis: 2.0 } },
@@ -81,14 +79,14 @@ const CAMO_PACK = [
   ['TOPO RED', 'topo', 1, [0x6a1e1a, 0xe0a080, 0x8a2a22]], ['TOPO BLUE', 'topo', 1, [0x1a2f4a, 0x8ec5ff, 0x24406a]], ['BRUSH RED', 'brush', 1, [0x7a1c18, 0x4a100d, 0xa63326, 0x220807]],
   ['BRUSH BLUE', 'brush', 1, [0x1f3b63, 0x132640, 0x2f5a94, 0x0b1525]], ['PINK DIGITAL', 'digital', 1, [0xf0b6c8, 0xd6829f, 0xfbe2ea, 0x9c4d66]], ['LIME DIGITAL', 'digital', 1, [0x9fd13a, 0x6a9a1e, 0xc8ef6a, 0x3a5a0e]],
   ['AQUA FADE', 'fade', 1, [0x1fa3a3, 0x8a3ad6]], ['FIRE FADE', 'fade', 1, [0xd62e1f, 0xf2c230]], ['POLKA', 'dots', 1, [0x151515, 0xf2f2f2]],
-  ['CRACKED ICE', 'cracked', 1, [0xcfeaf7, 0x5aa6cf, 0xeaf7ff]], ['HONEY GOLD', 'honey', 1, [0xd99a2b, 0xf2c25a, 0x6a4210], {}, { rough: 0.3, metal: 0.6 }], ['GRAPHITE HONEY', 'honey', 1, [0x3a3d42, 0x5a5e64, 0x1a1c1f], {}, { rough: 0.35, metal: 0.6 }],
+  ['CRACKED ICE', 'cracked', 1, [0xcfeaf7, 0x5aa6cf, 0xeaf7ff]], ['GRAPHITE HONEY', 'honey', 1, [0x3a3d42, 0x5a5e64, 0x1a1c1f], {}, { rough: 0.35, metal: 0.6 }],
   ['NEON WAVES', 'waves', 2, [0x0b0d1a, 0x1a1f3a, 0x00e5ff], { glowIdx: 2 }, { anim: 'scroll', emis: 2 }], ['NEON STRIPES', 'stripes', 2, [0x0b0b10, 0xff2fd6], { glowIdx: 1 }, { anim: 'pulse', emis: 2 }],
   ['LAVA CRACK', 'cracked', 2, [0x1a0d08, 0xff6a14, 0x2a140c], { glow: 1 }, { anim: 'pulse', emis: 2.2 }], ['TOXIC HONEY', 'honey', 2, [0x111a10, 0x1c2a1a, 0x7dff3a], { glow: 1 }, { anim: 'pulse', emis: 2 }],
   ['CYBER TRI', 'tri', 2, [0x0d1220, 0x16203a, 0x1f2d52, 0x00b8d9]], ['GLITCH', 'glitch', 2, [0x0b0c10, 0x1a1d26, 0xff2fd6, 0x00e5ff], { glow: 1 }, { anim: 'scroll', emis: 2 }],
   ['RGB GLITCH', 'glitch', 2, [0x0d0d0d, 0xff3030, 0x30ff60, 0x3080ff], { glow: 1 }, { emis: 1.8 }], ['SYNTHWAVE', 'fade', 2, [0xff2fd6, 0x2a1aa8], { glow: 1 }, { anim: 'scroll', emis: 1.2 }],
   ['AURORA', 'fade', 2, [0x1fd6a3, 0x5a2ad6], { glow: 1 }, { anim: 'scroll', emis: 1.2 }], ['TOPO NEON', 'topo', 2, [0x07120f, 0x39ff9c, 0x0d1f1a], { glow: 1 }, { anim: 'pulse', emis: 2.2 }],
-  ['GOLD SCALES', 'scales', 2, [0xe6b84a, 0xa07820, 0x5a3e0a], {}, { rough: 0.22, metal: 0.85 }], ['DRAGON FLECK', 'fleck', 2, [0x5a0f0c, 0xc23a18, 0xf2b84b, 0x220504]],
-  ['CAMO GOLD', 'multicam', 2, [0xc9a24a, 0x8a6a24, 0x5e4614, 0xf2d27a], {}, { rough: 0.3, metal: 0.7 }], ['CHROME TIGER', 'zebra', 2, [0xdfe4e8, 0x2a2d31], {}, { rough: 0.1, metal: 0.9 }],
+  ['DRAGON FLECK', 'fleck', 2, [0x5a0f0c, 0xc23a18, 0xf2b84b, 0x220504]],
+  ['CHROME TIGER', 'zebra', 2, [0xdfe4e8, 0x2a2d31], {}, { rough: 0.1, metal: 0.9 }],
   ['BLOOD SPLAT', 'splat', 2, [0x1a1a1a, 0x8e0f12, 0xc21a1f]], ['MIDNIGHT DOTS', 'dots', 2, [0x0b0f1f, 0x7fa8ff], { glow: 1 }, { anim: 'twinkle', emis: 1.8 }],
   ['ARCTIC CRACK', 'cracked', 2, [0xeaf4fa, 0x4aa8e0, 0xd0e6f2], { glow: 1 }, { anim: 'pulse', emis: 1.4 }], ['DUNE HONEY', 'honey', 2, [0xb89a6a, 0xd2b98a, 0x5a4428]],
   ['COBRA', 'scales', 2, [0x2a4a1a, 0x1a2e10, 0xd9c23a]], ['NEON BRUSH', 'brush', 2, [0x0d0d14, 0x2a1a44, 0xff2fd6, 0x00e5ff]],
@@ -96,8 +94,8 @@ const CAMO_PACK = [
   ['PRISM', 'holo', 3, [0x000000], { dark: 0 }, { anim: 'scroll', emis: 1.3, rough: 0.12, metal: 0.6 }], ['BLACK HOLO', 'holo', 3, [0x050505], { dark: 0.55 }, { anim: 'scroll', emis: 1.4, rough: 0.15, metal: 0.6 }],
   ['SOLAR FLARE', 'plasma', 3, [0x2a0600, 0xff5a14, 0xffe14d], {}, { anim: 'scroll', emis: 2 }], ['OCEANIC', 'plasma', 3, [0x021a2a, 0x0aa3c4, 0x9ef0ff], {}, { anim: 'scroll', emis: 2 }],
   ['VENOM', 'plasma', 3, [0x061a06, 0x39d61a, 0xc8ff3a], {}, { anim: 'scroll', emis: 2 }], ['NEON CIRCUIT', 'circuit', 3, [0x0a0612, 0xff2fd6], {}, { anim: 'scroll', emis: 2.6 }],
-  ['GOLD CIRCUIT', 'circuit', 3, [0x120d04, 0xf2c14e], {}, { anim: 'scroll', emis: 2.2, metal: 0.6 }], ['STARFALL', 'stars', 3, [0x05060f, 0xffffff], { dense: 0.02, nebula: 0x1a4a8a }, { anim: 'twinkle', emis: 2 }],
-  ['MOLTEN GOLD', 'marble', 3, [0x3a2a0a, 0x6a4e14], { glow: 0xffd23f, vein: 0.12 }, { anim: 'scroll', emis: 2, metal: 0.5 }], ['FROSTBITE', 'facets', 3, [0x3a6f9a, 0xf2fbff], {}, { anim: 'twinkle', emis: 1.4, rough: 0.05, metal: 0.5 }],
+  ['STARFALL', 'stars', 3, [0x05060f, 0xffffff], { dense: 0.02, nebula: 0x1a4a8a }, { anim: 'twinkle', emis: 2 }],
+  ['FROSTBITE', 'facets', 3, [0x3a6f9a, 0xf2fbff], {}, { anim: 'twinkle', emis: 1.4, rough: 0.05, metal: 0.5 }],
   ['EMERALD', 'facets', 3, [0x0e5a3a, 0x7af2c0], {}, { anim: 'twinkle', emis: 1.4, rough: 0.05, metal: 0.5 }], ['RUBY', 'facets', 3, [0x6a0a16, 0xff8aa0], {}, { anim: 'twinkle', emis: 1.4, rough: 0.05, metal: 0.5 }],
   ['OBSIDIAN FLAME', 'cracked', 3, [0x08080a, 0xff4a14, 0x18181c], { glow: 1 }, { anim: 'pulse', emis: 2.4 }],
 ];
@@ -113,7 +111,7 @@ for (const [name, t, c, gx, mx] of SECRET_PACK) COSM.push({ id: 'x_' + slug(name
 // PRIME: a universal version of each secret (any gun), half as likely, with a gold shimmer and a stronger glow
 for (const [name, t, c, gx, mx] of SECRET_PACK) COSM.push({ id: 'x_' + slug(name) + '_prime', name: name + ' PRIME', kind: 'camo', r: 5, secret: true, universal: true,
   g: Object.assign({ t, c, prime: true }, gx || {}), m: Object.assign({}, mx || {}, { emis: ((mx && mx.emis) || 1.5) * 1.35, metal: Math.min(1, ((mx && mx.metal) || 0.12) + 0.15) }) });
-// ---- gun STICKERS: one every 5 levels (level 100 is the DARKZONE GOLD skin above)
+// ---- gun STICKERS: one every 5 levels (level 100 is the DARKZONE ELITE skin above)
 const STICKER_DEFS = [
   [5, 'gg', 'GG', 0, 'text', ['#ffffff', '#16a34a'], 'GG'], [10, 'star', 'LONE STAR', 0, 'star', ['#f2c94c', '#8a5a00']], [15, 'bolt', 'LIGHTNING', 0, 'bolt', ['#ffe14d', '#1f2937']], [20, 'target', 'BULLSEYE', 0, 'target', ['#ef4444', '#ffffff']],
   [25, 'skull', 'SKULL', 1, 'skull', ['#f3f0e6', '#111111']], [30, 'ace', 'ACE OF SPADES', 1, 'spade', ['#111111', '#ffffff']], [35, 'beta', 'BETA TESTER', 1, 'text', ['#0b0c0d', '#e0b44a'], 'BETA'], [40, 'flame', 'FLAME', 1, 'flame', ['#ff5a14', '#ffd23f']], [45, 'shield', 'SHIELD', 1, 'shield', ['#2563eb', '#f8fafc']],
@@ -142,8 +140,8 @@ const BANNER_DEFS = [
   ['sunrise', 'SUNRISE', 1, 'rays', ['#ff8a3a', '#ffd23a']], ['ocean', 'DEEP WATER', 1, 'pat', ['#1f5f8b'], { pat: 'c_ocean_waves' }], ['split', 'TWO TONE', 1, 'split', ['#111111', '#e0b44a'], { em: ['ace', '#111111', '#ffffff'] }],
   ['hex', 'HIVE', 1, 'pat', ['#3a3d42'], { pat: 'c_honey_gold' }], ['grid', 'SYNTH GRID', 2, 'grid', ['#0b0614', '#ff2fd6', '#00e5ff']], ['inferno', 'INFERNO', 2, 'pat', ['#120605'], { pat: 'inferno', em: ['flame', '#ff5a14', '#ffd23f'] }],
   ['circuit', 'MAINFRAME', 2, 'pat', ['#0a1410'], { pat: 'circuit' }], ['royal', 'ROYALTY', 2, 'rays', ['#3a0a5a', '#e9b949'], { em: ['crown', '#f2b84b', '#b91c1c'] }],
-  ['galaxy', 'GALAXY', 3, 'stars', ['#05040b', '#ffffff', '#3a1c7a'], { em: ['eye', '#7c3aed', '#f5f3ff'] }], ['gold', 'GOLD STANDARD', 3, 'pat', ['#e9b949'], { pat: 'dzgold', em: ['dz', '#0b0c0d', '#e9b949'] }],
-  ['diamond', 'ICE COLD', 3, 'pat', ['#1d4f7a'], { pat: 'diamond', em: ['gem', '#7dd3fc', '#e0f2fe'] }], ['phoenix', 'REBIRTH', 3, 'rays', ['#ff4a0a', '#ffd23a'], { em: ['phoenix', '#ff6a1a', '#ffd23f'] }],
+  ['galaxy', 'GALAXY', 3, 'stars', ['#05040b', '#ffffff', '#3a1c7a'], { em: ['eye', '#7c3aed', '#f5f3ff'] }], ['gold', 'GOLD STANDARD', 3, 'pat', ['#e9b949'], { pat: 'g_gold', em: ['dz', '#0b0c0d', '#e9b949'] }],
+  ['diamond', 'ICE COLD', 3, 'pat', ['#1d4f7a'], { pat: 'g_diamond', em: ['gem', '#7dd3fc', '#e0f2fe'] }], ['phoenix', 'REBIRTH', 3, 'rays', ['#ff4a0a', '#ffd23a'], { em: ['phoenix', '#ff6a1a', '#ffd23f'] }],
 ];
 for (const [id, name, r, t, c, o] of BANNER_DEFS) COSM.push({ id: 'bn_' + id, name, kind: 'banner', r, free: !!(o && o.free), g: Object.assign({ t, c }, o || {}) });
 // ---- BATTLE PASS · SEASON 1: AFTERSHOCK. These only come from the pass (never from boxes). [name, tier, kind, pattern, rarity, colours, extra, material]
@@ -231,14 +229,14 @@ const BP_ITEMS = [
   ['MOLTEN CORE', 75, 'skin', 'plasma', 3, [0x1a0400, 0xff4a0a, 0xffd23a], {}, { anim: 'scroll', emis: 2.2 }],
   ['SKYFALL', 76, 'banner', 'stars', 3, ['#04060f', '#bfe4ff', '#1a3a7a'], { em: ['wings', '#2a3446', '#bfe4ff'] }],
   ['TOP 1', 77, 'sticker', 'text', 3, ['#ffd23a', '#111111'], 'TOP 1'],
-  ['QUAKE GOLD', 78, 'camo', 'cracked', 3, [0x1a1408, 0xffd23a, 0x2a2010], { glow: 1 }, { anim: 'pulse', emis: 2, metal: 0.6 }],
+  ['QUAKE EMBER', 78, 'camo', 'cracked', 3, [0x1a0a06, 0xff5a14, 0x2a1008], { glow: 1 }, { anim: 'pulse', emis: 2, metal: 0.6 }],
   ['BALL LIGHTNING', 79, 'camo', 'plasma', 3, [0x020a1a, 0x2a8aff, 0xe0f4ff], {}, { anim: 'scroll', emis: 2.2 }],
   ['EMBER PHOENIX', 80, 'sticker', 'phoenix', 3, ['#ff5a14', '#ffd23a']],
   ['CRYSTAL FAULT', 81, 'skin', 'facets', 3, [0x1a3a6a, 0xbfe4ff], {}, { anim: 'twinkle', emis: 1.5, rough: 0.05, metal: 0.5 }],
   ['HELLFIRE', 82, 'camo', 'marble', 3, [0x0a0202, 0x1a0505], { glow: 0xff2a14, vein: 0.12 }, { anim: 'scroll', emis: 2.4 }],
   ['MAGMA GEM', 83, 'charm', 'gem', 3, [0xff7a3a, 0xffd2a0, 0xff5a14], { spin: 1 }],
   ['DATAQUAKE', 84, 'camo', 'digital', 3, [0x0a0a14, 0x1a1a2e, 0x00e5ff, 0xff2fd6]],
-  ['GOLDEN ASH', 85, 'skin', 'solid', 3, [0xc9a24a], { fx: 'engrave' }, { rough: 0.16, metal: 1 }],
+  ['WHITE ASH', 85, 'skin', 'solid', 3, [0xd9dde0], { fx: 'engrave' }, { rough: 0.2, metal: 0.9 }],
   ['THUNDERSTRUCK', 86, 'camo', 'waves', 3, [0x040814, 0x0a1a3a, 0x9fe4ff, 0x4aa8ff], { glowIdx: 2 }, { anim: 'scroll', emis: 2.4 }],
   ['EPICENTER PRIME', 87, 'banner', 'grid', 3, ['#0a0402', '#ff5a14', '#ffd23a'], { em: ['dz', '#ff7a2a', '#0b0c0d'] }],
   ['VOLCANIC GLASS', 88, 'skin', 'facets', 3, [0x2a0804, 0xff8a4a], {}, { anim: 'twinkle', emis: 1.6, rough: 0.05, metal: 0.5 }],
@@ -247,7 +245,7 @@ const BP_ITEMS = [
   ['PYROCLAST', 91, 'camo', 'splinter', 3, [0x0a0404, 0x1a0806, 0x2a0c08, 0xff5a14], { glowIdx: 3 }, { anim: 'pulse', emis: 2.6 }],
   ['STORMGLASS', 92, 'skin', 'marble', 3, [0x0a1428, 0x14284a], { glow: 0x4aa8ff, vein: 0.12 }, { anim: 'scroll', emis: 2.2 }],
   ['AFTERSHOCK COIN', 93, 'charm', 'coin', 3, [0x1a1a1c, 0xff7a2a], { metal: 1, spin: 1 }],
-  ['TECTONIC GOLD', 94, 'camo', 'scales', 3, [0xffd23a, 0xa07820, 0x3a2a08], {}, { rough: 0.18, metal: 0.9 }],
+  ['TECTONIC EMBER', 94, 'camo', 'scales', 3, [0xff6a1a, 0xa0300a, 0x3a1006], {}, { rough: 0.18, metal: 0.9 }],
   ['SUPERNOVA', 95, 'skin', 'stars', 3, [0x0a0204, 0xffd2a0], { dense: 0.03, nebula: 0x8a2a0a }, { anim: 'twinkle', emis: 2.2 }],
   ['FINAL SHOCK', 96, 'camo', 'circuit', 3, [0x0a0400, 0xff6a14], {}, { anim: 'scroll', emis: 2.8 }],
   ['LEGEND', 97, 'sticker', 'text', 3, ['#0b0c0d', '#ffd23a'], 'LEGEND'],
@@ -270,6 +268,19 @@ const progBlank = () => ({ v: 1, xp: 0, dz: 0, owned: {}, equip: { all: null, gu
 let PROG = progBlank();
 try { const o = JSON.parse(localStorage.getItem(PROG_KEY) || 'null'); if (o && o.v === 1) PROG = Object.assign(progBlank(), o, { equip: Object.assign({ all: null, guns: {} }, o.equip || {}), stk: Object.assign({ all: null, guns: {} }, o.stk || {}), chm: Object.assign({ all: null, guns: {} }, o.chm || {}) }); } catch (e) {}
 for (const c of COSM) if (c.free && !PROG.owned[c.id]) PROG.owned[c.id] = 1;   // the default banner
+// gold and diamond camos are only earned in the camo grind now: the old ones are gone (refunded at their duplicate
+// value), the level-100 and battle pass ones became new non-gold versions you keep
+const COS_GONE = { rosegold: 3, diamond: 3, c_honey_gold: 1, c_gold_scales: 2, c_camo_gold: 2, c_gold_circuit: 3, c_molten_gold: 3 };
+const COS_SWAP = { dzgold: 'dzelite', bp1_quake_gold: 'bp1_quake_ember', bp1_golden_ash: 'bp1_white_ash', bp1_tectonic_gold: 'bp1_tectonic_ember' };
+(() => {
+  let dz = 0, ch = false;
+  for (const k of Object.keys(PROG.owned)) { if (k in COS_GONE) { dz += RAR[COS_GONE[k]].refund; delete PROG.owned[k]; ch = true; } else if (COS_SWAP[k]) { PROG.owned[COS_SWAP[k]] = PROG.owned[k]; delete PROG.owned[k]; ch = true; } }
+  const fix = id => COS_SWAP[id] || (id in COS_GONE ? null : id);
+  if (PROG.equip.all) { const v = fix(PROG.equip.all); if (v !== PROG.equip.all) { PROG.equip.all = v; ch = true; } }
+  for (const g in PROG.equip.guns) { const v = fix(PROG.equip.guns[g]); if (v !== PROG.equip.guns[g]) { ch = true; if (v) PROG.equip.guns[g] = v; else delete PROG.equip.guns[g]; } }
+  if (dz) { PROG.dz += dz; PROG.goneDz = (PROG.goneDz || 0) + dz; }
+  if (ch) saveProg();
+})();
 function saveProg() { try { localStorage.setItem(PROG_KEY, JSON.stringify(PROG)); } catch (e) {} }
 
 /* ---------- XP curve: level n -> n+1 takes 1000 + 100*(n-1) XP (level 100 is about 180 matches) */

@@ -10,11 +10,11 @@ module.exports = async p => {
   await p.evaluate(() => window.__A.toLobby()); await p.waitForTimeout(600);
   // some owned items + one secret for the M4A1
   await p.evaluate(() => { const A = window.__A; A.PROG.xp = A.XP_AT[52] + 400; for (const c of A.COSM) if (c.lvl && c.lvl <= 52) A.PROG.owned[c.id] = 1;
-    for (const id of ['diamond', 'dragon', 'tiger', 'woodland', 'carbon', 'rosegold', 'chrome', 'c_prism', 'c_neon_waves', 'c_lava_crack', 'c_forest_fleck', 'c_ruby', 'c_glitch', 'c_tiger_zebra']) A.PROG.owned[id] = 1;
+    for (const id of ['void', 'dragon', 'tiger', 'woodland', 'carbon', 'damascus', 'chrome', 'c_prism', 'c_neon_waves', 'c_lava_crack', 'c_forest_fleck', 'c_ruby', 'c_glitch', 'c_tiger_zebra']) A.PROG.owned[id] = 1;
     A.PROG.owned['x_bloodline@marc'] = 1; A.PROG.dz = 9000; A.saveProg(); });
   await p.evaluate(() => window.__A.actions('locker')); await p.waitForTimeout(8000); await snap('lk2_guns');
   await p.evaluate(() => document.querySelector('[data-lkgun="marc"]').click()); await p.waitForTimeout(2200); await snap('lk2_gun');
-  await p.evaluate(() => document.querySelector('#lkGrid [data-lk="diamond"]').click()); await p.waitForTimeout(2200); await snap('lk2_diamond');
+  await p.evaluate(() => document.querySelector('#lkGrid [data-lk="void"]').click()); await p.waitForTimeout(2200); await snap('lk2_void');
   await p.evaluate(() => document.querySelector('#lkGrid [data-lk="x_bloodline"]').click()); await p.waitForTimeout(2200); await snap('lk2_secret');
   out.gunTiles = await p.evaluate(() => [...document.querySelectorAll('#lkGrid [data-lk]')].map(b => b.dataset.lk).filter(Boolean).length);
   await p.evaluate(() => window.__A.actions('lk-apply')); await p.waitForTimeout(300);
