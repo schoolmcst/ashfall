@@ -40,6 +40,7 @@ function privCodeHtml() {
 }
 const modeGroup = k => MODES[k].online ? 'on' : 'off';
 function renderLobby(focusSel) {
+  if (typeof ZL !== 'undefined' && ZL.on) return renderZLobby(focusSel);
   if (!MODES[LOBBY.mode].online || !playlist().includes(LOBBY.mode)) LOBBY.mode = playlist()[0];
   const sel = LOBBY.mode, d = MODES[sel], online = !!d.online, st = careerOf(online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   if (online) LOBBY.lastOn = sel; else LOBBY.lastOff = sel;

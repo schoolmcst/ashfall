@@ -151,7 +151,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (e.entry) { e.entry.lastBy = by; e.entry.lastHead = head ? 1 : 0; }
   if (e.net) { netHit(e, dmg, head, by, boom); return false; }
   if ((e.spawnProt > 0 || G.holdT > 0) && inMatch() && by !== 'world') return false;   // spawn protection / pre-match hold
-  e.hp -= dmg; e.flinch = 1; if (typeof botWasHit === 'function' && M && M.def && inMatch()) botWasHit(e, by);
+  e.hp -= dmg; e.flinch = 1; if (e.zombie && by === 'player' && e.hp > 0) zombHit(e, head); if (typeof botWasHit === 'function' && M && M.def && inMatch()) botWasHit(e, by);
   if (e.hp > 0 && dir) { const pk = boom ? 0.5 : 0.07; e.group.position.x += dir.x * pk; e.group.position.z += dir.z * pk; e.slowT = boom ? 0.8 : 0.3; }
   if (e.hp <= 0) {
     enemies.splice(enemies.indexOf(e), 1);
@@ -316,6 +316,7 @@ function die() {
   mouseDown = false; mouseAds = false; G.streak = 0; statDeath(); stkDeath();
   try { matchPlayerKilled(G.killer); } catch (err) { reportError(err); }
   if (M.over) return;
+  if (M.mode === 'zomb') { finishDeath(); return; }
   if (inMatch() && !S.deathCam) { G.state = 'deathcam'; afterDeathInMatch(); return; }
   if (S.deathCam && G.state === 'playing') { startDeathCam(); return; }
   finishDeath();
@@ -326,23 +327,24 @@ function finishDeath() {
   G.state = 'dead'; mouseDown = false; mouseAds = false; G.dcHold = !!G.dc;
   $('killcam').classList.add('hide');
   try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
+  if (M.mode === 'zomb') zombDeathText(); else {
   const nb = recordBest();
   $('overStats').textContent = `WAVE ${G.wave}  ·  KILLS ${G.kills}  ·  SCORE ${G.score}`;
-  $('overBest').textContent = nb ? 'NEW PERSONAL BEST' : `BEST  ·  WAVE ${best.wave}  ·  SCORE ${best.score}`;
+  $('overBest').textContent = nb ? 'NEW PERSONAL BEST' : `BEST  ·  WAVE ${best.wave}  ·  SCORE ${best.score}`; }
   showScreen('over');
 }
 function pauseGame() {
   if (G.state !== 'playing' && G.state !== 'respawning' && G.state !== 'spectate') return;
   G.pausedFrom = G.state; G.state = 'paused'; mouseDown = false; mouseAds = false;
   try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
-  $('pauseSub').textContent = `WAVE ${G.wave}  ·  KILLS ${G.kills}  ·  SCORE ${G.score}`;
+  $('pauseSub').textContent = M.mode === 'zomb' ? `ROUND ${Z.round}  ·  ${(G.points | 0).toLocaleString()} POINTS  ·  KILLS ${G.kills}` : `WAVE ${G.wave}  ·  KILLS ${G.kills}  ·  SCORE ${G.score}`;
   showScreen('pause'); try { renderPauseSide(); } catch (e) {}
 }
 function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom || 'playing'; showScreen(null); lockPointer(); }
 // Scavenger: every kill tops up one magazine of reserve ammo
 function perkOnKill() { if (!perk('scavenger')) return; for (const w of WEAPONS) w.reserve = Math.min(w.reserveMax, w.reserve + w.magSize); }
 function startGame() { startMatch('surv'); }
-function restartMatch() { if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
+function restartMatch() { if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'zomb') startMatch('zomb', { map: ZL.map === 'random' ? 'random' : curMap }); else if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
 // leave whatever is running and go back to the menu scene (soldiers posing behind the menus)
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();
@@ -352,6 +354,6 @@ function leaveGame() {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   spawnMenuSoldiers();
 }
-function clearMatch() { try { netLeave(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
+function clearMatch() { try { netLeave(); } catch (e) {} try { zombClear(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
 function toMenu() { leaveGame(); showScreen('menu'); }
 function toLobby() { if (G.state !== 'menu') leaveGame(); renderLobby(); showScreen('lobby'); }

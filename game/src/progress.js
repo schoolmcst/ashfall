@@ -317,6 +317,7 @@ function progMatchXP(won, partial) {
   add('HARDPOINT TIME', (MS.hpTime | 0) * 5);
   if (!partial) {
     if (M && M.mode === 'surv') add('WAVES SURVIVED', (G.wave | 0) * 150);
+    else if (M && M.mode === 'zomb') add('ROUNDS SURVIVED', Math.max(0, (Z.round | 0) - 1) * 200);
     else { add('MATCH COMPLETE', 500); if (won === 1) add('VICTORY', 1000); else if (won === 0) add('DRAW', 400); }
   }
   let sum = rows.reduce((s, r) => s + r[1], 0);

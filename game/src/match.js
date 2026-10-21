@@ -28,7 +28,7 @@ const SKILL = {
 };
 const TEAM_COL = ['#5aaeff', '#ff5a4a'], TEAM_NAME = ['BLUE', 'RED'];
 let M = { mode: 'surv', def: MODES.surv, entries: [] };
-const inMatch = () => M && M.mode !== 'surv' && !G.bench;
+const inMatch = () => M && M.mode !== 'surv' && M.mode !== 'zomb' && !G.bench;
 const isFriend = e => M.def.teams && e.team === M.myTeam;
 
 /* ---------- map layout for the modes */
@@ -140,6 +140,7 @@ function startMatch(mode, custom) {
   else if (!NET.app) loadMap(DEFAULT_MAP);   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
   resetGame();
+  if (mode === 'zomb') { zombStart(cfg); return; }
   if (mode === 'surv') { if (curMap !== 'ruins') { buildSpawns(); const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z); } G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); matchHold(false); return; }
   buildSpawns();
   G.breakT = 1e9; G.waveActive = false; G.maxHp = M.maxHp; G.health = M.maxHp;
@@ -790,6 +791,7 @@ function scoreboardHtml() {
 /* ---------- HUD: score bar, centre message, objective markers */
 const fmtT = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 function updateModeHud(force) {
+  if (M.mode === 'zomb') { const el = $('mhud'), sv = $('stats'); el.classList.add('hide'); el._on = false; if (sv) { sv.style.display = 'none'; sv._surv = undefined; } return; }
   const el = $('mhud'), surv = M.mode === 'surv' || !!G.bench;
   const sv = $('stats'); if (sv && sv._surv !== surv) { sv._surv = surv; sv.style.display = surv ? '' : 'none'; }
   if (surv) { if (el._on !== false) { el._on = false; el.classList.add('hide'); } return; }

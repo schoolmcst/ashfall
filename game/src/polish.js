@@ -20,6 +20,7 @@ const MULTI = ['', '', 'DOUBLE KILL', 'TRIPLE KILL', 'MULTI KILL', 'RAMPAGE'];
 function onKill(e, head, boom, bonusOnly) {
   if (G.bench) return;
   perkOnKill();   // no feed, popups or streak banners during the benchmark
+  if (M.mode === 'zomb') { zombKill(e, head, boom, G.meleeT > 0); return; }
   const dist = Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z);
   let pts = 100 + (head ? 50 : 0), extra = 0, tags = [];
   if (head) tags.push('HEADSHOT');

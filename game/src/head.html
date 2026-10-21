@@ -74,6 +74,7 @@
   .cod-tile small{display:block;font-size:10px;letter-spacing:.35em;color:var(--dim)}.cod-tile b{display:block;font-size:26px;letter-spacing:.2em;margin:4px 0}.cod-tile span{font-size:11px;letter-spacing:.22em;color:var(--dim)}.cod-tile span i{font-style:normal;color:var(--accent)}
   .cod-tile:hover,.cod-tile:focus{outline:0;background:linear-gradient(90deg,rgba(224,180,74,.28),rgba(224,180,74,.04));border-color:rgba(224,180,74,.5);transform:translateX(6px)}.cod-tile:hover::before,.cod-tile:focus::before,.cod-tile.primary::before{background:var(--accent)}
   .cod-tile.primary b{color:var(--accent)}
+  .cod-tile.z-tile b{color:#8fd45a}.cod-tile.z-tile{border-left-color:#5a9a32}.cod-tab.z-tab{color:#8fd45a}
   .cod-opts .row-opt{margin:6px 0}
   .cod-main{gap:14px}.cod-tile.exit{padding:12px 22px 12px 26px}.cod-tile.exit b{font-size:16px;margin:0;color:var(--dim)}
   .cod-news{border:1px solid var(--line);background:rgba(0,0,0,.5)}.cn-h{padding:10px 16px;font-size:11px;letter-spacing:.35em;color:var(--accent);border-bottom:1px solid var(--line)}
@@ -389,6 +390,7 @@
     <div class="logo cod-logo">DARK<em>ZONE</em><span class="beta-tag">BETA</span></div>
     <nav class="cod-nav">
       <button class="cod-tab on" data-act="nav-play">PLAY</button>
+      <button class="cod-tab z-tab" data-act="go-zombies">ZOMBIES</button>
       <button class="cod-tab" data-act="loadout">WEAPONS</button>
       <button class="cod-tab" data-act="streaks">SCORESTREAKS</button>
       <button class="cod-tab" data-act="locker">LOCKER</button>
@@ -403,6 +405,7 @@
   <div class="cod-main">
     <div class="cod-tiles">
       <button class="cod-tile primary" data-act="go-on"><small>ONLINE &middot; REAL PLAYERS</small><b>MULTIPLAYER</b><span>QUICK PLAY &middot; CUSTOM &amp; PRIVATE MATCHES IN THE LOBBY</span></button>
+      <button class="cod-tile z-tile" data-act="go-zombies"><small>SOLO &middot; ROUND BASED</small><b>ZOMBIES</b><span>START WITH A PISTOL &middot; SURVIVE THE DEAD</span></button>
       <button class="cod-tile" data-act="settings"><small>VIDEO &middot; AUDIO &middot; CONTROLS &middot; KEYBINDS</small><b>SETTINGS</b><span>MAKE IT YOURS</span></button>
       <button class="cod-tile" data-act="replay"><small>TACTICAL MAP &middot; KILL FEED &middot; TIMELINE</small><b>REPLAY</b><span>REWATCH YOUR LAST MATCH</span></button>
     </div>
