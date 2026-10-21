@@ -108,8 +108,24 @@ function dressRidge() {
   wheelbarrow(-8.2, 4.8, 0, 2); milkCans(-12.0, -4.8); toolChest(-8.0, -5.3, 0, 0);
 }
 // hook each dress into its map's build
+// ---- furnishing: every room gets furniture that fits it (furnish.js)
+const FILL = {
+  stackyard: () => {},
+  killhouse: () => symZ((s, Z) => { const [a, b] = [Math.min(Z(5.1), Z(11.9)), Math.max(Z(5.1), Z(11.9))]; fillRoom(-7.9, a, 7.9, b, 0, 'office', { lights: false, max: 6 }); }),
+  skyport: () => { fillBuildings('shop'); fillRoom(-15.8, -21.75, 12.85, 21.75, 0, 'gate', { lights: false, max: 16 }); fillRoom(13.15, -21.75, 29.35, 21.75, 0, 'gate', { lights: false, max: 8, art: false }); },
+  spire: () => fillBuildings((r, f) => r.key === 'whiteTile' ? (f ? 'office' : 'home') : 'work'),
+  dustwater: () => fillBuildings((r, f) => r.w < 6 ? 'work' : Math.abs(r.x1 + r.x0) / 2 > 18 && Math.abs(r.x1 + r.x0) / 2 < 23 ? 'mosque' : Math.abs((r.z0 + r.z1) / 2) < 10 && r.x0 > 20 ? 'shop' : f ? 'bedroom' : 'home'),
+  whiteout: () => {
+    fillBuildings('locker');
+    fillRoom(-8.85, -5.85, -4.1, 5.85, 0, 'lab', { h: 3.4 }); fillRoom(4.1, -5.85, 8.85, 5.85, 0, 'lab', { h: 3.4 }); fillRoom(-3.9, -5.85, 3.9, 5.85, 0, 'lab', { h: 3.4, rug: false });
+    symZ((s, Z) => { const [a, b] = [Math.min(Z(12.15), Z(18.85)), Math.max(Z(12.15), Z(18.85))]; fillRoom(-5.85, a, 5.85, b, 0, 'locker', { h: 3.4 }); });
+    fillRoom(17.18, -9.82, 30.82, 9.82, 0, 'work', { lights: false, art: false, max: 10 });
+  },
+  blackwater: () => { fillBuildings('boat'); fillRoom(10.2, -11.8, 29.8, 11.8, 0, 'work', { lights: false, art: false, max: 12 }); },
+  ridgeline: () => { fillBuildings((r, f) => r.w < 6 ? 'work' : f ? 'bedroom' : 'home'); fillRoom(-13.85, -5.85, -6.15, 5.85, 0, 'farm', { h: 4.1, rug: false }); fillRoom(-13.85, -5.85, -6.15, 5.85, 4.2, 'farm', { h: 3.0, rug: false }); },
+};
 for (const [id, f] of [['stackyard', dressYard], ['killhouse', dressShoot], ['skyport', dressTerminal], ['spire', dressSpire], ['dustwater', dressDust], ['whiteout', dressSnow], ['blackwater', dressPier], ['ridgeline', dressRidge]]) {
-  const b = MAPS[id].build; MAPS[id].build = () => { b(); f(); };
+  const b = MAPS[id].build; MAPS[id].build = () => { ROOMS.length = 0; b(); f(); FILL[id](); };
 }
 // close-up views of the details (s_map renders them; the loading screen only uses the first four views)
 for (const [id, vs] of Object.entries({
@@ -121,4 +137,14 @@ for (const [id, vs] of Object.entries({
   whiteout: [[-6, 1.7, 1, -6.5, 0.9, 5], [-24, 1.7, 15, -30, 0.8, 9.5], [-13, 1.7, 26, -19, 0.6, 22]],
   blackwater: [[-21, 1.7, 18, -26, 0.6, 21], [16, 1.7, 0, 22, 1.2, 5], [-11, 1.7, 13, -14.5, 0.6, 9.5]],
   ridgeline: [[-38, 1.7, 13.5, -34, 0.6, 20], [35, 4.3, 14, 40.5, 6, 9], [-11.6, 1.7, -1.2, -8, 0.6, 5]],
+})) MAPS[id].views = MAPS[id].views.concat(vs);
+// interior views (furnished rooms)
+for (const [id, vs] of Object.entries({
+  killhouse: [[-6.5, 1.7, 6, 6, 1, 11]],
+  skyport: [[-14, 1.7, -3, -10, 0.8, -14], [7.5, 1.7, 14, 10.5, 1, 17]],
+  spire: [[27, 1.7, -8, 19, 1, -2], [1.8, 1.7, 16, -3, 1, 18]],
+  dustwater: [[-12.5, 1.7, 7, -19, 0.8, 5], [-12.5, 4.9, 7.5, -19, 4, 5], [28, 1.7, 6, 32, 0.8, 9]],
+  whiteout: [[4, 1.7, 15.5, -5, 1, 17.5], [5, 1.7, -4.5, 8, 1, 4]],
+  blackwater: [[-25.5, 1.7, 4.2, -25.5, 0.8, -4], [-25.5, 4.9, 4.2, -25.5, 4, -4]],
+  ridgeline: [[-24.5, 1.7, 20, -31, 0.8, 22.5], [-24.5, 4.9, 20, -31, 4, 22.5]],
 })) MAPS[id].views = MAPS[id].views.concat(vs);
