@@ -148,11 +148,12 @@ function updateEnemies(dt) {
 
 function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (!enemies.includes(e)) return false;
+  if (e.zombie && by === 'player' && typeof zombGunMul === 'function') dmg *= zombGunMul(boom);
   if (e.proxy) { if (by === 'player') zcProxyHit(e, dmg, head, boom); return false; }
   if (e.entry) { e.entry.lastBy = by; e.entry.lastHead = head ? 1 : 0; }
   if (e.net) { netHit(e, dmg, head, by, boom); return false; }
   if ((e.spawnProt > 0 || G.holdT > 0) && inMatch() && by !== 'world') return false;   // spawn protection / pre-match hold
-  e.hp -= dmg; e.flinch = 1; if (e.zombie && by === 'player' && e.hp > 0) zombHit(e, head); if (typeof botWasHit === 'function' && M && M.def && inMatch()) botWasHit(e, by);
+  e.hp -= dmg; e.flinch = 1; if (e.zombie && (by === 'player' ? G.meleeT > 0 : by && by.melee)) zombStagger(e, dir); if (e.zombie && by === 'player' && e.hp > 0) zombHit(e, head); if (typeof botWasHit === 'function' && M && M.def && inMatch()) botWasHit(e, by);
   if (e.hp > 0 && dir) { const pk = boom ? 0.5 : 0.07; e.group.position.x += dir.x * pk; e.group.position.z += dir.z * pk; e.slowT = boom ? 0.8 : 0.3; }
   if (e.hp <= 0) {
     enemies.splice(enemies.indexOf(e), 1);
@@ -318,6 +319,7 @@ function die() {
   mouseDown = false; mouseAds = false; G.streak = 0; statDeath(); stkDeath();
   try { matchPlayerKilled(G.killer); } catch (err) { reportError(err); }
   if (M.over) return;
+  if (M.mode === 'zomb' && zpSelfRevive()) { G.state = 'playing'; return; }
   if (M.mode === 'zomb' && zcInGame()) { zcDown(); return; }
   if (M.mode === 'zomb') { finishDeath(); return; }
   if (inMatch() && !S.deathCam) { G.state = 'deathcam'; afterDeathInMatch(); return; }

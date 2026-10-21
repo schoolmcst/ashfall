@@ -264,6 +264,7 @@ function zcClearProxies() { for (const e of ZC.prox.values()) { const i = enemie
 
 /* ---------- going down, reviving, bleeding out */
 function zcDown() {
+  try { zpLose(); } catch (e) {}
   ZC.down = true; ZC.downT = ZC_DOWN; G.health = 0; mouseDown = false; mouseAds = false;
   G.state = 'zdown'; showCenter('YOU ARE DOWN', 'a teammate can revive you · hold on'); try { sfx.hurt(); } catch (e) {}
 }
@@ -301,8 +302,8 @@ function zcReviveTick(dt) {
   if (kb('use') || pad.use) {
     if (ZC.revWho !== best.peer) { ZC.revWho = best.peer; ZC.revT = 0; }
     ZC.revT += dt;
-    if (ZC.revT >= ZC.revNeed) { ZC.revT = 0; ZC.rvseq++; ZC.rv.push([best.peer, ZC.rvseq]); while (ZC.rv.length > 6) ZC.rv.shift(); feedLine(`<b>YOU</b> <span class="fw">REVIVED</span> <b>${best.n}</b>`); G.points += 50; return ''; }
-    return `REVIVING ${best.n} · ${Math.round(ZC.revT / ZC.revNeed * 100)}%`;
+    if (ZC.revT >= (zpHas('revive') ? ZC.revNeed / 2 : ZC.revNeed)) { ZC.revT = 0; ZC.rvseq++; ZC.rv.push([best.peer, ZC.rvseq]); while (ZC.rv.length > 6) ZC.rv.shift(); feedLine(`<b>YOU</b> <span class="fw">REVIVED</span> <b>${best.n}</b>`); G.points += 50; return ''; }
+    return `REVIVING ${best.n} · ${Math.round(ZC.revT / (zpHas('revive') ? ZC.revNeed / 2 : ZC.revNeed) * 100)}%`;
   }
   ZC.revT = 0;
   return `HOLD ${actName('use')} TO REVIVE ${best.n}`;
@@ -331,7 +332,7 @@ function zcFrame(dt) {
 }
 function zcTeamHud(force) {
   let t = $('zTeam');
-  if (!t) { t = document.createElement('div'); t.id = 'zTeam'; ($('hud') || document.body).appendChild(t); const st = document.createElement('style'); st.textContent = `#zTeam{position:absolute;left:28px;bottom:222px;pointer-events:none;font:700 13px var(--font,system-ui);letter-spacing:.1em;color:#d8e8c8;text-shadow:0 1px 4px #000;line-height:1.6}#zTeam .dn{color:#ff6a5a}#zTeam .out{opacity:.45}`; document.head.appendChild(st); }
+  if (!t) { t = document.createElement('div'); t.id = 'zTeam'; ($('hud') || document.body).appendChild(t); const st = document.createElement('style'); st.textContent = `#zTeam{position:absolute;left:28px;bottom:262px;pointer-events:none;font:700 13px var(--font,system-ui);letter-spacing:.1em;color:#d8e8c8;text-shadow:0 1px 4px #000;line-height:1.6}#zTeam .dn{color:#ff6a5a}#zTeam .out{opacity:.45}`; document.head.appendChild(st); }
   const on = zcInGame() && G.state !== 'dead';
   const html = on ? [...ZC.rem.values()].filter(R => R.inGame).map(R => `<div class="${R.dn ? 'dn' : !R.a ? 'out' : ''}">${R.n} · ${R.pts.toLocaleString()}${R.dn ? ' · DOWN' : !R.a ? ' · OUT' : ''}</div>`).join('') : '';
   if (force || t._h !== html) { t._h = html; t.innerHTML = html; }

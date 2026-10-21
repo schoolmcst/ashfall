@@ -67,10 +67,10 @@ function zombStart(cfg) {
   showBanner('ZOMBIES', 'survive · 500 points to spend'); zombHud(true);
 }
 function zombEquip(keepCur) {
-  const g = Z.guns, gr = G.grenades;
+  const g = Z.guns, gr = G.grenades; zuRestore();
   equipClass(g.length > 1 ? { p: g[0], s: g[1], e: 'frag', k: 'none', factory: true } : { p: null, s: g[0], e: 'frag', k: 'none', only: g[0], factory: true });
   if (gr !== undefined) G.grenades = gr;
-  zuApply();
+  zuApply(); zpApply();
   if (keepCur !== undefined) { G.cur = Math.min(keepCur, WEAPONS.length - 1); gunObjs.forEach((o, i) => { o.visible = i === G.cur; }); }
   el.slots._cur = -1;
 }
@@ -92,7 +92,20 @@ function zombCrates() {
   const hp = LAYOUT.hp, a = near(hp[1] || hp[0]), b = near(hp[2] || hp[0]);
   Z.crate = mk(a, 0x5a3a1c, 0x9a3cff, 'MYSTERY CRATE'); Z.ammo = mk(b, 0x3a4630, 0x7dff5a, 'AMMO CRATE');
 }
-function zombHp(r) { return r <= 9 ? 100 + 60 * (r - 1) : (100 + 60 * 8) * Math.pow(1.1, r - 9); }
+function zombHp(r) { return r <= 10 ? 100 + 55 * (r - 1) : 595 * Math.pow(1.08, r - 10); }
+// your damage against zombies: each kind of gun is tuned for zombies, and every gun keeps up as the rounds go on
+const ZCAT_MUL = { pi: 2.6, smg: 1.9, ar: 1.8, lmg: 1.7, mr: 2.3, sr: 3.2, sg: 1.7, la: 1.4 };
+function zombGunMul(boom) {
+  const rf = Math.min(3, 1 + 0.07 * Math.max(0, (Z.round || 1) - 1));
+  if (boom) return rf * 1.5;
+  if (G.meleeT > 0) return rf;
+  const w = WEAPONS[G.cur]; return (w && ZCAT_MUL[w.def.cat] || 2) * rf;
+}
+// a punch knocks a zombie back and cancels its swing, so it cannot hit you straight back
+function zombStagger(e, dir) {
+  e.atkT = 0; e.hitDone = true; e.atkCd = 1.0; e.stunT = 0.8; e.flinch = 1;
+  if (dir) { e.group.position.x += dir.x * 0.9; e.group.position.z += dir.z * 0.9; }
+}
 function zombSpeedType(r) { const x = Math.random(); if (r >= 6 && x < Math.min(0.85, 0.25 + (r - 6) * 0.12)) return 'run'; if (r >= 3 && x < Math.min(0.9, 0.35 + (r - 3) * 0.12)) return 'jog'; return 'walk'; }
 const ZMAT = new Map();
 function zombMat(m) {
@@ -168,7 +181,7 @@ function zombThink(e, i, dt) {
     if (e.avoidT > 0) { e.avoidT -= dt; mx = -nz * e.avoidDir + nx * 0.3; mz = nx * e.avoidDir + nz * 0.3; }
     else if (gridClear(g.position.x, g.position.z, T.x, T.z, g.position.y, T.y)) { mx = nx + -nz * e.lurch * 0.3; mz = nz + nx * e.lurch * 0.3; }
     else { const nd = T.me ? navDir(g.position.x, g.position.z, g.position.y) : flowDir(flowField(T.x, T.z, T.y), g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
-    if (dist < 1.3 && up) { mx = mz = 0; e.atkCd -= dt; if (e.atkCd <= 0) { e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.7, 1.1); } }
+    if (dist < 1.3 && up) { mx = mz = 0; if (!(e.stunT > 0)) e.atkCd -= dt; if (e.atkCd <= 0 && !(e.stunT > 0)) { e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.7, 1.1); } }
   }
   const ml = Math.hypot(mx, mz), slow = (e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.45 : 1;
   const sp = ml > 0.01 ? e.speed * slow * (e.stunT > 0 ? 0.3 : 1) : 0;
@@ -199,9 +212,9 @@ function animZombie(e, dt, sp) {
   e.flinch = Math.max(0, e.flinch - dt * 4);
 }
 // points (called from the damage and kill hooks)
-function zombHit(e, head) { G.points += 10; }
+function zombHit(e, head) { G.points += zpHas('munch') ? 15 : 10; }
 function zombKill(e, head, boom, melee) {
-  const pts = melee ? 130 : head ? 100 : 60; G.points += pts - 10; G.score += pts;
+  const pts = Math.round((melee ? 130 : head ? 100 : 60) * (zpHas('munch') ? 1.5 : 1)); G.points += pts - (zpHas('munch') ? 15 : 10); G.score += pts;
   popScore('+' + pts, head ? 'head' : '', head ? 'HEADSHOT' : melee ? 'MELEE' : '');
 }
 // crates: stand close and press USE
@@ -215,8 +228,9 @@ function zombCrateTick(dt) {
     if (!msgTxt && d < 2.3 && Math.abs(P.y - c.position.y) < 1.5 && G.state === 'playing') { msgTxt = `${c.userData.label} · ${cost} POINTS · PRESS ${actName('use')}${G.points < cost ? ' · NOT ENOUGH POINTS' : ''}`; if ((kb('use') || pad.use) && !Z.useHeld && G.points >= cost) fn(); }
   }
   if (!msgTxt && G.state === 'playing') {
-    const use = (kb('use') || pad.use) && !Z.useHeld, dr = zdPrompt();
-    if (dr) { msgTxt = `${dr.d.name} · ${dr.d.cost} POINTS · PRESS ${actName('use')}${G.points < dr.d.cost ? ' · NOT ENOUGH POINTS' : ''}`; if (use && G.points >= dr.d.cost) zdBuy(dr); }
+    const use = (kb('use') || pad.use) && !Z.useHeld, dr = zdPrompt(), pm = zpNear();
+    if (pm) msgTxt = zpPrompt(pm, use);
+    else if (dr) { msgTxt = `${dr.d.name} · ${dr.d.cost} POINTS · PRESS ${actName('use')}${G.points < dr.d.cost ? ' · NOT ENOUGH POINTS' : ''}`; if (use && G.points >= dr.d.cost) zdBuy(dr); }
     else if (zuNear()) { const w = WEAPONS[G.cur], done = w && Z.up && Z.up.has(w.def.id); msgTxt = done ? 'GUN UPGRADER · THIS GUN IS UPGRADED' : `GUN UPGRADER · UPGRADE ${w ? w.def.name : ''} · ${ZU_COST} POINTS · PRESS ${actName('use')}${G.points < ZU_COST ? ' · NOT ENOUGH POINTS' : ''}`; if (use && !done && G.points >= ZU_COST) zuBuy(); }
   }
   Z.useHeld = kb('use') || pad.use;

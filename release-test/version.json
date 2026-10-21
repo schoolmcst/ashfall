@@ -1,19 +1,13 @@
 {
- "version": "1.2.31",
+ "version": "1.2.32",
  "notes": [
-  "ZOMBIES (new): a ZOMBIES tab on the main menu. Everyone starts with the Service 9 pistol, 2 frags and 500 points. Survive round after round - zombies walk, then jog, then run, and get tougher every round.",
-  "Zombies points: 10 a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Mystery Crate (950) gives a random gun, Ammo Crate (250) refills your ammo. Your best round is saved.",
-  "BUY DOORS: you start in the hospital's south lobby. 20 boarded doors and barricades (750 to 1500 points) open the hospital bit by bit. Zombies only come from the parts you have opened.",
-  "GUN UPGRADER: find the glowing machine in the north wing. 5000 points upgrades the gun in your hands: double damage, a bigger magazine, twice the reserve ammo and a purple glow.",
-  "ZOMBIES ONLINE CO-OP (up to 4): set PLAY to ONLINE CO-OP. QUICK PLAY drops you into a running game or starts one others can join; PRIVATE CODE gives a lobby where the host presses START.",
-  "Co-op: everyone keeps their own points and guns, the round is shared and doors open for the whole squad. Hold USE next to a downed teammate for 3 seconds to revive them. Bleed out and you are back next round. Everyone down = game over. If the host leaves, someone else takes over.",
-  "PARTY AND FRIENDS in Zombies, just like multiplayer: when the party leader presses QUICK PLAY the whole party follows into the same game.",
-  "NEW MAP: BLACKWELL HOSPITAL - a huge two-storey hospital, almost all indoors, bloody and gross. Corridors, wards, the ER, surgery, x-ray, the morgue, labs and a bridge across the atrium. Plays in every multiplayer mode and in Zombies.",
-  "GOLD AND DIAMOND ARE EARNED NOW: the only gold and diamond camos left are GOLD and DIAMOND from the camo grind (Locker > pick a gun > CHALLENGES).",
-  "Removed from chance boxes: Rose Gold, Diamond, Honey Gold, Gold Scales, Camo Gold, Gold Circuit and Molten Gold. If you owned any, you got their full duplicate value back in DZ.",
-  "Level 100 now gives DARKZONE ELITE (black with glowing orange facets) instead of Darkzone Gold - if you had Darkzone Gold, you now have Darkzone Elite.",
-  "Battle pass: Quake Gold, Golden Ash and Tectonic Gold are now Quake Ember, White Ash and Tectonic Ember - anything you unlocked carries over."
+  "ZOMBIES DAMAGE FIXED: every gun is tuned for zombies and keeps up as the rounds go on. The pistol drops round-1 zombies in two body shots; upgraded guns hit twice as hard. Zombie health grows more gently.",
+  "PUNCHING a zombie now knocks it back and cancels its swing, so it can't hit you straight back.",
+  "FOLLOW THE PURPLE ARROWS: the doors now lead to the gun upgrader, which has its own room (the north lobby, behind the new UPGRADE ROOM barricade). Every door has a price sign, and the doors on the way say TO THE GUN UPGRADER.",
+  "The GUN UPGRADER has a new look: a glowing purple core with spinning rings that speed up while it upgrades your gun.",
+  "6 PERK MACHINES around the hospital. Pay and your survivor hits a bowl, smokes a joint or eats an edible: SECOND WIND (1500, solo: get back up once / co-op: revive twice as fast), DOUBLE DAB (2000, shoot faster), QUICK RIP (3000, reload twice as fast), ZOOMIES (2000, move faster), KUSH TANK (2500, 250 health), MUNCHIES (2500, 50% more points). You lose your perks when you go down.",
+  "Fixed: an upgraded gun's purple glow could stay on that gun in multiplayer."
  ],
- "sha256": "3a394024254aa1a7688de2610ab0c35e2ef81fc2a2c3d22cb2c6b3576398d916",
+ "sha256": "164b0ac338c3d30e1b74c01d0a14e0c64efdbb6a7b7c22a02beafaa02917a2c2",
  "minApp": "1.0.0"
 }
