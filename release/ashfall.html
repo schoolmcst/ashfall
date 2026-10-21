@@ -60,6 +60,8 @@
   .cod-title{padding-bottom:12px}.cod-title small{display:block;font-size:11px;letter-spacing:.4em;color:var(--accent)}.cod-title b{font-size:26px;letter-spacing:.24em}
   .cod-nav{display:flex;gap:2px;flex:1;align-self:flex-end;min-width:0;overflow-x:auto;scrollbar-width:none}.cod-nav::-webkit-scrollbar{display:none}
   .cod-nav .cod-tab{letter-spacing:clamp(.04em,.14vw,.2em);padding-left:clamp(5px,.55vw,14px);padding-right:clamp(5px,.55vw,14px)}
+  @media (max-width:1440px){.cod-nav .cod-tab{letter-spacing:.03em;padding-left:5px;padding-right:5px;font-size:11.5px}}
+  @media (max-width:1300px){.cod-nav .cod-tab{letter-spacing:0;padding-left:4px;padding-right:4px;font-size:11px}}
   .cod-tab{white-space:nowrap;pointer-events:auto;cursor:pointer;background:none;border:0;border-bottom:3px solid transparent;color:var(--dim);font-weight:700;font-size:clamp(12px,1.02vw,14px);line-height:1;font-family:inherit;letter-spacing:clamp(.1em,.22vw,.28em);padding:14px clamp(6px,.7vw,16px) 16px}
   .cod-tab:hover,.cod-tab:focus,.cod-tab.on{outline:0;color:#fff;border-bottom-color:var(--accent)}.cod-tab.on{color:var(--accent)}
   .cod-card{flex-shrink:0;align-self:center;display:flex;gap:14px;align-items:center;padding:8px 14px;margin-bottom:12px;border:1px solid var(--line);background:rgba(0,0,0,.45);font-size:11px;letter-spacing:.18em;color:var(--dim)}
@@ -3789,6 +3791,8 @@ function buildYard() {
   for (const s of [-1, 1]) rail(-2.25, s * 1.2, 2.25, s * 1.2, 2.9, { h: 0.9 });
   stairs(-7.2, 0, 'e', 1.1, 0, 2.9, 'metal', { open: true, rails: false });   // west stair climbs east onto the deck
   stairs(7.2, 0, 'w', 1.1, 0, 2.9, 'metal', { open: true, rails: false });
+  // you can't jump from the tower onto the container rows and run along the tops
+  for (const s of [-1, 1]) for (const x of [-5.5, 5.5]) blk(x, s * 5.6, 2.5, 6.2, 2.2, 'dark', { y: 2.6, noDraw: true, noRay: true, walk: false });
   // ---- dressing
   for (const [x, z] of [[-11, -7], [11, 8], [0, -6.5], [-3, 15], [5, -15]]) puddle(x, z, 0, 1 + Math.random());
   stripes(-11, -16, 0, false, 1, 3, 'paintYellow'); stripes(11, 16, 0, false, 1, 3, 'paintYellow');
@@ -3849,6 +3853,8 @@ function buildShoot() {
   for (const s of [-1, 1]) rail(-1.5, s * 1.6, 1.5, s * 1.6, 3.1, { h: 0.95 });
   stairs(-6.6, 0, 'e', 1.0, 0, 3.1, 'metal', { open: true, rails: false });
   stairs(6.6, 0, 'w', 1.0, 0, 3.1, 'metal', { open: true, rails: false });
+  // the room walls next to the platform can't be walked along from up there
+  for (const s of [-1, 1]) blk(0, s * 5, 16.4, 0.5, 2.0, 'dark', { y: 2.8, noDraw: true, noRay: true, walk: false });
   // dressing: lights on poles at the corners, signs
   for (const [x, z] of [[-19, -19], [19, 19], [19, -19], [-19, 19]]) lampPost(x, z, 0, 6, x > 0 ? -1 : 1, 0, false);
   paperScatter(-3, 2, 0, 2.5, 6); paperScatter(-13, -10, 0, 2, 4); cone(14, -16); cone(12.5, 16);
@@ -4176,6 +4182,7 @@ function buildSnow() {
   // ---- the radar deck (5.5 m)
   deck(-14, 0, 4, 4, 5.5, 'steel', { posts: true, rails: ['w', 'e'] });
   for (const s of [-1, 1]) { rail(-16, s * 2, -14.7, s * 2, 5.5); rail(-13.3, s * 2, -12, s * 2, 5.5); }
+  blk(-11.9, 0, 0.2, 4.2, 2.4, 'dark', { y: 5.5, noDraw: true, noRay: true, walk: false });   // no jumping from the deck onto the lab roof
   CYL('steel', 0.1, 0.1, 3, 8, -15.6, 7, -1.6); PZ(-15.6, 5.5, -1.6, 0.25, 3, 0.25);
   batchAdd('paintWhite', new THREE.SphereGeometry(1.0, 14, 8, 0, TAU, 0, Math.PI / 2), mat4(-15.6, 8.5, -1.6, Math.PI / 2.5, 0.6, 0), true);
   B('redLight', 0.2, 0.2, 0.2, -15.6, 8.6, -1.6, 0, 0, 0, false);
@@ -5794,15 +5801,15 @@ function enemyMuzzle(e, out) {
 function enemyShoot(e, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
   const iq = e.iq || 0.5, track = Math.hypot(P.vx || 0, P.vz || 0) > 4 ? 0.85 + (e.hum || 0.4) * 0.12 : 1;   // a fast-moving player is harder to track
-  const chance = clamp((e.acc - dist * 0.009 * (1 - iq * 0.35) - (G.adsOn ? 0.05 : 0) - (P.eye < 1.4 ? 0.08 * (1 - iq * 0.5) : 0)) * (typeof botSettle === 'function' && inMatch() ? botSettle(e) : 1) * track, 0.06, 0.78);
+  const chance = clamp((e.acc - dist * 0.009 * (e.rangeK || 1) * (1 - iq * 0.35) - (G.adsOn ? 0.05 : 0) - (P.eye < 1.4 ? 0.08 * (1 - iq * 0.5) : 0)) * (typeof botSettle === 'function' && inMatch() ? botSettle(e) : 1) * track, 0.06, 0.78);
   const hit = Math.random() < chance;
   const to = new THREE.Vector3(P.x, P.y + P.eye * 0.8, P.z);
   if (!hit) to.add(new THREE.Vector3(rnd(-1.6, 1.6), rnd(-0.8, 1.0), rnd(-1.6, 1.6)));
-  addTracer(from, to, 0.05, 0.022);
-  e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
-  enemyFlashLight.position.copy(from); enemyFlashLight.intensity = 3.2; enemyFlashLight.userData.t = 0.05;
+  if (!e.stealth) addTracer(from, to, 0.05, 0.022);
+  e.rig.flash.visible = !e.stealth; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
+  enemyFlashLight.position.copy(from); enemyFlashLight.intensity = e.stealth ? 0 : 3.2; enemyFlashLight.userData.t = 0.05;
   const o = at(e.group.position.x, e.group.position.z, 20); sfx.enemy(o);
-  if (hit) { G.killer = e; hurtPlayer(e.dmg * (inMatch() && Math.random() < (e.hs || 0) ? 1.7 : 1), e.group.position.x, e.group.position.z); }
+  if (hit) { G.killer = e; hurtPlayer(e.dmg * (inMatch() && Math.random() < (e.hs || 0) ? 1.7 : 1) * (typeof botFall === 'function' ? botFall(e, dist) : 1), e.group.position.x, e.group.position.z); }
   else if (dist > 4) { const f = at(to.x, to.z, 8); f.vol *= 0.8; sfx.flyby(f); }
 }
 
@@ -5903,7 +5910,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
     dying.push(dd);
     e.rig.flash.visible = false;
     if (by === 'player') {
-      G.kills++; G.score += 100 + (head ? 50 : 0); statKill(e, head);
+      G.kills++; G.score += 100 + (head ? 50 : 0); statKill(e, head, !!boom);
       try { onKill(e, head, !!boom); } catch (err) { reportError(err); }
       sfx.kill(head);
     }
@@ -6115,13 +6122,14 @@ MS = blankMatch();
 function startMatchStats() { MS = blankMatch(); MS.active = true; }
 const wstat = id => MS.weapons[id] || (MS.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 });
 function statShot(hit) { if (!MS.active || G.bench) return; const w = WEAPONS[G.cur]; MS.shots++; if (hit) MS.hits++; if (w) { const s = wstat(w.def.id); s.shots++; if (hit) s.hits++; } }
-function statKill(e, head) { statKillAt(e.group.position.x, e.group.position.z, head); }
+function statKill(e, head, boom) { statKillAt(e.group.position.x, e.group.position.z, head, boom); }
 // a kill where the victim is somewhere (online kills can arrive after the victim's body is gone)
-function statKillAt(x, z, head) {
+function statKillAt(x, z, head, boom) {
   if (!MS.active || G.bench) return;
   const w = WEAPONS[G.cur], d = Math.hypot(x - P.x, z - P.z);
   MS.kills++; if (head) MS.heads++; MS.streak++; MS.bestStreak = Math.max(MS.bestStreak, MS.streak); MS.longest = Math.max(MS.longest, d);
   if (w) { const s = wstat(w.def.id); s.kills++; if (head) s.heads++; }
+  try { grindKill(head, d, boom); } catch (err) { reportError(err); }
 }
 function statDeath() { if (!MS.active || G.bench) return; MS.deaths++; MS.streak = 0; }
 // won: 1 win, 0 draw, -1 loss; null for Survival (no winner)
@@ -6190,6 +6198,107 @@ function renderStats() {
 function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(t.indexOf(statTab) + d + 3) % 3]; sfx.ui(); renderStats(); }
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
+{
+"v": "1.2.26",
+"d": "2026-10-21",
+"n": [
+"CAMO GRIND: every gun now has its own camo challenges - open the LOCKER, pick a gun and go to CHALLENGES. 8 military camos per gun, then GOLD, DIAMOND (whole class) and NOVA (every gun)",
+"BOT LOADOUTS: bots carry real guns that fit their job, with random attachments and camos - you see them in their hands, the kill feed names the gun, and each gun fights like the real thing (suppressed bots show no tracers)",
+"PLAY-PROOFING: you can no longer jump onto the Stackyard container tops from the tower, walk the Killhouse wall tops from the platform, or jump from the Whiteout radar deck onto the lab roof",
+"FIXES: the main-menu NEWS now shows the latest patch notes; the top menu tabs all fit on smaller screens; private matches can't be set to a retired map; brand-new players no longer get an old update's splash screen; bots stutter less finding their way onto roofs and ridges"
+]
+},
+{
+"v": "1.2.23",
+"d": "2026-10-21",
+"n": [
+"SMARTER BOTS: every bot gets a job when it spawns and plays it like a real team player",
+"ENTRY pushes first, SUPPORT follows a teammate and trades their fights, ANCHOR plays the objective, OVERWATCH takes the high ground and holds long angles, LURK waits and flanks alone, SLAYER goes for kills over the objective",
+"Bots take their own lanes when they spawn, so a team spreads over the whole map instead of running in a line",
+"S&D: attackers gather and hit the site together while a lurker cuts the rotation; defenders split over both sites and wait for a teammate before retaking a planted bomb",
+"Free-for-all and Gun Game bots have personalities: rushers, campers, flankers and roamers. Bots slow down near danger to check corners, hear footsteps close by, and only chase what they actually saw or heard"
+]
+},
+{
+"v": "1.2.22",
+"d": "2026-10-21",
+"n": [
+"SMARTER BOTS: every bot gets a job when it spawns and plays it like a real team player",
+"ENTRY pushes first, SUPPORT follows a teammate and trades their fights, ANCHOR plays the objective, OVERWATCH takes the high ground and holds long angles, LURK waits and flanks alone, SLAYER goes for kills over the objective",
+"Bots take their own lanes when they spawn, so a team spreads over the whole map instead of running in a line",
+"S&D: attackers gather and hit the site together while a lurker cuts the rotation; defenders split over both sites and wait for a teammate before retaking a planted bomb",
+"Free-for-all and Gun Game bots have personalities: rushers, campers, flankers and roamers. Bots slow down near danger to check corners, hear footsteps close by, and only chase what they actually saw or heard"
+]
+},
+{
+"v": "1.2.21",
+"d": "2026-10-21",
+"n": [
+"8 BRAND NEW MAPS - the old maps are out of the rotation. Every map has three lanes, flank routes between them and one power position that can always be shot back at",
+"SMALL: STACKYARD and KILLHOUSE. MEDIUM: SKYPORT, SPIRE, DUSTWATER, WHITEOUT, BLACKWATER PIER. LARGE: RIDGELINE (built for FFA and long-range fights). The lobby map picker shows each map's size",
+"67 NEW PROPS across the maps: airport security and luggage, market stalls and pottery, snowmobiles and research tents, lobster traps and anchors, farm fences and woodpiles, street and industrial details",
+"FURNISHED ROOMS: every room is filled with furniture that fits it - kitchens and living rooms, bedrooms, offices, the lab, shops, workshops, the barn and the boathouse - with rugs, lights and pictures. Doorways, stairs and walkways stay clear"
+]
+},
+{
+"v": "1.2.18",
+"d": "2026-10-16",
+"n": [
+"THE FREE SPEECH UPDATE",
+"CONTROLLER: pick your class with the controller before the match starts; the mouse cursor hides while you use a controller and comes back as soon as you touch the mouse or keyboard; button prompts show controller buttons",
+"TEXT CHAT: Enter to chat in a match (Tab switches ALL / PARTY), party chat in the lobby, quick-chat buttons, mute players. Match chat clears when the next match starts",
+"VOICE CHAT (desktop app): push to talk (V / D-pad left) or open mic, with volume, mic sensitivity and muting in the new pause menu panel",
+"GRENADES: no longer pass through walls, floors and ceilings inside buildings; hold the grenade button to see a dotted path of where it will go, let go to throw",
+"DZ: every finished match now pays DZ (40, +2 a kill, +30 for a win, online +25%)"
+]
+},
+{
+"v": "1.2.17",
+"d": "2026-10-16",
+"n": [
+"BATTLE PASS · Season 1: AFTERSHOCK - 100 tiers. Free row: DZ, free chance boxes and cosmetics. Premium row: a pass-only cosmetic every tier (free during the beta)",
+"NEW: gun CHARMS that hang off your gun and swing as you move, and account BANNERS behind your name (lobby and the death cam). Both come from chance boxes and the battle pass",
+"LOCKER: tabs for Camos, Stickers and Charms on each gun, a Banners page, faster weapon pictures, the list no longer jumps to the top",
+"SCORESTREAKS: cost more (UAV 550 to Airstrike 1700), 15 s between call-ins and a cooldown before each can be earned again, streak kills don't earn streaks, strikes hit a little softer",
+"HUD: simpler, solid colours with an outline so every number and message is readable",
+"RECOIL: every gun kicks harder and climbs more on a spray (assault rifles and SMGs most); less of it recovers on its own"
+]
+},
+{
+"v": "1.2.16",
+"d": "2026-10-15",
+"n": [
+"THE EA UPDATE",
+"100 NEW CAMOS: fleck, multicam, zebra, waves, glitch, honeycomb, holographic foil, gems and more, from Common to Legendary",
+"Three chance boxes: STANDARD (500 DZ), ELITE (1,200 DZ) and PRESTIGE (2,500 DZ) with better odds, each with a VIEW CONTENTS list",
+"New LOCKER: pick a weapon (with pictures of every gun), then its camos; stickers are under OTHER COSMETICS. Only the things you own are shown",
+"Diamond is now a cut gem with sparkles, and the metal finishes have brushed and engraved detail",
+"Chance boxes and Locker: more improvements"
+]
+},
+{
+"v": "1.2.12",
+"d": "2026-10-15",
+"n": [
+"LEVELS: level 1 to 100 from XP for kills, headshots, objectives, finishing and winning matches (online +25%). XP and level ups show on the results screen",
+"Every level pays DZ, every 5 levels unlocks a gun STICKER, and level 100 unlocks the DARKZONE GOLD skin",
+"New LOCKER tab: 39 camos and skins in 4 rarities plus 19 stickers, a 3D preview, and equip on one gun or all weapons",
+"New REWARDS tab: daily DZ reward with a 7 day streak, the level reward track, and CHANCE BOXES (500 DZ, odds shown: Common 60%, Rare 27%, Epic 10%, Legendary 3%). Camos only come from boxes; duplicates pay DZ back",
+"Everyone starts with 500 DZ for a first box, and past matches count toward a starting level (up to 25)"
+]
+},
+{
+"v": "1.2.11",
+"d": "2026-10-15",
+"n": [
+"Graphics settings overhaul: YOUR HARDWARE panel (graphics card, display and refresh rate, limits) and a benchmark button",
+"Render scale up to 200% (supersampling) for a much sharper image on strong graphics cards",
+"Frame rate limit: DISPLAY, 30, 60, 90, 120, 144, 165 or 240; dynamic resolution now aims for your limit, so high refresh monitors stay smooth",
+"Shadow quality OFF to EXTREME (8K shadow maps on cards that support it) plus a shadow distance slider",
+"Texture filtering 1x to 16x, texture quality, effects quality, grass density, anti-aliasing and which graphics card to use",
+"Presets set everything at once; change any detail and the preset shows CUSTOM. Your current settings carry over"
+]
+},
 {
 "v": "1.2.10",
 "d": "2026-10-15",
@@ -6497,6 +6606,7 @@ function spawnBot(en, pos) {
   if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
   en.bot = e; en.alive = true; enemies.push(e);
   if (M.mode === 'gun') botGunProfile(e, GUN_LADDER[Math.min(en.level || 0, GUN_LADDER.length - 1)]);
+  else if (!G.noRoles) try { botLoadout(e); } catch (err) { reportError(err); }
   return e;
 }
 function startMatch(mode, custom) {
@@ -6562,9 +6672,7 @@ function placePlayer(p) {
 // gun game bots fight with the gun of their level: its damage, fire rate and burst length
 function botGunProfile(e, id) {
   const d = ARM[id]; if (!d || !e) return;
-  const sk = SKILL[M.cfg.skill] || SKILL.regular, per = d.dmg * (d.pellets ? d.pellets * 0.55 : 1);
-  e.gunId = id; e.dmg = sk.dmg * (M.cfg.hardcore ? 1.4 : 1) * clamp(per / 34, 0.55, 3.2);
-  e.gap = clamp(d.interval || 0.1, 0.06, 1.3); e.burstMin = d.interval > 0.3 || d.auto === false ? 1 : 3; e.burstMax = d.interval > 0.3 || d.auto === false ? 3 : 7;
+  botApplyGun(e, d, {}); try { botGunVisual(e, d, {}, null); } catch (err) { reportError(err); }
   e.cd = Math.max(e.cd || 0, 0.7);   // a moment to bring the new gun up
 }
 function equipGunGame(level) {
@@ -6587,7 +6695,7 @@ function respawnPlayer() {
 function queueRespawn(en) { if (M.def.respawn) M.respawnQ.push({ en, t: M.def.respawn }); }
 
 /* ---------- kills, scoring */
-function weaponLabel(by) { if (by === 'player') return WEAPONS[G.cur] ? WEAPONS[G.cur].name : ''; if (by && by.entry) return 'RIFLE'; return '✹'; }
+function weaponLabel(by) { if (by === 'player') return WEAPONS[G.cur] ? WEAPONS[G.cur].name : ''; if (by && by.entry) return botGunName(by); return '✹'; }
 function nameHtml(en) {
   if (!en) return '';
   if (en.isPlayer) return '<b>YOU</b>';
@@ -6621,7 +6729,7 @@ function matchPlayerKilled(killer) {
   M.me.deaths++; M.me.alive = false;
   try { if (killer && killer.entry) brainHumanKilled(killer, P.x, P.z); } catch (err) {}
   const ke = killer && killer.entry ? killer.entry : null;
-  if (ke) { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> <b>YOU</b>`); }
+  if (ke) { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> <b>YOU</b>`); }
   dropCtfFlag('player');
   if (M.mode === 'snd') checkRoundEnd();
 }
@@ -6747,15 +6855,15 @@ function botSettle(e) {
 }
 function botShoot(e, t, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
-  botsHear(e.group.position.x, e.group.position.z, e.team, 40, e);
+  botsHear(e.group.position.x, e.group.position.z, e.team, e.stealth ? 18 : 40, e);
   e.lastShotT = M.t; if (e.entry) e.entry.sh = (e.entry.sh || 0) + 1;
   if (t === 'P') { G.killer = e; if (!(G.spawnProt > 0)) enemyShoot(e, dist); return; }
-  const chance = clamp((e.acc - dist * 0.008 - (t.crouchK || 0) * 0.06) * botSettle(e), 0.05, 0.7), hit = Math.random() < chance;
+  const chance = clamp((e.acc - dist * 0.008 * (e.rangeK || 1) - (t.crouchK || 0) * 0.06) * botSettle(e), 0.05, 0.7), hit = Math.random() < chance;
   targetPoint(t, _bd); const to = _bd.clone(); if (!hit) to.add(new THREE.Vector3(rnd(-1.4, 1.4), rnd(-0.6, 0.9), rnd(-1.4, 1.4)));
-  addTracer(from, to, 0.05, 0.02);
-  e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
+  if (!e.stealth) addTracer(from, to, 0.05, 0.02);
+  e.rig.flash.visible = !e.stealth; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
   const o = at(e.group.position.x, e.group.position.z, 20); sfx.enemy(o);
-  if (hit) { const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(), hd = Math.random() < (e.hs || 0.12); damageEnemy(t, e.dmg * (hd ? 2 : 1), hd, dir, false, e); }
+  if (hit) { const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(), hd = Math.random() < (e.hs || 0.12); damageEnemy(t, e.dmg * (hd ? 2 : 1) * botFall(e, dist), hd, dir, false, e); }
 }
 function updateBots(dt) {
   if (G.holdT > 0) return;
@@ -7389,10 +7497,10 @@ function lanePoint(e, frac, lane = e.lane, jit = 2.5) {
   const a = botAxis(e), x = a.S.x + a.fx * a.L * frac + a.lx * lane * a.off + rnd(-jit, jit), z = a.S.z + a.fz * a.L * frac + a.lz * lane * a.off + rnd(-jit, jit);
   const g = nearestPt(x, z); if (Math.hypot(g.x - x, g.z - z) < 4) return g;
   // no ground spot there (a ridge, a roof route): any floor level at that spot we can actually walk to
-  const me = nodeOf(e.group.position.x, e.group.position.z, e.group.position.y);
-  for (let r = 0; r <= 3; r++) for (let k = 0; k < 8; k++) {
+  const f = flowField(e.group.position.x, e.group.position.z, e.group.position.y);   // one search from where we stand (cached), not one per candidate
+  if (f) for (let r = 0; r <= 3; r++) for (let k = 0; k < 8; k++) {
     const cx = cellOf(x + Math.cos(k * 0.785) * r * 1.5), cz = cellOf(z + Math.sin(k * 0.785) * r * 1.5), c = cz * NN + cx;
-    for (let l = lvN[c] - 1; l >= 0; l--) { if (lvS[c * NL + l]) continue; const y = lvH[c * NL + l], f = flowField(cellPos(cx), cellPos(cz), y); if (f && me >= 0 && f[me] >= 0) return { x: cellPos(cx), z: cellPos(cz), y }; }
+    for (let l = lvN[c] - 1; l >= 0; l--) { if (lvS[c * NL + l]) continue; if (f[c * NL + l] >= 0) return { x: cellPos(cx), z: cellPos(cz), y: lvH[c * NL + l] }; }
   }
   return g;
 }
@@ -7518,6 +7626,101 @@ function botPace(e, tp) {
   if (e.job === 'lurk' && e.ri >= 1) k *= 0.82;
   return k;
 }
+/* ================================================================== bot loadouts: every bot carries a real gun
+   Each bot gets a class that fits its job (overwatch: sniper or marksman rifle, entry: SMG or shotgun, support: AR or
+   LMG...), random attachments from that gun's real attachment list, and sometimes a camo. The gun shows in its
+   hands (the same models as yours, with the attachments on), and it fights like that gun: damage, fire rate, bursts,
+   magazine, effective range and damage drop-off, and a suppressor really makes it quieter (no tracer, heard from
+   less far away). A bot keeps its class between lives, and now and then swaps to a new one. */
+const BOT_GUN_PREF = { entry: ['smg', 'sg', 'ar'], support: ['ar', 'lmg', 'ar'], anchor: ['ar', 'lmg', 'mr'], overwatch: ['sr', 'mr', 'sr'], lurk: ['smg', 'ar', 'smg'], slayer: ['ar', 'smg', 'sg'] };
+const BOT_LEN = { pi: 0.26, smg: 0.62, sg: 0.95, ar: 0.86, lmg: 1.0, mr: 1.02, sr: 1.15, la: 1.0 };
+const BOTGUN_CACHE = new Map();
+// run fn with this attachment set standing in for the player's own for that gun
+function withAtts(def, set, fn) {
+  const had = Object.prototype.hasOwnProperty.call(ATTS, def.id), old = ATTS[def.id];
+  ATTS[def.id] = set || {};
+  try { return fn(); } finally { if (had) ATTS[def.id] = old; else delete ATTS[def.id]; }
+}
+function botRandomAtts(def, quiet) {
+  const set = {};
+  for (const slot of slotsFor(def)) {
+    const opts = attFor(def, slot);   // [factory part, ...options]
+    if (quiet && slot === 'muzzle') { const s = opts.find(a => a.id === 'suppressor'); if (s) { set[slot] = s.id; continue; } }
+    if (opts.length > 1 && Math.random() < 0.65) set[slot] = opts[1 + ((Math.random() * (opts.length - 1)) | 0)].id;
+  }
+  return set;
+}
+function botPickGun(e) {
+  const prefs = BOT_GUN_PREF[e.job] || ['ar', 'smg'], cat = prefs[(Math.random() * prefs.length) | 0];
+  const list = ARMORY.filter(d => d.cat === cat);
+  return list.length ? list[(Math.random() * list.length) | 0] : ARMORY.find(d => d.cat === 'ar');
+}
+// stats from the gun and its attachments
+function botApplyGun(e, def, atts) {
+  const st = withAtts(def, atts, () => computeStats(def, null)), sk = SKILL[M.cfg.skill] || SKILL.regular;
+  const per = st.dmg * (st.pellets > 1 ? st.pellets * 0.55 : 1), semi = st.interval > 0.3 || def.auto === false;
+  e.gunId = def.id; e.atts = atts || {};
+  e.dmg = sk.dmg * (M.cfg.hardcore ? 1.4 : 1) * clamp(per / 34, 0.55, 3.2);
+  e.gap = clamp(st.interval, 0.06, 1.3); e.burstMin = semi ? 1 : 3; e.burstMax = semi ? 3 : 7;
+  e.magSize = Math.max(1, st.magSize); e.mag = Math.min(e.mag || e.magSize, e.magSize) || e.magSize;
+  e.eff = st.eff; e.fallMin = st.fallMin; e.rangeK = clamp(28 / Math.max(6, st.eff), 0.35, 2.2); e.stealth = !!st.stealth;
+}
+// the gun in the bot's hands
+function botGunVisual(e, def, atts, camo) {
+  const rig = e.rig; if (!rig || !rig.gun) return;
+  if (e.gunVis) { rig.gun.remove(e.gunVis); e.gunVis = null; }
+  const key = def.id + '|' + JSON.stringify(atts || {}) + '|' + (camo || '');
+  let tpl = BOTGUN_CACHE.get(key);
+  if (!tpl) {
+    const g = buildGunModel(def, true);
+    withAtts(def, atts, () => { const st = computeStats(def, null); attachVisuals(g, def, false, g.userData.len + st.lenAdd, null); });
+    try { if (camo) applyCamo(g, camo); } catch (err) {}
+    g.traverse(o => { if (o.name && /^hand/.test(o.name)) o.visible = false; }); if (g.userData.flash) g.userData.flash.visible = false;
+    const holder = new THREE.Group(); holder.add(g); g.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    g.traverse(o => { if (!o.isMesh || (o.material && o.material.blending === THREE.AdditiveBlending)) return; for (let p = o; p; p = p.parent) if (!p.visible) return; box.expandByObject(o); });
+    const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3()), L = BOT_LEN[def.cat] || 0.86;
+    g.position.sub(c); holder.scale.setScalar(L / Math.max(sz.z, sz.x, 0.1)); holder.rotation.y = Math.PI;   // view models point down -z, the rig's gun points +z
+    tpl = botGunMerge(holder); tpl.userData.len = L; BOTGUN_CACHE.set(key, tpl);
+    if (BOTGUN_CACHE.size > 48) BOTGUN_CACHE.delete(BOTGUN_CACHE.keys().next().value);
+  }
+  const vis = tpl.clone(), L = tpl.userData.len, cz = def.cat === 'pi' ? 0.06 : L / 2 - 0.22;
+  vis.position.set(0, 0, cz);
+  for (const ch of rig.gun.children) if (ch !== rig.flash) ch.visible = false;
+  rig.gun.add(vis); e.gunVis = vis;
+  if (rig.flash) rig.flash.position.z = cz + L / 2 + 0.04;
+}
+// bake the gun into one mesh per material (about 28 parts -> 10 draw calls per bot)
+function botGunMerge(holder) {
+  holder.updateMatrixWorld(true);
+  const groups = new Map(), out = new THREE.Group();
+  holder.traverse(o => {
+    if (!o.isMesh || (o.material && o.material.blending === THREE.AdditiveBlending)) return;
+    for (let p = o; p; p = p.parent) if (!p.visible) return;
+    const g = o.geometry, ok = g && g.attributes.position && g.attributes.normal && g.attributes.uv && !Array.isArray(o.material);
+    if (!ok) { const m = o.clone(); m.userData = {}; o.matrixWorld.decompose(m.position, m.quaternion, m.scale); out.add(m); return; }
+    if (!groups.has(o.material)) groups.set(o.material, []);
+    groups.get(o.material).push({ g, m: o.matrixWorld.clone() });
+  });
+  for (const [mat, parts] of groups) { const m = new THREE.Mesh(mergeGeos(parts), mat); m.castShadow = true; out.add(m); }
+  out.traverse(o => { o.userData = {}; if (o.isMesh) o.raycast = () => {}; });   // clone() deep-copies userData, and the view model's has loops
+  return out;
+}
+// a bot's class: kept between lives, sometimes changed
+function botLoadout(e) {
+  const en = e.entry; if (!en) return;
+  if (!en.loadout || Math.random() < 0.2) {
+    const def = botPickGun(e), quiet = e.job === 'lurk' && Math.random() < 0.7;
+    let camo = null; if (Math.random() < 0.4) { const pool = BOX_POOL.filter(c => c.kind === 'camo' || c.kind === 'skin'); camo = pool.length ? pool[(Math.random() * pool.length) | 0].id : null; }
+    en.loadout = { gun: def.id, atts: botRandomAtts(def, quiet), camo };
+  }
+  const L = en.loadout, def = ARM[L.gun]; if (!def) return;
+  botApplyGun(e, def, L.atts);
+  try { botGunVisual(e, def, L.atts, L.camo); } catch (err) { reportError(err); }
+}
+// damage drop-off past the gun's effective range (bot shots)
+const botFall = (e, dist) => !e.eff || dist <= e.eff ? 1 : Math.max(e.fallMin || 0.5, e.eff / dist);
+const botGunName = e => (e && e.gunId && ARM[e.gunId] ? ARM[e.gunId].name : 'RIFLE');
 /* ================================================================== lobby: pick a mode, check your class, custom games, stats */
 function modeRules(k, cfg) {
   const d = MODES[k], c = cfg || matchCfg(k);
@@ -9448,7 +9651,7 @@ function netTick(dt) {
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
         else { statKillAt(R.x, R.z, head); perkOnKill(); }
         if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
-      } else if (botBy(R.kb)) { const ke = botBy(R.kb); try { brainHumanKilled(ke.bot, R.x, R.z); } catch (err) {} ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> ${nameHtml(R.entry)}`); }
+      } else if (botBy(R.kb)) { const ke = botBy(R.kb); try { brainHumanKilled(ke.bot, R.x, R.z); } catch (err) {} ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> ${nameHtml(R.entry)}`); }
       else if (R.kb && NET.rem.get(R.kb)) feedLine(`${netFeedName(NET.rem.get(R.kb))} <span class="fw">✦</span> ${nameHtml(R.entry)}${head ? ' <span class="ft">HEADSHOT</span>' : ''}`);
       netDropBot(R, true, head);
     }
@@ -9588,7 +9791,7 @@ function netBots(dt) {
   NET.botPres = M.entries.filter(en => en.botLabel).map(en => {
     const e = en.bot, g = e && e.group;
     return [en.botLabel, { v: 1, on: 1, bot: 1, n: en.name, tm: M.def.teams ? en.team : 0, x: g ? r2(g.position.x) : 0, y: g ? r2(g.position.y) : 0, z: g ? r2(g.position.z) : 0, yw: g ? r3(g.rotation.y - Math.PI) : 0, pt: 0,
-      cr: e && e.crouchK > 0.5 ? 1 : 0, a: e && en.alive ? 1 : 0, wn: 'RIFLE', k: en.kills, d: en.deaths, ds: en.ds, kb: en.kb, kh: en.kh, sh: en.sh, hs: en.hs, ep: NET.ep }];
+      cr: e && e.crouchK > 0.5 ? 1 : 0, a: e && en.alive ? 1 : 0, wn: botGunName(e), k: en.kills, d: en.deaths, ds: en.ds, kb: en.kb, kh: en.kh, sh: en.sh, hs: en.hs, ep: NET.ep }];
   });
 }
 
@@ -9643,7 +9846,7 @@ const PRIV_SC = { tdm: [10, 150, 5], ffa: [5, 60, 5], gun: [20, 20, 1], hp: [50,
 const PRIV_MODE = { tdm: 'otdm', ffa: 'offa', gun: 'ogun', hp: 'ohp', ctf: 'octf', snd: 'osnd' };
 function privClean(c) {
   const md = PRIV_SC[c.md] ? c.md : 'tdm', L = PRIV_SC[md];
-  return { md, mp: c.mp === 'random' || MAPS[c.mp] ? c.mp : 'random', b: clamp(+c.b | 0, 0, 11), tl: clamp(+c.tl | 0, 0, 30), sc: md === 'gun' ? GUN_LADDER.length : clamp(+c.sc | 0 || L[0], L[0], L[1]) };
+  return { md, mp: c.mp === 'random' || (MAPS[c.mp] && !MAPS[c.mp].hidden) ? c.mp : 'random', b: clamp(+c.b | 0, 0, 11), tl: clamp(+c.tl | 0, 0, 30), sc: md === 'gun' ? GUN_LADDER.length : clamp(+c.sc | 0 || L[0], L[0], L[1]) };
 }
 PRIVCFG = privClean(PRIVCFG);
 const privSave = () => { try { localStorage.setItem(PRIV_KEY, JSON.stringify(PRIVCFG)); } catch (e) {} };
@@ -11361,11 +11564,11 @@ function applyCamo(g, id) {
 // which cosmetic a gun wears: its own pick, else the all-weapons pick (only if owned)
 // which camo a gun wears: its own pick, else the all-weapons pick (owned only). Secret camos only on the gun they dropped for
 const secretKey = (id, gun) => id + '@' + gun;
-function ownsFor(id, gunId) { const c = COS[id]; return !!c && (c.secret && !c.universal ? !!PROG.owned[secretKey(id, gunId)] : !!PROG.owned[id]); }
-function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; if (!id || !COS[id]) return null; if (COS[id].secret && !COS[id].universal && own !== id) return null; return ownsFor(id, gunId) ? id : null; }
+function ownsFor(id, gunId) { const c = COS[id]; return !!c && ((c.secret && !c.universal) || c.grind ? !!PROG.owned[secretKey(id, gunId)] : !!PROG.owned[id]); }
+function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; if (!id || !COS[id]) return null; if (((COS[id].secret && !COS[id].universal) || COS[id].grind) && own !== id) return null; return ownsFor(id, gunId) ? id : null; }
 function refreshHeldCamos() { try { (WEAPONS || []).forEach((w, i) => { if (gunObjs[i] && w && w.def) { applyCamo(gunObjs[i], camoFor(w.def.id)); applySticker(gunObjs[i], stickerFor(w.def.id)); applyCharm(gunObjs[i], charmFor(w.def.id)); } }); } catch (e) {} }
-const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]]).length;
-const publicCount = () => COSM.filter(c => !c.secret).length;
+const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]] && !COS[k.split('@')[0]].grind).length;
+const publicCount = () => COSM.filter(c => !c.secret && !c.grind).length;
 
 /* ---------- weapon pictures for the Locker (rendered one per frame, cached per gun + camo + sticker) */
 const THUMB = { cache: {}, q: [], scene: null, cam: null, rt: null, buf: null };
@@ -11480,24 +11683,25 @@ function renderLocker() {
     $('lkFilters').innerHTML = `<button class="cod-tab on" data-act="lk-guns">WEAPONS</button><button class="cod-tab" data-act="lk-banners">BANNERS</button><span class="lk-crumb">SELECT A WEAPON</span>`;
     const cats = []; for (const d of lockerGuns()) { if (!cats.includes(d.cat)) cats.push(d.cat); }
     body.className = 'lk-guns';
-    body.innerHTML = `<div class="lk-count">${ownedCount()} / ${publicCount()} COLLECTED${Object.keys(PROG.owned).some(k => k.includes('@')) ? ' · + SECRET' : ''}</div>` + cats.map(cat => `<div class="lk-cat"><small>${CATS[cat].name}</small><div class="lk-gg">${lockerGuns().filter(d => d.cat === cat).map(d => {
+    body.innerHTML = `<div class="lk-count">${ownedCount()} / ${publicCount()} COLLECTED${Object.keys(PROG.owned).some(k => k.includes('@') && COS[k.split('@')[0]] && COS[k.split('@')[0]].secret) ? ' · + SECRET' : ''}</div>` + cats.map(cat => `<div class="lk-cat"><small>${CATS[cat].name}</small><div class="lk-gg">${lockerGuns().filter(d => d.cat === cat).map(d => {
       const cm = camoFor(d.id), st = stickerFor(d.id), n = gunItems(d.id, 'camo').length;
       const th = gunThumb(d.id);
-      return `<button class="lk-gun" data-lkgun="${d.id}" style="${cm ? `--rc:${RAR[COS[cm].r].col}` : ''}"><em>${n} CAMO${n === 1 ? '' : 'S'}</em><span class="lk-gimg" data-thumb="${d.id}">${th ? `<img src="${th}" alt="">` : ''}</span><b>${d.name}</b><small>${cm ? COS[cm].name : 'FACTORY'}${st ? ' · ' + COS[st].name : ''}</small></button>`;
+      return `<button class="lk-gun" data-lkgun="${d.id}" style="${cm ? `--rc:${RAR[COS[cm].r].col}` : ''}"><em>${n} CAMO${n === 1 ? '' : 'S'}</em><span class="lk-gimg" data-thumb="${d.id}">${th ? `<img src="${th}" alt="">` : ''}</span><b>${d.name}</b><span class="gr-badge ${grindBadge(d.id).includes('/') ? '' : grindBadge(d.id)}">${grindBadge(d.id)}</span><small>${cm ? COS[cm].name : 'FACTORY'}${st ? ' · ' + COS[st].name : ''}</small></button>`;
     }).join('')}</div></div>`).join('');
     for (const b of body.querySelectorAll('[data-lkgun]')) b.onclick = () => { LK.gun = b.dataset.lkgun; LK.view = 'gun'; LK.tab = 'camo'; LK.sel = camoFor(LK.gun); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on, #lkGrid button'); };
     PV.want = null; return;
   }
   if (LK.view === 'banners') return renderBanners(body);
   // one gun: preview + its camos, stickers or charms
+  if (LK.tab === 'grind') return renderGrind(body, ARM[LK.gun]);
   const d = ARM[LK.gun], cur = camoFor(LK.gun), curS = stickerFor(LK.gun), curC = charmFor(LK.gun), tab = LK.tab === 'other' ? 'sticker' : LK.tab, items = gunItems(LK.gun, tab);
   const curT = tab === 'sticker' ? curS : tab === 'charm' ? curC : cur, word = { camo: 'CAMO', sticker: 'STICKER', charm: 'CHARM' }[tab];
   const sel = LK.sel && COS[LK.sel] ? COS[LK.sel] : null, on = sel && curT === sel.id;
-  $('lkFilters').innerHTML = `<button class="cod-tab" data-act="lk-back">&lsaquo; WEAPONS</button>` + [['camo', 'CAMOS'], ['sticker', 'STICKERS'], ['charm', 'CHARMS']].map(([k, n]) => `<button class="cod-tab${tab === k ? ' on' : ''}" data-lktab="${k}">${n}</button>`).join('');
+  $('lkFilters').innerHTML = `<button class="cod-tab" data-act="lk-back">&lsaquo; WEAPONS</button>` + [['camo', 'CAMOS'], ['grind', 'CHALLENGES'], ['sticker', 'STICKERS'], ['charm', 'CHARMS']].map(([k, n]) => `<button class="cod-tab${tab === k ? ' on' : ''}" data-lktab="${k}">${n}</button>`).join('');
   body.className = 'lk-body';
   body.innerHTML = `<div class="lk-left"><div class="lk-gun-h"><small>${CATS[d.cat].name}</small><b>${d.name}</b></div><canvas id="lkPrev" width="480" height="200"></canvas><div id="lkInfo"></div><div class="lk-acts" id="lkActs2"></div></div><div class="lk-right"><div class="lk-sub">${tab === 'camo' ? 'CAMOS & SKINS · YOU OWN ' + items.length : tab === 'sticker' ? 'STICKERS · ONE PER GUN · YOU OWN ' + items.length : 'CHARMS · HANG ONE ON EACH GUN · YOU OWN ' + items.length}</div><div class="lk-grid" id="lkGrid"></div></div>`;
   $('lkInfo').innerHTML = sel ? `<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} ${kindName(sel)}${sel.bp ? ' · SEASON 1' : ''}</small><b>${sel.name}</b></div>${sel.secret ? `<div class="lk-secret${sel.universal ? ' prime' : ''}">${sel.universal ? 'SECRET PRIME · WORKS ON EVERY GUN' : 'SECRET · ONLY FOR THE ' + d.name}${typeof SECRET_VID !== 'undefined' && SECRET_VID[sel.id] ? ' <button class="mini lk-rv" data-act="lk-reveal">▶ PLAY REVEAL</button>' : ''}</div>` : ''}
-<div class="lk-acts"><button class="btn primary" data-act="lk-apply"${on ? ' disabled' : ''}>${on ? 'EQUIPPED' : 'EQUIP ON ' + d.name}</button>${sel.secret && !sel.universal ? '' : `<button class="btn" data-act="lk-all">EQUIP ON ALL WEAPONS</button>`}</div>`
+<div class="lk-acts"><button class="btn primary" data-act="lk-apply"${on ? ' disabled' : ''}>${on ? 'EQUIPPED' : 'EQUIP ON ' + d.name}</button>${(sel.secret && !sel.universal) || sel.grind ? '' : `<button class="btn" data-act="lk-all">EQUIP ON ALL WEAPONS</button>`}</div>`
     : `<div class="lk-name"><small>NO ${word}</small><b>${tab === 'camo' ? 'FACTORY FINISH' : 'NONE'}</b></div>`;
   $('lkActs2').innerHTML = `<button class="btn" data-act="lk-clear-${tab}"${!curT ? ' disabled' : ''}>REMOVE ${word}</button>`;
   const empty = { camo: 'No camos yet. Open chance boxes in REWARDS to get some.', sticker: 'Level up to earn stickers (one every 5 levels), or get them from the BATTLE PASS.', charm: 'No charms yet. They come from chance boxes in REWARDS and from the BATTLE PASS.' }[tab];
@@ -11530,8 +11734,8 @@ function lockerAct(act) {
   if (act === 'lk-guns') { LK.view = 'guns'; sfx.ui(); renderLocker(); focusFirst('#lkBody [data-lkgun]'); return true; }
   if (act === 'lk-banner' && LK.bsel && PROG.owned[LK.bsel]) { PROG.banner = LK.bsel; saveProg(); sfx.ui(); toast2('BANNER EQUIPPED'); renderLocker(); try { renderMenuCard(); } catch (e) {} focusFirst('#lkGrid .on'); return true; }
   if (act === 'lk-apply' && LK.sel && ownsFor(LK.sel, LK.gun)) { slot.guns[LK.gun] = LK.sel; saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on'); return true; }
-  if (act === 'lk-all' && LK.sel && PROG.owned[LK.sel] && (!COS[LK.sel].secret || COS[LK.sel].universal)) {
-    slot.all = LK.sel; for (const g in slot.guns) if (!(COS[slot.guns[g]] && COS[slot.guns[g]].secret)) delete slot.guns[g];   // secret picks stay on their gun
+  if (act === 'lk-all' && LK.sel && PROG.owned[LK.sel] && (!COS[LK.sel].secret || COS[LK.sel].universal) && !COS[LK.sel].grind) {
+    slot.all = LK.sel; for (const g in slot.guns) if (!(COS[slot.guns[g]] && (COS[slot.guns[g]].secret || COS[slot.guns[g]].grind))) delete slot.guns[g];   // secret picks stay on their gun
     saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on'); toast2('EQUIPPED ON ALL WEAPONS'); return true;
   }
   if (act === 'lk-clear-charm') { PROG.chm.guns[LK.gun] = 'none'; saveProg(); LK.sel = null; refreshHeldCamos(); sfx.ui(); renderLocker(); return true; }
@@ -11551,7 +11755,7 @@ function lockerAct(act) {
   if (act === 'rw-box-close') { boxClose(); return true; }
   if (act === 'rw-box-equip') {
     const r = BOXV.res;
-    if (r && !r.dup) { if (r.it.secret && !r.it.universal) { PROG.equip.guns[r.gun] = r.it.id; toast2(r.it.name + ' ON ' + ARM[r.gun].name); } else { PROG.equip.all = r.it.id; for (const g in PROG.equip.guns) if (!(COS[PROG.equip.guns[g]] && COS[PROG.equip.guns[g]].secret)) delete PROG.equip.guns[g]; toast2(r.it.name + ' ON ALL WEAPONS'); } saveProg(); refreshHeldCamos(); }
+    if (r && !r.dup) { if (r.it.secret && !r.it.universal) { PROG.equip.guns[r.gun] = r.it.id; toast2(r.it.name + ' ON ' + ARM[r.gun].name); } else { PROG.equip.all = r.it.id; for (const g in PROG.equip.guns) if (!(COS[PROG.equip.guns[g]] && (COS[PROG.equip.guns[g]].secret || COS[PROG.equip.guns[g]].grind))) delete PROG.equip.guns[g]; toast2(r.it.name + ' ON ALL WEAPONS'); } saveProg(); refreshHeldCamos(); }
     boxClose(); return true;
   }
   return false;
@@ -11711,6 +11915,126 @@ function boxClose() { if (BOXV.ov) BOXV.ov.remove(); BOXV.ov = null; BOXV.res = 
 @media (max-width:900px){.rw2{grid-template-columns:1fr}.lk-body{grid-template-columns:1fr}.rw-boxes{grid-template-columns:1fr}}
 @media (max-width:900px){.lk-body,.rw-body{grid-template-columns:1fr}}`;
   document.head.appendChild(s);
+})();
+/* ================================================================== CAMO GRIND: earn camos by playing each gun
+   Every gun has 8 MILITARY camos, each behind a challenge with that gun (kills, headshots, longshots, hip-fire or
+   crouched kills, double kills). All 8 unlock GOLD for that gun. GOLD on every gun in a class unlocks DIAMOND for
+   the whole class. DIAMOND on every class unlocks NOVA for every gun. Progress counts in every mode, offline and
+   online (not the benchmark), and is saved with the rest of your progress (PROG.grind). Grind camos belong to the
+   gun they were earned on. */
+const GRIND_MIL = [
+  ['DUSTLINE', 'blobs', 0, [0xb59a6a, 0x8d7448, 0xd2bd8e, 0x5e4c30]],
+  ['FIELD DRAB', 'digital', 0, [0x56603a, 0x3a4228, 0x7a7d4e, 0x262b1c]],
+  ['SCRUBLAND', 'splinter', 0, [0x8a8456, 0x5f5a38, 0xa9a274, 0x3b3824]],
+  ['SAVANNA', 'tiger', 1, [0xc49a52, 0x3a2a14, 0xe0c27a]],
+  ['TIMBERLINE', 'multicam', 1, [0x5a4a34, 0x3a5030, 0x8a7a5a, 0x22261a]],
+  ['COBALT', 'hex', 1, [0x1f3a66, 0x264878, 0x30588c, 0x162a4a], { line: 0x0a1426 }],
+  ['VIPER', 'scales', 2, [0x2e5a24, 0x1a3614, 0x0e1e0a], {}, { rough: 0.45, metal: 0.25 }],
+  ['CRIMSON', 'splat', 2, [0x6a0e0e, 0x9a1a14, 0x2a0606, 0xd8402a], {}, { rough: 0.5, metal: 0.15 }],
+];
+const GRIND_TOP = [
+  { id: 'g_gold', name: 'GOLD', kind: 'skin', r: 3, grind: true, g: { t: 'solid', c: [0xe0b445], fx: 'engrave' }, m: { rough: 0.3, metal: 0.8 } },
+  { id: 'g_diamond', name: 'DIAMOND', kind: 'skin', r: 3, grind: true, g: { t: 'facets', c: [0x7fb8e6, 0xffffff] }, m: { rough: 0.05, metal: 0.3, anim: 'twinkle', emis: 1.7 } },
+  { id: 'g_nova', name: 'NOVA', kind: 'skin', r: 3, grind: true, g: { t: 'stars', c: [0x060208, 0xffc27a], dense: 0.014, nebula: 0x9a2a0c }, m: { rough: 0.22, metal: 0.35, anim: 'twinkle', emis: 2.2 } },
+];
+GRIND_MIL.forEach(([name, t, r, c, gx, mx], i) => { const it = { id: 'g_m' + i, name, kind: 'camo', r, grind: true, tier: i, g: Object.assign({ t, c }, gx || {}), m: mx }; COSM.push(it); COS[it.id] = it; });
+for (const it of GRIND_TOP) { COSM.push(it); COS[it.id] = it; }
+if (!PROG.grind) PROG.grind = {};
+
+// the challenge behind each military camo, by class (launchers have no headshots)
+const GRIND_LONG = { sg: 12, smg: 20, pi: 18, ar: 30, lmg: 30, mr: 40, sr: 45, la: 25 };
+function grindTasks(cat) {
+  if (cat === 'la') return [['k', 10, 'KILLS'], ['k', 25, 'KILLS'], ['ls', 5, 'LONGSHOT KILLS'], ['dbl', 3, 'DOUBLE KILLS'], ['k', 50, 'KILLS'], ['ls', 15, 'LONGSHOT KILLS'], ['dbl', 8, 'DOUBLE KILLS'], ['k', 100, 'KILLS']];
+  const alt = cat === 'sr' || cat === 'mr' ? 'CROUCHED KILLS' : 'HIP-FIRE KILLS';
+  return [['k', 25, 'KILLS'], ['hs', 10, 'HEADSHOT KILLS'], ['k', 50, 'KILLS'], ['ls', 10, 'LONGSHOT KILLS'], ['alt', 15, alt], ['dbl', 5, 'DOUBLE KILLS'], ['hs', 30, 'HEADSHOT KILLS'], ['k', 100, 'KILLS']];
+}
+const grindGuns = () => lockerGuns();
+const grindKey = (id, gun) => id + '@' + gun;
+const grindHas = (id, gun) => !!PROG.owned[grindKey(id, gun)];
+const grindStat = gun => PROG.grind[gun] || (PROG.grind[gun] = { k: 0, hs: 0, ls: 0, alt: 0, dbl: 0 });
+function grindMilDone(gun) { let n = 0; for (let i = 0; i < 8; i++) if (grindHas('g_m' + i, gun)) n++; return n; }
+const grindClassGuns = cat => grindGuns().filter(d => d.cat === cat);
+const grindClasses = () => [...new Set(grindGuns().map(d => d.cat))];
+
+// a kill by the player: x/z of the victim, headshot, explosive (grenades don't count; launchers do)
+const GRIND_DBL = {};
+function grindKill(head, dist, boom) {
+  if (G.bench) return;
+  const w = WEAPONS[G.cur]; if (!w || !w.def) return;
+  const d = w.def, gun = d.id; if (!grindGuns().some(x => x.id === gun)) return;
+  if (boom && d.cat !== 'la') return;
+  const s = grindStat(gun);
+  s.k++; if (head && !boom) s.hs++;
+  if (dist >= (GRIND_LONG[d.cat] || 30)) s.ls++;
+  if (d.cat === 'sr' || d.cat === 'mr' ? P.eye < 1.4 : !(G.ads > 0.5 || G.adsOn)) s.alt++;
+  const now = G.time; if (now - (GRIND_DBL[gun] || -99) < 3) { s.dbl++; GRIND_DBL[gun] = -99; } else GRIND_DBL[gun] = now;
+  grindCheck(gun, true);
+  saveProg();
+}
+// unlock whatever is now earned; loud = show it in the match
+function grindCheck(gun, loud) {
+  const d = ARM[gun]; if (!d) return [];
+  const got = [], s = grindStat(gun), tasks = grindTasks(d.cat);
+  const own = (id, g) => { if (grindHas(id, g)) return; PROG.owned[grindKey(id, g)] = Date.now(); got.push([id, g]); };
+  tasks.forEach(([k, n], i) => { if (s[k] >= n) own('g_m' + i, gun); });
+  if (grindMilDone(gun) >= 8) own('g_gold', gun);
+  const cg = grindClassGuns(d.cat);
+  if (cg.every(x => grindHas('g_gold', x.id))) for (const x of cg) own('g_diamond', x.id);
+  if (grindClasses().every(c => grindClassGuns(c).every(x => grindHas('g_diamond', x.id)))) for (const x of grindGuns()) own('g_nova', x.id);
+  if (got.length && loud) {
+    const top = got.find(([id]) => !id.startsWith('g_m')) || got[0], c = COS[top[0]];
+    try { showBanner(c.name + ' UNLOCKED', ARM[top[1]].name + (got.length > 1 ? ` · +${got.length - 1} MORE` : '')); sfx.streak(); } catch (e) {}
+    try { toast2('CAMO UNLOCKED · ' + c.name + ' · ' + ARM[top[1]].name); } catch (e) {}
+  }
+  return got;
+}
+// progress of one row in the challenges list: [have, need, label]
+function grindRow(gun, id) {
+  const d = ARM[gun];
+  if (id.startsWith('g_m')) { const i = +id.slice(3), [k, n, label] = grindTasks(d.cat)[i], s = grindStat(gun); return [Math.min(s[k], n), n, `${n} ${label}` + (k === 'ls' ? ` (${GRIND_LONG[d.cat] || 30} M+)` : '')]; }
+  if (id === 'g_gold') return [grindMilDone(gun), 8, 'UNLOCK ALL 8 MILITARY CAMOS'];
+  if (id === 'g_diamond') { const cg = grindClassGuns(d.cat); return [cg.filter(x => grindHas('g_gold', x.id)).length, cg.length, `GOLD ON EVERY ${CATS[d.cat].name.replace(/S$/, '')}`]; }
+  const cl = grindClasses(); return [cl.filter(c => grindClassGuns(c).every(x => grindHas('g_diamond', x.id))).length, cl.length, 'DIAMOND IN EVERY WEAPON CLASS'];
+}
+const GRIND_IDS = ['g_m0', 'g_m1', 'g_m2', 'g_m3', 'g_m4', 'g_m5', 'g_m6', 'g_m7', 'g_gold', 'g_diamond', 'g_nova'];
+// the gun's mastery badge for the weapon grid
+function grindBadge(gun) { return grindHas('g_nova', gun) ? 'NOVA' : grindHas('g_diamond', gun) ? 'DIAMOND' : grindHas('g_gold', gun) ? 'GOLD' : grindMilDone(gun) + '/8'; }
+
+// the CHALLENGES tab of one gun in the locker
+function renderGrind(body, d) {
+  const gun = d.id, cur = camoFor(gun);
+  const sel = LK.sel && COS[LK.sel] && COS[LK.sel].grind ? COS[LK.sel] : null, has = sel && grindHas(sel.id, gun), on = sel && cur === sel.id;
+  $('lkFilters').innerHTML = `<button class="cod-tab" data-act="lk-back">&lsaquo; WEAPONS</button>` + [['camo', 'CAMOS'], ['grind', 'CHALLENGES'], ['sticker', 'STICKERS'], ['charm', 'CHARMS']].map(([k, n]) => `<button class="cod-tab${LK.tab === k ? ' on' : ''}" data-lktab="${k}">${n}</button>`).join('');
+  body.className = 'lk-body';
+  const mil = grindMilDone(gun);
+  body.innerHTML = `<div class="lk-left"><div class="lk-gun-h"><small>${CATS[d.cat].name}</small><b>${d.name}</b></div><canvas id="lkPrev" width="480" height="200"></canvas><div id="lkInfo"></div></div>
+<div class="lk-right"><div class="lk-sub">CAMO CHALLENGES · ${mil}/8 MILITARY${grindBadge(gun).includes('/') ? '' : ' · ' + grindBadge(gun)}</div><div class="gr-list" id="lkGrid">${GRIND_IDS.map((id, i) => {
+    const c = COS[id], [h, n, txt] = grindRow(gun, id), ok = grindHas(id, gun), top = !id.startsWith('g_m');
+    return `${i === 8 ? '<div class="gr-h">MASTERY</div>' : i === 0 ? '<div class="gr-h">MILITARY</div>' : ''}<button class="gr-row${ok ? ' ok' : ''}${top ? ' top ' + id.slice(2) : ''}${LK.sel === id ? ' on' : ''}${cur === id ? ' eq' : ''}" data-lk="${id}"><span class="gr-sw" style="background-image:url(${swatchUrl(id)})">${ok ? '' : '<i>🔒</i>'}</span><span class="gr-t"><b>${c.name}</b><small>${txt}</small><span class="gr-bar"><span style="width:${Math.round(h / n * 100)}%"></span></span></span><em>${ok ? (cur === id ? 'EQUIPPED' : 'UNLOCKED') : h + ' / ' + n}</em></button>`;
+  }).join('')}</div></div>`;
+  $('lkInfo').innerHTML = sel ? `<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${sel.tier !== undefined ? 'MILITARY CAMO ' + (sel.tier + 1) + ' / 8' : 'MASTERY CAMO'}</small><b>${sel.name}</b></div><p class="lk-note">${sel.tier !== undefined ? grindRow(gun, sel.id)[2] + ' with the ' + d.name + '.' : grindRow(gun, sel.id)[2] + '.'}</p>
+<div class="lk-acts"><button class="btn primary" data-act="lk-apply"${!has || on ? ' disabled' : ''}>${on ? 'EQUIPPED' : has ? 'EQUIP ON ' + d.name : 'LOCKED · ' + grindRow(gun, sel.id)[0] + ' / ' + grindRow(gun, sel.id)[1]}</button></div>`
+    : `<div class="lk-name"><small>CAMO GRIND</small><b>${d.name}</b></div><p class="lk-note">Each challenge with this gun unlocks a camo for it. All 8 unlock GOLD; GOLD on every gun in the class unlocks DIAMOND; DIAMOND in every class unlocks NOVA.</p>`;
+  for (const b of $('lkGrid').querySelectorAll('[data-lk]')) b.onclick = () => { LK.sel = b.dataset.lk; sfx.ui(); renderLocker(); focusFirst('#lkGrid [data-lk="' + LK.sel + '"]'); };
+  for (const b of $('lkFilters').querySelectorAll('[data-lktab]')) b.onclick = () => { LK.tab = b.dataset.lktab; LK.sel = LK.tab === 'sticker' ? stickerFor(gun) : LK.tab === 'charm' ? charmFor(gun) : cur; sfx.ui(); renderLocker(); focusFirst('#lkFilters .on'); };
+  PV.key = ''; PV.want = { def: d, ovr: null, camo: sel ? sel.id : cur, stk: stickerFor(gun), chm: charmFor(gun) };
+}
+(() => {
+  const st = document.createElement('style');
+  st.textContent = `.gr-list{display:flex;flex-direction:column;gap:6px;padding-bottom:12px}
+.gr-h{font:700 11px var(--font,system-ui);letter-spacing:.2em;color:#9aa3aa;margin:8px 0 2px}
+.gr-row{display:grid;grid-template-columns:54px 1fr auto;align-items:center;gap:12px;padding:8px 12px 8px 8px;border:1px solid var(--line,#333);background:rgba(20,22,26,.75);color:#e8e2d0;text-align:left;cursor:pointer}
+.gr-row:hover,.gr-row:focus{border-color:#ffd24a;outline:none}.gr-row.on{border-color:#ffd24a;background:rgba(60,48,14,.55)}
+.gr-sw{width:54px;height:54px;background-size:cover;border:1px solid rgba(255,255,255,.18);position:relative;display:block}
+.gr-row:not(.ok) .gr-sw{filter:grayscale(.85) brightness(.55)}.gr-sw i{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-style:normal;font-size:20px;filter:none}
+.gr-t{display:flex;flex-direction:column;gap:3px;min-width:0}.gr-t b{font-size:15px;letter-spacing:.08em}.gr-t small{font-size:11px;color:#aab2b8;letter-spacing:.06em}
+.gr-bar{height:5px;background:rgba(255,255,255,.1);display:block}.gr-bar span{display:block;height:100%;background:#ffd24a}
+.gr-row.ok .gr-bar span{background:#5adc7a}.gr-row em{font-style:normal;font:700 12px var(--font,system-ui);letter-spacing:.1em;color:#cfd6db;white-space:nowrap}
+.gr-row.ok em{color:#5adc7a}.gr-row.eq em{color:#ffd24a}
+.gr-row.top.gold{border-left:3px solid #d4a83a}.gr-row.top.diamond{border-left:3px solid #9fd6ff}.gr-row.top.nova{border-left:3px solid #ff5a14}
+.lk-gun .gr-badge{position:absolute;right:6px;bottom:6px;font:700 10px var(--font,system-ui);letter-spacing:.12em;padding:2px 6px;background:rgba(0,0,0,.6);color:#cfd6db}
+.lk-gun .gr-badge.GOLD{color:#f2c94c}.lk-gun .gr-badge.DIAMOND{color:#9fd6ff}.lk-gun .gr-badge.NOVA{color:#ff7a3a}`;
+  document.head.appendChild(st);
 })();
 /* ================================================================== BATTLE PASS · SEASON 1: AFTERSHOCK
    100 tiers. Every match's XP also fills the pass (2,500 XP a tier). Two rows:
@@ -11895,6 +12219,7 @@ const HC_CARDS = [
 function hcShow(force) {
   let seen = null; try { seen = localStorage.getItem(HC_KEY); } catch (e) {}
   if (!force && seen === HC_VER) return false;
+  if (!force && !(typeof PROG !== 'undefined' && PROG.xp > 0)) { try { localStorage.setItem(HC_KEY, HC_VER); } catch (e) {} return false; }   // brand-new players don't get an old update's splash
   try { localStorage.setItem(HC_KEY, HC_VER); } catch (e) {}
   const shots = typeof MAPSHOTS !== 'undefined' ? Object.values(MAPSHOTS).flat() : [];
   const m = document.createElement('div'); m.id = 'hcSplash';
@@ -12676,7 +13001,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

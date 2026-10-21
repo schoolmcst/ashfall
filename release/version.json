@@ -1,12 +1,11 @@
 {
- "version": "1.2.23",
+ "version": "1.2.26",
  "notes": [
-  "SMARTER BOTS: every bot gets a job when it spawns and plays it like a real team player",
-  "ENTRY pushes first, SUPPORT follows a teammate and trades their fights, ANCHOR plays the objective, OVERWATCH takes the high ground and holds long angles, LURK waits and flanks alone, SLAYER goes for kills over the objective",
-  "Bots take their own lanes when they spawn, so a team spreads over the whole map instead of running in a line",
-  "S&D: attackers gather and hit the site together while a lurker cuts the rotation; defenders split over both sites and wait for a teammate before retaking a planted bomb",
-  "Free-for-all and Gun Game bots have personalities: rushers, campers, flankers and roamers. Bots slow down near danger to check corners, hear footsteps close by, and only chase what they actually saw or heard"
+  "CAMO GRIND: every gun now has its own camo challenges - open the LOCKER, pick a gun and go to CHALLENGES. 8 military camos per gun, then GOLD, DIAMOND (whole class) and NOVA (every gun)",
+  "BOT LOADOUTS: bots carry real guns that fit their job, with random attachments and camos - you see them in their hands, the kill feed names the gun, and each gun fights like the real thing (suppressed bots show no tracers)",
+  "PLAY-PROOFING: you can no longer jump onto the Stackyard container tops from the tower, walk the Killhouse wall tops from the platform, or jump from the Whiteout radar deck onto the lab roof",
+  "FIXES: the main-menu NEWS now shows the latest patch notes; the top menu tabs all fit on smaller screens; private matches can't be set to a retired map; brand-new players no longer get an old update's splash screen; bots stutter less finding their way onto roofs and ridges"
  ],
- "sha256": "da441f8d8c56714133b41fcba3cd4da1b41689b7c9617108afe61b5d20ba571c",
+ "sha256": "b9e704b70d185b91eb3f9850823b44f276dfa7ac3b74c1774a2be7c6979eab56",
  "minApp": "1.0.0"
 }
