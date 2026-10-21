@@ -84,7 +84,7 @@ function openModes() {
 const MAP_CHOICES = () => ['random', ...MAP_ORDER.filter(id => !MAPS[id].hidden)];
 function lobbyMapRow(d) {
   const id = LOBBY.map, m = MAPS[id];
-  const name = m ? m.name : 'RANDOM', sub = m ? m.place : d.online && NET.app ? 'the host picks; you pick when you host' : 'a different map each match';
+  const name = m ? m.name : 'RANDOM', sub = m ? (m.size ? { flash: 'SMALL', core: 'MEDIUM', large: 'LARGE' }[m.size] + ' · ' : '') + m.place : d.online && NET.app ? 'the host picks; you pick when you host' : 'a different map each match';
   return `<div class="lob-map"><span>MAP${d.online && NET.app ? ' (IF YOU HOST)' : ''}</span><div class="lob-cpick"><button class="mini" data-act="map-" aria-label="Previous map">&lsaquo;</button><b>${name}</b><button class="mini" data-act="map+" aria-label="Next map">&rsaquo;</button></div><small>${sub}</small></div>`;
 }
 function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }

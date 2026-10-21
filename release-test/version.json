@@ -1,13 +1,12 @@
 {
- "version": "1.2.18",
+ "version": "1.2.19",
  "notes": [
-  "THE FREE SPEECH UPDATE",
-  "CONTROLLER: pick your class with the controller before the match starts; the mouse cursor hides while you use a controller and comes back as soon as you touch the mouse or keyboard; button prompts show controller buttons",
-  "TEXT CHAT: Enter to chat in a match (Tab switches ALL / PARTY), party chat in the lobby, quick-chat buttons, mute players. Match chat clears when the next match starts",
-  "VOICE CHAT (desktop app): push to talk (V / D-pad left) or open mic, with volume, mic sensitivity and muting in the new pause menu panel",
-  "GRENADES: no longer pass through walls, floors and ceilings inside buildings; hold the grenade button to see a dotted path of where it will go, let go to throw",
-  "DZ: every finished match now pays DZ (40, +2 a kill, +30 for a win, online +25%)"
+  "8 BRAND NEW MAPS - the old maps are out of the rotation. Every map has three lanes, flank routes between them and one power position that can always be shot back at",
+  "SMALL: STACKYARD (container yard with a container tower) and KILLHOUSE (roofless shoot house with an overwatch platform)",
+  "MEDIUM: SKYPORT (airport terminal and tarmac), SPIRE (skyscraper rooftop at dusk), DUSTWATER (desert village with a minaret), WHITEOUT (arctic research base), BLACKWATER PIER (harbour, fish market and cannery)",
+  "LARGE: RIDGELINE (farm valley split by a river, with four crossings and a barn loft) - built for FFA and long-range fights",
+  "Spawns sit behind cover that blocks the long looks into them, and the lobby map picker shows each map's size"
  ],
- "sha256": "e1d4005b024a6c7c21e981dfef037ec148fd5f5dbf3073d6f354db6caab1d23e",
+ "sha256": "efaf7a63c838e0a14737184d916af4c714eca7b441104c6f4c8383e82751a8ce",
  "minApp": "1.0.0"
 }

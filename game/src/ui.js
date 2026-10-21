@@ -655,7 +655,7 @@ function frame(now) {
 const BOOT = [
   ['BUILDING TEXTURES', () => { buildTextures(); try { realTexStart(); } catch (e) {} }],
   ['PREPARING MATERIALS', () => { buildMaterials(); buildViewmodelMaterials(); addFresnelAll(MAT); addFresnelAll(VM); buildMapMaterials(); }],
-  ['RAISING THE RUINS', () => loadMap('ruins')],
+  ['BUILDING THE MAP', () => loadMap(DEFAULT_MAP)],
   ['EQUIPPING SOLDIERS', () => { buildSoldierTemplates(); addFresnelAll(SOLD.mats); addFresnelAll(SOLD.skinMats); setupViewmodel(); initAttachments(); }],
   ['LOADING EFFECTS', buildFx],
   ['LIGHTING THE SKY', () => { buildEnvironment(); applyVideoSettings(); applyAudioSettings(); }],

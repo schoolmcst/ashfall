@@ -312,7 +312,7 @@ function clearWorld() {
 }
 let PLAYRECT = [-44, 44, -44, 44];
 function loadMap(id) {
-  if (!MAPS[id]) id = 'ruins';
+  if (!MAPS[id]) id = DEFAULT_MAP;
   if (curMap === id && boxes.length) return false;
   const t0 = performance.now();
   clearWorld(); buildMapMaterials();
@@ -334,11 +334,13 @@ function loadMap(id) {
 }
 let MENU_VIEW = { x: 0, z: 0, r: 12.5, y: 2.1 }, MAP_BUILD_MS = 0;
 // next map in the online rotation (deterministic per match number so everyone agrees)
+// the map the menu shows and the fallback for unknown ids (the 2024 maps stay in the code but out of every list)
+const DEFAULT_MAP = 'dustwater';
 function rotationMap(n) { const pool = MAP_ORDER.filter(id => !MAPS[id].hidden); return pool[((n % pool.length) + pool.length) % pool.length]; }
 
 /* ---------- the original map */
 defineMap({
-  id: 'ruins', name: 'ASH RUINS', place: 'Bombed-out village crossroads', desc: 'A ruined village around a crossroads: houses you can fight through room by room, two-storey firing positions, broken walls and burnt-out shells on every flank.',
+  id: 'ruins', hidden: true, name: 'ASH RUINS', place: 'Bombed-out village crossroads', desc: 'A ruined village around a crossroads: houses you can fight through room by room, two-storey firing positions, broken walls and burnt-out shells on every flank.',
   build: () => buildWorld(), env: {},
   grass: { avoid: (x, z) => Math.abs(z - 2) < 3.4 || (Math.abs(x) < 3.4 && z > -24 && z < 44) },
   layout: {
