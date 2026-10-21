@@ -1,12 +1,13 @@
 {
- "version": "1.2.19",
+ "version": "1.2.20",
  "notes": [
-  "8 BRAND NEW MAPS - the old maps are out of the rotation. Every map has three lanes, flank routes between them and one power position that can always be shot back at",
-  "SMALL: STACKYARD (container yard with a container tower) and KILLHOUSE (roofless shoot house with an overwatch platform)",
-  "MEDIUM: SKYPORT (airport terminal and tarmac), SPIRE (skyscraper rooftop at dusk), DUSTWATER (desert village with a minaret), WHITEOUT (arctic research base), BLACKWATER PIER (harbour, fish market and cannery)",
-  "LARGE: RIDGELINE (farm valley split by a river, with four crossings and a barn loft) - built for FFA and long-range fights",
-  "Spawns sit behind cover that blocks the long looks into them, and the lobby map picker shows each map's size"
+  "THE DETAIL PASS: 67 new props and lots of new detail across all 8 maps",
+  "Furnished interiors: the Spire penthouse living room and office, desks and whiteboards in the Whiteout lab, a briefing board in the Killhouse",
+  "Skyport: security gates, queue ropes, departure boards, luggage carts and suitcases, vending machines",
+  "Dustwater: fruit and pottery on the market stalls, rug piles, laundry lines over the alleys, satellite dishes on the roofs",
+  "Whiteout: snowmobiles, sleds, a research tent, ski racks, fuel bladders and radio masts. Blackwater Pier: lobster traps, buoys, an anchor, fish crates, pipes and valves in the cannery",
+  "Ridgeline: fences, a woodpile, a trough, a scarecrow, milk cans and a radio mast on the ridge. Stackyard: electrical boxes, drum racks, cable spools and tool chests"
  ],
- "sha256": "efaf7a63c838e0a14737184d916af4c714eca7b441104c6f4c8383e82751a8ce",
+ "sha256": "4b5fd8ec9ed70f97f6dadf80d5bfba8ccd93361e36ab09d1077a31dad88d0dbd",
  "minApp": "1.0.0"
 }
