@@ -41,6 +41,7 @@ function buildMap2Materials() {
   MAT.sheet = std(TEX.metal, { color: C(0xa9b0b5), roughness: 0.5, metalness: 0.6, bumpScale: 0.004 });
   MAT.glassDark = new THREE.MeshStandardMaterial({ color: C(0x2a3a48), roughness: 0.05, metalness: 0.6, envMapIntensity: 1.6 });
   MAT.whiteTile = std(TEX.concrete, { color: C(0xe8eaec), roughness: 0.45, bumpScale: 0.005 });
+  MAT.panel = std(TEX.concrete, { color: C(0xd6dce2), roughness: 0.55, metalness: 0.1, bumpScale: 0.004 });
   MAT.mud = std(TEX.concrete, { color: C(0x8a6a48), roughness: 1, bumpScale: 0.03 });
   MAT.hay = std(TEX.wood, { color: C(0xd8b860), roughness: 1 });
   MAT.redBarn = std(TEX.wood, { color: C(0x9c3a2c), roughness: 0.9 });
