@@ -9,8 +9,8 @@ module.exports = async p => {
   const save = (name, url) => fs.writeFileSync(path.join(out, `${id}_${name}.png`), Buffer.from(url.split(',')[1], 'base64'));
   // top-down plan with lanes / objectives marked
   const plan = await p.evaluate(() => {
-    const A = window.__A, r = A.renderer, sc = A.scene, cam = new THREE.OrthographicCamera(-46, 46, 46, -46, 1, 400);
-    cam.position.set(0, 200, 0); cam.up.set(0, 0, -1); cam.lookAt(0, 0, 0);
+    const A = window.__A, r = A.renderer, sc = A.scene, pr = A.MAPS[A.curMap].play || [-44, 44, -44, 44], cx = (pr[0] + pr[1]) / 2, cz = (pr[2] + pr[3]) / 2, hw = Math.max(pr[1] - pr[0], pr[3] - pr[2]) / 2 + 2, cam = new THREE.OrthographicCamera(-hw, hw, hw, -hw, 200 - (A.MAPS[A.curMap].planCut || 190), 400);   // planCut: cut away roofs above that height
+    cam.position.set(cx, 200, cz); cam.up.set(0, 0, -1); cam.lookAt(cx, 0, cz);
     const marks = new THREE.Group(); sc.add(marks);
     const dot = (x, y, z, col, s = 1.2) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(s, s, 0.3, 16), new THREE.MeshBasicMaterial({ color: col, depthTest: false })); m.position.set(x, y + 30, z); m.renderOrder = 99; marks.add(m); };
     const L = A.LAYOUT; L.spawn.forEach((s, i) => dot(s.x, s.y || 0, s.z, i ? 0xff3030 : 0x3080ff, 2.2)); L.hp.forEach(h => dot(h.x, h.y || 0, h.z, 0xffffff, 1.4)); L.sites.forEach(h => dot(h.x, h.y || 0, h.z, 0xffd24a, 1.8)); L.flags.forEach(h => dot(h.x, h.y || 0, h.z, 0x30ff60, 1.0));

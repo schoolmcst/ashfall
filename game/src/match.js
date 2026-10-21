@@ -50,6 +50,7 @@ function buildSpawns() {
     if (!opts.length) continue;
     const p = { x: cellPos(cx), z: cellPos(cz), y: opts[(Math.random() * opts.length) | 0] };
     if (ok && !ok(p)) continue;
+    if (p.x < PLAYRECT[0] + 1.5 || p.x > PLAYRECT[1] - 1.5 || p.z < PLAYRECT[2] + 1.5 || p.z > PLAYRECT[3] - 1.5) continue;   // inside the play area (small maps)
     SPAWNS.push(p);
   }
   for (const k of ['spawn', 'hp', 'flags', 'sites']) LAYOUT[k] = LAYOUT[k].map(p => p.y !== undefined ? Object.assign({}, p) : Object.assign({}, p, openNear(p.x, p.z), { y: 0 }));
