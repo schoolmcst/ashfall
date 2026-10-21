@@ -5794,15 +5794,15 @@ function enemyMuzzle(e, out) {
 function enemyShoot(e, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
   const iq = e.iq || 0.5, track = Math.hypot(P.vx || 0, P.vz || 0) > 4 ? 0.85 + (e.hum || 0.4) * 0.12 : 1;   // a fast-moving player is harder to track
-  const chance = clamp((e.acc - dist * 0.009 * (1 - iq * 0.35) - (G.adsOn ? 0.05 : 0) - (P.eye < 1.4 ? 0.08 * (1 - iq * 0.5) : 0)) * (typeof botSettle === 'function' && inMatch() ? botSettle(e) : 1) * track, 0.06, 0.78);
+  const chance = clamp((e.acc - dist * 0.009 * (e.rangeK || 1) * (1 - iq * 0.35) - (G.adsOn ? 0.05 : 0) - (P.eye < 1.4 ? 0.08 * (1 - iq * 0.5) : 0)) * (typeof botSettle === 'function' && inMatch() ? botSettle(e) : 1) * track, 0.06, 0.78);
   const hit = Math.random() < chance;
   const to = new THREE.Vector3(P.x, P.y + P.eye * 0.8, P.z);
   if (!hit) to.add(new THREE.Vector3(rnd(-1.6, 1.6), rnd(-0.8, 1.0), rnd(-1.6, 1.6)));
-  addTracer(from, to, 0.05, 0.022);
-  e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
-  enemyFlashLight.position.copy(from); enemyFlashLight.intensity = 3.2; enemyFlashLight.userData.t = 0.05;
+  if (!e.stealth) addTracer(from, to, 0.05, 0.022);
+  e.rig.flash.visible = !e.stealth; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
+  enemyFlashLight.position.copy(from); enemyFlashLight.intensity = e.stealth ? 0 : 3.2; enemyFlashLight.userData.t = 0.05;
   const o = at(e.group.position.x, e.group.position.z, 20); sfx.enemy(o);
-  if (hit) { G.killer = e; hurtPlayer(e.dmg * (inMatch() && Math.random() < (e.hs || 0) ? 1.7 : 1), e.group.position.x, e.group.position.z); }
+  if (hit) { G.killer = e; hurtPlayer(e.dmg * (inMatch() && Math.random() < (e.hs || 0) ? 1.7 : 1) * (typeof botFall === 'function' ? botFall(e, dist) : 1), e.group.position.x, e.group.position.z); }
   else if (dist > 4) { const f = at(to.x, to.z, 8); f.vol *= 0.8; sfx.flyby(f); }
 }
 
@@ -6498,6 +6498,7 @@ function spawnBot(en, pos) {
   if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
   en.bot = e; en.alive = true; enemies.push(e);
   if (M.mode === 'gun') botGunProfile(e, GUN_LADDER[Math.min(en.level || 0, GUN_LADDER.length - 1)]);
+  else if (!G.noRoles) try { botLoadout(e); } catch (err) { reportError(err); }
   return e;
 }
 function startMatch(mode, custom) {
@@ -6563,9 +6564,7 @@ function placePlayer(p) {
 // gun game bots fight with the gun of their level: its damage, fire rate and burst length
 function botGunProfile(e, id) {
   const d = ARM[id]; if (!d || !e) return;
-  const sk = SKILL[M.cfg.skill] || SKILL.regular, per = d.dmg * (d.pellets ? d.pellets * 0.55 : 1);
-  e.gunId = id; e.dmg = sk.dmg * (M.cfg.hardcore ? 1.4 : 1) * clamp(per / 34, 0.55, 3.2);
-  e.gap = clamp(d.interval || 0.1, 0.06, 1.3); e.burstMin = d.interval > 0.3 || d.auto === false ? 1 : 3; e.burstMax = d.interval > 0.3 || d.auto === false ? 3 : 7;
+  botApplyGun(e, d, {}); try { botGunVisual(e, d, {}, null); } catch (err) { reportError(err); }
   e.cd = Math.max(e.cd || 0, 0.7);   // a moment to bring the new gun up
 }
 function equipGunGame(level) {
@@ -6588,7 +6587,7 @@ function respawnPlayer() {
 function queueRespawn(en) { if (M.def.respawn) M.respawnQ.push({ en, t: M.def.respawn }); }
 
 /* ---------- kills, scoring */
-function weaponLabel(by) { if (by === 'player') return WEAPONS[G.cur] ? WEAPONS[G.cur].name : ''; if (by && by.entry) return 'RIFLE'; return '✹'; }
+function weaponLabel(by) { if (by === 'player') return WEAPONS[G.cur] ? WEAPONS[G.cur].name : ''; if (by && by.entry) return botGunName(by); return '✹'; }
 function nameHtml(en) {
   if (!en) return '';
   if (en.isPlayer) return '<b>YOU</b>';
@@ -6622,7 +6621,7 @@ function matchPlayerKilled(killer) {
   M.me.deaths++; M.me.alive = false;
   try { if (killer && killer.entry) brainHumanKilled(killer, P.x, P.z); } catch (err) {}
   const ke = killer && killer.entry ? killer.entry : null;
-  if (ke) { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> <b>YOU</b>`); }
+  if (ke) { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> <b>YOU</b>`); }
   dropCtfFlag('player');
   if (M.mode === 'snd') checkRoundEnd();
 }
@@ -6748,15 +6747,15 @@ function botSettle(e) {
 }
 function botShoot(e, t, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
-  botsHear(e.group.position.x, e.group.position.z, e.team, 40, e);
+  botsHear(e.group.position.x, e.group.position.z, e.team, e.stealth ? 18 : 40, e);
   e.lastShotT = M.t; if (e.entry) e.entry.sh = (e.entry.sh || 0) + 1;
   if (t === 'P') { G.killer = e; if (!(G.spawnProt > 0)) enemyShoot(e, dist); return; }
-  const chance = clamp((e.acc - dist * 0.008 - (t.crouchK || 0) * 0.06) * botSettle(e), 0.05, 0.7), hit = Math.random() < chance;
+  const chance = clamp((e.acc - dist * 0.008 * (e.rangeK || 1) - (t.crouchK || 0) * 0.06) * botSettle(e), 0.05, 0.7), hit = Math.random() < chance;
   targetPoint(t, _bd); const to = _bd.clone(); if (!hit) to.add(new THREE.Vector3(rnd(-1.4, 1.4), rnd(-0.6, 0.9), rnd(-1.4, 1.4)));
-  addTracer(from, to, 0.05, 0.02);
-  e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
+  if (!e.stealth) addTracer(from, to, 0.05, 0.02);
+  e.rig.flash.visible = !e.stealth; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
   const o = at(e.group.position.x, e.group.position.z, 20); sfx.enemy(o);
-  if (hit) { const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(), hd = Math.random() < (e.hs || 0.12); damageEnemy(t, e.dmg * (hd ? 2 : 1), hd, dir, false, e); }
+  if (hit) { const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(), hd = Math.random() < (e.hs || 0.12); damageEnemy(t, e.dmg * (hd ? 2 : 1) * botFall(e, dist), hd, dir, false, e); }
 }
 function updateBots(dt) {
   if (G.holdT > 0) return;
@@ -7519,6 +7518,86 @@ function botPace(e, tp) {
   if (e.job === 'lurk' && e.ri >= 1) k *= 0.82;
   return k;
 }
+/* ================================================================== bot loadouts: every bot carries a real gun
+   Each bot gets a class that fits its job (overwatch: sniper or marksman rifle, entry: SMG or shotgun, support: AR or
+   LMG...), random attachments from that gun's real attachment list, and sometimes a camo. The gun shows in its
+   hands (the same models as yours, with the attachments on), and it fights like that gun: damage, fire rate, bursts,
+   magazine, effective range and damage drop-off, and a suppressor really makes it quieter (no tracer, heard from
+   less far away). A bot keeps its class between lives, and now and then swaps to a new one. */
+const BOT_GUN_PREF = { entry: ['smg', 'sg', 'ar'], support: ['ar', 'lmg', 'ar'], anchor: ['ar', 'lmg', 'mr'], overwatch: ['sr', 'mr', 'sr'], lurk: ['smg', 'ar', 'smg'], slayer: ['ar', 'smg', 'sg'] };
+const BOT_LEN = { pi: 0.26, smg: 0.62, sg: 0.95, ar: 0.86, lmg: 1.0, mr: 1.02, sr: 1.15, la: 1.0 };
+const BOTGUN_CACHE = new Map();
+// run fn with this attachment set standing in for the player's own for that gun
+function withAtts(def, set, fn) {
+  const had = Object.prototype.hasOwnProperty.call(ATTS, def.id), old = ATTS[def.id];
+  ATTS[def.id] = set || {};
+  try { return fn(); } finally { if (had) ATTS[def.id] = old; else delete ATTS[def.id]; }
+}
+function botRandomAtts(def, quiet) {
+  const set = {};
+  for (const slot of slotsFor(def)) {
+    const opts = attFor(def, slot);   // [factory part, ...options]
+    if (quiet && slot === 'muzzle') { const s = opts.find(a => a.id === 'suppressor'); if (s) { set[slot] = s.id; continue; } }
+    if (opts.length > 1 && Math.random() < 0.65) set[slot] = opts[1 + ((Math.random() * (opts.length - 1)) | 0)].id;
+  }
+  return set;
+}
+function botPickGun(e) {
+  const prefs = BOT_GUN_PREF[e.job] || ['ar', 'smg'], cat = prefs[(Math.random() * prefs.length) | 0];
+  const list = ARMORY.filter(d => d.cat === cat);
+  return list.length ? list[(Math.random() * list.length) | 0] : ARMORY.find(d => d.cat === 'ar');
+}
+// stats from the gun and its attachments
+function botApplyGun(e, def, atts) {
+  const st = withAtts(def, atts, () => computeStats(def, null)), sk = SKILL[M.cfg.skill] || SKILL.regular;
+  const per = st.dmg * (st.pellets > 1 ? st.pellets * 0.55 : 1), semi = st.interval > 0.3 || def.auto === false;
+  e.gunId = def.id; e.atts = atts || {};
+  e.dmg = sk.dmg * (M.cfg.hardcore ? 1.4 : 1) * clamp(per / 34, 0.55, 3.2);
+  e.gap = clamp(st.interval, 0.06, 1.3); e.burstMin = semi ? 1 : 3; e.burstMax = semi ? 3 : 7;
+  e.magSize = Math.max(1, st.magSize); e.mag = Math.min(e.mag || e.magSize, e.magSize) || e.magSize;
+  e.eff = st.eff; e.fallMin = st.fallMin; e.rangeK = clamp(28 / Math.max(6, st.eff), 0.35, 2.2); e.stealth = !!st.stealth;
+}
+// the gun in the bot's hands
+function botGunVisual(e, def, atts, camo) {
+  const rig = e.rig; if (!rig || !rig.gun) return;
+  if (e.gunVis) { rig.gun.remove(e.gunVis); e.gunVis = null; }
+  const key = def.id + '|' + JSON.stringify(atts || {}) + '|' + (camo || '');
+  let tpl = BOTGUN_CACHE.get(key);
+  if (!tpl) {
+    const g = buildGunModel(def, true);
+    withAtts(def, atts, () => { const st = computeStats(def, null); attachVisuals(g, def, false, g.userData.len + st.lenAdd, null); });
+    try { if (camo) applyCamo(g, camo); } catch (err) {}
+    g.traverse(o => { if (o.name && /^hand/.test(o.name)) o.visible = false; }); if (g.userData.flash) g.userData.flash.visible = false;
+    const holder = new THREE.Group(); holder.add(g); g.updateMatrixWorld(true);
+    const box = new THREE.Box3();
+    g.traverse(o => { if (!o.isMesh || (o.material && o.material.blending === THREE.AdditiveBlending)) return; for (let p = o; p; p = p.parent) if (!p.visible) return; box.expandByObject(o); });
+    const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3()), L = BOT_LEN[def.cat] || 0.86;
+    g.position.sub(c); holder.scale.setScalar(L / Math.max(sz.z, sz.x, 0.1)); holder.rotation.y = Math.PI;   // view models point down -z, the rig's gun points +z
+    holder.traverse(o => { o.userData = {}; if (o.isMesh) { o.castShadow = true; o.raycast = () => {}; } }); holder.userData.len = L;   // clone() deep-copies userData, and the view model's has loops
+    tpl = holder; BOTGUN_CACHE.set(key, tpl);
+    if (BOTGUN_CACHE.size > 48) BOTGUN_CACHE.delete(BOTGUN_CACHE.keys().next().value);
+  }
+  const vis = tpl.clone(), L = tpl.userData.len, cz = def.cat === 'pi' ? 0.06 : L / 2 - 0.22;
+  vis.position.set(0, 0, cz);
+  for (const ch of rig.gun.children) if (ch !== rig.flash) ch.visible = false;
+  rig.gun.add(vis); e.gunVis = vis;
+  if (rig.flash) rig.flash.position.z = cz + L / 2 + 0.04;
+}
+// a bot's class: kept between lives, sometimes changed
+function botLoadout(e) {
+  const en = e.entry; if (!en) return;
+  if (!en.loadout || Math.random() < 0.2) {
+    const def = botPickGun(e), quiet = e.job === 'lurk' && Math.random() < 0.7;
+    let camo = null; if (Math.random() < 0.4) { const pool = BOX_POOL.filter(c => c.kind === 'camo' || c.kind === 'skin'); camo = pool.length ? pool[(Math.random() * pool.length) | 0].id : null; }
+    en.loadout = { gun: def.id, atts: botRandomAtts(def, quiet), camo };
+  }
+  const L = en.loadout, def = ARM[L.gun]; if (!def) return;
+  botApplyGun(e, def, L.atts);
+  try { botGunVisual(e, def, L.atts, L.camo); } catch (err) { reportError(err); }
+}
+// damage drop-off past the gun's effective range (bot shots)
+const botFall = (e, dist) => !e.eff || dist <= e.eff ? 1 : Math.max(e.fallMin || 0.5, e.eff / dist);
+const botGunName = e => (e && e.gunId && ARM[e.gunId] ? ARM[e.gunId].name : 'RIFLE');
 /* ================================================================== lobby: pick a mode, check your class, custom games, stats */
 function modeRules(k, cfg) {
   const d = MODES[k], c = cfg || matchCfg(k);
@@ -9449,7 +9528,7 @@ function netTick(dt) {
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
         else { statKillAt(R.x, R.z, head); perkOnKill(); }
         if (!bot) feedLine(`<b>YOU</b> <span class="fw">${WEAPONS[G.cur].name}</span> ${nameHtml(R.entry)}`);
-      } else if (botBy(R.kb)) { const ke = botBy(R.kb); try { brainHumanKilled(ke.bot, R.x, R.z); } catch (err) {} ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> ${nameHtml(R.entry)}`); }
+      } else if (botBy(R.kb)) { const ke = botBy(R.kb); try { brainHumanKilled(ke.bot, R.x, R.z); } catch (err) {} ke.kills++; ke.score += 100; feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> ${nameHtml(R.entry)}`); }
       else if (R.kb && NET.rem.get(R.kb)) feedLine(`${netFeedName(NET.rem.get(R.kb))} <span class="fw">✦</span> ${nameHtml(R.entry)}${head ? ' <span class="ft">HEADSHOT</span>' : ''}`);
       netDropBot(R, true, head);
     }
@@ -9589,7 +9668,7 @@ function netBots(dt) {
   NET.botPres = M.entries.filter(en => en.botLabel).map(en => {
     const e = en.bot, g = e && e.group;
     return [en.botLabel, { v: 1, on: 1, bot: 1, n: en.name, tm: M.def.teams ? en.team : 0, x: g ? r2(g.position.x) : 0, y: g ? r2(g.position.y) : 0, z: g ? r2(g.position.z) : 0, yw: g ? r3(g.rotation.y - Math.PI) : 0, pt: 0,
-      cr: e && e.crouchK > 0.5 ? 1 : 0, a: e && en.alive ? 1 : 0, wn: 'RIFLE', k: en.kills, d: en.deaths, ds: en.ds, kb: en.kb, kh: en.kh, sh: en.sh, hs: en.hs, ep: NET.ep }];
+      cr: e && e.crouchK > 0.5 ? 1 : 0, a: e && en.alive ? 1 : 0, wn: botGunName(e), k: en.kills, d: en.deaths, ds: en.ds, kb: en.kb, kh: en.kh, sh: en.sh, hs: en.hs, ep: NET.ep }];
   });
 }
 
@@ -12798,7 +12877,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

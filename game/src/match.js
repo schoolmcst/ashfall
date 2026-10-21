@@ -130,6 +130,7 @@ function spawnBot(en, pos) {
   if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
   en.bot = e; en.alive = true; enemies.push(e);
   if (M.mode === 'gun') botGunProfile(e, GUN_LADDER[Math.min(en.level || 0, GUN_LADDER.length - 1)]);
+  else if (!G.noRoles) try { botLoadout(e); } catch (err) { reportError(err); }
   return e;
 }
 function startMatch(mode, custom) {
@@ -195,9 +196,7 @@ function placePlayer(p) {
 // gun game bots fight with the gun of their level: its damage, fire rate and burst length
 function botGunProfile(e, id) {
   const d = ARM[id]; if (!d || !e) return;
-  const sk = SKILL[M.cfg.skill] || SKILL.regular, per = d.dmg * (d.pellets ? d.pellets * 0.55 : 1);
-  e.gunId = id; e.dmg = sk.dmg * (M.cfg.hardcore ? 1.4 : 1) * clamp(per / 34, 0.55, 3.2);
-  e.gap = clamp(d.interval || 0.1, 0.06, 1.3); e.burstMin = d.interval > 0.3 || d.auto === false ? 1 : 3; e.burstMax = d.interval > 0.3 || d.auto === false ? 3 : 7;
+  botApplyGun(e, d, {}); try { botGunVisual(e, d, {}, null); } catch (err) { reportError(err); }
   e.cd = Math.max(e.cd || 0, 0.7);   // a moment to bring the new gun up
 }
 function equipGunGame(level) {
@@ -220,7 +219,7 @@ function respawnPlayer() {
 function queueRespawn(en) { if (M.def.respawn) M.respawnQ.push({ en, t: M.def.respawn }); }
 
 /* ---------- kills, scoring */
-function weaponLabel(by) { if (by === 'player') return WEAPONS[G.cur] ? WEAPONS[G.cur].name : ''; if (by && by.entry) return 'RIFLE'; return '✹'; }
+function weaponLabel(by) { if (by === 'player') return WEAPONS[G.cur] ? WEAPONS[G.cur].name : ''; if (by && by.entry) return botGunName(by); return '✹'; }
 function nameHtml(en) {
   if (!en) return '';
   if (en.isPlayer) return '<b>YOU</b>';
@@ -254,7 +253,7 @@ function matchPlayerKilled(killer) {
   M.me.deaths++; M.me.alive = false;
   try { if (killer && killer.entry) brainHumanKilled(killer, P.x, P.z); } catch (err) {}
   const ke = killer && killer.entry ? killer.entry : null;
-  if (ke) { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">RIFLE</span> <b>YOU</b>`); }
+  if (ke) { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> <b>YOU</b>`); }
   dropCtfFlag('player');
   if (M.mode === 'snd') checkRoundEnd();
 }
@@ -380,15 +379,15 @@ function botSettle(e) {
 }
 function botShoot(e, t, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
-  botsHear(e.group.position.x, e.group.position.z, e.team, 40, e);
+  botsHear(e.group.position.x, e.group.position.z, e.team, e.stealth ? 18 : 40, e);
   e.lastShotT = M.t; if (e.entry) e.entry.sh = (e.entry.sh || 0) + 1;
   if (t === 'P') { G.killer = e; if (!(G.spawnProt > 0)) enemyShoot(e, dist); return; }
-  const chance = clamp((e.acc - dist * 0.008 - (t.crouchK || 0) * 0.06) * botSettle(e), 0.05, 0.7), hit = Math.random() < chance;
+  const chance = clamp((e.acc - dist * 0.008 * (e.rangeK || 1) - (t.crouchK || 0) * 0.06) * botSettle(e), 0.05, 0.7), hit = Math.random() < chance;
   targetPoint(t, _bd); const to = _bd.clone(); if (!hit) to.add(new THREE.Vector3(rnd(-1.4, 1.4), rnd(-0.6, 0.9), rnd(-1.4, 1.4)));
-  addTracer(from, to, 0.05, 0.02);
-  e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
+  if (!e.stealth) addTracer(from, to, 0.05, 0.02);
+  e.rig.flash.visible = !e.stealth; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
   const o = at(e.group.position.x, e.group.position.z, 20); sfx.enemy(o);
-  if (hit) { const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(), hd = Math.random() < (e.hs || 0.12); damageEnemy(t, e.dmg * (hd ? 2 : 1), hd, dir, false, e); }
+  if (hit) { const dir = new THREE.Vector3(to.x - from.x, 0, to.z - from.z).normalize(), hd = Math.random() < (e.hs || 0.12); damageEnemy(t, e.dmg * (hd ? 2 : 1) * botFall(e, dist), hd, dir, false, e); }
 }
 function updateBots(dt) {
   if (G.holdT > 0) return;

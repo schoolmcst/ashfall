@@ -51,15 +51,15 @@ function enemyMuzzle(e, out) {
 function enemyShoot(e, dist) {
   const from = enemyMuzzle(e, new THREE.Vector3());
   const iq = e.iq || 0.5, track = Math.hypot(P.vx || 0, P.vz || 0) > 4 ? 0.85 + (e.hum || 0.4) * 0.12 : 1;   // a fast-moving player is harder to track
-  const chance = clamp((e.acc - dist * 0.009 * (1 - iq * 0.35) - (G.adsOn ? 0.05 : 0) - (P.eye < 1.4 ? 0.08 * (1 - iq * 0.5) : 0)) * (typeof botSettle === 'function' && inMatch() ? botSettle(e) : 1) * track, 0.06, 0.78);
+  const chance = clamp((e.acc - dist * 0.009 * (e.rangeK || 1) * (1 - iq * 0.35) - (G.adsOn ? 0.05 : 0) - (P.eye < 1.4 ? 0.08 * (1 - iq * 0.5) : 0)) * (typeof botSettle === 'function' && inMatch() ? botSettle(e) : 1) * track, 0.06, 0.78);
   const hit = Math.random() < chance;
   const to = new THREE.Vector3(P.x, P.y + P.eye * 0.8, P.z);
   if (!hit) to.add(new THREE.Vector3(rnd(-1.6, 1.6), rnd(-0.8, 1.0), rnd(-1.6, 1.6)));
-  addTracer(from, to, 0.05, 0.022);
-  e.rig.flash.visible = true; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
-  enemyFlashLight.position.copy(from); enemyFlashLight.intensity = 3.2; enemyFlashLight.userData.t = 0.05;
+  if (!e.stealth) addTracer(from, to, 0.05, 0.022);
+  e.rig.flash.visible = !e.stealth; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
+  enemyFlashLight.position.copy(from); enemyFlashLight.intensity = e.stealth ? 0 : 3.2; enemyFlashLight.userData.t = 0.05;
   const o = at(e.group.position.x, e.group.position.z, 20); sfx.enemy(o);
-  if (hit) { G.killer = e; hurtPlayer(e.dmg * (inMatch() && Math.random() < (e.hs || 0) ? 1.7 : 1), e.group.position.x, e.group.position.z); }
+  if (hit) { G.killer = e; hurtPlayer(e.dmg * (inMatch() && Math.random() < (e.hs || 0) ? 1.7 : 1) * (typeof botFall === 'function' ? botFall(e, dist) : 1), e.group.position.x, e.group.position.z); }
   else if (dist > 4) { const f = at(to.x, to.z, 8); f.vol *= 0.8; sfx.flyby(f); }
 }
 

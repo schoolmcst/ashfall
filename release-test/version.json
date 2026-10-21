@@ -1,11 +1,11 @@
 {
- "version": "1.2.24",
+ "version": "1.2.25",
  "notes": [
-  "CAMO GRIND: every gun now has its own camo challenges - open the LOCKER, pick a gun and go to CHALLENGES",
-  "8 MILITARY camos per gun: kills, headshots, longshots, hip-fire kills (crouched kills for snipers and marksman rifles) and double kills with that gun",
-  "MASTERY: all 8 unlock GOLD for that gun. GOLD on every gun in a class unlocks DIAMOND for the whole class. DIAMOND in every class unlocks NOVA for every gun",
-  "Progress counts in every mode, offline and online, with a banner when you unlock one. The weapon grid shows each gun's progress"
+  "CAMO GRIND: every gun now has its own camo challenges - open the LOCKER, pick a gun and go to CHALLENGES. 8 military camos per gun, then GOLD, DIAMOND (whole class) and NOVA (every gun)",
+  "BOT LOADOUTS: bots now carry real guns with random attachments and camos - you can see them in their hands, and the kill feed names the gun",
+  "Bots pick guns that fit their job: overwatch snipers and marksman rifles, entries SMGs and shotguns, support ARs and LMGs, lurkers often suppressed",
+  "Bot guns fight like the real thing: damage, fire rate, magazine, effective range and drop-off. Suppressed bots show no tracers or flash and are heard from less far away"
  ],
- "sha256": "9dc5cf6370da52eae7f81b17e6800c0dd3df726ae284f59312b54d517baa6dda",
+ "sha256": "1bed25e93dba2abb09d6b872210a93280fe1574b6bf933aaa8d7e4c41530b345",
  "minApp": "1.0.0"
 }
