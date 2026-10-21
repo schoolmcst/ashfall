@@ -1,11 +1,12 @@
 {
- "version": "1.2.21",
+ "version": "1.2.22",
  "notes": [
-  "8 BRAND NEW MAPS - the old maps are out of the rotation. Every map has three lanes, flank routes between them and one power position that can always be shot back at",
-  "SMALL: STACKYARD and KILLHOUSE. MEDIUM: SKYPORT, SPIRE, DUSTWATER, WHITEOUT, BLACKWATER PIER. LARGE: RIDGELINE (built for FFA and long-range fights). The lobby map picker shows each map's size",
-  "67 NEW PROPS across the maps: airport security and luggage, market stalls and pottery, snowmobiles and research tents, lobster traps and anchors, farm fences and woodpiles, street and industrial details",
-  "FURNISHED ROOMS: every room is filled with furniture that fits it - kitchens and living rooms, bedrooms, offices, the lab, shops, workshops, the barn and the boathouse - with rugs, lights and pictures. Doorways, stairs and walkways stay clear"
+  "SMARTER BOTS: every bot gets a job when it spawns and plays it like a real team player",
+  "ENTRY pushes first, SUPPORT follows a teammate and trades their fights, ANCHOR plays the objective, OVERWATCH takes the high ground and holds long angles, LURK waits and flanks alone, SLAYER goes for kills over the objective",
+  "Bots take their own lanes when they spawn, so a team spreads over the whole map instead of running in a line",
+  "S&D: attackers gather and hit the site together while a lurker cuts the rotation; defenders split over both sites and wait for a teammate before retaking a planted bomb",
+  "Free-for-all and Gun Game bots have personalities: rushers, campers, flankers and roamers. Bots slow down near danger to check corners, hear footsteps close by, and only chase what they actually saw or heard"
  ],
- "sha256": "c02d154baf4367a9a05154e8da1739c999d0a15bc17d2f0f668945653c0bf3a4",
+ "sha256": "da441f8d8c56714133b41fcba3cd4da1b41689b7c9617108afe61b5d20ba571c",
  "minApp": "1.0.0"
 }
