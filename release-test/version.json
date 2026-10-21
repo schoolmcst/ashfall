@@ -1,12 +1,12 @@
 {
- "version": "1.2.28",
+ "version": "1.2.29",
  "notes": [
-  "ZOMBIES (new): a ZOMBIES tab on the main menu takes you to its own lobby. No loadout: everyone starts with the Service 9 pistol, 2 frags and 500 points.",
-  "Survive round after round. Zombies walk at first, jog from round 3 and run from round 6, and get tougher every round.",
-  "Points: 10 a hit, 60 a kill, 100 a headshot kill, 130 a melee kill.",
-  "Mystery Crate (950 points) gives a random gun. Ammo Crate (250 points) refills your ammo. Press USE at a crate to buy.",
-  "Pick a map in the zombies lobby (LB / RB changes it) or leave it on RANDOM. Your best round is saved."
+  "NEW MAP: BLACKWELL HOSPITAL - a huge two-storey hospital, almost all indoors. Long corridors, wards, the ER, surgery, x-ray, the morgue, labs and a bridge across the atrium. Plays in every multiplayer mode and in Zombies.",
+  "ZOMBIES ONLINE CO-OP: in the Zombies lobby set PLAY to ONLINE CO-OP, then FIND A CO-OP GAME, or type a private code to play with friends. Up to 4 survivors.",
+  "In co-op the host presses START. Everyone keeps their own points and guns; the round is shared.",
+  "Going down in co-op: a teammate holds USE next to you for 3 seconds to revive you (they get 50 points). If you bleed out after 30 seconds you come back at the start of the next round with a pistol. Everyone down = game over.",
+  "If the co-op host leaves, another player takes over and the game keeps going."
  ],
- "sha256": "95bee66676ed6cb88831ddf4daac25849d8ce3dccd80558309b5bed2e72fc1c5",
+ "sha256": "9e1df31fb822b10d4149605bcba4d7733167446db97f0fe7666784e2cbe45c63",
  "minApp": "1.0.0"
 }

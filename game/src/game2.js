@@ -148,6 +148,7 @@ function updateEnemies(dt) {
 
 function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (!enemies.includes(e)) return false;
+  if (e.proxy) { if (by === 'player') zcProxyHit(e, dmg, head, boom); return false; }
   if (e.entry) { e.entry.lastBy = by; e.entry.lastHead = head ? 1 : 0; }
   if (e.net) { netHit(e, dmg, head, by, boom); return false; }
   if ((e.spawnProt > 0 || G.holdT > 0) && inMatch() && by !== 'world') return false;   // spawn protection / pre-match hold
@@ -164,6 +165,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
       try { onKill(e, head, !!boom); } catch (err) { reportError(err); }
       sfx.kill(head);
     }
+    if (e.zombie && typeof ZC !== 'undefined' && ZC.on) zcKilled(e, by, head);
     try { matchBotKilled(e, by, head, boom); } catch (err) { reportError(err); }
     if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(e.group.position.x, e.group.position.z, groundAt(e.group.position.x, e.group.position.z, e.group.position.y + 0.3));
     _n.set(0, 1, 0); _v3.set(e.group.position.x, 0, e.group.position.z - 0.2); addDecal(_v3, _n, 'blood', 1.3);
@@ -316,6 +318,7 @@ function die() {
   mouseDown = false; mouseAds = false; G.streak = 0; statDeath(); stkDeath();
   try { matchPlayerKilled(G.killer); } catch (err) { reportError(err); }
   if (M.over) return;
+  if (M.mode === 'zomb' && zcInGame()) { zcDown(); return; }
   if (M.mode === 'zomb') { finishDeath(); return; }
   if (inMatch() && !S.deathCam) { G.state = 'deathcam'; afterDeathInMatch(); return; }
   if (S.deathCam && G.state === 'playing') { startDeathCam(); return; }
@@ -334,7 +337,7 @@ function finishDeath() {
   showScreen('over');
 }
 function pauseGame() {
-  if (G.state !== 'playing' && G.state !== 'respawning' && G.state !== 'spectate') return;
+  if (G.state !== 'playing' && G.state !== 'respawning' && G.state !== 'spectate' && G.state !== 'zdown' && G.state !== 'zspec') return;
   G.pausedFrom = G.state; G.state = 'paused'; mouseDown = false; mouseAds = false;
   try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   $('pauseSub').textContent = M.mode === 'zomb' ? `ROUND ${Z.round}  ·  ${(G.points | 0).toLocaleString()} POINTS  ·  KILLS ${G.kills}` : `WAVE ${G.wave}  ·  KILLS ${G.kills}  ·  SCORE ${G.score}`;
@@ -344,7 +347,7 @@ function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom
 // Scavenger: every kill tops up one magazine of reserve ammo
 function perkOnKill() { if (!perk('scavenger')) return; for (const w of WEAPONS) w.reserve = Math.min(w.reserveMax, w.reserve + w.magSize); }
 function startGame() { startMatch('surv'); }
-function restartMatch() { if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'zomb') startMatch('zomb', { map: ZL.map === 'random' ? 'random' : curMap }); else if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
+function restartMatch() { if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'zomb' && ZC.on) { zcRedeploy(); return; } if (M.mode === 'zomb') startMatch('zomb', { map: ZL.map === 'random' ? 'random' : curMap }); else if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
 // leave whatever is running and go back to the menu scene (soldiers posing behind the menus)
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();

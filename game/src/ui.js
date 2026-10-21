@@ -4,7 +4,7 @@ let curScreen = null, returnScreen = 'menu';
 function showScreen(id) {
   curScreen = id; if (id === 'menu') try { renderMenuCard(); } catch (e) {}
   for (const s of SCREENS) $(s).classList.toggle('hide', s !== id);
-  $('hud').classList.toggle('hide', !(G.state === 'playing' || G.state === 'paused' || G.state === 'dead' || G.state === 'respawning' || G.state === 'spectate' || G.state === 'deathcam'));
+  $('hud').classList.toggle('hide', !(G.state === 'playing' || G.state === 'paused' || G.state === 'dead' || G.state === 'respawning' || G.state === 'spectate' || G.state === 'deathcam' || G.state === 'zdown' || G.state === 'zspec'));
   if (id) setTimeout(() => { const f = focusables(); if (f.length && !f.includes(document.activeElement)) { try { f[0].focus(); } catch (e) {} } }, 0);
 }
 function lockPointer() { try { const r = renderer.domElement.requestPointerLock && renderer.domElement.requestPointerLock(); if (r && r.catch) r.catch(() => {}); } catch (e) {} }
@@ -313,7 +313,7 @@ addEventListener('keydown', e => {
   if ((e.code === 'Enter' || e.code === 'NumpadEnter') && G.state === 'playing' && !curScreen) { e.preventDefault(); chatOpen(); return; }
   keys[e.code] = true;
   if (G.state === 'deathcam') { if (G.dc && G.dc.t > 0.6 && (e.code === 'Space' || e.code === 'Enter' || e.code === 'Escape')) finishDeath(); return; }
-  if ((G.state === 'respawning' || G.state === 'spectate') && e.code === 'Escape') { pauseGame(); return; }
+  if ((G.state === 'respawning' || G.state === 'spectate' || G.state === 'zdown' || G.state === 'zspec') && e.code === 'Escape') { pauseGame(); return; }
   if (G.state === 'spectate' && (e.code === 'Space' || e.code === 'Enter')) { G.specNext = true; return; }
   if (e.code === 'Tab' || e.code === bind('board')) e.preventDefault();
   if (curScreen === 'classpick' && /^Digit[1-5]$/.test(e.code)) { cpPick(+e.code.slice(5) - 1); return; }
@@ -357,7 +357,7 @@ addEventListener('mouseup', e => { if (e.button === 0) mouseDown = false; if (e.
 addEventListener('contextmenu', e => e.preventDefault());
 addEventListener('wheel', e => { if (G.state === 'playing') cycleWeapon(e.deltaY > 0 ? 1 : -1); });
 addEventListener('mousemove', e => {
-  if (G.state !== 'playing' || document.pointerLockElement !== renderer.domElement) return;
+  if ((G.state !== 'playing' && G.state !== 'zdown') || document.pointerLockElement !== renderer.domElement) return;
   const sens = 0.0022 * S.sens / 100 * lerp(1, adsSensMul(), G.ads);
   P.yaw -= e.movementX * sens; P.pitch = clamp(P.pitch - e.movementY * sens * (S.invertY ? -1 : 1), -1.5, 1.5);
 });
@@ -418,7 +418,7 @@ function pollPad(dt) {
   const playing = G.state === 'playing' && !curScreen;
   if (gp.buttons.some(b => b.pressed) || Math.hypot(rawL[0], rawL[1]) > 0.4 || Math.hypot(rawR[0], rawR[1]) > 0.4) inputMode('pad');
   if (G.state === 'deathcam') { if ((press(0) || press(9)) && G.dc && G.dc.t > 0.6) finishDeath(); prevBtn = gp.buttons.map(b => b.pressed); return; }
-  if (press(9)) { if (playing || G.state === 'respawning' || G.state === 'spectate') pauseGame(); else if (G.state === 'paused') resumeGame(); else if (curScreen === 'lobby') actions('lob-start'); else if (curScreen === 'menu') toLobby(); else if (G.state === 'dead') restartMatch(); }
+  if (press(9)) { if (playing || G.state === 'respawning' || G.state === 'spectate' || G.state === 'zdown' || G.state === 'zspec') pauseGame(); else if (G.state === 'paused') resumeGame(); else if (curScreen === 'lobby') actions('lob-start'); else if (curScreen === 'menu') toLobby(); else if (G.state === 'dead') restartMatch(); }
   pad.board = down(pb('board')); pad.use = playing && down(pb('reload'));
   if (G.state === 'spectate' && press(0)) G.specNext = true;
   // analog triggers with a little hysteresis so a half-pull doesn't chatter
@@ -596,6 +596,7 @@ function tick(dt) {
     if (inMatch()) { updateBots(dt); updateMatch(dt); } else if (M.mode === 'zomb') { updateNav(P.x, P.z); updateZombies(dt); } else { updateNav(P.x, P.z); updateWaves(dt); updateEnemies(dt); }
     updateGrenades(dt); updatePickups(dt); updateHud();
   } else if (G.state === 'menu') { menuCamera(); updateMenuSoldiers(dt); }
+  else if (M.mode === 'zomb' && typeof ZC !== 'undefined' && ZC.on && ZC.inGame && (G.state === 'paused' || G.state === 'zdown' || G.state === 'zspec')) { try { zcBackTick(dt); } catch (err) { reportError(err); } }
   else if (G.state === 'paused' && M.online) {   // online the match carries on behind the pause menu (bots, rounds, gravity)
     P.vy -= 22 * dt; P.y += P.vy * dt; const gy = groundAt(P.x, P.z, P.y); if (P.y <= gy) { P.y = gy; P.vy = 0; }
     updateBots(dt); updateMatch(dt); updateGrenades(dt); updateHud();
@@ -622,8 +623,8 @@ function tick(dt) {
 try {
   const bgW = new Worker(URL.createObjectURL(new Blob(['let t=null;onmessage=e=>{clearInterval(t);t=null;if(e.data)t=setInterval(()=>postMessage(0),50)}'], { type: 'text/javascript' })));
   let bgLast = performance.now();
-  bgW.onmessage = () => { if (!document.hidden || !M.online || !ready) return; const now = performance.now(), dt = Math.min(0.1, (now - bgLast) / 1000); bgLast = now; NOW += dt; try { tick(dt); } catch (e) {} };
-  const bgSync = () => { bgLast = performance.now(); bgW.postMessage(document.hidden && M && M.online ? 1 : 0); };
+  bgW.onmessage = () => { if (!document.hidden || !(M.online || (typeof ZC !== 'undefined' && ZC.on && ZC.inGame)) || !ready) return; const now = performance.now(), dt = Math.min(0.1, (now - bgLast) / 1000); bgLast = now; NOW += dt; try { tick(dt); } catch (e) {} };
+  const bgSync = () => { bgLast = performance.now(); bgW.postMessage(document.hidden && M && (M.online || (typeof ZC !== 'undefined' && ZC.on && ZC.inGame)) ? 1 : 0); };
   document.addEventListener('visibilitychange', bgSync); setInterval(bgSync, 3000);
 } catch (e) {}
 function renderFrame() {
@@ -686,7 +687,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

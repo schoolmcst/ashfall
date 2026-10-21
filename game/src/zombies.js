@@ -5,9 +5,10 @@
    100 a headshot kill, 130 a melee kill. Spend them at the MYSTERY CRATE (950: a random gun) and the AMMO CRATE
    (250: full ammo). No loadout: everyone starts the same. */
 MODES.zomb = { name: 'ZOMBIES', short: 'ZOMBIES', icon: 'ZMB', desc: 'Survive round after round of the dead. Start with a pistol, earn points, and buy guns from the Mystery Crate.', teams: false, respawn: 0, score: 0, time: 0, unit: 'ROUNDS' };
-const ZL = { on: false, map: 'random' };
+const ZL = { on: false, map: 'random', net: 'solo', code: '' };
+try { ZL.net = localStorage.getItem('ashfall.znet') === 'coop' ? 'coop' : 'solo'; ZL.code = localStorage.getItem('ashfall.zcode') || ''; } catch (e) {}
 try { const m = localStorage.getItem('ashfall.zmap'); if (m === 'random' || (MAPS[m] && !MAPS[m].hidden)) ZL.map = m; } catch (e) {}
-const Z = { round: 0, toSpawn: 0, spawnT: 0, breakT: 0, active: false, guns: [], crate: null, ammo: null, boxT: 0, best: { round: 0, pts: 0 } };
+const Z = { zid: 0, targets: [], round: 0, toSpawn: 0, spawnT: 0, breakT: 0, active: false, guns: [], crate: null, ammo: null, boxT: 0, best: { round: 0, pts: 0 } };
 try { Object.assign(Z.best, JSON.parse(localStorage.getItem('ashfall.zbest') || '{}')); } catch (e) {}
 const Z_BOX = 950, Z_AMMO = 250;
 const Z_POOL = () => ARMORY.filter(d => ['ar', 'smg', 'lmg', 'mr', 'sr', 'sg'].includes(d.cat));
@@ -21,23 +22,33 @@ function renderZLobby(focusSel) {
   for (const b of document.querySelectorAll('#lobby .cod-nav [data-act="loadout"], #lobby .cod-nav [data-act="streaks"]')) b.style.display = 'none';
   const ph = document.querySelector('#lobby .cod-foot .padhint'); if (ph) ph.innerHTML = 'LB / RB  CHANGE MAP &middot; START  PLAY';
   $('lobSel').innerHTML =
-    `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="z-start"><small>SOLO · ROUND BASED</small><b>START ZOMBIES</b></button></div>` +
-    `<div class="cod-row cod-map"><small>MAP</small><b>${m ? m.name : 'RANDOM'}</b><span>${m ? m.place : 'a different map each game'}</span><div class="arw"><button class="mini" data-act="z-map-" aria-label="Previous map">&lsaquo;</button><button class="mini" data-act="z-map+" aria-label="Next map">&rsaquo;</button></div></div>` +
+    `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="z-start"><small>${zcStartLabel()[0]}</small><b>${zcStartLabel()[1]}</b></button></div>` + zcLobbyRows() +
+    `<div class="cod-row cod-map"><small>MAP${ZC.on && !zcHost() ? ' · THE HOST PICKS' : ''}</small><b>${m ? m.name : 'RANDOM'}</b><span>${m ? m.place : 'a different map each game'}</span><div class="arw"><button class="mini" data-act="z-map-" aria-label="Previous map">&lsaquo;</button><button class="mini" data-act="z-map+" aria-label="Next map">&rsaquo;</button></div></div>` +
     `<div class="cod-row"><small>STARTING GEAR</small><b>SERVICE 9 · 2 FRAGS</b><span>everyone starts the same · 500 points to spend</span></div>` +
     `<div class="cod-row"><small>MYSTERY CRATE · ${Z_BOX} POINTS</small><b>A RANDOM GUN</b><span>AMMO CRATE · ${Z_AMMO} POINTS · full ammo for your guns</span></div>` +
     `<div class="cod-row"><small>YOUR BEST</small><b>ROUND ${Z.best.round || 0}</b><span>${(Z.best.pts || 0).toLocaleString()} POINTS</span></div>`;
-  $('lobRoster').innerHTML = `<div class="ros-h"><span>SQUAD</span><b>SOLO</b></div><div class="ros-team" style="--tc:#7dbb4a"><div class="tn">SURVIVORS</div><div class="ros-p me"><span class="lv">★</span>${NET.nick || 'YOU'}<em>READY</em></div></div>` +
-    `<div class="ros-info"><b>ZOMBIES</b>Survive round after round of the dead. They walk at first, then jog, then run. 10 points a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Press USE (E / X) at the crates to buy.</div>`;
+  $('lobRoster').innerHTML = `<div id="zRoster">${zcRosterHtml()}</div>` +
+    `<div class="ros-info"><b>ZOMBIES</b>Survive round after round of the dead. They walk at first, then jog, then run. 10 points a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Press USE (E / X) at the crates to buy.${ZL.net === 'coop' ? ' In co-op, a downed teammate is revived by holding USE next to them.' : ''}</div>`;
+  ZC.rosterKey = ''; zcWireLobby();
   if (focusSel) focusFirst(focusSel);
 }
 function zombAct(act) {
   if (act === 'go-zombies') { sfx.ui(); openZLobby(); return true; }
   if (act === 'go-on' || act === 'go-mp' || act === 'deploy' || act === 'play') { zombLobbyOff(); return false; }
   if (!ZL.on || curScreen !== 'lobby') return false;
-  if (act === 'z-start' || act === 'lob-start') { startMatch('zomb', { map: ZL.map }); return true; }
+  if (act === 'z-start' || act === 'lob-start') {
+    if (ZL.net !== 'coop') { startMatch('zomb', { map: ZL.map }); return true; }
+    if (!ZC.on) { const i = $('zCode'); if (i && cleanCode(i.value) !== 'public' && i.value.trim()) zcJoin('code', cleanCode(i.value)); else zcJoin('quick'); }
+    else if (zcHost()) zcHostStart();
+    return true;
+  }
+  if (act === 'z-net-' || act === 'z-net+') { ZL.net = ZL.net === 'coop' ? 'solo' : 'coop'; if (ZL.net === 'solo' && ZC.on) zcLeave(); ZC.err = ''; try { localStorage.setItem('ashfall.znet', ZL.net); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="${act}"]`); return true; }
+  if (act === 'z-code') { const i = $('zCode'), c = i ? cleanCode(i.value) : ''; if (!c || c === 'public') { if (i) { i.focus(); i.placeholder = 'type a code first'; } return true; } ZL.code = c; zcJoin('code', c); return true; }
+  if (act === 'z-leave') { zcLeave(); sfx.ui(); return true; }
+  if ((act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') && ZC.on && !zcHost()) return true;
   if (act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(ZL.map)), d = act.endsWith('+') ? 1 : -1; ZL.map = L[(i + d + L.length) % L.length]; try { localStorage.setItem('ashfall.zmap', ZL.map); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="z-map${d > 0 ? '+' : '-'}"]`); return true; }
   if (act === 'playlist' || act === 'loadout' || act === 'streaks' || act === 'custom') return true;
-  if (act === 'lobby-back') { zombLobbyOff(); showScreen('menu'); return true; }
+  if (act === 'lobby-back') { zombLobbyOff(); if (ZC.on) zcLeave(); showScreen('menu'); return true; }
   return false;
 }
 function zombLobbyOff() { ZL.on = false; for (const b of document.querySelectorAll('#lobby .cod-nav [data-act="loadout"], #lobby .cod-nav [data-act="streaks"]')) b.style.display = ''; const ph = document.querySelector('#lobby .cod-foot .padhint'); if (ph) ph.innerHTML = 'LB / RB  CHANGE MODE &middot; START  PLAY'; }
@@ -46,9 +57,10 @@ function zombLobbyOff() { ZL.on = false; for (const b of document.querySelectorA
 function zombStart(cfg) {
   buildSpawns();
   const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z);
-  Object.assign(Z, { round: 0, toSpawn: 0, spawnT: 0, breakT: 4, active: false, guns: ['sidearm'], boxT: 0 });
+  Object.assign(Z, { zid: 0, round: 0, toSpawn: 0, spawnT: 0, breakT: ZC.on && ZC.inGame ? 6 : 4, active: false, guns: ['sidearm'], boxT: 0 });
   zombEquip(); G.grenades = 2; G.points = 500; G.score = 0;
   zombCrates();
+  if (ZC.on && ZC.inGame) zcStartLocal();
   G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
   showBanner('ZOMBIES', 'survive · 500 points to spend'); zombHud(true);
 }
@@ -97,6 +109,7 @@ function makeZombie(x, z, y) {
     phase: Math.random() * 6, phase0: Math.random() * 6, chk: 0.6, lastX: x, lastZ: z, avoidT: 0, avoidDir: 1, flinch: 0, aim: 0, crouchK: 0, hold: 0,
     atkT: 0, atkCd: rnd(0.2, 0.6), growlT: rnd(1, 6), lurch: rnd(-0.3, 0.3), slowT: 0, noSeeT: 0,
   };
+  e.zid = ++Z.zid;
   rig.hits.forEach(m => { m.userData.enemy = e; });
   enemies.push(e);
   return e;
@@ -105,7 +118,7 @@ function zombSpawn() {
   const pts = buildSpawns();
   for (let t = 0; t < 40; t++) {
     const p = pts[(Math.random() * pts.length) | 0], d = Math.hypot(p.x - P.x, p.z - P.z);
-    if (d < 18 || d > 60) continue;
+    if (d > 60 || Z.targets.some(t => Math.hypot(p.x - t.x, p.z - t.z) < 16) || (d < 18 && !Z.targets.some(t => !t.me))) continue;
     const n = nodeOf(p.x, p.z, p.y); if (n < 0 || !navField || navField[n] < 0) continue;
     return makeZombie(p.x, p.z, p.y);
   }
@@ -113,12 +126,15 @@ function zombSpawn() {
 }
 function zombRound() {
   Z.round++; Z.toSpawn = Math.min(80, 6 + (Z.round - 1) * 3); Z.spawnT = 1; Z.active = true;
-  G.wave = Z.round; G.health = G.maxHp;
+  G.wave = Z.round; if (!(ZC.on && ZC.down)) G.health = G.maxHp; if (ZC.on && ZC.dead) zcRespawn();
   showBanner(`ROUND ${Z.round}`, Z.round === 1 ? 'here they come' : Z.round % 5 === 0 ? 'they are getting faster' : `${Z.toSpawn} zombies`);
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
   zombHud(true);
 }
 function updateZombies(dt) {
+  if (zcInGame()) zcFrame(dt);
+  if (zcInGame() && !zcHost()) { zombHud(); zombCrateTick(dt); return; }
+  Z.targets = zombTargets();
   if (!Z.active) { Z.breakT -= dt; if (Z.breakT <= 0) zombRound(); }
   else {
     const cap = Math.min(24, 10 + Z.round);
@@ -129,17 +145,25 @@ function updateZombies(dt) {
   zombHud();
   zombCrateTick(dt);
 }
+// the survivor a zombie goes for: the nearest one standing (keeps its pick unless another is much closer)
+function zombPick(e) {
+  const g = e.group.position, T = Z.targets || []; let best = null, bd = 1e9;
+  for (const t of T) { let d = Math.hypot(t.x - g.x, t.z - g.z) + Math.abs(t.y - g.y) * 3; if (e.tgKey && (t.me ? 'me' : t.peer) === e.tgKey) d -= 4; if (d < bd) { bd = d; best = t; } }
+  e.tgKey = best ? (best.me ? 'me' : best.peer) : ''; return best;
+}
 function zombThink(e, i, dt) {
-  const g = e.group, dx = P.x - g.position.x, dz = P.z - g.position.z, dist = Math.max(Math.hypot(dx, dz), 0.001), nx = dx / dist, nz = dz / dist;
-  const up = Math.abs((P.y || 0) - g.position.y) < 1.6;
+  const T = zombPick(e), g = e.group;
+  if (!T) { e.atkT = Math.max(0, e.atkT - dt); botGround(g, dt); animZombie(e, dt, 0); return; }
+  const dx = T.x - g.position.x, dz = T.z - g.position.z, dist = Math.max(Math.hypot(dx, dz), 0.001), nx = dx / dist, nz = dz / dist;
+  const up = Math.abs((T.y || 0) - g.position.y) < 1.6;
   let mx = 0, mz = 0;
   if (e.atkT > 0) {   // mid-swing: stand and hit
     e.atkT -= dt;
-    if (!e.hitDone && e.atkT < 0.3) { e.hitDone = true; if (dist < 1.75 && up && G.state === 'playing') { G.killer = null; hurtPlayer(34, g.position.x, g.position.z); try { sfx.melee && sfx.melee(); } catch (err) {} } }
+    if (!e.hitDone && e.atkT < 0.3) { e.hitDone = true; if (dist < 1.75 && up) { if (!T.me) zcSwing(T.peer, 34, e); else if (G.state === 'playing' || G.state === 'paused') { G.killer = null; hurtPlayer(34, g.position.x, g.position.z); try { sfx.melee && sfx.melee(); } catch (err) {} } } }
   } else {
     if (e.avoidT > 0) { e.avoidT -= dt; mx = -nz * e.avoidDir + nx * 0.3; mz = nx * e.avoidDir + nz * 0.3; }
-    else if (gridClear(g.position.x, g.position.z, P.x, P.z, g.position.y, P.y)) { mx = nx + -nz * e.lurch * 0.3; mz = nz + nx * e.lurch * 0.3; }
-    else { const nd = navDir(g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
+    else if (gridClear(g.position.x, g.position.z, T.x, T.z, g.position.y, T.y)) { mx = nx + -nz * e.lurch * 0.3; mz = nz + nx * e.lurch * 0.3; }
+    else { const nd = T.me ? navDir(g.position.x, g.position.z, g.position.y) : flowDir(flowField(T.x, T.z, T.y), g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
     if (dist < 1.3 && up) { mx = mz = 0; e.atkCd -= dt; if (e.atkCd <= 0) { e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.7, 1.1); } }
   }
   const ml = Math.hypot(mx, mz), slow = (e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.45 : 1;
@@ -179,12 +203,12 @@ function zombKill(e, head, boom, melee) {
 // crates: stand close and press USE
 function zombCrateTick(dt) {
   const pr = $('zPrompt'); if (!pr) return;
-  let msgTxt = '';
+  let msgTxt = zcInGame() ? zcReviveTick(dt) : '';
   for (const [c, cost, fn] of [[Z.crate, Z_BOX, zombBuyBox], [Z.ammo, Z_AMMO, zombBuyAmmo]]) {
     if (!c) continue;
     c.children[c.children.length - 1].material.opacity = 0.1 + Math.sin(NOW * 2) * 0.04;
     const d = Math.hypot(P.x - c.position.x, P.z - c.position.z);
-    if (d < 2.3 && Math.abs(P.y - c.position.y) < 1.5) { msgTxt = `${c.userData.label} · ${cost} POINTS · PRESS ${actName('use')}${G.points < cost ? ' · NOT ENOUGH POINTS' : ''}`; if ((kb('use') || pad.use) && !Z.useHeld && G.points >= cost) fn(); }
+    if (!msgTxt && d < 2.3 && Math.abs(P.y - c.position.y) < 1.5 && G.state === 'playing') { msgTxt = `${c.userData.label} · ${cost} POINTS · PRESS ${actName('use')}${G.points < cost ? ' · NOT ENOUGH POINTS' : ''}`; if ((kb('use') || pad.use) && !Z.useHeld && G.points >= cost) fn(); }
   }
   Z.useHeld = kb('use') || pad.use;
   if (Z.boxT > 0) { Z.boxT -= dt; const lid = Z.crate.userData.lid; lid.position.y = 0.81 + Math.min(0.5, (1.4 - Z.boxT) * 1.2); lid.rotation.x = -Math.min(1.1, (1.4 - Z.boxT) * 2); if (Z.boxT <= 0) { lid.position.y = 0.81; lid.rotation.x = 0; } }
@@ -209,14 +233,14 @@ function zombHud(force) {
 #zPrompt{position:absolute;left:50%;top:62%;transform:translateX(-50%);padding:8px 16px;background:rgba(0,0,0,.6);border-left:3px solid #9a3cff;color:#fff;font:700 13px var(--font,system-ui);letter-spacing:.14em;opacity:0;transition:opacity .15s;pointer-events:none;white-space:nowrap}`;
     document.head.appendChild(st);
   }
-  const on = M.mode === 'zomb' && (G.state === 'playing' || G.state === 'paused');
+  const on = M.mode === 'zomb' && (G.state === 'playing' || G.state === 'paused' || G.state === 'zdown' || G.state === 'zspec');
   if (h.style.display !== (on ? '' : 'none')) h.style.display = on ? '' : 'none';
   if (!on) { const p = $('zPrompt'); if (p) p.style.opacity = 0; return; }
   const pts = (G.points | 0).toLocaleString() + ' PTS', rd = Z.round ? String(Z.round) : '';
   if (force || h._p !== pts) { h._p = pts; h.firstChild.textContent = pts; }
   if (force || h._r !== rd) { h._r = rd; h.lastChild.textContent = rd; }
 }
-function zombClear() { Z.active = false; Z.crate = Z.ammo = null; zombHud(); }
+function zombClear() { Z.active = false; Z.crate = Z.ammo = null; zombHud(); if (typeof ZC !== 'undefined' && ZC.on) { ZC.inGame = false; ZC.down = ZC.dead = false; zcClearProxies(); for (const R of ZC.rem.values()) zcDropAvatar(R); zcTeamHud(true); } }
 function zombDeathText() {
   const nb = Z.round > (Z.best.round || 0) || (Z.round === Z.best.round && G.score > (Z.best.pts || 0));
   if (nb) { Z.best = { round: Z.round, pts: G.score }; try { localStorage.setItem('ashfall.zbest', JSON.stringify(Z.best)); } catch (e) {} }
