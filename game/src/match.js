@@ -126,6 +126,7 @@ function spawnBot(en, pos) {
     iq: sk.iq || 0.5, hs: sk.hs || 0.12, lkp: null, lkpT: -99, hitT: -99, nades: Math.random() < (sk.iq || 0.5) ? 2 : 1, nadeT: M.t + rnd(4, 10), flankT: 0 });
   e.group.rotation.y = Math.atan2(-pos.x, -pos.z); e.group.position.y = pos.y || 0; e.spawnProt = 1.5;
   try { brainBoost(e); } catch (err) {}
+  if (!G.noRoles) try { botRoleInit(e, pos); } catch (err) { reportError(err); }
   if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
   en.bot = e; en.alive = true; enemies.push(e);
   if (M.mode === 'gun') botGunProfile(e, GUN_LADDER[Math.min(en.level || 0, GUN_LADDER.length - 1)]);
@@ -342,6 +343,7 @@ function botGoal(e, cands) {
   const keep = e.goal && M.t < e.goalT && Math.hypot(e.goal.x - ex, e.goal.z - ez) > 2;
   const near = (p, r) => ({ x: p.x + rnd(-r, r), z: p.z + rnd(-r, r), y: p.y || 0 });
   const set = (p, hold) => { e.goalT = M.t + (hold || rnd(3, 6)); return p; };
+  if (e.job) { const g = botRoleGoal(e, cands, keep, near, set); if (g) return g; }
   if (M.mode === 'hp' && M.hp && !M.hp.wait) {
     const z = LAYOUT.hp[M.hp.idx];
     if (e.role === 'obj' || Math.hypot(z.x - ex, z.z - ez) < 22 || Math.random() < 0.5) return keep && Math.hypot(e.goal.x - z.x, e.goal.z - z.z) < 6 ? e.goal : set(near(z, 3.5), 2.5);
@@ -428,9 +430,10 @@ function updateBots(dt) {
     } else { holding = true; e.strafeT -= dt; if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = rnd(1, 3); } mx = Math.cos(e.phase0 + M.t * 0.3) * 0.4 * e.strafe; mz = Math.sin(e.phase0 + M.t * 0.3) * 0.4; }
     const ml = Math.hypot(mx, mz), stun = e.stunT > 0 ? 0.25 : 1;
     let sp = ml > 0.01 ? e.speed * (holding ? 0.5 : 1) * stun * ((e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.4 : 1) : 0;
+    if (e.job) sp *= botPace(e, tp);
     // human habits while not fighting: stop now and then to check a corner, look around instead of staring ahead
     const hum = e.hum || 0.4;
-    if (!tp && !busy) {
+    if (!tp && !busy && !e.watching) {
       e.pauseT = (e.pauseT || 0) - dt; e.nextPause = (e.nextPause === undefined ? M.t + rnd(5, 11) : e.nextPause);
       if (M.t > e.nextPause && Math.random() < hum) { e.pauseT = rnd(0.5, 1.3); e.nextPause = M.t + rnd(6, 13); e.lookYaw = g.rotation.y + rnd(-1.6, 1.6); }
       if (e.pauseT > 0) sp *= 0.15;
