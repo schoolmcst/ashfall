@@ -10,7 +10,7 @@ const PRIV_SC = { tdm: [10, 150, 5], ffa: [5, 60, 5], gun: [20, 20, 1], hp: [50,
 const PRIV_MODE = { tdm: 'otdm', ffa: 'offa', gun: 'ogun', hp: 'ohp', ctf: 'octf', snd: 'osnd' };
 function privClean(c) {
   const md = PRIV_SC[c.md] ? c.md : 'tdm', L = PRIV_SC[md];
-  return { md, mp: c.mp === 'random' || MAPS[c.mp] ? c.mp : 'random', b: clamp(+c.b | 0, 0, 11), tl: clamp(+c.tl | 0, 0, 30), sc: md === 'gun' ? GUN_LADDER.length : clamp(+c.sc | 0 || L[0], L[0], L[1]) };
+  return { md, mp: c.mp === 'random' || (MAPS[c.mp] && !MAPS[c.mp].hidden) ? c.mp : 'random', b: clamp(+c.b | 0, 0, 11), tl: clamp(+c.tl | 0, 0, 30), sc: md === 'gun' ? GUN_LADDER.length : clamp(+c.sc | 0 || L[0], L[0], L[1]) };
 }
 PRIVCFG = privClean(PRIVCFG);
 const privSave = () => { try { localStorage.setItem(PRIV_KEY, JSON.stringify(PRIVCFG)); } catch (e) {} };

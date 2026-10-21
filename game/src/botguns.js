@@ -53,8 +53,7 @@ function botGunVisual(e, def, atts, camo) {
     g.traverse(o => { if (!o.isMesh || (o.material && o.material.blending === THREE.AdditiveBlending)) return; for (let p = o; p; p = p.parent) if (!p.visible) return; box.expandByObject(o); });
     const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3()), L = BOT_LEN[def.cat] || 0.86;
     g.position.sub(c); holder.scale.setScalar(L / Math.max(sz.z, sz.x, 0.1)); holder.rotation.y = Math.PI;   // view models point down -z, the rig's gun points +z
-    holder.traverse(o => { o.userData = {}; if (o.isMesh) { o.castShadow = true; o.raycast = () => {}; } }); holder.userData.len = L;   // clone() deep-copies userData, and the view model's has loops
-    tpl = holder; BOTGUN_CACHE.set(key, tpl);
+    tpl = botGunMerge(holder); tpl.userData.len = L; BOTGUN_CACHE.set(key, tpl);
     if (BOTGUN_CACHE.size > 48) BOTGUN_CACHE.delete(BOTGUN_CACHE.keys().next().value);
   }
   const vis = tpl.clone(), L = tpl.userData.len, cz = def.cat === 'pi' ? 0.06 : L / 2 - 0.22;
@@ -62,6 +61,22 @@ function botGunVisual(e, def, atts, camo) {
   for (const ch of rig.gun.children) if (ch !== rig.flash) ch.visible = false;
   rig.gun.add(vis); e.gunVis = vis;
   if (rig.flash) rig.flash.position.z = cz + L / 2 + 0.04;
+}
+// bake the gun into one mesh per material (about 28 parts -> 10 draw calls per bot)
+function botGunMerge(holder) {
+  holder.updateMatrixWorld(true);
+  const groups = new Map(), out = new THREE.Group();
+  holder.traverse(o => {
+    if (!o.isMesh || (o.material && o.material.blending === THREE.AdditiveBlending)) return;
+    for (let p = o; p; p = p.parent) if (!p.visible) return;
+    const g = o.geometry, ok = g && g.attributes.position && g.attributes.normal && g.attributes.uv && !Array.isArray(o.material);
+    if (!ok) { const m = o.clone(); m.userData = {}; o.matrixWorld.decompose(m.position, m.quaternion, m.scale); out.add(m); return; }
+    if (!groups.has(o.material)) groups.set(o.material, []);
+    groups.get(o.material).push({ g, m: o.matrixWorld.clone() });
+  });
+  for (const [mat, parts] of groups) { const m = new THREE.Mesh(mergeGeos(parts), mat); m.castShadow = true; out.add(m); }
+  out.traverse(o => { o.userData = {}; if (o.isMesh) o.raycast = () => {}; });   // clone() deep-copies userData, and the view model's has loops
+  return out;
 }
 // a bot's class: kept between lives, sometimes changed
 function botLoadout(e) {

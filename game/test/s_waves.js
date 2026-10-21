@@ -1,7 +1,7 @@
 // wave mode on each map: enemies spawn, reach the player, nothing throws
 module.exports = async p => p.evaluate(async () => {
   const A = window.__A, out = {};
-  for (const id of ['docks', 'town', 'metro']) {
+  for (const id of A.MAP_ORDER.filter(m => !A.MAPS[m].hidden)) {
     A.startMatch('surv', { map: id }); A.G.health = 1e9; A.G.maxHp = 1e9; A.G.noRender = true;
     await new Promise(r => setTimeout(r, 14000));
     const P = A.P, en = A.enemies;

@@ -33,6 +33,8 @@ function buildYard() {
   for (const s of [-1, 1]) rail(-2.25, s * 1.2, 2.25, s * 1.2, 2.9, { h: 0.9 });
   stairs(-7.2, 0, 'e', 1.1, 0, 2.9, 'metal', { open: true, rails: false });   // west stair climbs east onto the deck
   stairs(7.2, 0, 'w', 1.1, 0, 2.9, 'metal', { open: true, rails: false });
+  // you can't jump from the tower onto the container rows and run along the tops
+  for (const s of [-1, 1]) for (const x of [-5.5, 5.5]) blk(x, s * 5.6, 2.5, 6.2, 2.2, 'dark', { y: 2.6, noDraw: true, noRay: true, walk: false });
   // ---- dressing
   for (const [x, z] of [[-11, -7], [11, 8], [0, -6.5], [-3, 15], [5, -15]]) puddle(x, z, 0, 1 + Math.random());
   stripes(-11, -16, 0, false, 1, 3, 'paintYellow'); stripes(11, 16, 0, false, 1, 3, 'paintYellow');

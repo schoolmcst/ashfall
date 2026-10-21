@@ -37,6 +37,8 @@ function buildShoot() {
   for (const s of [-1, 1]) rail(-1.5, s * 1.6, 1.5, s * 1.6, 3.1, { h: 0.95 });
   stairs(-6.6, 0, 'e', 1.0, 0, 3.1, 'metal', { open: true, rails: false });
   stairs(6.6, 0, 'w', 1.0, 0, 3.1, 'metal', { open: true, rails: false });
+  // the room walls next to the platform can't be walked along from up there
+  for (const s of [-1, 1]) blk(0, s * 5, 16.4, 0.5, 2.0, 'dark', { y: 2.8, noDraw: true, noRay: true, walk: false });
   // dressing: lights on poles at the corners, signs
   for (const [x, z] of [[-19, -19], [19, 19], [19, -19], [-19, 19]]) lampPost(x, z, 0, 6, x > 0 ? -1 : 1, 0, false);
   paperScatter(-3, 2, 0, 2.5, 6); paperScatter(-13, -10, 0, 2, 4); cone(14, -16); cone(12.5, 16);

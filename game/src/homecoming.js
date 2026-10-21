@@ -14,6 +14,7 @@ const HC_CARDS = [
 function hcShow(force) {
   let seen = null; try { seen = localStorage.getItem(HC_KEY); } catch (e) {}
   if (!force && seen === HC_VER) return false;
+  if (!force && !(typeof PROG !== 'undefined' && PROG.xp > 0)) { try { localStorage.setItem(HC_KEY, HC_VER); } catch (e) {} return false; }   // brand-new players don't get an old update's splash
   try { localStorage.setItem(HC_KEY, HC_VER); } catch (e) {}
   const shots = typeof MAPSHOTS !== 'undefined' ? Object.values(MAPSHOTS).flat() : [];
   const m = document.createElement('div'); m.id = 'hcSplash';

@@ -1,11 +1,11 @@
 {
- "version": "1.2.25",
+ "version": "1.2.26",
  "notes": [
   "CAMO GRIND: every gun now has its own camo challenges - open the LOCKER, pick a gun and go to CHALLENGES. 8 military camos per gun, then GOLD, DIAMOND (whole class) and NOVA (every gun)",
-  "BOT LOADOUTS: bots now carry real guns with random attachments and camos - you can see them in their hands, and the kill feed names the gun",
-  "Bots pick guns that fit their job: overwatch snipers and marksman rifles, entries SMGs and shotguns, support ARs and LMGs, lurkers often suppressed",
-  "Bot guns fight like the real thing: damage, fire rate, magazine, effective range and drop-off. Suppressed bots show no tracers or flash and are heard from less far away"
+  "BOT LOADOUTS: bots carry real guns that fit their job, with random attachments and camos - you see them in their hands, the kill feed names the gun, and each gun fights like the real thing (suppressed bots show no tracers)",
+  "PLAY-PROOFING: you can no longer jump onto the Stackyard container tops from the tower, walk the Killhouse wall tops from the platform, or jump from the Whiteout radar deck onto the lab roof",
+  "FIXES: the main-menu NEWS now shows the latest patch notes; the top menu tabs all fit on smaller screens; private matches can't be set to a retired map; brand-new players no longer get an old update's splash screen; bots stutter less finding their way onto roofs and ridges"
  ],
- "sha256": "1bed25e93dba2abb09d6b872210a93280fe1574b6bf933aaa8d7e4c41530b345",
+ "sha256": "b9e704b70d185b91eb3f9850823b44f276dfa7ac3b74c1774a2be7c6979eab56",
  "minApp": "1.0.0"
 }

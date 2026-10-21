@@ -59,6 +59,7 @@ function buildSnow() {
   // ---- the radar deck (5.5 m)
   deck(-14, 0, 4, 4, 5.5, 'steel', { posts: true, rails: ['w', 'e'] });
   for (const s of [-1, 1]) { rail(-16, s * 2, -14.7, s * 2, 5.5); rail(-13.3, s * 2, -12, s * 2, 5.5); }
+  blk(-11.9, 0, 0.2, 4.2, 2.4, 'dark', { y: 5.5, noDraw: true, noRay: true, walk: false });   // no jumping from the deck onto the lab roof
   CYL('steel', 0.1, 0.1, 3, 8, -15.6, 7, -1.6); PZ(-15.6, 5.5, -1.6, 0.25, 3, 0.25);
   batchAdd('paintWhite', new THREE.SphereGeometry(1.0, 14, 8, 0, TAU, 0, Math.PI / 2), mat4(-15.6, 8.5, -1.6, Math.PI / 2.5, 0.6, 0), true);
   B('redLight', 0.2, 0.2, 0.2, -15.6, 8.6, -1.6, 0, 0, 0, false);

@@ -21,7 +21,7 @@ const fs = require('fs');
   const join = (p, n) => ev(p, n => { const A_ = window.__A; A_.NET.nick = n; A_.NET.code = 'crew9'; A_.G.noRender = true; A_.LOBBY.mode = 'otdm'; A_.toLobby(); A_.actions('custom'); document.getElementById('netCodeGo').click(); }, n);
   await ev(A, () => { window.__A.toLobby(); window.__A.G.noRender = true; }); await A.waitForTimeout(500); await A.screenshot({ path: 'app_lobby.png' }); await ev(A, () => window.__A.actions('custom')); await A.waitForTimeout(500); await A.screenshot({ path: 'app_custom.png' });
   await join(A, 'ALPHA'); await A.waitForTimeout(7000);
-  await ev(A, () => { const N = window.__A.NET; Object.assign(N.priv.cfg, { md: 'hp', b: 3, tl: 1, sc: 150, mp: 'docks' }); window.__A.renderPlobby(true); });
+  await ev(A, () => { const N = window.__A.NET; Object.assign(N.priv.cfg, { md: 'hp', b: 3, tl: 1, sc: 150, mp: 'dustwater' }); window.__A.renderPlobby(true); });
   await ev(A, () => { const b = [...document.querySelectorAll('#plSet .seg button')].find(x => x.textContent === 'HARDPOINT'); b.click(); });
   await join(B, 'BRAVO'); await A.waitForTimeout(12000);
   const lobbyA = await st(A), lobbyB = await st(B);

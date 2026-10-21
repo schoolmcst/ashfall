@@ -62,10 +62,10 @@ function lanePoint(e, frac, lane = e.lane, jit = 2.5) {
   const a = botAxis(e), x = a.S.x + a.fx * a.L * frac + a.lx * lane * a.off + rnd(-jit, jit), z = a.S.z + a.fz * a.L * frac + a.lz * lane * a.off + rnd(-jit, jit);
   const g = nearestPt(x, z); if (Math.hypot(g.x - x, g.z - z) < 4) return g;
   // no ground spot there (a ridge, a roof route): any floor level at that spot we can actually walk to
-  const me = nodeOf(e.group.position.x, e.group.position.z, e.group.position.y);
-  for (let r = 0; r <= 3; r++) for (let k = 0; k < 8; k++) {
+  const f = flowField(e.group.position.x, e.group.position.z, e.group.position.y);   // one search from where we stand (cached), not one per candidate
+  if (f) for (let r = 0; r <= 3; r++) for (let k = 0; k < 8; k++) {
     const cx = cellOf(x + Math.cos(k * 0.785) * r * 1.5), cz = cellOf(z + Math.sin(k * 0.785) * r * 1.5), c = cz * NN + cx;
-    for (let l = lvN[c] - 1; l >= 0; l--) { if (lvS[c * NL + l]) continue; const y = lvH[c * NL + l], f = flowField(cellPos(cx), cellPos(cz), y); if (f && me >= 0 && f[me] >= 0) return { x: cellPos(cx), z: cellPos(cz), y }; }
+    for (let l = lvN[c] - 1; l >= 0; l--) { if (lvS[c * NL + l]) continue; if (f[c * NL + l] >= 0) return { x: cellPos(cx), z: cellPos(cz), y: lvH[c * NL + l] }; }
   }
   return g;
 }

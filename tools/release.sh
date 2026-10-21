@@ -12,6 +12,8 @@ if [ "$MODE" = public ]; then
 fi
 [ "$MODE" = test ] || { echo "usage: release.sh test <version> notes... | release.sh public"; exit 1; }
 V=${2:?version like 1.0.1}; shift 2
+# the main-menu NEWS panel: every public release so far plus this one
+(cd "$ROOT" && python3 -c 'import json,sys,datetime; print(json.dumps({"version": sys.argv[1], "notes": sys.argv[2:], "date": datetime.date.today().isoformat()}))' "$V" "$@" | python3 tools/mknews.py)
 bash "$ROOT/game/build.sh"
 cp "$ROOT/game/ashfall.html" "$ROOT/release-test/ashfall.html"
 python3 - "$ROOT/release-test" "$V" "$@" <<'PY'
