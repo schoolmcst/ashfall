@@ -36,6 +36,12 @@ const fs = require('fs');
   await A.waitForTimeout(12000);
   for (const p of pages) await unpause(p);
   const s1 = [await st(A), await st(B), await st(C)];
+  // doors: a client buys one, the host buys one; everyone should see both open
+  await ev(B, () => { const A_ = window.__A; A_.G.points = 5000; A_.zdBuy(A_.ZD.list.find(o => o.d.name === 'MAIN CORRIDOR')); });
+  await ev(A, () => { const A_ = window.__A; A_.G.points = 5000; A_.zdBuy(A_.ZD.list.find(o => o.d.name === 'WEST LOBBY DOOR')); });
+  await A.waitForTimeout(5000);
+  const doors = []; for (const p of pages) doors.push(await ev(p, () => window.__A.ZD.list.filter(o => o.open).map(o => o.d.name).sort().join(', ')));
+  console.log('DOORS', JSON.stringify(doors));
   // invulnerable for the shooting part; B shoots the nearest zombie copy until a kill comes back from the host
   for (const p of pages) await ev(p, () => { window.__A.G.health = 1e9; window.__A.G.maxHp = 1e9; });
   const shoot = await ev(B, async () => {
@@ -53,6 +59,7 @@ const fs = require('fs');
   });
   await A.waitForTimeout(1500);
   const s2 = [await st(A), await st(B), await st(C)];
+  console.log('DOORS2', JSON.stringify(await ev(C, () => ({ open: window.__A.ZD.list.filter(o => o.open).map(o => o.d.name), n: window.__A.ZD.list.length, inGame: window.__A.ZC.inGame, gid: window.__A.ZC.gid, hzd: (() => { for (const R of window.__A.ZC.rem.values()) if (R.ho) return [R.pr.zd, R.pr.gid]; })() }))));
   // pictures: C looks at B, zombies around
   await ev(C, () => { const A_ = window.__A, P = A_.P, R = [...A_.ZC.rem.values()].find(r => r.n === 'BRAVO'); if (R) { P.x = R.x + 4; P.z = R.z + 2; P.y = R.y; P.yaw = Math.atan2(-(R.x - P.x), -(R.z - P.z)); P.pitch = -0.05; } });
   await A.waitForTimeout(1500); await shot(C, 'zc_mates');

@@ -5,9 +5,8 @@
    100 a headshot kill, 130 a melee kill. Spend them at the MYSTERY CRATE (950: a random gun) and the AMMO CRATE
    (250: full ammo). No loadout: everyone starts the same. */
 MODES.zomb = { name: 'ZOMBIES', short: 'ZOMBIES', icon: 'ZMB', desc: 'Survive round after round of the dead. Start with a pistol, earn points, and buy guns from the Mystery Crate.', teams: false, respawn: 0, score: 0, time: 0, unit: 'ROUNDS' };
-const ZL = { on: false, map: 'random', net: 'solo', code: '' };
+const ZL = { on: false, map: 'blackwell', net: 'solo', code: '' };
 try { ZL.net = localStorage.getItem('ashfall.znet') === 'coop' ? 'coop' : 'solo'; ZL.code = localStorage.getItem('ashfall.zcode') || ''; } catch (e) {}
-try { const m = localStorage.getItem('ashfall.zmap'); if (m === 'random' || (MAPS[m] && !MAPS[m].hidden)) ZL.map = m; } catch (e) {}
 const Z = { zid: 0, targets: [], round: 0, toSpawn: 0, spawnT: 0, breakT: 0, active: false, guns: [], crate: null, ammo: null, boxT: 0, best: { round: 0, pts: 0 } };
 try { Object.assign(Z.best, JSON.parse(localStorage.getItem('ashfall.zbest') || '{}')); } catch (e) {}
 const Z_BOX = 950, Z_AMMO = 250;
@@ -23,12 +22,12 @@ function renderZLobby(focusSel) {
   const ph = document.querySelector('#lobby .cod-foot .padhint'); if (ph) ph.innerHTML = 'LB / RB  CHANGE MAP &middot; START  PLAY';
   $('lobSel').innerHTML =
     `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="z-start"><small>${zcStartLabel()[0]}</small><b>${zcStartLabel()[1]}</b></button></div>` + zcLobbyRows() +
-    `<div class="cod-row cod-map"><small>MAP${ZC.on && !zcHost() ? ' · THE HOST PICKS' : ''}</small><b>${m ? m.name : 'RANDOM'}</b><span>${m ? m.place : 'a different map each game'}</span><div class="arw"><button class="mini" data-act="z-map-" aria-label="Previous map">&lsaquo;</button><button class="mini" data-act="z-map+" aria-label="Next map">&rsaquo;</button></div></div>` +
+    `<div class="cod-row cod-map"><small>MAP</small><b>${m ? m.name : ''}</b><span>start in the lobby · buy doors to open the hospital</span></div>` +
     `<div class="cod-row"><small>STARTING GEAR</small><b>SERVICE 9 · 2 FRAGS</b><span>everyone starts the same · 500 points to spend</span></div>` +
     `<div class="cod-row"><small>MYSTERY CRATE · ${Z_BOX} POINTS</small><b>A RANDOM GUN</b><span>AMMO CRATE · ${Z_AMMO} POINTS · full ammo for your guns</span></div>` +
     `<div class="cod-row"><small>YOUR BEST</small><b>ROUND ${Z.best.round || 0}</b><span>${(Z.best.pts || 0).toLocaleString()} POINTS</span></div>`;
   $('lobRoster').innerHTML = `<div id="zRoster">${zcRosterHtml()}</div>` +
-    `<div class="ros-info"><b>ZOMBIES</b>Survive round after round of the dead. They walk at first, then jog, then run. 10 points a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Press USE (E / X) at the crates to buy.${ZL.net === 'coop' ? ' In co-op, a downed teammate is revived by holding USE next to them.' : ''}</div>`;
+    `<div class="ros-info"><b>ZOMBIES</b>Survive round after round of the dead. They walk at first, then jog, then run. 10 points a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Press USE (E / X) at the crates and doors to buy. Open doors to reach more of the hospital, and find the GUN UPGRADER (5000) in the north wing.${ZL.net === 'coop' ? ' In co-op, a downed teammate is revived by holding USE next to them.' : ''}</div>`;
   ZC.rosterKey = ''; zcWireLobby();
   if (focusSel) focusFirst(focusSel);
 }
@@ -46,7 +45,8 @@ function zombAct(act) {
   if (act === 'z-code') { const i = $('zCode'), c = i ? cleanCode(i.value) : ''; if (!c || c === 'public') { if (i) { i.focus(); i.placeholder = 'type a code first'; } return true; } ZL.code = c; zcJoin('code', c); return true; }
   if (act === 'z-leave') { zcLeave(); sfx.ui(); return true; }
   if ((act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') && ZC.on && !zcHost()) return true;
-  if (act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(ZL.map)), d = act.endsWith('+') ? 1 : -1; ZL.map = L[(i + d + L.length) % L.length]; try { localStorage.setItem('ashfall.zmap', ZL.map); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="z-map${d > 0 ? '+' : '-'}"]`); return true; }
+  if (act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') return true;
+  if (false) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(ZL.map)), d = act.endsWith('+') ? 1 : -1; ZL.map = L[(i + d + L.length) % L.length]; try { localStorage.setItem('ashfall.zmap', ZL.map); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="z-map${d > 0 ? '+' : '-'}"]`); return true; }
   if (act === 'playlist' || act === 'loadout' || act === 'streaks' || act === 'custom') return true;
   if (act === 'lobby-back') { zombLobbyOff(); if (ZC.on) zcLeave(); showScreen('menu'); return true; }
   return false;
@@ -59,6 +59,7 @@ function zombStart(cfg) {
   const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z);
   Object.assign(Z, { zid: 0, round: 0, toSpawn: 0, spawnT: 0, breakT: ZC.on && ZC.inGame ? 6 : 4, active: false, guns: ['sidearm'], boxT: 0 });
   zombEquip(); G.grenades = 2; G.points = 500; G.score = 0;
+  Z.up = new Set(); zdInit(); zombEquip();
   zombCrates();
   if (ZC.on && ZC.inGame) zcStartLocal();
   G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
@@ -68,6 +69,7 @@ function zombEquip(keepCur) {
   const g = Z.guns, gr = G.grenades;
   equipClass(g.length > 1 ? { p: g[0], s: g[1], e: 'frag', k: 'none', factory: true } : { p: null, s: g[0], e: 'frag', k: 'none', only: g[0], factory: true });
   if (gr !== undefined) G.grenades = gr;
+  zuApply();
   if (keepCur !== undefined) { G.cur = Math.min(keepCur, WEAPONS.length - 1); gunObjs.forEach((o, i) => { o.visible = i === G.cur; }); }
   el.slots._cur = -1;
 }
@@ -115,14 +117,14 @@ function makeZombie(x, z, y) {
   return e;
 }
 function zombSpawn() {
-  const pts = buildSpawns();
-  for (let t = 0; t < 40; t++) {
-    const p = pts[(Math.random() * pts.length) | 0], d = Math.hypot(p.x - P.x, p.z - P.z);
-    if (d > 60 || Z.targets.some(t => Math.hypot(p.x - t.x, p.z - t.z) < 16) || (d < 18 && !Z.targets.some(t => !t.me))) continue;
+  const pts = zdSpawnPts(), T = Z.targets || []; if (!pts.length || !T.length) return null;
+  for (let t = 0; t < 80; t++) {
+    const p = pts[(Math.random() * pts.length) | 0], minD = t < 30 ? 16 : t < 60 ? 11 : 7;
+    if (T.some(q => Math.hypot(p.x - q.x, p.z - q.z) < minD) || !T.some(q => Math.hypot(p.x - q.x, p.z - q.z) < 60)) continue;
     const n = nodeOf(p.x, p.z, p.y); if (n < 0 || !navField || navField[n] < 0) continue;
     return makeZombie(p.x, p.z, p.y);
   }
-  const p = randomOpenSpot(18, 30); return makeZombie(p.x, p.z, p.y || 0);
+  return null;
 }
 function zombRound() {
   Z.round++; Z.toSpawn = Math.min(80, 6 + (Z.round - 1) * 3); Z.spawnT = 1; Z.active = true;
@@ -133,12 +135,13 @@ function zombRound() {
 }
 function updateZombies(dt) {
   if (zcInGame()) zcFrame(dt);
+  zdTick(dt);
   if (zcInGame() && !zcHost()) { zombHud(); zombCrateTick(dt); return; }
   Z.targets = zombTargets();
   if (!Z.active) { Z.breakT -= dt; if (Z.breakT <= 0) zombRound(); }
   else {
     const cap = Math.min(24, 10 + Z.round);
-    if (Z.toSpawn > 0) { Z.spawnT -= dt; if (Z.spawnT <= 0 && enemies.length < cap) { zombSpawn(); Z.toSpawn--; Z.spawnT = Math.max(0.35, 1.9 - Z.round * 0.13); } }
+    if (Z.toSpawn > 0) { Z.spawnT -= dt; if (Z.spawnT <= 0 && enemies.length < cap) { if (zombSpawn()) Z.toSpawn--; Z.spawnT = Math.max(0.35, 1.9 - Z.round * 0.13); } }
     else if (!enemies.length) { Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); }
   }
   for (let i = 0; i < enemies.length; i++) zombThink(enemies[i], i, dt);
@@ -210,6 +213,11 @@ function zombCrateTick(dt) {
     const d = Math.hypot(P.x - c.position.x, P.z - c.position.z);
     if (!msgTxt && d < 2.3 && Math.abs(P.y - c.position.y) < 1.5 && G.state === 'playing') { msgTxt = `${c.userData.label} · ${cost} POINTS · PRESS ${actName('use')}${G.points < cost ? ' · NOT ENOUGH POINTS' : ''}`; if ((kb('use') || pad.use) && !Z.useHeld && G.points >= cost) fn(); }
   }
+  if (!msgTxt && G.state === 'playing') {
+    const use = (kb('use') || pad.use) && !Z.useHeld, dr = zdPrompt();
+    if (dr) { msgTxt = `${dr.d.name} · ${dr.d.cost} POINTS · PRESS ${actName('use')}${G.points < dr.d.cost ? ' · NOT ENOUGH POINTS' : ''}`; if (use && G.points >= dr.d.cost) zdBuy(dr); }
+    else if (zuNear()) { const w = WEAPONS[G.cur], done = w && Z.up && Z.up.has(w.def.id); msgTxt = done ? 'GUN UPGRADER · THIS GUN IS UPGRADED' : `GUN UPGRADER · UPGRADE ${w ? w.def.name : ''} · ${ZU_COST} POINTS · PRESS ${actName('use')}${G.points < ZU_COST ? ' · NOT ENOUGH POINTS' : ''}`; if (use && !done && G.points >= ZU_COST) zuBuy(); }
+  }
   Z.useHeld = kb('use') || pad.use;
   if (Z.boxT > 0) { Z.boxT -= dt; const lid = Z.crate.userData.lid; lid.position.y = 0.81 + Math.min(0.5, (1.4 - Z.boxT) * 1.2); lid.rotation.x = -Math.min(1.1, (1.4 - Z.boxT) * 2); if (Z.boxT <= 0) { lid.position.y = 0.81; lid.rotation.x = 0; } }
   if (pr.textContent !== msgTxt) { pr.textContent = msgTxt; pr.style.opacity = msgTxt ? 1 : 0; }
@@ -240,7 +248,7 @@ function zombHud(force) {
   if (force || h._p !== pts) { h._p = pts; h.firstChild.textContent = pts; }
   if (force || h._r !== rd) { h._r = rd; h.lastChild.textContent = rd; }
 }
-function zombClear() { Z.active = false; Z.crate = Z.ammo = null; zombHud(); if (typeof ZC !== 'undefined' && ZC.on) { ZC.inGame = false; ZC.down = ZC.dead = false; zcClearProxies(); for (const R of ZC.rem.values()) zcDropAvatar(R); zcTeamHud(true); } }
+function zombClear() { Z.active = false; Z.crate = Z.ammo = null; zombHud(); try { zdClear(); } catch (e) {} if (typeof ZC !== 'undefined' && ZC.on) { ZC.inGame = false; ZC.down = ZC.dead = false; zcClearProxies(); for (const R of ZC.rem.values()) zcDropAvatar(R); zcTeamHud(true); } }
 function zombDeathText() {
   const nb = Z.round > (Z.best.round || 0) || (Z.round === Z.best.round && G.score > (Z.best.pts || 0));
   if (nb) { Z.best = { round: Z.round, pts: G.score }; try { localStorage.setItem('ashfall.zbest', JSON.stringify(Z.best)); } catch (e) {} }

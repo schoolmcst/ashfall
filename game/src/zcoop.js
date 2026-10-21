@@ -76,6 +76,8 @@ function zcRead() {
     }
     // revives aimed at me
     if (Array.isArray(pr.rv)) for (const v of pr.rv) { if (!Array.isArray(v) || (+v[1] || 0) <= R.seenRv) continue; R.seenRv = +v[1] || 0; if (v[0] === ZC.me && ZC.down && !ZC.dead) zcRevived(R); }
+    // doors someone else bought (the host collects them; everyone follows the host's list)
+    if (host && R.inGame && Array.isArray(pr.od)) for (const id of pr.od) if (!ZD.open.has(+id)) zdOpen(+id, false);
     // the host applies everyone's hits on its zombies
     if (Array.isArray(pr.hs)) for (const h of pr.hs) {
       if (!Array.isArray(h) || (+h[3] || 0) <= R.seenHit) continue; R.seenHit = +h[3] || 0;
@@ -98,6 +100,7 @@ function zcRead() {
   const zr = Math.max(ZC.round, +H.zr | 0);
   if (zr > ZC.round) zcClientRound(zr);
   if (ZC.active && !H.za && zr === ZC.round && zr > 0) showBanner(`ROUND ${zr} SURVIVED`, 'next round in 8 seconds');
+  if (Array.isArray(H.zd)) for (const id of H.zd) if (!ZD.open.has(+id)) zdOpen(+id, false);
   ZC.round = zr; ZC.left = +H.zl | 0; ZC.active = !!H.za; Z.round = zr; G.wave = zr;
   // kills (mine get the points)
   const killed = new Set();
@@ -137,9 +140,9 @@ function zcPublish() {
   for (const [zid, h] of ZC.pend) { ZC.hseq++; ZC.hs.push([zid, Math.round(h.d), h.h ? 1 : 0, ZC.hseq, h.b ? 1 : 0, h.m ? 1 : 0]); }
   ZC.pend.clear(); while (ZC.hs.length > 24) ZC.hs.shift();
   const o = { zc: 1, n: NET.nick, g: inG ? ZC.gid : 0, x: r2(P.x), y: r2(P.y || 0), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch),
-    a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv };
+    a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv, od: inG ? [...ZD.mine] : [] };
   if (zcHost()) {
-    Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, zr: Z.round, zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
+    Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, zr: Z.round, zd: inG ? [...ZD.open] : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
     o.zs = inG ? enemies.filter(e => e.zombie && !e.proxy).map(e => { const g = e.group.position; return [e.zid, r2(g.x), r2(g.z), r2(g.y), Math.round(e.group.rotation.y * 100), e.kind === 'run' ? 2 : e.kind === 'jog' ? 1 : 0, e.atkT > 0 ? 1 : 0, Math.round(clamp(e.hp / e.maxHp, 0, 1) * 100)]; }) : [];
   }
   ZC.room.presence(o);
@@ -148,7 +151,7 @@ function zcPublish() {
 /* ---------- starting, ending */
 function zcHostStart() {
   if (!zcHost()) return;
-  const L = MAP_CHOICES().filter(id => id !== 'random'), mp = ZL.map === 'random' || !MAPS[ZL.map] ? L[(Math.random() * L.length) | 0] : ZL.map;
+  const mp = ZOMB_MAP;
   ZC.mp = mp; ZC.st = 'play'; ZC.zk = []; ZC.zt = [];
   zcEnterGame(mp, 1 + ((Math.random() * 1e9) | 0));
 }

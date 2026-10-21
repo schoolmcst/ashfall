@@ -93,8 +93,8 @@ function ambulance(x, z, q = 0) {
 }
 // furniture themes for fillRoom: [width along the wall, depth, height, fn]
 Object.assign(FURN, {
-  ward: [[1.6, 2.15, 1.0, hospBed], [1.6, 2.15, 1.0, (x, z, y, q) => hospBed(x, z, y, q, 'cloth3')], [1.0, 0.45, 1.9, medCabinet], [0.85, 0.85, 0.9, armchair], [1.6, 2.15, 1.0, hospBed], [0.5, 0.45, 0.9, (x, z, y) => pottedPlant(x, z, y, 1.0)]],
-  er: [[1.6, 2.15, 1.0, hospBed], [0.8, 0.55, 1.1, crashCart], [0.7, 1.95, 1.0, gurney], [1.0, 0.45, 1.9, medCabinet], [1.6, 2.15, 1.0, hospBed], [0.4, 0.4, 1.4, vitals]],
+  ward: [[1.6, 2.15, 1.0, hospBed], [1.6, 2.15, 1.0, (x, z, y, q) => hospBed(x, z, y, q, 'bloodSheet')], [1.0, 0.45, 1.9, medCabinet], [0.85, 0.85, 0.9, armchair], [1.6, 2.15, 1.0, hospBed], [0.5, 0.45, 0.9, (x, z, y) => pottedPlant(x, z, y, 1.0)]],
+  er: [[1.6, 2.15, 1.0, (x, z, y, q) => hospBed(x, z, y, q, 'bloodSheet')], [0.8, 0.55, 1.1, crashCart], [0.7, 1.95, 1.0, gurney], [1.0, 0.45, 1.9, medCabinet], [1.6, 2.15, 1.0, hospBed], [0.4, 0.4, 1.4, vitals]],
   surgery: [[1.0, 0.45, 1.9, medCabinet], [0.8, 0.55, 1.1, crashCart], [0.4, 0.4, 1.4, vitals], [2.05, 0.72, 1.7, labBench], [1.0, 0.45, 1.9, medCabinet]],
   morgue: [[2.6, 0.95, 2.1, morgueWall], [2.6, 0.95, 2.1, morgueWall], [0.7, 1.95, 1.0, gurney], [1.0, 0.45, 1.9, medCabinet], [2.05, 0.72, 1.7, labBench]],
   xray: [[2.9, 1.4, 2.5, xrayMachine], [1.5, 0.75, 1.2, deskPC], [1.0, 0.45, 1.9, medCabinet], [0.5, 0.62, 1.35, fileCab], [0.7, 1.95, 1.0, gurney]],
@@ -112,15 +112,19 @@ function hospMaterials() {
   const floor = cv(256, (g, n) => {
     for (let j = 0; j < 2; j++) for (let i = 0; i < 2; i++) { const k = (i + j) % 2 ? 216 : 226; g.fillStyle = `rgb(${k},${k - 4},${k - 14})`; g.fillRect(i * n / 2, j * n / 2, n / 2, n / 2); }
     for (let q = 0; q < 1400; q++) { const v = 150 + r() * 70; g.fillStyle = `rgba(${v},${v - 6},${v - 18},0.5)`; g.fillRect(r() * n, r() * n, 1.5, 1.5); }
-    g.fillStyle = 'rgba(90,86,76,0.55)'; for (const t of [0, n / 2]) { g.fillRect(t, 0, 2, n); g.fillRect(0, t, n, 2); }
+    g.fillStyle = 'rgba(60,54,40,0.75)'; for (const t of [0, n / 2]) { g.fillRect(t, 0, 3, n); g.fillRect(0, t, n, 3); }
+    for (let q = 0; q < 22; q++) { const x = r() * n, y = r() * n, rad = 8 + r() * 40, gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${70 + r() * 30 | 0},${60 + r() * 20 | 0},${35},${0.18 + r() * 0.2})`); gr.addColorStop(1, 'rgba(70,60,35,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
   });
-  const wallC = cv(128, (g, n) => { g.fillStyle = '#d9dccf'; g.fillRect(0, 0, n, n); for (let q = 0; q < 500; q++) { const v = 200 + r() * 30; g.fillStyle = `rgba(${v},${v + 2},${v - 8},0.35)`; g.fillRect(r() * n, r() * n, 2, 2); } });
-  const ceil = cv(128, (g, n) => { g.fillStyle = '#e6e6e0'; g.fillRect(0, 0, n, n); g.fillStyle = 'rgba(150,150,140,0.5)'; for (let q = 0; q < 260; q++) g.fillRect(r() * n, r() * n, 1, 1); g.fillStyle = '#9a9a92'; g.fillRect(0, 0, n, 3); g.fillRect(0, 0, 3, n); });
+  const wallC = cv(256, (g, n) => { g.fillStyle = '#c8c6b0'; g.fillRect(0, 0, n, n); for (let q = 0; q < 900; q++) { const v = 170 + r() * 40; g.fillStyle = `rgba(${v},${v - 2},${v - 22},0.35)`; g.fillRect(r() * n, r() * n, 2, 2); }
+    for (let q = 0; q < 9; q++) { const x = r() * n, w = 6 + r() * 26, L = n * (0.15 + r() * 0.6), gr = g.createLinearGradient(0, 0, 0, L); gr.addColorStop(0, `rgba(${110 + r() * 30 | 0},${90 + r() * 20 | 0},50,${0.12 + r() * 0.18})`); gr.addColorStop(1, 'rgba(110,90,50,0)'); g.fillStyle = gr; g.fillRect(x, 0, w, L); }
+    for (let q = 0; q < 14; q++) { const x = r() * n, y = r() * n, rad = 10 + r() * 34, gr = g.createRadialGradient(x, y, 0, x, y, rad); gr.addColorStop(0, `rgba(${60 + r() * 30 | 0},${62 + r() * 20 | 0},40,${0.2 + r() * 0.2})`); gr.addColorStop(1, 'rgba(60,62,40,0)'); g.fillStyle = gr; g.fillRect(x - rad, y - rad, rad * 2, rad * 2); }
+    const gb = g.createLinearGradient(0, n * 0.75, 0, n); gb.addColorStop(0, 'rgba(70,60,40,0)'); gb.addColorStop(1, 'rgba(70,60,40,0.45)'); g.fillStyle = gb; g.fillRect(0, n * 0.75, n, n * 0.25); });
+  const ceil = cv(128, (g, n) => { g.fillStyle = '#cfcdbf'; g.fillRect(0, 0, n, n); g.fillStyle = 'rgba(150,150,140,0.5)'; for (let q = 0; q < 260; q++) g.fillRect(r() * n, r() * n, 1, 1); g.fillStyle = '#9a9a92'; g.fillRect(0, 0, n, 3); g.fillRect(0, 0, 3, n); });
   MAT.hospFloor = new THREE.MeshStandardMaterial({ map: toTex(floor, true, 1), roughness: 0.38, metalness: 0 });
   MAT.hospWall = new THREE.MeshStandardMaterial({ map: toTex(wallC, true, 1), roughness: 0.85, metalness: 0 });
   MAT.hospCeil = new THREE.MeshStandardMaterial({ map: toTex(ceil, true, 1), roughness: 0.9, metalness: 0 });
   MAT.hospBand = new THREE.MeshStandardMaterial({ color: C(0x5d8c7b), roughness: 0.6 });
-  TILES.hospFloor = 2.4; TILES.hospWall = 2.5; TILES.hospCeil = 1.2;
+  TILES.hospFloor = 2.4; TILES.hospWall = 3.2; TILES.hospCeil = 1.2;
 }
 // a floor slab with a ceiling-tile underside
 function hSlab(x, z, w, d, top, th = 0.25, key = 'hospFloor') { slab(x, z, w, d, top, key, th); batchAdd('hospCeil', scaledPlane(w, d, 1.2), mat4(x, top - th - 0.012, z, Math.PI / 2, 0, 0), false); }
@@ -130,8 +134,80 @@ function hStrip(z, xa, xb, gaps, fn) {
   let u = a; for (const [g0, g1] of cut.concat([[b, b]])) { if (g0 - u > 0.2) fn((u + g0) / 2, g0 - u, z); u = Math.max(u, g1); }
 }
 
+// ---------------------------------------------------------------- the mess: blood, grime, body bags, debris, flickering lights
+function goreMaterials() {
+  if (MAT.gorePool) return;
+  const r = makeRng(1313), cv = (n, draw) => { const c = document.createElement('canvas'); c.width = c.height = n; const g = c.getContext('2d'); draw(g, n); return c; };
+  const blob = (g, x, y, rad, col, k = 14) => { g.fillStyle = col; g.beginPath(); for (let i = 0; i <= k; i++) { const a = i / k * TAU, rr = rad * (0.7 + r() * 0.5); i ? g.lineTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr) : g.moveTo(x + Math.cos(a) * rr, y + Math.sin(a) * rr); } g.closePath(); g.fill(); };
+  const RED = a => `rgba(${90 + (r() * 40) | 0},${(r() * 10) | 0},${(r() * 8) | 0},${a})`;
+  const pool = cv(256, (g, n) => { for (let i = 0; i < 7; i++) blob(g, n / 2 + (r() - 0.5) * n * 0.3, n / 2 + (r() - 0.5) * n * 0.3, n * (0.12 + r() * 0.14), RED(0.9)); blob(g, n / 2, n / 2, n * 0.16, 'rgba(40,0,0,0.6)'); for (let i = 0; i < 26; i++) { const a = r() * TAU, d = n * (0.3 + r() * 0.17); blob(g, n / 2 + Math.cos(a) * d, n / 2 + Math.sin(a) * d, 2 + r() * 7, RED(0.85), 8); } });
+  const splat = cv(256, (g, n) => { blob(g, n / 2, n / 2, n * 0.14, RED(0.95)); for (let i = 0; i < 40; i++) { const a = r() * TAU, d = n * (0.08 + r() * 0.38), s = 2 + r() * 9 * (1 - d / n); blob(g, n / 2 + Math.cos(a) * d, n / 2 + Math.sin(a) * d, s, RED(0.9), 8); } for (let i = 0; i < 9; i++) { const x = n / 2 + (r() - 0.5) * n * 0.3; g.fillStyle = RED(0.85); g.fillRect(x, n / 2, 2 + r() * 3, n * (0.15 + r() * 0.3)); } });
+  const drag = cv(256, (g, n) => { for (let i = 0; i < 26; i++) { const x = n * (0.2 + r() * 0.6), w = 4 + r() * 18; g.fillStyle = RED(0.45 + r() * 0.5); g.fillRect(x, r() * n * 0.1, w, n * (0.8 + r() * 0.2)); } blob(g, n / 2, n * 0.92, n * 0.12, RED(0.9)); });
+  const hand = cv(256, (g, n) => { for (let h = 0; h < 3; h++) { const x = 50 + h * 75 + r() * 20, y = 70 + r() * 110, s = 0.8 + r() * 0.3; g.fillStyle = RED(0.85); g.beginPath(); g.ellipse(x, y, 22 * s, 26 * s, 0, 0, TAU); g.fill(); for (let f = 0; f < 5; f++) { const a = -2.4 + f * 0.42 + (f === 0 ? -0.35 : 0), L = (f === 0 ? 24 : 34) * s; g.save(); g.translate(x + Math.cos(a) * 20 * s, y + Math.sin(a) * 22 * s); g.rotate(a + Math.PI / 2); g.fillRect(-5 * s, -L, 10 * s, L); g.restore(); } g.fillRect(x - 3, y + 20 * s, 5, 30 + r() * 60); } });
+  const grime = cv(256, (g, n) => { for (let i = 0; i < 30; i++) blob(g, n / 2 + (r() - 0.5) * n * 0.6, n / 2 + (r() - 0.5) * n * 0.6, n * (0.05 + r() * 0.14), `rgba(${40 + (r() * 30) | 0},${45 + (r() * 30) | 0},${25 + (r() * 15) | 0},${0.12 + r() * 0.2})`); });
+  const water = cv(128, (g, n) => { for (let i = 0; i < 6; i++) blob(g, n / 2 + (r() - 0.5) * n * 0.3, n / 2 + (r() - 0.5) * n * 0.3, n * (0.15 + r() * 0.15), 'rgba(30,34,30,0.35)'); });
+  const words = ['GET OUT', 'THEY ARE INSIDE', "DON'T OPEN", 'HELP US', 'NO WAY OUT', 'ROOM 12 IS SAFE?'];
+  const text = cv(512, (g, n) => { g.font = 'bold 50px Georgia, serif'; g.textAlign = 'center'; words.forEach((w, i) => { const y = 70 + i * 80; g.fillStyle = RED(0.92); g.fillText(w, n / 2 + (r() - 0.5) * 30, y); for (let k = 0; k < 7; k++) g.fillRect(n / 2 - 150 + r() * 300, y + 4, 3, 10 + r() * 50); }); });
+  const sheet = cv(128, (g, n) => { g.fillStyle = '#e4ded0'; g.fillRect(0, 0, n, n); for (let i = 0; i < 9; i++) blob(g, n * (0.2 + r() * 0.6), n * (0.2 + r() * 0.6), n * (0.06 + r() * 0.16), RED(0.85)); });
+  const mk = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ map: toTex(c, true, 1), transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2, roughness: 0.35 }, o));
+  MAT.gorePool = mk(pool); MAT.goreSplat = mk(splat); MAT.goreDrag = mk(drag, { roughness: 0.5 }); MAT.goreHand = mk(hand, { roughness: 0.6 });
+  MAT.goreGrime = mk(grime, { roughness: 1 }); MAT.goreWater = mk(water, { roughness: 0.05, metalness: 0.2 }); MAT.goreText = mk(text, { roughness: 0.6 });
+  MAT.bloodSheet = new THREE.MeshStandardMaterial({ map: toTex(sheet, true, 1), roughness: 0.95 });
+  MAT.bodyBag = new THREE.MeshStandardMaterial({ color: C(0x1c1f22), roughness: 0.45, metalness: 0.1 });
+}
+// one of the six lines of writing on the text sheet, as a wall decal
+function goreWords(x, y, z, ry, i, w = 2.4) { const g = new THREE.PlaneGeometry(w, w * 80 / 512), uv = g.attributes.uv.array, v0 = 1 - (30 + i * 80) / 512, v1 = 1 - (110 + i * 80) / 512; for (let k = 1; k < uv.length; k += 2) uv[k] = uv[k] > 0.5 ? v0 : v1; batchAdd('goreText', g, mat4(x, y, z, 0, ry, 0), false); }
+function bodyBag(x, z, y = 0, ry = 0, blood = true) {
+  B('bodyBag', 0.55, 0.26, 1.5, x, y + 0.13, z, 0, ry, 0, false); CYL('bodyBag', 0.27, 0.27, 0.55, 10, x + Math.sin(ry) * 0.75, y + 0.13, z + Math.cos(ry) * 0.75, 0, ry, Math.PI / 2, false);
+  CYL('bodyBag', 0.24, 0.24, 0.5, 10, x - Math.sin(ry) * 0.75, y + 0.12, z - Math.cos(ry) * 0.75, 0, ry, Math.PI / 2, false); B('steel', 0.03, 0.02, 1.6, x, y + 0.27, z, 0, ry, 0, false);
+  if (blood) batchAdd('gorePool', new THREE.PlaneGeometry(1.6, 1.6), mat4(x + 0.3, y + 0.035, z, -Math.PI / 2, 0, ry), false);
+}
+function hospGore() {
+  goreMaterials();
+  const r = makeRng(4242), H = HOSP.H, inBox = (x, z, y0, y1) => boxes.some(b => b.bot <= y0 && b.top >= y1 && x > b.minx && x < b.maxx && z > b.minz && z < b.maxz);
+  const floorAt = y => { for (let t = 0; t < 40; t++) { const x = (r() - 0.5) * 79, z = (r() - 0.5) * 67; if (y > 1 && Math.abs(x) < 10 && Math.abs(z) < 10 && Math.abs(x) > 1.3) continue; if (inBox(x, z, y + 0.05, y + 0.4)) continue; return [x, z]; } return null; };
+  const floorDecal = (key, x, z, y, s, rot = r() * TAU, sx = 1) => batchAdd(key, new THREE.PlaneGeometry(s * sx, s), mat4(x, y + 0.035 + r() * 0.004, z, -Math.PI / 2, 0, rot), false);
+  // floors: pools, splatter, grime, puddles on both floors
+  for (const y of [0, H]) {
+    for (let i = 0; i < 150; i++) { const p = floorAt(y); if (p) floorDecal(i % 3 ? 'goreSplat' : 'gorePool', p[0], p[1], y, 1.0 + r() * 2.2); }
+    for (let i = 0; i < 90; i++) { const p = floorAt(y); if (p) floorDecal('goreGrime', p[0], p[1], y, 2 + r() * 3.5); }
+    for (let i = 0; i < 12; i++) { const p = floorAt(y); if (p) floorDecal('goreWater', p[0], p[1], y, 1.2 + r() * 1.8); }
+    // drag trails down the corridors
+    for (let i = 0; i < 26; i++) { const s = r() < 0.5 ? 1 : -1, zc = s * (i % 2 ? 12 + (r() - 0.5) * 2 : 25.5 + (r() - 0.5) * 1.2), xc = (r() - 0.5) * 70; if (y > 1 && Math.abs(xc) < 10 && Math.abs(zc) < 14) continue; floorDecal('goreDrag', xc, zc, y, 0.9, Math.PI / 2 + (r() < 0.5 ? 0 : Math.PI) + (r() - 0.5) * 0.2, 4 + r() * 3); }
+  }
+  // walls: walk out from random floor spots to the nearest wall and decorate its face
+  const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const wallSpot = y => {
+    const p = floorAt(y); if (!p) return null; const d = D4[(r() * 4) | 0];
+    for (let t = 0.2; t < 5; t += 0.1) { const x = p[0] + d[0] * t, z = p[1] + d[1] * t;
+      const b = boxes.find(b => b.bot <= y + 0.3 && b.top >= y + 2.3 && x > b.minx && x < b.maxx && z > b.minz && z < b.maxz && !b.walk);
+      if (b) { if (Math.min(b.maxx - b.minx, b.maxz - b.minz) > 0.7) return null; const fx = d[0] ? (d[0] > 0 ? b.minx - 0.012 : b.maxx + 0.012) : x, fz = d[1] ? (d[1] > 0 ? b.minz - 0.012 : b.maxz + 0.012) : z; return { x: fx, z: fz, ry: d[0] ? (d[0] > 0 ? -Math.PI / 2 : Math.PI / 2) : (d[1] > 0 ? Math.PI : 0) }; }
+    } return null; };
+  for (const y of [0, H]) {
+    for (let i = 0; i < 320; i++) { const w = wallSpot(y); if (!w) continue; const k = r(), key = k < 0.35 ? 'goreSplat' : k < 0.6 ? 'goreHand' : k < 0.85 ? 'goreGrime' : 'gorePool', s = key === 'goreGrime' ? 2 + r() * 2.2 : 1.0 + r() * 1.4;
+      batchAdd(key, new THREE.PlaneGeometry(s, s), mat4(w.x, y + (key === 'goreGrime' ? 0.8 + r() * 2 : 0.7 + r() * 1.1), w.z, 0, w.ry, key === 'goreHand' ? 0 : r() * TAU), false); }
+    for (let i = 0; i < 8; i++) { const w = wallSpot(y); if (w) goreWords(w.x, y + 1.6 + r() * 0.5, w.z, w.ry, (i + (y ? 3 : 0)) % 6); }
+    // mould on the ceiling
+    for (let i = 0; i < 26; i++) { const p = floorAt(y); if (p) batchAdd('goreGrime', new THREE.PlaneGeometry(2 + r() * 2, 2 + r() * 2), mat4(p[0], y + (y ? H - 0.05 : H - 0.28), p[1], Math.PI / 2, 0, r() * TAU), false); }
+  }
+  // the big messages people see first
+  goreWords(-7.86, 2.1, 20, Math.PI / 2, 0, 3.2); goreWords(7.86, 2.1, -20, -Math.PI / 2, 1, 3.6); goreWords(-20, 2.0, 10.14, 0, 2, 2.6); goreWords(20, 2.0, -10.14, Math.PI, 3, 2.6);
+  // body bags, debris, fallen ceiling tiles
+  for (const [x, z, y, ry] of [[-3, 30, 0, 0.3], [5.5, -29, 0, 1.4], [-24, 12.4, 0, 1.6], [27, -12, 0, 1.5], [16, -6.5, 0, 0.2], [27.5, -2.5, 0, 1.6], [30.5, -2.5, 0, 1.5], [-30, 25.5, 0, 1.6], [12, 12, H, 1.55], [-26, -12.5, H, 1.6], [-16, 6, H, 0.4], [33, 20, 0, 0.1]]) bodyBag(x, z, y, ry);
+  for (const y of [0, H]) for (let i = 0; i < 80; i++) { const p = floorAt(y); if (p) batchAdd(i % 4 ? 'paintWhite' : 'cloth3', new THREE.PlaneGeometry(0.21, 0.3), mat4(p[0], y + 0.04, p[1], -Math.PI / 2, 0, r() * TAU), false); }
+  for (const [x, z, y] of [[-14, 12, 0], [22, 12.5, 0], [-31, -12, 0], [6, 25.5, 0], [-18, -25.5, 0], [30, 12, H], [-12, -12, H], [18, 25.5, H]]) { const top = y + H - (y ? 0.03 : 0.27); B('hospCeil', 1.2, 0.03, 0.6, x, top - 0.6, z, 0.9, r(), 0.3, false); B('hospCeil', 1.2, 0.02, 0.6, x + 0.6, y + 0.05, z + 0.3, 0, r() * 3, 0, false); B('steel', 0.03, 0.9, 0.03, x - 0.5, top - 0.45, z, 0.4, 0, 0.3, false); }
+  // tipped-over furniture in the corridors
+  for (const [x, z, y, ry] of [[-9, 12.6, 0, 0.4], [34, -13.2, 0, 0], [-22, 26, H, 1.2], [14, -25.9, 0, 0.1]]) { B('steel', 1.9, 0.62, 0.05, x, y + 0.31, z, 0, ry, 0); B('cloth1', 1.8, 0.5, 0.08, x, y + 0.3, z + 0.08, 0, ry, 0, false); }
+  for (const [x, z, y] of [[3, 12.5, 0], [-36, 25, 0], [24, -11.5, H], [-6, -26, 0]]) { B('dark', 0.5, 0.45, 0.05, x, y + 0.03, z, Math.PI / 2, r() * 3, 0, false); B('dark', 0.5, 0.05, 0.45, x + 0.2, y + 0.25, z, 0, r() * 3, 1.2, false); }
+}
+// a few lights that flicker (called every frame from the main loop)
+function hospFlicker(dt) {
+  if (curMap !== 'blackwell' || !HOSP.flick) return;
+  for (const f of HOSP.flick) { f.t -= dt; if (f.t <= 0) { f.on = !f.on; f.t = f.on ? rnd(0.3, 4) : rnd(0.03, 0.25); f.l.intensity = f.on ? f.i : f.i * 0.08; } }
+}
+
 function buildHospital() {
-  buildMap2Materials(); hospMaterials();
+  buildMap2Materials(); hospMaterials(); goreMaterials(); HOSP.flick = [];
   const H = HOSP.H, OUT = HOSP.OUT, ZO = HOSP.ZO, OK = 'hospWall', IK = 'hospWall';
   for (const q of [-1, 1]) { floorQuad(0, q * 42, 100, 16, 0, 'asphalt', 5); floorQuad(q * 45, 0, 10, 68, 0, 'asphalt', 5); }
   floorQuad(0, 0, OUT * 2, ZO * 2, 0.01, 'hospFloor', 2.4);
@@ -227,7 +303,7 @@ function buildHospital() {
   // ---- lights (dim, cold, a few warm emergency lamps)
   for (const [x, y, z, c, i, d] of [[0, 7.2, 0, 0xdfe8ff, 1.8, 26], [0, 3.4, 24, 0xfff0d8, 1.3, 16], [0, 3.4, -24, 0xfff0d8, 1.3, 16],
     [-25, 3.5, 12, 0xd8e4ff, 1.1, 18], [25, 3.5, 12, 0xd8e4ff, 1.1, 18], [-25, 3.5, -12, 0xd8e4ff, 1.1, 18], [25, 3.5, -12, 0xd8e4ff, 1.1, 18],
-    [-25, 7.7, 12, 0xffd0a0, 1.0, 18], [25, 7.7, -12, 0xffd0a0, 1.0, 18], [-25, 7.7, -12, 0xff9a7a, 0.9, 16], [25, 7.7, 12, 0xff9a7a, 0.9, 16]]) lampLight(x, y, z, c, i * 1.35, d * 1.15);
+    [-25, 7.7, 12, 0xffd0a0, 1.0, 18], [25, 7.7, -12, 0xffd0a0, 1.0, 18], [-25, 7.7, -12, 0xff9a7a, 0.9, 16], [25, 7.7, 12, 0xff9a7a, 0.9, 16]]) { const l = lampLight(x, y, z, c, i * 1.35, d * 1.15); if (x !== 0) (HOSP.flick = HOSP.flick || []).push({ l, i: i * 1.35, t: rnd(0, 3), on: true }); }
   for (const z of [-12, 12]) for (const y of [0, H]) for (let x = -37; x <= 37; x += 6) ceilLight(x, y ? 2 * H - 0.03 : H - 0.27, z, 1.0);
   // ---- boundary fence around the outside strip
   for (const s of [-1, 1]) { fence(-43, s * 41, 43, s * 41, 0, 2.6); fence(s * 43, -41, s * 43, 41, 0, 2.6); }
@@ -237,6 +313,7 @@ function buildHospital() {
     f(x, z, 0, q);
   for (const [x, z, q, f] of [[-20, -11, 1, gurney], [18, 12.8, 1, gurney], [-33, 12.6, 0, wheelchair], [32.5, -25.5, 1, gurney], [-14, 25.5, 1, crashCart]]) f(x, z, H, q);
   hospFurnish();
+  hospGore();
 }
 // themes per room, per half (south s = 1 is the emergency side, north s = -1 the surgery side)
 function hospFurnish() {
@@ -269,7 +346,7 @@ function hospFurnish() {
 defineMap({
   id: 'blackwell', size: 'large', planCut: 4.0, name: 'BLACKWELL HOSPITAL', place: 'Abandoned hospital, dusk', desc: 'A huge two-storey hospital, almost all indoors. Fight down the long corridors, through the wards, the ER and the morgue, or take the bridge over the atrium.',
   play: [-43, 43, -41, 41], build: buildHospital,
-  env: { top: 0x2e3a52, horizon: 0xb08a6a, fog: 0.009, sun: [-40, 14, 30], sunCol: 0xffb07a, sunI: 1.5, skySun: 0xff9a60, hemiSky: 0xc8d0e0, hemiGround: 0x6a665e, exposure: 1.25 },
+  env: { top: 0x2e3a52, horizon: 0xb08a6a, fog: 0.009, sun: [-40, 14, 30], sunCol: 0xffb07a, sunI: 1.5, skySun: 0xff9a60, hemiSky: 0xa8aebc, hemiGround: 0x4a463e, exposure: 1.08 },
   grass: { count: 0 }, spawnMaxY: 0.5,
   layout: {
     spawn: [{ x: 0, z: 37.5 }, { x: 0, z: -37.5 }],
