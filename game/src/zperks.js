@@ -77,60 +77,185 @@ function zpSelfRevive() {
   return true;
 }
 
-/* ---------- the first-person animation: bowl, joint or edible */
+/* ---------- the first-person animations: bowl, joint or edible
+   Built in the viewmodel scene (camera at the origin looking down -z, the mouth is about (0, -0.075, -0.17)).
+   Each hand follows keyframes [time, x, y, z, rx, ry, rz] eased between; props and smoke are driven by the clock. */
 function zpMat(c, o) { return new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.6 }, o)); }
+const ZP_SKIN = () => ZP.skin || (ZP.skin = zpMat(0xc99a72, { roughness: 0.7 }));
+const ZP_SLEEVE = () => ZP.sleeve || (ZP.sleeve = zpMat(0x434a36, { roughness: 0.9 }));
+// a hand: palm, four two-joint fingers curled by `curl`, a thumb, wrist and sleeve. side = 1 right, -1 left
+function zpHand(side, curl = 1.0, thumbIn = 0.7) {
+  const g = new THREE.Group(), sk = ZP_SKIN(), box = (w, h, d, m = sk) => new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+  const palm = box(0.05, 0.02, 0.055); g.add(palm);
+  const knuck = box(0.048, 0.018, 0.012); knuck.position.set(0, 0.002, -0.031); g.add(knuck);
+  g.userData.fingers = [];
+  for (let k = 0; k < 4; k++) {
+    const f = new THREE.Group(); f.position.set((-0.018 + k * 0.012) * side, 0, -0.034); g.add(f);
+    const len = [0.02, 0.023, 0.022, 0.017][k];
+    const a = box(0.0105, 0.011, len); a.position.z = -len / 2; f.add(a);
+    const j2 = new THREE.Group(); j2.position.z = -len; f.add(j2);
+    const b = box(0.0095, 0.0098, len * 0.85); b.position.z = -len * 0.42; j2.add(b);
+    f.rotation.x = -curl * 0.9; j2.rotation.x = -curl * 1.1; g.userData.fingers.push([f, j2]);
+  }
+  const th = new THREE.Group(); th.position.set(0.026 * side, -0.004, -0.008); g.add(th);
+  const t1 = box(0.012, 0.012, 0.024); t1.position.z = -0.012; th.add(t1);
+  const t2 = box(0.011, 0.011, 0.018); t2.position.set(0, 0, -0.031); th.add(t2);
+  th.rotation.set(-0.2, -thumbIn * side, 0.3 * side); g.userData.thumb = th;
+  const wrist = box(0.04, 0.022, 0.028); wrist.position.set(0, -0.002, 0.038); g.add(wrist);
+  // the forearm goes down and back, out of the bottom of the view (not at the camera)
+  const arm = new THREE.Group(); arm.position.set(0, -0.006, 0.045); arm.rotation.x = 0.95; g.add(arm);
+  const fore = box(0.034, 0.03, 0.1); fore.position.z = 0.045; arm.add(fore);
+  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.026, 0.026, 0.018, 12), zpMat(0x2e3326)); cuff.rotation.x = Math.PI / 2; cuff.position.z = 0.1; arm.add(cuff);
+  const sleeve = new THREE.Mesh(new THREE.CylinderGeometry(0.028, 0.034, 0.22, 12), ZP_SLEEVE()); sleeve.rotation.x = Math.PI / 2; sleeve.position.z = 0.2; arm.add(sleeve);
+  return g;
+}
+const zpEase = x => x * x * (3 - 2 * x);
+function zpKey(track, t, out) {
+  let a = track[0], b = track[track.length - 1];
+  for (let i = 0; i < track.length - 1; i++) if (t >= track[i][0] && t <= track[i + 1][0]) { a = track[i]; b = track[i + 1]; break; }
+  if (t <= track[0][0]) a = b = track[0];
+  const k = a === b ? 0 : zpEase(clamp((t - a[0]) / (b[0] - a[0]), 0, 1));
+  out.position.set(lerp(a[1], b[1], k), lerp(a[2], b[2], k), lerp(a[3], b[3], k)); out.rotation.set(lerp(a[4], b[4], k), lerp(a[5], b[5], k), lerp(a[6], b[6], k));
+}
+// tracks per animation: right hand (R), left hand (L)
+const ZP_TRACKS = {
+  bowl: { dur: 4.0, R: [[0, 0.2, -0.36, -0.42, 0.4, 0.3, 0.3], [0.55, 0.035, -0.075, -0.23, -0.15, 0.05, 0.05], [1.9, 0.03, -0.068, -0.205, -0.1, 0.03, 0.04], [2.35, 0.09, -0.2, -0.32, 0.25, 0.2, 0.2], [2.8, 0.2, -0.4, -0.42, 0.5, 0.3, 0.3], [4, 0.2, -0.4, -0.42, 0.5, 0.3, 0.3]],
+                    L: [[0, -0.22, -0.38, -0.4, 0.3, -0.3, -0.3], [0.45, -0.22, -0.38, -0.4, 0.3, -0.3, -0.3], [0.85, -0.035, -0.075, -0.25, 0.1, -0.5, -0.9], [1.75, -0.034, -0.07, -0.245, 0.1, -0.5, -0.9], [2.15, -0.22, -0.4, -0.4, 0.3, -0.3, -0.3], [4.0, -0.22, -0.4, -0.4, 0.3, -0.3, -0.3]] },
+  joint: { dur: 3.8, R: [[0, 0.2, -0.34, -0.42, 0.3, 0.2, 0.2], [0.6, 0.025, -0.058, -0.215, -0.1, 0.25, -0.15], [1.7, 0.022, -0.055, -0.205, -0.08, 0.25, -0.15], [2.2, 0.11, -0.16, -0.34, 0.1, 0.2, 0], [2.7, 0.11, -0.16, -0.34, 0.1, 0.2, 0], [2.85, 0.11, -0.14, -0.34, 0.25, 0.2, 0], [3, 0.11, -0.16, -0.34, 0.1, 0.2, 0], [3.6, 0.22, -0.4, -0.42, 0.4, 0.2, 0.2]] },
+  edible: { dur: 3.4, R: [[0, 0.18, -0.34, -0.42, 0.3, 0.2, 0.2], [0.55, 0.02, -0.07, -0.26, -0.3, 0.1, 0], [0.75, 0.01, -0.055, -0.195, -0.35, 0.1, 0], [0.95, 0.02, -0.07, -0.26, -0.3, 0.1, 0], [1.35, 0.01, -0.055, -0.195, -0.35, 0.1, 0], [1.55, 0.02, -0.07, -0.26, -0.3, 0.1, 0], [1.95, 0.01, -0.055, -0.19, -0.35, 0.1, 0], [2.2, 0.06, -0.15, -0.3, -0.1, 0.1, 0], [2.9, 0.2, -0.4, -0.42, 0.4, 0.2, 0.2]] },
+};
+function zpGlass(col) { return zpMat(col, { transparent: true, opacity: 0.72, roughness: 0.05, metalness: 0.1, emissive: new THREE.Color(col).multiplyScalar(0.12) }); }
 function zpStartAnim(p) {
   zpEndAnim();
-  const g = new THREE.Group(), skin = zpMat(0xc89a74), sleeve = zpMat(0x3c4232);
-  const arm = new THREE.Mesh(new THREE.BoxGeometry(0.045, 0.045, 0.14), sleeve); arm.position.set(0.03, -0.04, 0.09); g.add(arm);
-  const hand = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.045, 0.06), skin); hand.position.set(0.0, 0, 0); g.add(hand);
-  const item = new THREE.Group(); g.add(item); let tip = null, flame = null, bites = [];
+  const tr = ZP_TRACKS[p.anim], root = new THREE.Group(), R = zpHand(1, p.anim === 'edible' ? 0.75 : 1.0, p.anim === 'joint' ? 1.1 : 0.7), A = { t: 0, dur: tr.dur, root, R, p, puffs: [], sparks: [], tr };
+  root.add(R);
   if (p.anim === 'bowl') {
-    const glass = zpMat(p.col, { transparent: true, opacity: 0.75, roughness: 0.1, metalness: 0.2 });
-    const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.03, 0.022, 0.035, 12), glass); bowl.position.set(0.0, 0.05, -0.07); item.add(bowl);
-    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.011, 0.014, 0.17, 8), glass); stem.rotation.x = Math.PI / 2; stem.position.set(0, 0.03, -0.0); item.add(stem);
-    const herb = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.024, 0.008, 10), zpMat(0x4a6a2a)); herb.position.set(0, 0.07, -0.07); item.add(herb); tip = herb;
-    const lighter = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.06, 0.015), zpMat(0xc0302a)); lighter.position.set(-0.07, 0.06, -0.09); item.add(lighter);
-    flame = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0xffa040, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false })); flame.scale.set(0.04, 0.06, 1); flame.position.set(-0.045, 0.1, -0.08); item.add(flame);
+    // spoon pipe: bowl, neck, stem and mouthpiece, swirled glass; lighter in the left hand
+    const pipe = new THREE.Group(), gl = zpGlass(p.col), gl2 = zpGlass(0xeaf6ff);
+    const bowl = new THREE.Mesh(new THREE.SphereGeometry(0.024, 16, 12), gl); bowl.scale.set(1, 0.8, 1); bowl.position.set(0, 0.012, -0.045); pipe.add(bowl);
+    const lip = new THREE.Mesh(new THREE.TorusGeometry(0.012, 0.003, 8, 16), gl2); lip.rotation.x = Math.PI / 2; lip.position.set(0, 0.03, -0.045); pipe.add(lip);
+    const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.009, 0.014, 0.1, 12), gl); stem.rotation.x = Math.PI / 2; stem.position.set(0, 0.006, 0.01); pipe.add(stem);
+    const mouth = new THREE.Mesh(new THREE.SphereGeometry(0.0095, 10, 8), gl2); mouth.position.set(0, 0.006, 0.06); pipe.add(mouth);
+    for (let i = 0; i < 5; i++) { const sw = new THREE.Mesh(new THREE.TorusGeometry(0.011 + i * 0.0006, 0.0018, 6, 12, Math.PI), zpMat(0xffffff, { emissive: new THREE.Color(p.col), emissiveIntensity: 0.4 })); sw.position.set(0, 0.006, -0.025 + i * 0.016); sw.rotation.set(0, Math.PI / 2, i); pipe.add(sw); }
+    const herb = new THREE.Mesh(new THREE.CylinderGeometry(0.0115, 0.009, 0.006, 12), zpMat(0x3e5a22, { emissive: new THREE.Color(0xff4a0a), emissiveIntensity: 0 })); herb.position.set(0, 0.027, -0.045); pipe.add(herb);
+    pipe.position.set(-0.005, 0.016, -0.03); pipe.rotation.set(0, 0, 0.05); R.add(pipe); A.cherry = herb; A.bowlAt = pipe;
+    const L = zpHand(-1, 1.0, 0.4); root.add(L); A.L = L;
+    const lighter = new THREE.Group(), body = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.055, 0.012), zpMat(0xc02a26, { roughness: 0.3 })); lighter.add(body);
+    const cap = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.012, 0.012), zpMat(0xb8bcc0, { metalness: 0.9, roughness: 0.25 })); cap.position.y = 0.033; lighter.add(cap);
+    const flame = new THREE.Group(), fo = new THREE.Mesh(new THREE.ConeGeometry(0.006, 0.028, 10), new THREE.MeshBasicMaterial({ color: 0xff8a20, transparent: true, opacity: 0.85, blending: THREE.AdditiveBlending, depthWrite: false })); fo.position.y = 0.014; flame.add(fo);
+    const fi = new THREE.Mesh(new THREE.ConeGeometry(0.0032, 0.016, 8), new THREE.MeshBasicMaterial({ color: 0x6ab4ff, transparent: true, opacity: 0.9, blending: THREE.AdditiveBlending, depthWrite: false })); fi.position.y = 0.008; flame.add(fi);
+    const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0xffa040, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, opacity: 0.7 })); fl.scale.set(0.05, 0.05, 1); fl.position.y = 0.015; flame.add(fl);
+    flame.position.y = 0.04; lighter.add(flame); lighter.position.set(0.004, 0.03, -0.03); lighter.rotation.set(0, 0, -0.15); L.add(lighter); A.flame = flame;
+    const glowL = new THREE.PointLight(0xff8a30, 0, 0.6, 2); glowL.position.set(0, 0.06, -0.03); lighter.add(glowL); A.flameLight = glowL;
   } else if (p.anim === 'joint') {
-    const j = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.009, 0.11, 8), zpMat(0xf3efe4)); j.rotation.x = Math.PI / 2; j.position.set(0, 0.035, -0.07); item.add(j);
-    tip = new THREE.Mesh(new THREE.SphereGeometry(0.008, 8, 6), zpMat(0x331100, { emissive: new THREE.Color(0xff5a10), emissiveIntensity: 2 })); tip.position.set(0, 0.035, -0.128); item.add(tip);
+    const jt = new THREE.Group();
+    const paper = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0062, 0.075, 12), zpMat(0xf1ece0, { roughness: 0.9 })); paper.rotation.x = Math.PI / 2; jt.add(paper);
+    const filt = new THREE.Mesh(new THREE.CylinderGeometry(0.0045, 0.0045, 0.012, 12), zpMat(0xd9c49a)); filt.rotation.x = Math.PI / 2; filt.position.z = 0.043; jt.add(filt);
+    const twist = new THREE.Mesh(new THREE.ConeGeometry(0.0062, 0.008, 10), zpMat(0xe8e2d4)); twist.rotation.x = -Math.PI / 2; twist.position.z = -0.041; jt.add(twist);
+    const ash = new THREE.Mesh(new THREE.CylinderGeometry(0.0058, 0.006, 0.008, 12), zpMat(0x9a9690, { roughness: 1 })); ash.rotation.x = Math.PI / 2; ash.position.z = -0.045; jt.add(ash);
+    const cherry = new THREE.Mesh(new THREE.SphereGeometry(0.0062, 12, 8), zpMat(0x2a0800, { emissive: new THREE.Color(0xff4a0a), emissiveIntensity: 1.5 })); cherry.scale.z = 0.5; cherry.position.z = -0.0495; jt.add(cherry);
+    const cl = new THREE.PointLight(0xff5a1a, 0.15, 0.25, 2); cl.position.z = -0.055; jt.add(cl);
+    jt.position.set(-0.004, 0.017, -0.06); jt.rotation.set(0.15, -0.5, 0); jt.scale.setScalar(1.4); R.add(jt); A.cherry = cherry; A.cherryLight = cl; A.tipObj = cherry; A.ash = ash;
   } else {
-    const gm = zpMat(p.col, { roughness: 0.25, transparent: true, opacity: 0.92 });
-    for (const [x, y, r] of [[0, 0.035, 0.022], [0, 0.068, 0.017], [-0.013, 0.083, 0.007], [0.013, 0.083, 0.007], [-0.018, 0.04, 0.009], [0.018, 0.04, 0.009]]) { const s = new THREE.Mesh(new THREE.SphereGeometry(r, 10, 8), gm); s.position.set(x, y, -0.06); item.add(s); bites.push(s); }
+    // a gummy bear: body, head, ears, arms and legs; bites take the head, then the shoulders, then the rest
+    const bear = new THREE.Group(), gm = zpMat(p.col, { roughness: 0.18, transparent: true, opacity: 0.88, emissive: new THREE.Color(p.col).multiplyScalar(0.18) });
+    const part = (geo, x, y, z, sx = 1, sy = 1, sz = 1) => { const m = new THREE.Mesh(geo, gm); m.position.set(x, y, z); m.scale.set(sx, sy, sz); bear.add(m); return m; };
+    const body = part(new THREE.SphereGeometry(0.016, 14, 10), 0, 0, 0, 1, 1.2, 0.75);
+    const head = part(new THREE.SphereGeometry(0.012, 14, 10), 0, 0.025, 0, 1, 0.92, 0.8);
+    const ears = [part(new THREE.SphereGeometry(0.0045, 8, 6), -0.0085, 0.035, 0), part(new THREE.SphereGeometry(0.0045, 8, 6), 0.0085, 0.035, 0)];
+    const arms = [part(new THREE.SphereGeometry(0.0055, 8, 6), -0.015, 0.008, 0.002, 1, 1.5, 1), part(new THREE.SphereGeometry(0.0055, 8, 6), 0.015, 0.008, 0.002, 1, 1.5, 1)];
+    const legs = [part(new THREE.SphereGeometry(0.007, 8, 6), -0.009, -0.019, 0.002, 1, 1.2, 1), part(new THREE.SphereGeometry(0.007, 8, 6), 0.009, -0.019, 0.002, 1, 1.2, 1)];
+    const snout = part(new THREE.SphereGeometry(0.0045, 8, 6), 0, 0.022, 0.009);
+    bear.position.set(0.0, 0.04, -0.062); bear.rotation.set(-0.25, 0, 0); bear.scale.setScalar(1.8); R.add(bear);
+    A.bites = [[head, snout, ...ears], [...arms, body], [...legs]]; A.bear = bear;
+    if (R.userData.thumb) R.userData.thumb.rotation.y = -1.1;
   }
-  vmScene.add(g);
+  vmScene.add(root);
   const gun = gunObjs[G.cur]; if (gun) gun.visible = false;
-  G.swapT = Math.max(G.swapT, 3.0); G.reloading = false; mouseAds = false;
-  ZP.anim = { t: 0, dur: 3.0, g, item, tip, flame, bites, p, puffs: [], gunIdx: G.cur };
-  try { if (p.anim === 'edible') { tone(180, 0.08, 0.06, 'square'); setTimeout(() => tone(150, 0.08, 0.06, 'square'), 650); } else { setTimeout(() => burst(1.1, 700, 0.07, 'lowpass'), 450); setTimeout(() => burst(1.4, 420, 0.09, 'lowpass'), 1700); } } catch (e) {}
+  G.swapT = Math.max(G.swapT, tr.dur); G.reloading = false; mouseAds = false;
+  A.cough = p.anim === 'bowl' && Math.random() < 0.5;
+  ZP.anim = A;
+  try {
+    if (p.anim === 'edible') { for (const t of [700, 1300, 1900]) setTimeout(() => { tone(220, 0.05, 0.05, 'square'); tone(160, 0.07, 0.04, 'triangle'); }, t); }
+    else {
+      if (p.anim === 'bowl') { setTimeout(() => { tone(1800, 0.03, 0.04, 'square'); burst(0.08, 3000, 0.05, 'highpass'); }, 800); }
+      setTimeout(() => burst(1.0, 600, 0.06, 'lowpass'), p.anim === 'bowl' ? 900 : 650);
+      setTimeout(() => burst(1.6, 380, 0.09, 'lowpass'), p.anim === 'bowl' ? 2250 : 1800);
+      if (A.cough) for (const t of [3000, 3250, 3480]) setTimeout(() => burst(0.14, 900, 0.12, 'bandpass'), t);
+    }
+  } catch (e) {}
 }
 function zpEndAnim() {
   const a = ZP.anim; if (!a) return; ZP.anim = null;
-  vmScene.remove(a.g); for (const s of a.puffs) vmScene.remove(s.m);
+  vmScene.remove(a.root); for (const s of a.puffs.concat(a.sparks)) vmScene.remove(s.m);
   const gun = gunObjs[G.cur]; if (gun) gun.visible = true;
+  vmCamera.rotation.set(0, 0, 0);
+}
+// smoke puffs: soft sprites that grow, drift, turn slowly and fade; heavy ones roll forward from the mouth
+function zpPuff(a, x, y, z, vx, vy, vz, size, op, life) {
+  const tint = new THREE.Color(0xdfe2d6).lerp(new THREE.Color(a.p.col), 0.12);
+  const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: tint, transparent: true, opacity: 0, depthWrite: false, rotation: Math.random() * TAU }));
+  m.position.set(x, y, z); m.scale.set(size, size, 1); vmScene.add(m);
+  a.puffs.push({ m, v: [vx, vy, vz], s0: size, op, life: 0, max: life, spin: (Math.random() - 0.5) * 1.2 });
 }
 function zpTick(dt) {
-  const a = ZP.anim;
-  if (a) {
-    a.t += dt; const t = a.t, ease = x => x * x * (3 - 2 * x);
-    const up = t < 0.55 ? ease(t / 0.55) : t < 1.7 ? 1 : t < 2.3 ? 1 - ease((t - 1.7) / 0.6) : 0;
-    a.g.position.set(0.17 - up * 0.17, -0.42 + up * 0.35, -0.56 + up * 0.22);
-    a.g.rotation.set(up * 0.35, -0.3 + up * 0.3, 0.2 - up * 0.2);
-    if (a.flame) { const on = t > 0.5 && t < 1.5; a.flame.visible = on; a.flame.scale.set(0.035 + Math.random() * 0.015, 0.05 + Math.random() * 0.02, 1); }
-    if (a.tip && a.tip.material.emissive) a.tip.material.emissiveIntensity = t > 0.6 && t < 1.6 ? 2.5 + Math.sin(t * 20) : 1.2;
-    if (a.p.anim === 'edible') { const n = Math.floor(clamp((t - 0.6) / 0.35, 0, a.bites.length)); a.bites.forEach((b, i) => { b.visible = i >= n; }); }
-    // exhale: puffs drift out from the mouth, grow and fade
-    if (a.p.anim !== 'edible' && t > 1.6 && t < 2.6 && Math.random() < dt * 22) {
-      const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: 0xd8dccf, transparent: true, opacity: 0.55, depthWrite: false }));
-      m.position.set((Math.random() - 0.5) * 0.04, -0.06, -0.22); m.scale.set(0.08, 0.08, 1); vmScene.add(m);
-      a.puffs.push({ m, v: [(Math.random() - 0.5) * 0.12, 0.05 + Math.random() * 0.06, -0.25 - Math.random() * 0.2], life: 0 });
+  if (ZP.freeze) return;   // test pictures step the clock by hand
+  if (ZP.wobT > 0) ZP.wobT -= dt;
+  const a = ZP.anim; if (!a) return;
+  a.t += dt; const t = a.t, an = a.p.anim;
+  zpKey(a.tr.R, t, a.R); if (a.L) zpKey(a.tr.L, t, a.L);
+  // breathing sway on top of the keyframes
+  a.root.position.set(Math.sin(t * 1.7) * 0.003, Math.sin(t * 2.3) * 0.003, 0);
+  if (an === 'bowl') {
+    const lit = t > 0.85 && t < 1.8;
+    a.flame.visible = lit; a.flameLight.intensity = lit ? 0.9 + Math.random() * 0.4 : 0;
+    if (lit) { const lean = clamp((t - 0.95) * 3, 0, 1); a.flame.rotation.set(0, 0, 0.9 * lean + (Math.random() - 0.5) * 0.15); a.flame.scale.set(1, 0.85 + Math.random() * 0.3 + lean * 0.3, 1); }
+    const draw = t > 1.0 && t < 1.95 ? Math.min(1, (t - 1.0) * 2) : Math.max(0, 1 - (t - 1.95) * 1.5);
+    a.cherry.material.emissiveIntensity = draw * (2 + Math.sin(t * 25) * 0.6);
+    if (t > 1.0 && t < 2.3 && Math.random() < dt * 14) { const w = new THREE.Vector3(); a.cherry.getWorldPosition(w); zpPuff(a, w.x, w.y + 0.005, w.z, (Math.random() - 0.5) * 0.01, 0.035, 0, 0.012, 0.35, 1.0); }
+  } else if (an === 'joint') {
+    const pull = t > 0.65 && t < 1.7 ? Math.min(1, (t - 0.65) * 2.5) : 0;
+    a.cherry.material.emissiveIntensity = 1.2 + pull * (2.5 + Math.sin(t * 30) * 0.8); a.cherryLight.intensity = 0.15 + pull * 0.9;
+    const w = new THREE.Vector3(); a.cherry.getWorldPosition(w);
+    if (Math.random() < dt * (pull ? 4 : 9)) zpPuff(a, w.x, w.y + 0.004, w.z, (Math.random() - 0.5) * 0.008, 0.03 + Math.random() * 0.015, 0.002, 0.008, 0.3, 1.6);   // the thin trail off the tip
+    if (pull && Math.random() < dt * 18) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0xffa040, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false })); m.position.copy(w); m.scale.set(0.006, 0.006, 1); vmScene.add(m); a.sparks.push({ m, v: [(Math.random() - 0.5) * 0.06, 0.03 + Math.random() * 0.05, (Math.random() - 0.5) * 0.04], life: 0, max: 0.35 }); }
+    if (t > 2.84 && !a.flicked) { a.flicked = true; a.ash.visible = false; for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.003, 0.003), zpMat(0x8a8680)); m.position.copy(w); vmScene.add(m); a.sparks.push({ m, v: [(Math.random() - 0.5) * 0.04, -0.02, (Math.random() - 0.5) * 0.03], life: 0, max: 0.8, grav: true }); } }
+  } else if (a.bites) {
+    for (let i = 0; i < a.bites.length; i++) if (t > [0.76, 1.36, 1.96][i] && !a.bites[i].done) {
+      a.bites[i].done = true; for (const m of a.bites[i]) m.visible = false;
+      const w = new THREE.Vector3(); a.bear.getWorldPosition(w);
+      for (let k = 0; k < 7; k++) { const m = new THREE.Mesh(new THREE.SphereGeometry(0.0022, 6, 4), a.bear.children[0].material); m.position.copy(w); vmScene.add(m); a.sparks.push({ m, v: [(Math.random() - 0.5) * 0.06, 0.01 + Math.random() * 0.02, (Math.random() - 0.5) * 0.04], life: 0, max: 0.7, grav: true }); }
     }
-    for (let i = a.puffs.length - 1; i >= 0; i--) { const s = a.puffs[i]; s.life += dt; s.m.position.x += s.v[0] * dt; s.m.position.y += s.v[1] * dt; s.m.position.z += s.v[2] * dt; const k = 0.08 + s.life * 0.45; s.m.scale.set(k, k, 1); s.m.material.opacity = Math.max(0, 0.55 - s.life * 0.45); if (s.life > 1.3) { vmScene.remove(s.m); a.puffs.splice(i, 1); } }
-    if (t > 1.9 && !a.hazed) { a.hazed = true; zpHaze(a.p); }
-    if (t >= a.dur && !a.puffs.length) zpEndAnim();
-    else if (t >= a.dur) { const gun = gunObjs[G.cur]; if (gun && !gun.visible) gun.visible = true; a.g.visible = false; }
+    if (t > 0.8 && t < 2.6) a.root.position.y += Math.abs(Math.sin(t * 11)) * -0.004;   // chewing
   }
+  // the exhale: a dense rolling cloud from the mouth
+  const ex0 = an === 'bowl' ? 2.25 : an === 'joint' ? 1.8 : 99;
+  if (t > ex0 && t < ex0 + 1.1 && Math.random() < dt * 30) {
+    const k = (t - ex0) / 1.1;
+    zpPuff(a, (Math.random() - 0.5) * 0.02, -0.05 + Math.random() * 0.01, -0.17, (Math.random() - 0.5) * 0.08, 0.02 + Math.random() * 0.04 + k * 0.03, -0.18 - Math.random() * 0.14, 0.035, 0.6 * (1 - k * 0.5), 1.9);
+  }
+  if (a.cough && t > 3.0 && t < 3.7 && Math.random() < dt * 25) zpPuff(a, (Math.random() - 0.5) * 0.03, -0.05, -0.16, (Math.random() - 0.5) * 0.15, 0.05, -0.3, 0.03, 0.5, 1.2);
+  for (let i = a.puffs.length - 1; i >= 0; i--) {
+    const s = a.puffs[i]; s.life += dt; const f = s.life / s.max;
+    s.v[2] *= 1 - dt * 0.8; s.v[0] *= 1 - dt * 0.5; s.v[1] += dt * 0.01;
+    s.m.position.x += s.v[0] * dt; s.m.position.y += s.v[1] * dt; s.m.position.z += s.v[2] * dt;
+    const sc = s.s0 * (1 + f * 5); s.m.scale.set(sc, sc, 1); s.m.material.rotation += s.spin * dt;
+    s.m.material.opacity = s.op * Math.min(1, s.life * 6) * (1 - f) * (1 - f * 0.3);
+    if (f >= 1) { vmScene.remove(s.m); a.puffs.splice(i, 1); }
+  }
+  for (let i = a.sparks.length - 1; i >= 0; i--) { const s = a.sparks[i]; s.life += dt; if (s.grav) s.v[1] -= dt * 0.25; s.m.position.x += s.v[0] * dt; s.m.position.y += s.v[1] * dt; s.m.position.z += s.v[2] * dt; if (s.m.material.opacity !== undefined && !s.grav) s.m.material.opacity = 1 - s.life / s.max; if (s.life > s.max) { vmScene.remove(s.m); a.sparks.splice(i, 1); } }
+  // the haze kicks in near the end: a slow wobble of the view
+  const hz = an === 'edible' ? 2.2 : ex0 + 0.3;
+  if (t > hz && !a.hazed) { a.hazed = true; zpHaze(a.p); ZP.wobT = 3.5; }
+  const done = t >= a.dur;
+  if (done) { a.R.visible = false; if (a.L) a.L.visible = false; const gun = gunObjs[G.cur]; if (gun && !gun.visible) gun.visible = true; }
+  if (done && !a.puffs.length && !a.sparks.length) zpEndAnim();
+}
+// the wobble outlasts the animation a little (applied to the world camera's roll, fades out)
+function zpWobble() {
+  if (!(ZP.wobT > 0)) return;
+  const k = Math.min(1, ZP.wobT / 1.5) * 0.012;
+  camera.rotation.z += Math.sin(NOW * 1.6) * k; camera.position.y += Math.sin(NOW * 1.1) * k * 0.6;
 }
 // a short coloured haze over the screen when it kicks in
 function zpHaze(p) {
