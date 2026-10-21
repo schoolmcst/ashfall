@@ -709,11 +709,11 @@ function applyCamo(g, id) {
 // which cosmetic a gun wears: its own pick, else the all-weapons pick (only if owned)
 // which camo a gun wears: its own pick, else the all-weapons pick (owned only). Secret camos only on the gun they dropped for
 const secretKey = (id, gun) => id + '@' + gun;
-function ownsFor(id, gunId) { const c = COS[id]; return !!c && (c.secret && !c.universal ? !!PROG.owned[secretKey(id, gunId)] : !!PROG.owned[id]); }
-function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; if (!id || !COS[id]) return null; if (COS[id].secret && !COS[id].universal && own !== id) return null; return ownsFor(id, gunId) ? id : null; }
+function ownsFor(id, gunId) { const c = COS[id]; return !!c && ((c.secret && !c.universal) || c.grind ? !!PROG.owned[secretKey(id, gunId)] : !!PROG.owned[id]); }
+function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; if (!id || !COS[id]) return null; if (((COS[id].secret && !COS[id].universal) || COS[id].grind) && own !== id) return null; return ownsFor(id, gunId) ? id : null; }
 function refreshHeldCamos() { try { (WEAPONS || []).forEach((w, i) => { if (gunObjs[i] && w && w.def) { applyCamo(gunObjs[i], camoFor(w.def.id)); applySticker(gunObjs[i], stickerFor(w.def.id)); applyCharm(gunObjs[i], charmFor(w.def.id)); } }); } catch (e) {} }
-const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]]).length;
-const publicCount = () => COSM.filter(c => !c.secret).length;
+const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]] && !COS[k.split('@')[0]].grind).length;
+const publicCount = () => COSM.filter(c => !c.secret && !c.grind).length;
 
 /* ---------- weapon pictures for the Locker (rendered one per frame, cached per gun + camo + sticker) */
 const THUMB = { cache: {}, q: [], scene: null, cam: null, rt: null, buf: null };
@@ -828,24 +828,25 @@ function renderLocker() {
     $('lkFilters').innerHTML = `<button class="cod-tab on" data-act="lk-guns">WEAPONS</button><button class="cod-tab" data-act="lk-banners">BANNERS</button><span class="lk-crumb">SELECT A WEAPON</span>`;
     const cats = []; for (const d of lockerGuns()) { if (!cats.includes(d.cat)) cats.push(d.cat); }
     body.className = 'lk-guns';
-    body.innerHTML = `<div class="lk-count">${ownedCount()} / ${publicCount()} COLLECTED${Object.keys(PROG.owned).some(k => k.includes('@')) ? ' · + SECRET' : ''}</div>` + cats.map(cat => `<div class="lk-cat"><small>${CATS[cat].name}</small><div class="lk-gg">${lockerGuns().filter(d => d.cat === cat).map(d => {
+    body.innerHTML = `<div class="lk-count">${ownedCount()} / ${publicCount()} COLLECTED${Object.keys(PROG.owned).some(k => k.includes('@') && COS[k.split('@')[0]] && COS[k.split('@')[0]].secret) ? ' · + SECRET' : ''}</div>` + cats.map(cat => `<div class="lk-cat"><small>${CATS[cat].name}</small><div class="lk-gg">${lockerGuns().filter(d => d.cat === cat).map(d => {
       const cm = camoFor(d.id), st = stickerFor(d.id), n = gunItems(d.id, 'camo').length;
       const th = gunThumb(d.id);
-      return `<button class="lk-gun" data-lkgun="${d.id}" style="${cm ? `--rc:${RAR[COS[cm].r].col}` : ''}"><em>${n} CAMO${n === 1 ? '' : 'S'}</em><span class="lk-gimg" data-thumb="${d.id}">${th ? `<img src="${th}" alt="">` : ''}</span><b>${d.name}</b><small>${cm ? COS[cm].name : 'FACTORY'}${st ? ' · ' + COS[st].name : ''}</small></button>`;
+      return `<button class="lk-gun" data-lkgun="${d.id}" style="${cm ? `--rc:${RAR[COS[cm].r].col}` : ''}"><em>${n} CAMO${n === 1 ? '' : 'S'}</em><span class="lk-gimg" data-thumb="${d.id}">${th ? `<img src="${th}" alt="">` : ''}</span><b>${d.name}</b><span class="gr-badge ${grindBadge(d.id).includes('/') ? '' : grindBadge(d.id)}">${grindBadge(d.id)}</span><small>${cm ? COS[cm].name : 'FACTORY'}${st ? ' · ' + COS[st].name : ''}</small></button>`;
     }).join('')}</div></div>`).join('');
     for (const b of body.querySelectorAll('[data-lkgun]')) b.onclick = () => { LK.gun = b.dataset.lkgun; LK.view = 'gun'; LK.tab = 'camo'; LK.sel = camoFor(LK.gun); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on, #lkGrid button'); };
     PV.want = null; return;
   }
   if (LK.view === 'banners') return renderBanners(body);
   // one gun: preview + its camos, stickers or charms
+  if (LK.tab === 'grind') return renderGrind(body, ARM[LK.gun]);
   const d = ARM[LK.gun], cur = camoFor(LK.gun), curS = stickerFor(LK.gun), curC = charmFor(LK.gun), tab = LK.tab === 'other' ? 'sticker' : LK.tab, items = gunItems(LK.gun, tab);
   const curT = tab === 'sticker' ? curS : tab === 'charm' ? curC : cur, word = { camo: 'CAMO', sticker: 'STICKER', charm: 'CHARM' }[tab];
   const sel = LK.sel && COS[LK.sel] ? COS[LK.sel] : null, on = sel && curT === sel.id;
-  $('lkFilters').innerHTML = `<button class="cod-tab" data-act="lk-back">&lsaquo; WEAPONS</button>` + [['camo', 'CAMOS'], ['sticker', 'STICKERS'], ['charm', 'CHARMS']].map(([k, n]) => `<button class="cod-tab${tab === k ? ' on' : ''}" data-lktab="${k}">${n}</button>`).join('');
+  $('lkFilters').innerHTML = `<button class="cod-tab" data-act="lk-back">&lsaquo; WEAPONS</button>` + [['camo', 'CAMOS'], ['grind', 'CHALLENGES'], ['sticker', 'STICKERS'], ['charm', 'CHARMS']].map(([k, n]) => `<button class="cod-tab${tab === k ? ' on' : ''}" data-lktab="${k}">${n}</button>`).join('');
   body.className = 'lk-body';
   body.innerHTML = `<div class="lk-left"><div class="lk-gun-h"><small>${CATS[d.cat].name}</small><b>${d.name}</b></div><canvas id="lkPrev" width="480" height="200"></canvas><div id="lkInfo"></div><div class="lk-acts" id="lkActs2"></div></div><div class="lk-right"><div class="lk-sub">${tab === 'camo' ? 'CAMOS & SKINS · YOU OWN ' + items.length : tab === 'sticker' ? 'STICKERS · ONE PER GUN · YOU OWN ' + items.length : 'CHARMS · HANG ONE ON EACH GUN · YOU OWN ' + items.length}</div><div class="lk-grid" id="lkGrid"></div></div>`;
   $('lkInfo').innerHTML = sel ? `<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} ${kindName(sel)}${sel.bp ? ' · SEASON 1' : ''}</small><b>${sel.name}</b></div>${sel.secret ? `<div class="lk-secret${sel.universal ? ' prime' : ''}">${sel.universal ? 'SECRET PRIME · WORKS ON EVERY GUN' : 'SECRET · ONLY FOR THE ' + d.name}${typeof SECRET_VID !== 'undefined' && SECRET_VID[sel.id] ? ' <button class="mini lk-rv" data-act="lk-reveal">▶ PLAY REVEAL</button>' : ''}</div>` : ''}
-<div class="lk-acts"><button class="btn primary" data-act="lk-apply"${on ? ' disabled' : ''}>${on ? 'EQUIPPED' : 'EQUIP ON ' + d.name}</button>${sel.secret && !sel.universal ? '' : `<button class="btn" data-act="lk-all">EQUIP ON ALL WEAPONS</button>`}</div>`
+<div class="lk-acts"><button class="btn primary" data-act="lk-apply"${on ? ' disabled' : ''}>${on ? 'EQUIPPED' : 'EQUIP ON ' + d.name}</button>${(sel.secret && !sel.universal) || sel.grind ? '' : `<button class="btn" data-act="lk-all">EQUIP ON ALL WEAPONS</button>`}</div>`
     : `<div class="lk-name"><small>NO ${word}</small><b>${tab === 'camo' ? 'FACTORY FINISH' : 'NONE'}</b></div>`;
   $('lkActs2').innerHTML = `<button class="btn" data-act="lk-clear-${tab}"${!curT ? ' disabled' : ''}>REMOVE ${word}</button>`;
   const empty = { camo: 'No camos yet. Open chance boxes in REWARDS to get some.', sticker: 'Level up to earn stickers (one every 5 levels), or get them from the BATTLE PASS.', charm: 'No charms yet. They come from chance boxes in REWARDS and from the BATTLE PASS.' }[tab];
@@ -878,8 +879,8 @@ function lockerAct(act) {
   if (act === 'lk-guns') { LK.view = 'guns'; sfx.ui(); renderLocker(); focusFirst('#lkBody [data-lkgun]'); return true; }
   if (act === 'lk-banner' && LK.bsel && PROG.owned[LK.bsel]) { PROG.banner = LK.bsel; saveProg(); sfx.ui(); toast2('BANNER EQUIPPED'); renderLocker(); try { renderMenuCard(); } catch (e) {} focusFirst('#lkGrid .on'); return true; }
   if (act === 'lk-apply' && LK.sel && ownsFor(LK.sel, LK.gun)) { slot.guns[LK.gun] = LK.sel; saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on'); return true; }
-  if (act === 'lk-all' && LK.sel && PROG.owned[LK.sel] && (!COS[LK.sel].secret || COS[LK.sel].universal)) {
-    slot.all = LK.sel; for (const g in slot.guns) if (!(COS[slot.guns[g]] && COS[slot.guns[g]].secret)) delete slot.guns[g];   // secret picks stay on their gun
+  if (act === 'lk-all' && LK.sel && PROG.owned[LK.sel] && (!COS[LK.sel].secret || COS[LK.sel].universal) && !COS[LK.sel].grind) {
+    slot.all = LK.sel; for (const g in slot.guns) if (!(COS[slot.guns[g]] && (COS[slot.guns[g]].secret || COS[slot.guns[g]].grind))) delete slot.guns[g];   // secret picks stay on their gun
     saveProg(); refreshHeldCamos(); sfx.ui(); renderLocker(); focusFirst('#lkGrid .on'); toast2('EQUIPPED ON ALL WEAPONS'); return true;
   }
   if (act === 'lk-clear-charm') { PROG.chm.guns[LK.gun] = 'none'; saveProg(); LK.sel = null; refreshHeldCamos(); sfx.ui(); renderLocker(); return true; }
@@ -899,7 +900,7 @@ function lockerAct(act) {
   if (act === 'rw-box-close') { boxClose(); return true; }
   if (act === 'rw-box-equip') {
     const r = BOXV.res;
-    if (r && !r.dup) { if (r.it.secret && !r.it.universal) { PROG.equip.guns[r.gun] = r.it.id; toast2(r.it.name + ' ON ' + ARM[r.gun].name); } else { PROG.equip.all = r.it.id; for (const g in PROG.equip.guns) if (!(COS[PROG.equip.guns[g]] && COS[PROG.equip.guns[g]].secret)) delete PROG.equip.guns[g]; toast2(r.it.name + ' ON ALL WEAPONS'); } saveProg(); refreshHeldCamos(); }
+    if (r && !r.dup) { if (r.it.secret && !r.it.universal) { PROG.equip.guns[r.gun] = r.it.id; toast2(r.it.name + ' ON ' + ARM[r.gun].name); } else { PROG.equip.all = r.it.id; for (const g in PROG.equip.guns) if (!(COS[PROG.equip.guns[g]] && (COS[PROG.equip.guns[g]].secret || COS[PROG.equip.guns[g]].grind))) delete PROG.equip.guns[g]; toast2(r.it.name + ' ON ALL WEAPONS'); } saveProg(); refreshHeldCamos(); }
     boxClose(); return true;
   }
   return false;

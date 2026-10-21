@@ -1,12 +1,11 @@
 {
- "version": "1.2.23",
+ "version": "1.2.24",
  "notes": [
-  "SMARTER BOTS: every bot gets a job when it spawns and plays it like a real team player",
-  "ENTRY pushes first, SUPPORT follows a teammate and trades their fights, ANCHOR plays the objective, OVERWATCH takes the high ground and holds long angles, LURK waits and flanks alone, SLAYER goes for kills over the objective",
-  "Bots take their own lanes when they spawn, so a team spreads over the whole map instead of running in a line",
-  "S&D: attackers gather and hit the site together while a lurker cuts the rotation; defenders split over both sites and wait for a teammate before retaking a planted bomb",
-  "Free-for-all and Gun Game bots have personalities: rushers, campers, flankers and roamers. Bots slow down near danger to check corners, hear footsteps close by, and only chase what they actually saw or heard"
+  "CAMO GRIND: every gun now has its own camo challenges - open the LOCKER, pick a gun and go to CHALLENGES",
+  "8 MILITARY camos per gun: kills, headshots, longshots, hip-fire kills (crouched kills for snipers and marksman rifles) and double kills with that gun",
+  "MASTERY: all 8 unlock GOLD for that gun. GOLD on every gun in a class unlocks DIAMOND for the whole class. DIAMOND in every class unlocks NOVA for every gun",
+  "Progress counts in every mode, offline and online, with a banner when you unlock one. The weapon grid shows each gun's progress"
  ],
- "sha256": "da441f8d8c56714133b41fcba3cd4da1b41689b7c9617108afe61b5d20ba571c",
+ "sha256": "9dc5cf6370da52eae7f81b17e6800c0dd3df726ae284f59312b54d517baa6dda",
  "minApp": "1.0.0"
 }

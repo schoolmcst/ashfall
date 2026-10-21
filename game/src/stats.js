@@ -15,13 +15,14 @@ MS = blankMatch();
 function startMatchStats() { MS = blankMatch(); MS.active = true; }
 const wstat = id => MS.weapons[id] || (MS.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 });
 function statShot(hit) { if (!MS.active || G.bench) return; const w = WEAPONS[G.cur]; MS.shots++; if (hit) MS.hits++; if (w) { const s = wstat(w.def.id); s.shots++; if (hit) s.hits++; } }
-function statKill(e, head) { statKillAt(e.group.position.x, e.group.position.z, head); }
+function statKill(e, head, boom) { statKillAt(e.group.position.x, e.group.position.z, head, boom); }
 // a kill where the victim is somewhere (online kills can arrive after the victim's body is gone)
-function statKillAt(x, z, head) {
+function statKillAt(x, z, head, boom) {
   if (!MS.active || G.bench) return;
   const w = WEAPONS[G.cur], d = Math.hypot(x - P.x, z - P.z);
   MS.kills++; if (head) MS.heads++; MS.streak++; MS.bestStreak = Math.max(MS.bestStreak, MS.streak); MS.longest = Math.max(MS.longest, d);
   if (w) { const s = wstat(w.def.id); s.kills++; if (head) s.heads++; }
+  try { grindKill(head, d, boom); } catch (err) { reportError(err); }
 }
 function statDeath() { if (!MS.active || G.bench) return; MS.deaths++; MS.streak = 0; }
 // won: 1 win, 0 draw, -1 loss; null for Survival (no winner)

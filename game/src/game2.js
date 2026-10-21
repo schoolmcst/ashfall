@@ -160,7 +160,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
     dying.push(dd);
     e.rig.flash.visible = false;
     if (by === 'player') {
-      G.kills++; G.score += 100 + (head ? 50 : 0); statKill(e, head);
+      G.kills++; G.score += 100 + (head ? 50 : 0); statKill(e, head, !!boom);
       try { onKill(e, head, !!boom); } catch (err) { reportError(err); }
       sfx.kill(head);
     }
