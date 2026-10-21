@@ -19,16 +19,17 @@ function renderZLobby(focusSel) {
   $('lobKind').textContent = 'ZOMBIES';
   $('lobPlayer').innerHTML = playerCard(st); cardBanner($('lobPlayer'));
   for (const b of document.querySelectorAll('#lobby .cod-nav [data-act="loadout"], #lobby .cod-nav [data-act="streaks"]')) b.style.display = 'none';
-  const ph = document.querySelector('#lobby .cod-foot .padhint'); if (ph) ph.innerHTML = 'LB / RB  CHANGE MAP &middot; START  PLAY';
+  const ph = document.querySelector('#lobby .cod-foot .padhint'); if (ph) ph.innerHTML = 'START  PLAY';
   $('lobSel').innerHTML =
     `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="z-start"><small>${zcStartLabel()[0]}</small><b>${zcStartLabel()[1]}</b></button></div>` + zcLobbyRows() +
     `<div class="cod-row cod-map"><small>MAP</small><b>${m ? m.name : ''}</b><span>start in the lobby · buy doors to open the hospital</span></div>` +
     `<div class="cod-row"><small>STARTING GEAR</small><b>SERVICE 9 · 2 FRAGS</b><span>everyone starts the same · 500 points to spend</span></div>` +
     `<div class="cod-row"><small>MYSTERY CRATE · ${Z_BOX} POINTS</small><b>A RANDOM GUN</b><span>AMMO CRATE · ${Z_AMMO} POINTS · full ammo for your guns</span></div>` +
     `<div class="cod-row"><small>YOUR BEST</small><b>ROUND ${Z.best.round || 0}</b><span>${(Z.best.pts || 0).toLocaleString()} POINTS</span></div>`;
-  $('lobRoster').innerHTML = `<div id="zRoster">${zcRosterHtml()}</div>` +
+  $('lobRoster').innerHTML = zcRightHtml() +
     `<div class="ros-info"><b>ZOMBIES</b>Survive round after round of the dead. They walk at first, then jog, then run. 10 points a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Press USE (E / X) at the crates and doors to buy. Open doors to reach more of the hospital, and find the GUN UPGRADER (5000) in the north wing.${ZL.net === 'coop' ? ' In co-op, a downed teammate is revived by holding USE next to them.' : ''}</div>`;
-  ZC.rosterKey = ''; zcWireLobby();
+  ZC.rosterKey = ''; zcWireLobby(); zcLobbyRefresh(false);
+  if (ZL.net === 'coop' && NET.app) { try { partyWire(); netCheckService(); netLobbyCount(); netCheckVersion(); zcLanList(); } catch (e) {} }
   if (focusSel) focusFirst(focusSel);
 }
 function zombAct(act) {
@@ -37,7 +38,7 @@ function zombAct(act) {
   if (!ZL.on || curScreen !== 'lobby') return false;
   if (act === 'z-start' || act === 'lob-start') {
     if (ZL.net !== 'coop') { startMatch('zomb', { map: ZL.map }); return true; }
-    if (!ZC.on) { const i = $('zCode'); if (i && cleanCode(i.value) !== 'public' && i.value.trim()) zcJoin('code', cleanCode(i.value)); else zcJoin('quick'); }
+    if (!ZC.on) { if (!(typeof partyWaiting === 'function' && partyWaiting())) zcJoin('quick'); }
     else if (zcHost()) zcHostStart();
     return true;
   }

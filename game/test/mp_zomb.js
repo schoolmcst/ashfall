@@ -23,7 +23,7 @@ const fs = require('fs');
   const unpause = p => ev(p, () => { const G = window.__A.G; if (G.state === 'paused') G.state = G.pausedFrom || 'playing'; });
   // everyone opens the zombies lobby in co-op and presses FIND A CO-OP GAME
   for (const [p, n, i] of [[A, 'ALPHA', 0], [B, 'BRAVO', 1], [C, 'CHARLIE', 2]]) {
-    await ev(p, n => { const A_ = window.__A; A_.NET.nick = n; A_.ZL.map = 'blackwell'; A_.ZL.net = 'coop'; A_.openZLobby(); A_.zombAct('z-start'); }, n);
+    await ev(p, n => { const A_ = window.__A; A_.NET.nick = n; A_.ZL.map = 'blackwell'; A_.ZL.net = 'coop'; A_.openZLobby(); A_.zcJoin('code', 'zt1'); }, n);
     await A.waitForTimeout(i === 0 ? 9000 : 6000);
   }
   await A.waitForTimeout(2000);

@@ -28,6 +28,7 @@ async function zcJoin(kind, code) {
   Object.assign(ZC, { on: true, room, conn: 'in', me: room.me, kind, code: code || '', inGame: false, gid: 0, st: 'wait', joinedT: performance.now() });
   ZC.rem.clear(); clearInterval(ZC.timer); ZC.timer = setInterval(zcTick, 50);
   zcPublish(); zcLobbyRefresh(true); try { sfx.ui(); } catch (e) {}
+  if (kind !== 'code' && room.host) zcHostStart();   // Quick Play: no waiting room, others drop into your game
 }
 function zcLeave() {
   clearInterval(ZC.timer); ZC.timer = null;
@@ -50,6 +51,7 @@ function zcTick() {
     if (zcHost() && !ZC.wasHost && ZC.inGame) zcBecomeHost();
     ZC.wasHost = zcHost();
     zcPublish();
+    if (zcHost() && (ZC.lanT = (ZC.lanT || 0) - 0.05) <= 0) { ZC.lanT = 2; try { window.ASHFALL_APP.lan.announce({ slot: ZC.room.slot, name: NET.nick, mode: 'zomb', n: 1 + ZC.rem.size }); } catch (e) {} }
     if (!ZC.inGame && typeof curScreen !== 'undefined' && curScreen === 'lobby' && ZL.on) zcLobbyRefresh(false);
   } catch (e) { try { reportError(e); } catch (err) {} }
 }
@@ -338,34 +340,63 @@ function zcTeamHud(force) {
 /* ---------- the zombies lobby: solo / online co-op */
 function zcLobbyRows() {
   const coop = ZL.net === 'coop';
-  let h = `<div class="cod-row"><small>PLAY</small><b>${coop ? 'ONLINE CO-OP' : 'SOLO'}</b><span>${coop ? 'up to 4 survivors · the host runs the zombies' : 'just you against the dead'}</span><div class="arw"><button class="mini" data-act="z-net-" aria-label="Solo or co-op">&lsaquo;</button><button class="mini" data-act="z-net+" aria-label="Solo or co-op">&rsaquo;</button></div></div>`;
-  if (coop && !ZC.on) h += `<div class="net-form z-code"><label>PRIVATE CODE (OPTIONAL)<input id="zCode" maxlength="20" value="${ZL.code || ''}" autocomplete="off" spellcheck="false" placeholder="play with friends: pick a code"></label><button class="btn net-codebtn" data-act="z-code">JOIN CODE</button></div>`;
-  if (coop && ZC.on) h += `<div class="cod-row"><small>CO-OP ${ZC.kind === 'code' ? 'CODE ' + ZC.code.toUpperCase() : 'QUICK PLAY'}</small><b>${zcHost() ? 'YOU ARE THE HOST' : 'JOINED'}</b><span>${zcHost() ? 'press START when your squad is in' : 'waiting for the host to start'}</span><div class="arw"><button class="mini z-leave" data-act="z-leave">LEAVE</button></div></div>`;
+  let h = `<div class="cod-row"><small>PLAY</small><b>${coop ? 'ONLINE CO-OP' : 'SOLO'}</b><span>${coop ? 'up to 4 survivors · your party comes with you' : 'just you against the dead'}</span><div class="arw"><button class="mini" data-act="z-net-" aria-label="Solo or co-op">&lsaquo;</button><button class="mini" data-act="z-net+" aria-label="Solo or co-op">&rsaquo;</button></div></div>`;
+  if (!coop) return h;
+  if (!NET.app) return h + `<div class="net-off">Online co-op runs in the desktop app.</div>`;
+  if (ZC.on) h += `<div class="cod-row"><small>${ZC.kind === 'code' ? 'PRIVATE CODE ' + ZC.code.toUpperCase() : 'ONLINE CO-OP'}</small><b>${zcHost() ? 'YOU ARE THE HOST' : 'JOINED'}</b><span>${zcHost() ? 'press START when your squad is in' : 'waiting for the host to start'}</span><div class="arw"><button class="mini z-leave" data-act="z-leave">LEAVE</button></div></div>`;
+  else h += `<div class="net-hint">Quick Play drops you into a co-op game that is already running, or starts one that others can join. Play with friends: party up on the right, or use a private code.</div>` +
+    `<div class="net-form z-code"><label>PRIVATE CODE MATCH<input id="zCode" maxlength="20" value="${ZL.code || ''}" autocomplete="off" spellcheck="false" placeholder="e.g. squad7"></label><button class="btn net-codebtn" data-act="z-code">HOST / JOIN</button></div>`;
+  h += `<div class="net-lan" id="zLan"></div><div class="net-svc" id="netSvc">MATCH SERVICE: CHECKING…</div><div class="net-count" id="netCount"></div>`;
   if (ZC.err) h += `<div class="net-count bad">${ZC.err}</div>`;
   return h;
 }
 function zcStartLabel() {
   if (ZL.net !== 'coop') return ['SOLO · ROUND BASED', 'START ZOMBIES'];
   if (ZC.conn === 'connecting') return ['ONLINE CO-OP', 'CONNECTING…'];
-  if (!ZC.on) return ['ONLINE CO-OP · QUICK PLAY', 'FIND A CO-OP GAME'];
+  if (!ZC.on) return NET.app && typeof partyWaiting === 'function' && partyWaiting() ? ['ONLINE CO-OP · IN A PARTY', 'WAITING FOR LEADER'] : ['ONLINE CO-OP · UP TO 4 SURVIVORS', 'QUICK PLAY'];
   const n = 1 + [...ZC.rem.values()].length;
-  return zcHost() ? [`ONLINE CO-OP · ${n} SURVIVOR${n === 1 ? '' : 'S'}`, 'START GAME'] : ['ONLINE CO-OP', 'WAITING FOR HOST'];
+  return zcHost() ? [`PRIVATE CO-OP · ${n} SURVIVOR${n === 1 ? '' : 'S'}`, 'START GAME'] : ['PRIVATE CO-OP', 'WAITING FOR HOST'];
 }
 function zcRosterHtml() {
+  if (ZL.net === 'coop' && !ZC.on) return '';
   const rows = [`<div class="ros-p me"><span class="lv">★</span>${NET.nick || 'YOU'}<em>${ZC.on && zcHost() ? 'HOST' : 'READY'}</em></div>`];
   if (ZC.on) for (const R of ZC.rem.values()) rows.push(`<div class="ros-p"><span class="lv">·</span>${R.n}<em>${R.ho ? 'HOST' : R.pr && R.pr.g ? 'IN GAME' : 'READY'}</em></div>`);
   const n = rows.length;
   return `<div class="ros-h"><span>SQUAD</span><b>${ZL.net === 'coop' ? `${n} / ${ZC_MAX}` : 'SOLO'}</b></div><div class="ros-team" style="--tc:#7dbb4a"><div class="tn">SURVIVORS</div>${rows.join('')}</div>`;
 }
+// the right-hand side: survivors in this game, then the same party / friends / chat panel as multiplayer
+function zcRightHtml() {
+  const coop = ZL.net === 'coop' && NET.app;
+  return `<div id="zRoster">${zcRosterHtml()}</div>` + (coop && typeof partyHtml === 'function' ? `<div id="partyBox">${partyHtml()}</div>` + (typeof lobChatHtml === 'function' ? lobChatHtml() : '') : '');
+}
 // keep the lobby up to date without rebuilding the code box while someone types in it
 function zcLobbyRefresh(full) {
   if (typeof curScreen === 'undefined' || curScreen !== 'lobby' || !ZL.on) return;
   if (full) { renderZLobby(); return; }
-  const key = zcStartLabel().join('|') + '|' + [...ZC.rem.values()].map(R => R.n + (R.pr && R.pr.g ? 1 : 0)).join(',') + '|' + ZC.hostLobbyMap;
+  const key = zcStartLabel().join('|') + '|' + [...ZC.rem.values()].map(R => R.n + (R.pr && R.pr.g ? 1 : 0)).join(',');
   if (key === ZC.rosterKey) return; ZC.rosterKey = key;
   const r = $('zRoster'); if (r) r.innerHTML = zcRosterHtml();
-  const b = document.querySelector('#lobSel .cod-go'); if (b) { const [s, t] = zcStartLabel(); b.innerHTML = `<small>${s}</small><b>${t}</b>`; }
-  if (ZC.on && !zcHost() && ZC.hostLobbyMap) { const m = document.querySelector('#lobSel .cod-map b'); if (m) m.textContent = ZC.hostLobbyMap === 'random' ? 'RANDOM' : MAPS[ZC.hostLobbyMap] ? MAPS[ZC.hostLobbyMap].name : ''; }
+  const b = document.querySelector('#lobSel .cod-go'); if (b) { const [s, t] = zcStartLabel(); b.innerHTML = `<small>${s}</small><b>${t}</b>`; b.disabled = t === 'WAITING FOR LEADER' || t === 'WAITING FOR HOST' || t === 'CONNECTING…'; }
+}
+// co-op games on the same Wi-Fi (the host announces them, like multiplayer)
+function zcLanList() {
+  const box = $('zLan'); if (!box || !NET.app || ZC.on) { if (box) box.innerHTML = ''; return; }
+  let games = []; try { games = (window.ASHFALL_APP.lan && window.ASHFALL_APP.lan.games()) || []; } catch (e) {}
+  games = games.filter(g => g && typeof g.slot === 'string' && g.mode === 'zomb').slice(0, 4);
+  const key = JSON.stringify(games); if (box._k === key) return; box._k = key;
+  box.innerHTML = games.length ? `<span>ON YOUR WI-FI</span>` + games.map((g, i) => `<button class="btn net-lanbtn" data-zlan="${i}">${cleanNick(g.name)}'S ZOMBIES · ${Math.min(4, g.n | 0)} SURVIVORS</button>`).join('') : '';
+  for (const b of box.querySelectorAll('[data-zlan]')) b.onclick = () => { const g = games[+b.dataset.zlan]; sfx.ui(); zcJoin('slot', g.slot); };
+}
+setInterval(() => { try { if (typeof curScreen !== 'undefined' && curScreen === 'lobby' && ZL.on && ZL.net === 'coop') zcLanList(); } catch (e) {} }, 2000);
+// the party follows its leader into Zombies the same way as into a multiplayer match
+function zcPartyGo() { return ZC.on && ZC.room && ZC.room.slot ? { s: ZC.room.slot, m: 'zomb' } : null; }
+function zcPartyFollow(go) {
+  if (ZC.on && ZC.room && ZC.room.slot === go.s) return;
+  if (G.state !== 'menu') leaveGame();
+  if (ZC.on) zcLeave();
+  showMsg('JOINING YOUR PARTY LEADER');
+  ZL.net = 'coop'; if (!ZL.on || curScreen !== 'lobby') openZLobby(); else renderZLobby();
+  zcJoin('slot', go.s);
 }
 function zcWireLobby() {
   const i = $('zCode'); if (!i) return;

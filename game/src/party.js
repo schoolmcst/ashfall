@@ -32,8 +32,9 @@ function partyMembers() {
 }
 const partyWaiting = () => !!(PARTY.room && !PARTY.room.host && partyMembers().length > 1);
 // the match the leader is in, for everyone else to follow
-function partyGo() { return M && M.online && NET.on && NET.room && NET.room.slot ? { s: NET.room.slot, m: NET.mode } : null; }
+function partyGo() { if (typeof zcPartyGo === 'function' && zcPartyGo()) return zcPartyGo(); return M && M.online && NET.on && NET.room && NET.room.slot ? { s: NET.room.slot, m: NET.mode } : null; }
 function partyFollow(go) {
+  if (go && go.m === 'zomb' && typeof zcPartyFollow === 'function') { zcPartyFollow(go); return; }
   if (!go || !MODES[go.m] || !MODES[go.m].online) return;
   if (M && M.online && NET.room && NET.room.slot === go.s) return;
   if (G.state !== 'menu') leaveGame();
@@ -58,6 +59,7 @@ function partyRender() {
   if (typeof curScreen === 'undefined' || curScreen !== 'lobby') return;
   const a = document.activeElement, typing = a && a.tagName === 'INPUT' && a.closest && a.closest('#partyBox');
   if ($('partyBox') && !typing) { $('partyBox').innerHTML = partyHtml(); partyWire(); }
+  if (typeof ZL !== 'undefined' && ZL.on) { ZC.rosterKey = ''; zcLobbyRefresh(false); return; }
   const b = document.querySelector('.cod-go'); if (b && MODES[LOBBY.mode].online) { const w = partyWaiting(); b.disabled = w || !netReady(); const t = b.querySelector('b'); if (t) t.textContent = w ? 'WAITING FOR LEADER' : 'QUICK PLAY'; }
 }
 function partyHtml() {
