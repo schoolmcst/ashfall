@@ -1,13 +1,11 @@
 {
- "version": "1.2.18",
+ "version": "1.2.21",
  "notes": [
-  "THE FREE SPEECH UPDATE",
-  "CONTROLLER: pick your class with the controller before the match starts; the mouse cursor hides while you use a controller and comes back as soon as you touch the mouse or keyboard; button prompts show controller buttons",
-  "TEXT CHAT: Enter to chat in a match (Tab switches ALL / PARTY), party chat in the lobby, quick-chat buttons, mute players. Match chat clears when the next match starts",
-  "VOICE CHAT (desktop app): push to talk (V / D-pad left) or open mic, with volume, mic sensitivity and muting in the new pause menu panel",
-  "GRENADES: no longer pass through walls, floors and ceilings inside buildings; hold the grenade button to see a dotted path of where it will go, let go to throw",
-  "DZ: every finished match now pays DZ (40, +2 a kill, +30 for a win, online +25%)"
+  "8 BRAND NEW MAPS - the old maps are out of the rotation. Every map has three lanes, flank routes between them and one power position that can always be shot back at",
+  "SMALL: STACKYARD and KILLHOUSE. MEDIUM: SKYPORT, SPIRE, DUSTWATER, WHITEOUT, BLACKWATER PIER. LARGE: RIDGELINE (built for FFA and long-range fights). The lobby map picker shows each map's size",
+  "67 NEW PROPS across the maps: airport security and luggage, market stalls and pottery, snowmobiles and research tents, lobster traps and anchors, farm fences and woodpiles, street and industrial details",
+  "FURNISHED ROOMS: every room is filled with furniture that fits it - kitchens and living rooms, bedrooms, offices, the lab, shops, workshops, the barn and the boathouse - with rugs, lights and pictures. Doorways, stairs and walkways stay clear"
  ],
- "sha256": "e1d4005b024a6c7c21e981dfef037ec148fd5f5dbf3073d6f354db6caab1d23e",
+ "sha256": "c02d154baf4367a9a05154e8da1739c999d0a15bc17d2f0f668945653c0bf3a4",
  "minApp": "1.0.0"
 }
