@@ -156,7 +156,7 @@ function zcPublish() {
 /* ---------- starting, ending */
 function zcHostStart() {
   if (!zcHost()) return;
-  const mp = ZOMB_MAP;
+  const mp = zmapIs(ZL.map) ? ZL.map : 'blackwell';
   ZC.mp = mp; ZC.st = 'play'; ZC.zk = []; ZC.zt = [];
   zcEnterGame(mp, 1 + ((Math.random() * 1e9) | 0));
 }

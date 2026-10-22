@@ -76,9 +76,21 @@ const ZS_ROUNDS = {
   10: [['sparks', 'Round ten! Does anybody want to talk about feelings? I have a lot of feelings right now.'], ['doc', 'After the cure. Feelings after the cure.']],
   15: [['tank', 'Fifteen rounds. My arms hurt. My ears hurt. Even my hair hurts.'], ['smokes', 'You know what helps with that.'], ['tank', 'Do not say it.'], ['smokes', 'Weed.']],
 };
+// everything the story says on screen (swapped per map by zmapUse; these are the hospital's)
+const ZS_TEXT = {
+  title: 'THE GREEN CURE', place: 'BLACKWELL GENERAL · ZOMBIES', introSub: 'SEVEN CHAPTERS · TWELVE TAPES', introEm: 'a drug trial gone wrong · find the cure',
+  needPower: 'THE BODY IS IN THE DARK · TURN THE POWER ON FIRST', needCard: 'LOCKED IN THE LAB CABINET · YOU NEED A KEYCARD', stashLocked: 'NIGHTSHADE STASH · YOU NEED A LIGHTER FROM... ACTUALLY, GET THE KEYCARD FIRST (CHAPTER 2)',
+  stashVerb: 'BURN IT', panel: 'FUSE BOX', parts: 'FUSES', panelDo: 'PUT IN THE FUSES AND TURN THE POWER ON', powerOn: 'POWER IS ON', powerSub: 'the lab is open',
+  partSub: 'the fuse box is in the atrium', stashSub: 'burned', jarSub: 'the other half of the cure', bloodSub: 'the purest sample there will ever be',
+  station: 'CHEM STATION', cooking: 'COOKING THE GREEN CURE', cookDo: 'COOK THE GREEN CURE', cookStay: 'stay near the chem station', bar: 'THE GREEN CURE',
+  boss: 'PATIENT ZERO', bossSub: 'the first one · kill him and take his blood', bossDown: 'PATIENT ZERO IS DOWN', bossDownSub: 'take his blood', drop: "PATIENT ZERO'S BLOOD",
+  doneSub: 'story complete · every perk · upgraded gun · 5000 points', cont: 'TO BE CONTINUED', contSub: "Harold's truck · twelve pallets of Lazarus nine",
+  dropLook: 'blood', keyDone: 'ashfall.zstory', keyTapes: 'ashfall.ztapes', bossScale: 1.45, bossHp: 3000,
+};
 const ZS = { flags: new Set(), mine: new Set(), objs: [], tapes: [], cook: -1, cookT: 0, done: false, heard: new Set(), chapter: -1, bossOut: false, boss: null, playing: false, said: new Set() };
-try { for (const t of JSON.parse(localStorage.getItem('ashfall.ztapes') || '[]')) ZS.heard.add(+t); } catch (e) {}
-const zsDoneEver = () => { try { return localStorage.getItem('ashfall.zstory') === 'done'; } catch (e) { return false; } };
+function zsLoadTapes() { ZS.heard.clear(); try { for (const t of JSON.parse(localStorage.getItem(ZS_TEXT.keyTapes) || '[]')) ZS.heard.add(+t); } catch (e) {} }
+zsLoadTapes();
+const zsDoneEver = key => { try { return localStorage.getItem(key || ZS_TEXT.keyDone) === 'done'; } catch (e) { return false; } };
 const zsHas = id => ZS.flags.has(id);
 const zsFuses = () => ['f1', 'f2', 'f3'].filter(zsHas).length, zsStashes = () => ['st1', 'st2', 'st3'].filter(zsHas).length;
 // which chapter we are on, from what has happened
@@ -88,14 +100,19 @@ function zsChapterNow() { if (ZS.done) return 6; if (!zsHas('power')) return 0; 
 function zsGlowMat(col, k = 1.4) { return new THREE.MeshStandardMaterial({ color: 0x0a0a0a, emissive: new THREE.Color(col), emissiveIntensity: k, roughness: 0.4 }); }
 function zsMake(it) {
   const g = new THREE.Group(), s = it.at, add = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); g.add(m); return m; };
-  let col = 0x9a3cff;
-  if (it.kind === 'card') { const bag = new THREE.MeshStandardMaterial({ color: 0x1c1f22, roughness: 0.45 }); add(new THREE.BoxGeometry(0.55, 0.26, 1.5), bag, 0.55, 0.13, -0.2).rotation.y = 0.3; add(new THREE.BoxGeometry(0.03, 0.02, 1.5), new THREE.MeshStandardMaterial({ color: 0x8a8f94, metalness: 0.8 }), 0.55, 0.27, -0.2).rotation.y = 0.3; col = 0x5ab4ff; add(new THREE.BoxGeometry(0.09, 0.005, 0.055), zsGlowMat(col, 1.1), 0, 0.02, 0); add(new THREE.BoxGeometry(0.03, 0.006, 0.02), new THREE.MeshStandardMaterial({ color: 0xc8a030, metalness: 0.8 }), -0.025, 0.022, 0); }
-  else if (it.kind === 'stash') { for (let i = 0; i < 3; i++) { add(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0x5a1a8a, transparent: true, opacity: 0.8, emissive: new THREE.Color(0x7a2cff), emissiveIntensity: 0.6 }), -0.08 + i * 0.08, 0.05, (i % 2) * 0.05); add(new THREE.CylinderGeometry(0.037, 0.037, 0.025, 12), new THREE.MeshStandardMaterial({ color: 0xe8e8e8 }), -0.08 + i * 0.08, 0.11, (i % 2) * 0.05); } for (let i = 0; i < 6; i++) add(new THREE.SphereGeometry(0.012, 6, 4), zsGlowMat(0xb06cff, 1.2), (Math.random() - 0.5) * 0.3, 0.01, 0.1 + Math.random() * 0.1); }
-  else if (it.kind === 'jar') { col = 0x4adf5a; add(new THREE.CylinderGeometry(0.09, 0.09, 0.22, 16), new THREE.MeshStandardMaterial({ color: 0x8adf8a, transparent: true, opacity: 0.5, roughness: 0.05 }), 0, 0.11, 0); add(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0x3e6a24, roughness: 1 }), 0, 0.08, 0); add(new THREE.CylinderGeometry(0.095, 0.095, 0.03, 16), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.235, 0); add(new THREE.BoxGeometry(0.12, 0.06, 0.005), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0, 0.12, 0.091); }
-  else if (it.kind === 'fuse') { col = 0xffa030; add(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 12), new THREE.MeshStandardMaterial({ color: 0xe8e2d0, transparent: true, opacity: 0.7, roughness: 0.1 }), 0, 0.03, 0).rotation.z = Math.PI / 2; for (const x of [-0.09, 0.09]) add(new THREE.CylinderGeometry(0.033, 0.033, 0.03, 12), new THREE.MeshStandardMaterial({ color: 0xc8a030, metalness: 0.9, roughness: 0.3 }), x, 0.03, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.005, 0.005, 0.15, 6), zsGlowMat(col, 1.5), 0, 0.03, 0).rotation.z = Math.PI / 2; }
-  else if (it.kind === 'tape') { col = 0xffc24a; add(new THREE.BoxGeometry(0.1, 0.015, 0.065), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.01, 0); add(new THREE.BoxGeometry(0.07, 0.016, 0.03), zsGlowMat(col, 0.9), 0, 0.012, 0); }
-  else if (it.kind === 'blood') { col = 0xd02040; add(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 10), new THREE.MeshStandardMaterial({ color: 0x9a0a1a, transparent: true, opacity: 0.85, emissive: new THREE.Color(0x6a0010), emissiveIntensity: 0.6 }), 0, 0.06, 0); add(new THREE.CylinderGeometry(0.022, 0.022, 0.025, 10), new THREE.MeshStandardMaterial({ color: 0x9a3cff }), 0, 0.13, 0); }
-  if (it.kind === 'fuse' || it.kind === 'tape') for (const m of g.children) { m.scale.multiplyScalar(2); m.position.multiplyScalar(2); }
+  let col = 0x9a3cff; const K = it.look || it.kind;
+  if (K === 'card') { const bag = new THREE.MeshStandardMaterial({ color: 0x1c1f22, roughness: 0.45 }); add(new THREE.BoxGeometry(0.55, 0.26, 1.5), bag, 0.55, 0.13, -0.2).rotation.y = 0.3; add(new THREE.BoxGeometry(0.03, 0.02, 1.5), new THREE.MeshStandardMaterial({ color: 0x8a8f94, metalness: 0.8 }), 0.55, 0.27, -0.2).rotation.y = 0.3; col = 0x5ab4ff; add(new THREE.BoxGeometry(0.09, 0.005, 0.055), zsGlowMat(col, 1.1), 0, 0.02, 0); add(new THREE.BoxGeometry(0.03, 0.006, 0.02), new THREE.MeshStandardMaterial({ color: 0xc8a030, metalness: 0.8 }), -0.025, 0.022, 0); }
+  else if (K === 'stash') { for (let i = 0; i < 3; i++) { add(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0x5a1a8a, transparent: true, opacity: 0.8, emissive: new THREE.Color(0x7a2cff), emissiveIntensity: 0.6 }), -0.08 + i * 0.08, 0.05, (i % 2) * 0.05); add(new THREE.CylinderGeometry(0.037, 0.037, 0.025, 12), new THREE.MeshStandardMaterial({ color: 0xe8e8e8 }), -0.08 + i * 0.08, 0.11, (i % 2) * 0.05); } for (let i = 0; i < 6; i++) add(new THREE.SphereGeometry(0.012, 6, 4), zsGlowMat(0xb06cff, 1.2), (Math.random() - 0.5) * 0.3, 0.01, 0.1 + Math.random() * 0.1); }
+  else if (K === 'jar') { col = 0x4adf5a; add(new THREE.CylinderGeometry(0.09, 0.09, 0.22, 16), new THREE.MeshStandardMaterial({ color: 0x8adf8a, transparent: true, opacity: 0.5, roughness: 0.05 }), 0, 0.11, 0); add(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0x3e6a24, roughness: 1 }), 0, 0.08, 0); add(new THREE.CylinderGeometry(0.095, 0.095, 0.03, 16), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.235, 0); add(new THREE.BoxGeometry(0.12, 0.06, 0.005), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0, 0.12, 0.091); }
+  else if (K === 'fuse') { col = 0xffa030; add(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 12), new THREE.MeshStandardMaterial({ color: 0xe8e2d0, transparent: true, opacity: 0.7, roughness: 0.1 }), 0, 0.03, 0).rotation.z = Math.PI / 2; for (const x of [-0.09, 0.09]) add(new THREE.CylinderGeometry(0.033, 0.033, 0.03, 12), new THREE.MeshStandardMaterial({ color: 0xc8a030, metalness: 0.9, roughness: 0.3 }), x, 0.03, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.005, 0.005, 0.15, 6), zsGlowMat(col, 1.5), 0, 0.03, 0).rotation.z = Math.PI / 2; }
+  else if (K === 'tape') { col = 0xffc24a; add(new THREE.BoxGeometry(0.1, 0.015, 0.065), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.01, 0); add(new THREE.BoxGeometry(0.07, 0.016, 0.03), zsGlowMat(col, 0.9), 0, 0.012, 0); }
+  else if (K === 'blood') { col = 0xd02040; add(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 10), new THREE.MeshStandardMaterial({ color: 0x9a0a1a, transparent: true, opacity: 0.85, emissive: new THREE.Color(0x6a0010), emissiveIntensity: 0.6 }), 0, 0.06, 0); add(new THREE.CylinderGeometry(0.022, 0.022, 0.025, 10), new THREE.MeshStandardMaterial({ color: 0x9a3cff }), 0, 0.13, 0); }
+  else if (K === 'valve') { col = 0xff5a3a; const red = new THREE.MeshStandardMaterial({ color: 0xb02a1a, roughness: 0.5, metalness: 0.4 }); const t = add(new THREE.TorusGeometry(0.16, 0.025, 8, 20), red, 0, 0.03, 0); t.rotation.x = Math.PI / 2; for (let i = 0; i < 4; i++) { const sp = add(new THREE.BoxGeometry(0.3, 0.02, 0.02), red, 0, 0.03, 0); sp.rotation.y = i * Math.PI / 4; } add(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 10), new THREE.MeshStandardMaterial({ color: 0x8a8f94, metalness: 0.8 }), 0, 0.05, 0); add(new THREE.TorusGeometry(0.17, 0.006, 6, 20), zsGlowMat(col, 1.2), 0, 0.06, 0).rotation.x = Math.PI / 2; }
+  else if (K === 'key') { const coat = new THREE.MeshStandardMaterial({ color: 0x2a2620, roughness: 1 }); add(new THREE.BoxGeometry(0.5, 0.22, 1.6), coat, 0.6, 0.11, -0.3).rotation.y = 0.5; add(new THREE.SphereGeometry(0.13, 10, 8), new THREE.MeshStandardMaterial({ color: 0x8a9a7a, roughness: 1 }), 0.2, 0.12, 0.45); col = 0xffc24a; const brass = new THREE.MeshStandardMaterial({ color: 0xc8a030, metalness: 0.9, roughness: 0.3, emissive: new THREE.Color(0x4a3000), emissiveIntensity: 0.6 }); add(new THREE.TorusGeometry(0.035, 0.01, 6, 14), brass, -0.06, 0.012, 0).rotation.x = Math.PI / 2; add(new THREE.BoxGeometry(0.12, 0.012, 0.016), brass, 0.03, 0.012, 0); add(new THREE.BoxGeometry(0.016, 0.012, 0.04), brass, 0.08, 0.012, 0.02); }
+  else if (K === 'pallet') { add(new THREE.BoxGeometry(1.2, 0.14, 1.0), new THREE.MeshStandardMaterial({ color: 0x8a6a40, roughness: 1 }), 0, 0.07, 0); for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(1.1, 0.42, 0.92), new THREE.MeshStandardMaterial({ color: 0x4a1a70, roughness: 0.4, emissive: new THREE.Color(0x3a0a6a), emissiveIntensity: 0.7, transparent: true, opacity: 0.92 }), 0, 0.36 + i * 0.44, 0); add(new THREE.BoxGeometry(0.5, 0.2, 0.01), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0.2, 0.5, 0.47); }
+  else if (K === 'formula') { col = 0x4adf5a; add(new THREE.BoxGeometry(0.3, 0.02, 0.22), new THREE.MeshStandardMaterial({ color: 0xd8ccaa, roughness: 1 }), 0, 0.01, 0); add(new THREE.CylinderGeometry(0.035, 0.035, 0.2, 12), new THREE.MeshStandardMaterial({ color: 0x8adf8a, transparent: true, opacity: 0.55, roughness: 0.05, emissive: new THREE.Color(0x2adf4a), emissiveIntensity: 0.8 }), 0.06, 0.11, 0.02); add(new THREE.CylinderGeometry(0.03, 0.03, 0.14, 12), zsGlowMat(0x3aff5a, 1.4), 0.06, 0.08, 0.02); add(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 12), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0.06, 0.22, 0.02); }
+  else if (K === 'ledger') { col = 0xd8b060; add(new THREE.BoxGeometry(0.26, 0.05, 0.34), new THREE.MeshStandardMaterial({ color: 0x5a1a1a, roughness: 0.8 }), 0, 0.025, 0); add(new THREE.BoxGeometry(0.24, 0.04, 0.32), new THREE.MeshStandardMaterial({ color: 0xe8dcc0 }), 0.006, 0.026, 0); add(new THREE.BoxGeometry(0.1, 0.004, 0.04), zsGlowMat(col, 1.0), 0, 0.053, -0.1); }
+  if (K === 'fuse' || K === 'tape' || K === 'valve') for (const m of g.children) { m.scale.multiplyScalar(2); m.position.multiplyScalar(2); }
   const beam = add(new THREE.CylinderGeometry(0.12, 0.25, 2.2, 10, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }), 0, 1.1, 0);
   const lt = new THREE.PointLight(col, 0.7, 3.5, 2); lt.position.y = 0.4; g.add(lt);
   g.position.set(s.x, s.y, s.z); scene.add(g); g.userData.beam = beam; return g;
@@ -115,7 +132,7 @@ function zsStation() {
   const flask = add(new THREE.SphereGeometry(0.11, 14, 10), new THREE.MeshStandardMaterial({ color: 0x3adf5a, transparent: true, opacity: 0.6, emissive: new THREE.Color(0x2adf4a), emissiveIntensity: 0.2 }), -0.3, 1.25, 0);
   add(new THREE.CylinderGeometry(0.025, 0.04, 0.2, 10), new THREE.MeshStandardMaterial({ color: 0xcfe8cf, transparent: true, opacity: 0.6 }), -0.3, 1.42, 0);
   for (let i = 0; i < 4; i++) add(new THREE.CylinderGeometry(0.02, 0.02, 0.15, 8), new THREE.MeshStandardMaterial({ color: [0x9a3cff, 0x3adf5a, 0xe8822a, 0x3a8ee6][i], transparent: true, opacity: 0.8 }), 0.3 + i * 0.1, 1.02, -0.2);
-  const c = document.createElement('canvas'); c.width = 256; c.height = 64; const cg = c.getContext('2d'); cg.fillStyle = '#081008'; cg.fillRect(0, 0, 256, 64); cg.fillStyle = '#5adf6a'; cg.font = 'bold 26px sans-serif'; cg.textAlign = 'center'; cg.fillText('CHEM STATION', 128, 40);
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64; const cg = c.getContext('2d'); cg.fillStyle = '#081008'; cg.fillRect(0, 0, 256, 64); cg.fillStyle = '#5adf6a'; cg.font = 'bold 26px sans-serif'; cg.textAlign = 'center'; cg.fillText(ZS_TEXT.station, 128, 40);
   const st = new THREE.CanvasTexture(c); st.encoding = THREE.sRGBEncoding; add(new THREE.PlaneGeometry(0.9, 0.22), new THREE.MeshBasicMaterial({ map: st }), 0, 0.6, 0.456);
   const lt = new THREE.PointLight(0x3adf5a, 0.6, 5, 2); lt.position.set(0, 1.6, 0.4); g.add(lt);
   g.position.set(s.x, s.y, s.z); scene.add(g);
@@ -124,7 +141,7 @@ function zsStation() {
 }
 function zsBuild() {
   zsClear();
-  if (curMap !== ZOMB_MAP) return;
+  if (!zmapIs(curMap)) return;
   Object.assign(ZS, { cook: -1, cookT: 0, done: false, chapter: -1, bossOut: false, boss: null, bloodItem: null }); ZS.flags.clear(); ZS.mine.clear(); ZS.said.clear();
   ZS.objs = ZS_ITEMS.map(it => ({ it, g: zsMake(it) }));
   ZS.tapes = ZS_TAPES.map((t, i) => ({ t, i, g: zsMake({ kind: 'tape', at: t.at }) }));
@@ -146,22 +163,22 @@ function zsNear(at, r = 1.6) { return Math.hypot(P.x - at.x, P.z - at.z) < r && 
 function zsPrompt(use) {
   if (G.state !== 'playing') return '';
   for (const o of ZS.objs) if (o.g && zsNear(o.it.at)) {
-    if (o.it.needs && !zsHas(o.it.needs)) return o.it.needs === 'power' ? `${o.it.name} · THE BODY IS IN THE DARK · TURN THE POWER ON FIRST` : `${o.it.name} · LOCKED IN THE LAB CABINET · YOU NEED A KEYCARD`;
-    if (o.it.kind === 'stash' && !zsHas('card')) return 'NIGHTSHADE STASH · YOU NEED A LIGHTER FROM... ACTUALLY, GET THE KEYCARD FIRST (CHAPTER 2)';
-    if (use) zsPick(o.it); return `${o.it.name} · PRESS ${actName('use')} TO ${o.it.kind === 'stash' ? 'BURN IT' : 'TAKE IT'}`;
+    if (o.it.needs && !zsHas(o.it.needs)) return o.it.needs === 'power' ? `${o.it.name} · ${ZS_TEXT.needPower}` : `${o.it.name} · ${ZS_TEXT.needCard}`;
+    if (o.it.kind === 'stash' && !zsHas('card')) return ZS_TEXT.stashLocked;
+    if (use) zsPick(o.it); return `${o.it.name} · PRESS ${actName('use')} TO ${o.it.kind === 'stash' ? ZS_TEXT.stashVerb : 'TAKE IT'}`;
   }
-  if (ZS.bloodItem && ZS.bloodItem.g && zsNear(ZS.bloodItem.at)) { if (use) zsPick({ id: 'blood', kind: 'blood', name: "PATIENT ZERO'S BLOOD" }); return `PATIENT ZERO'S BLOOD · PRESS ${actName('use')} TO TAKE IT`; }
+  if (ZS.bloodItem && ZS.bloodItem.g && zsNear(ZS.bloodItem.at)) { if (use) zsPick({ id: 'blood', kind: 'blood', name: ZS_TEXT.drop }); return `${ZS_TEXT.drop} · PRESS ${actName('use')} TO TAKE IT`; }
   for (const t of ZS.tapes) if (t.g && zsNear(t.t.at, 1.4)) { if (use) zsPlayTape(t); return `${t.t.title} · PRESS ${actName('use')} TO LISTEN`; }
   if (ZS.fusebox && zsNear(ZS_FUSEBOX, 1.9)) {
-    if (zsHas('power')) return 'FUSE BOX · POWER IS ON';
-    const n = zsFuses(); if (n < 3) return `FUSE BOX · ${n} OF 3 FUSES · FIND THE REST`;
-    if (use) zsPower(); return `FUSE BOX · PRESS ${actName('use')} TO PUT IN THE FUSES AND TURN THE POWER ON`;
+    if (zsHas('power')) return `${ZS_TEXT.panel} · ${ZS_TEXT.powerOn}`;
+    const n = zsFuses(); if (n < 3) return `${ZS_TEXT.panel} · ${n} OF 3 ${ZS_TEXT.parts} · FIND THE REST`;
+    if (use) zsPower(); return `${ZS_TEXT.panel} · PRESS ${actName('use')} TO ${ZS_TEXT.panelDo}`;
   }
   if (ZS.station && zsNear(ZS_COOK, 2.0)) {
-    if (ZS.done || ZS.cook >= 1) return 'THE GREEN CURE · DONE';
-    if (ZS.cook >= 0) return `COOKING THE GREEN CURE · ${Math.round(ZS.cook * 100)}% · STAY CLOSE`;
-    if (zsChapterNow() < 5) return `CHEM STATION · NOT YET · CHAPTER ${zsChapterNow() + 1}: ${ZS_CHAPTERS[zsChapterNow()].goal.toUpperCase()}`;
-    if (use) zsStartCookReq(); return `CHEM STATION · PRESS ${actName('use')} TO COOK THE GREEN CURE (60 SECONDS · HOLD THEM OFF)`;
+    if (ZS.done || ZS.cook >= 1) return `${ZS_TEXT.bar} · DONE`;
+    if (ZS.cook >= 0) return `${ZS_TEXT.cooking} · ${Math.round(ZS.cook * 100)}% · STAY CLOSE`;
+    if (zsChapterNow() < 5) return `${ZS_TEXT.station} · NOT YET · CHAPTER ${zsChapterNow() + 1}: ${ZS_CHAPTERS[zsChapterNow()].goal.toUpperCase()}`;
+    if (use) zsStartCookReq(); return `${ZS_TEXT.station} · PRESS ${actName('use')} TO ${ZS_TEXT.cookDo} (60 SECONDS · HOLD THEM OFF)`;
   }
   return '';
 }
@@ -170,15 +187,16 @@ function zsPick(it) {
   if (!zsFlag(it.id)) return;
   try { sfx.pickup(); if (it.kind === 'stash') { sfx.explode(at(it.at.x, it.at.z, 10, it.at.y)); } } catch (e) {}
   if (it.kind === 'stash') try { explosionFx(new THREE.Vector3(it.at.x, it.at.y + 0.3, it.at.z), 0.4); } catch (e) {}
-  const sub = it.kind === 'fuse' ? `${zsFuses()} of 3 · the fuse box is in the atrium` : it.kind === 'stash' ? `burned · ${zsStashes()} of 3` : it.kind === 'jar' ? 'the other half of the cure' : it.kind === 'blood' ? 'the purest sample there will ever be' : '';
+  const sub = it.kind === 'fuse' ? `${zsFuses()} of 3 · ${ZS_TEXT.partSub}` : it.kind === 'stash' ? `${ZS_TEXT.stashSub} · ${zsStashes()} of 3` : it.kind === 'jar' ? ZS_TEXT.jarSub : it.kind === 'blood' ? ZS_TEXT.bloodSub : '';
   showBanner(it.name, sub); zsLine(it.kind);
   zsCheckChapter();
 }
-function zsPower() { if (zsFuses() < 3) return; zsFlag('power'); try { tone(60, 1.2, 0.3, 'sawtooth', 120); burst(0.4, 2000, 0.2, 'highpass'); } catch (e) {} zsApplyPower(); showBanner('POWER IS ON', 'the lab is open'); zsCheckChapter(); }
+function zsPower() { if (zsFuses() < 3) return; zsFlag('power'); try { tone(60, 1.2, 0.3, 'sawtooth', 120); burst(0.4, 2000, 0.2, 'highpass'); } catch (e) {} zsApplyPower(); showBanner(ZS_TEXT.powerOn, ZS_TEXT.powerSub); zsCheckChapter(); }
 // the power: the flickering lights steady and the fuse box goes green
 function zsApplyPower() {
   if (ZS.fusebox) for (const m of ZS.fusebox.slots) m.material.emissive.setHex(0x2adf4a);
-  if (typeof HOSP !== 'undefined' && HOSP.flick) for (const f of HOSP.flick) { f.l.intensity = f.i * 1.15; f.t = 1e9; f.on = true; }
+  try { if (curMap === 'works') worksPower(); zmapPowerPads(); } catch (e) {}
+  if (curMap === 'blackwell' && typeof HOSP !== 'undefined' && HOSP.flick) for (const f of HOSP.flick) { f.l.intensity = f.i * 1.15; f.t = 1e9; f.on = true; }
 }
 const ZS_SAY = {
   doc: { fuse: 'A fuse. Sparks will be thrilled.', card: 'My keycard. Harold, you idiot.', stash: 'Burn it. Every last pill.', jar: 'Pharmaceutical grade. Do not tell the board.', blood: 'Patient Zero\'s blood. Careful. That vial is the whole outbreak.', cook: 'Burner is lit. Sixty seconds. Keep them off me!' },
@@ -202,12 +220,12 @@ function zsBoss() {
   const pts = zdSpawnPts().filter(p => { const n = nodeOf(p.x, p.z, p.y); return navField && n >= 0 && navField[n] >= 0 && Math.hypot(p.x - P.x, p.z - P.z) > 12; });
   const p = pts.length ? pts[(Math.random() * pts.length) | 0] : { x: P.x + 10, z: P.z, y: P.y };
   const e = makeZombie(p.x, p.z, p.y || 0); zsMakeBoss(e);
-  e.hp = e.maxHp = 3000 + zombHp(Math.max(1, Z.round)) * 10; e.kind = 'run'; e.speed = 3.6;
-  ZS.boss = e; showBanner('PATIENT ZERO', 'the first one · kill him and take his blood');
+  e.hp = e.maxHp = ZS_TEXT.bossHp + zombHp(Math.max(1, Z.round)) * 10; e.kind = 'run'; e.speed = 3.6;
+  ZS.boss = e; showBanner(ZS_TEXT.boss, ZS_TEXT.bossSub);
   try { sfx.zscreech(at(p.x, p.z, 40, p.y)); sfx.zgroan(at(p.x, p.z, 40, p.y), false); } catch (err) {}
 }
 function zsMakeBoss(e) {
-  e.boss = true; e.group.scale.setScalar(1.45); e.group.userData.scale = 1.45;
+  e.boss = true; e.group.scale.setScalar(ZS_TEXT.bossScale); e.group.userData.scale = ZS_TEXT.bossScale;
   const purple = new Map(); e.group.traverse(o => { if (o.isMesh && !o.userData.hitbox) { const m = o.material; if (!purple.has(m)) { const c = (Array.isArray(m) ? m[0] : m).clone(); if (c.emissive) { c.emissive.setHex(0x5a10a0); c.emissiveIntensity = 0.7; } if (c.color) c.color.lerp(new THREE.Color(0x6a3a8a), 0.5); purple.set(m, c); } o.material = purple.get(m); } });
   const lt = new THREE.PointLight(0x9a3cff, 1.2, 6, 2); lt.position.y = 1.6; e.group.add(lt);
 }
@@ -215,12 +233,12 @@ function zsMakeBoss(e) {
 function zsBossDied(e) {
   ZS.boss = null; const g = e.group.position, ok = isFinite(g.x + g.z + g.y), p = ok ? g : (e.bossLast || P);
   zsDropBlood(p.x, p.z, groundAt(p.x, p.z, (p.y || 0) + 0.3));
-  showBanner('PATIENT ZERO IS DOWN', 'take his blood'); try { sfx.streak(); } catch (err) {}
+  showBanner(ZS_TEXT.bossDown, ZS_TEXT.bossDownSub); try { sfx.streak(); } catch (err) {}
 }
-function zsDropBlood(x, z, y) { if (ZS.bloodItem || zsHas('blood')) return; ZS.bloodItem = { at: { x, z, y }, g: zsMake({ kind: 'blood', at: { x, z, y } }) }; }
+function zsDropBlood(x, z, y) { if (ZS.bloodItem || zsHas('blood')) return; ZS.bloodItem = { at: { x, z, y }, g: zsMake({ kind: 'blood', look: ZS_TEXT.dropLook, at: { x, z, y } }) }; }
 function zsPlayTape(t) {
   if (ZS.playing) return;
-  ZS.heard.add(t.i); try { localStorage.setItem('ashfall.ztapes', JSON.stringify([...ZS.heard])); } catch (e) {}
+  ZS.heard.add(t.i); try { localStorage.setItem(ZS_TEXT.keyTapes, JSON.stringify([...ZS.heard])); } catch (e) {}
   try { tone(1200, 0.05, 0.08, 'square'); burst(0.3, 3000, 0.04, 'highpass'); } catch (e) {}
   showBanner(t.t.title, `tape ${ZS.heard.size} of ${ZS_TAPES.length} found`);
   zsDialog(t.t.lines);
@@ -242,12 +260,12 @@ function zsDialog(lines, done) {
   next();
 }
 // group talk every few rounds (called from the round start)
-function zsRoundTalk(r) { const s = ZS_ROUNDS[r]; if (s && !ZS.said.has(r)) { ZS.said.add(r); setTimeout(() => zsDialog(s), 3500); } }
+function zsRoundTalk(r) { try { zmapRound(r); } catch (e) {} const s = ZS_ROUNDS[r]; if (s && !ZS.said.has(r)) { ZS.said.add(r); setTimeout(() => zsDialog(s), 3500); } }
 function zsStartCookReq() { if (zcInGame() && !zcHost()) zcEvent('cook', P); else zsStartCook(); }
 function zsStartCook() {
   if (ZS.cook >= 0 || ZS.done || zsChapterNow() < 5) return;
   ZS.cook = 0; ZS.cookT = 0;
-  showBanner('COOKING THE GREEN CURE', 'hold them off for 60 seconds · stay near the chem station'); zsLine('cook');
+  showBanner(ZS_TEXT.cooking, `hold them off for 60 seconds · ${ZS_TEXT.cookStay}`); zsLine('cook');
   if (typeof Z !== 'undefined') { Z.toSpawn += 14; Z.active = true; Z.spawnT = 0.5; }
 }
 // every frame (the host runs the boss and the cooking; everyone draws)
@@ -271,8 +289,8 @@ function zsTick(dt) {
 }
 function zsBar(on) {
   let b = $('zCook');
-  if (!b) { b = document.createElement('div'); b.id = 'zCook'; b.innerHTML = '<span>THE GREEN CURE</span><i><s></s></i>'; ($('hud') || document.body).appendChild(b); const st = document.createElement('style'); st.textContent = `#zCook{position:absolute;left:50%;top:84px;transform:translateX(-50%);width:min(420px,70vw);text-align:center;pointer-events:none;font:800 12px var(--font,system-ui);letter-spacing:.2em;color:#9aff9a;text-shadow:0 1px 4px #000}#zCook i{display:block;height:8px;margin-top:6px;background:rgba(0,0,0,.6);border:1px solid rgba(154,255,154,.5)}#zCook s{display:block;height:100%;width:0;background:linear-gradient(90deg,#2adf4a,#9aff6a);box-shadow:0 0 10px #2adf4a}`; document.head.appendChild(st); }
-  b.style.display = on ? '' : 'none'; if (on) b.querySelector('s').style.width = Math.round(ZS.cook * 100) + '%';
+  if (!b) { b = document.createElement('div'); b.id = 'zCook'; b.innerHTML = '<span></span><i><s></s></i>'; ($('hud') || document.body).appendChild(b); const st = document.createElement('style'); st.textContent = `#zCook{position:absolute;left:50%;top:84px;transform:translateX(-50%);width:min(420px,70vw);text-align:center;pointer-events:none;font:800 12px var(--font,system-ui);letter-spacing:.2em;color:#9aff9a;text-shadow:0 1px 4px #000}#zCook i{display:block;height:8px;margin-top:6px;background:rgba(0,0,0,.6);border:1px solid rgba(154,255,154,.5)}#zCook s{display:block;height:100%;width:0;background:linear-gradient(90deg,#2adf4a,#9aff6a);box-shadow:0 0 10px #2adf4a}`; document.head.appendChild(st); }
+  b.style.display = on ? '' : 'none'; if (on) b.querySelector('span').textContent = ZS_TEXT.bar; if (on) b.querySelector('s').style.width = Math.round(ZS.cook * 100) + '%';
 }
 // the objective line on screen (top left, under the minimap side)
 function zsHud(force) {
@@ -281,25 +299,25 @@ function zsHud(force) {
   if (force === false) { h.innerHTML = ''; return; }
   const c = zsChapterNow(), ch = ZS_CHAPTERS[c];
   let extra = c === 0 ? ` (${zsFuses()}/3)` : c === 2 ? ` (${zsStashes()}/3)` : '';
-  const html = typeof M !== 'undefined' && M && M.mode === 'zomb' ? `<b>THE GREEN CURE · CHAPTER ${c + 1} OF 7</b>${ch.name} · ${ch.goal}${extra}` : '';
+  const html = typeof M !== 'undefined' && M && M.mode === 'zomb' ? `<b>${ZS_TEXT.title} · CHAPTER ${c + 1} OF 7</b>${ch.name} · ${ch.goal}${extra}` : '';
   if (force || h._h !== html) { h._h = html; h.innerHTML = html; }
 }
 function zsComplete() {
   if (ZS.done) return; ZS.done = true; ZS.cook = 1;
-  try { localStorage.setItem('ashfall.zstory', 'done'); } catch (e) {}
-  showBanner('THE GREEN CURE', 'story complete · every perk · upgraded gun · 5000 points');
+  try { localStorage.setItem(ZS_TEXT.keyDone, 'done'); } catch (e) {}
+  showBanner(ZS_TEXT.title, ZS_TEXT.doneSub);
   try { sfx.streak(); } catch (e) {}
   for (const p of ZPERKS) ZP.have.add(p.id); zpApply(); zpHud(true);
   const w = WEAPONS[G.cur]; if (w && Z.up) { Z.up.add(w.def.id); zombEquip(G.cur); }
   G.points += 5000; zsCheckChapter();
-  setTimeout(() => zsDialog(ZS_END, () => showBanner('TO BE CONTINUED', "Harold's truck · twelve pallets of Lazarus nine")), 1500);
+  setTimeout(() => zsDialog(ZS_END, () => showBanner(ZS_TEXT.cont, ZS_TEXT.contSub)), 1500);
 }
 // co-op: the host merges what everyone picked up; clients follow the host's flags, boss blood and cooking
 function zsFromHost(H) {
   let ch = false;
   if (Array.isArray(H.qf)) for (const id of H.qf) if (typeof id === 'string' && !ZS.flags.has(id)) { ZS.flags.add(id); zsTaken(id); if (id === 'power') zsApplyPower(); ch = true; }
   if (Array.isArray(H.qb) && !ZS.bloodItem && !zsHas('blood')) zsDropBlood(netNum(H.qb[0], -ARENA, ARENA), netNum(H.qb[1], -ARENA, ARENA), netNum(H.qb[2], -5, 20));
-  if (typeof H.qc === 'number') { const was = ZS.cook; ZS.cook = H.qc; if (was < 0 && H.qc >= 0 && H.qc < 1) showBanner('COOKING THE GREEN CURE', 'hold them off for 60 seconds'); if (H.qc >= 1 && !ZS.done) zsComplete(); }
+  if (typeof H.qc === 'number') { const was = ZS.cook; ZS.cook = H.qc; if (was < 0 && H.qc >= 0 && H.qc < 1) showBanner(ZS_TEXT.cooking, 'hold them off for 60 seconds'); if (H.qc >= 1 && !ZS.done) zsComplete(); }
   if (ch) zsCheckChapter();
 }
 function zsFromPeer(R) {
@@ -310,7 +328,7 @@ function zsFromPeer(R) {
 // the intro, every game (any key or 6 seconds hides the title; the voices finish over gameplay)
 function zsIntro() {
   let o = $('zIntro'); if (!o) { o = document.createElement('div'); o.id = 'zIntro'; document.body.appendChild(o); const st = document.createElement('style'); st.textContent = `#zIntro{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(20,4,30,.75),rgba(0,0,0,.92));color:#e8e2d0;pointer-events:none;transition:opacity 1.2s;text-align:center}#zIntro b{font:900 54px Georgia,serif;letter-spacing:.12em;color:#7adf6a;text-shadow:0 0 30px rgba(90,223,106,.5)}#zIntro small{font:700 13px var(--font,system-ui);letter-spacing:.4em;margin-top:10px;color:#b06cff}#zIntro em{font:14px var(--font,system-ui);margin-top:26px;opacity:.6;font-style:normal;letter-spacing:.2em}`; document.head.appendChild(st); }
-  o.innerHTML = `<small>BLACKWELL GENERAL · ZOMBIES</small><b>THE GREEN CURE</b><small>${zsDoneEver() ? 'STORY COMPLETE · PLAY IT AGAIN' : 'SEVEN CHAPTERS · TWELVE TAPES'}</small><em>a drug trial gone wrong · find the cure</em>`;
+  o.innerHTML = `<small>${ZS_TEXT.place}</small><b>${ZS_TEXT.title}</b><small>${zsDoneEver() ? 'STORY COMPLETE · PLAY IT AGAIN' : ZS_TEXT.introSub}</small><em>${ZS_TEXT.introEm}</em>`;
   o.style.opacity = 1; o.style.display = '';
   const hide = () => { o.style.opacity = 0; setTimeout(() => { o.style.display = 'none'; }, 1300); removeEventListener('keydown', hide); };
   addEventListener('keydown', hide); setTimeout(hide, 6000);

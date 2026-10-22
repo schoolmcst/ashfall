@@ -34,6 +34,7 @@ const ZWALLS = [
 // purple arrows on the floor from the start to the gun upgrader
 const ZU_PATH = [[4.5, 31], [4.5, 27.5], [4.5, 24], [4.5, 20], [2.5, 16.4], [0.7, 12], [0.7, 9], [0.7, 5], [0.7, 2], [0.7, -1.5], [0.7, -4.5], [0.7, -8], [0.7, -12], [-1.5, -16.5], [-3.2, -20], [-4.6, -23.6], [-5.6, -26.2]];
 const ZU_SPOT = { x: -6.9, z: -27, y: 0 };
+const ZU_STRIPS = [[-7.82, -24, 0.04, 18], [7.82, -24, 0.04, 18]];   // purple light strips on the upgrader room's walls
 const ZD = { list: [], open: new Set(), mine: new Set(), anim: [], pts: null, up: null };
 ZDOORS.forEach((d, i) => { d.id = i; });
 const zdMats = () => ZD.mats || (ZD.mats = {
@@ -100,14 +101,15 @@ function zdRemove(o) {
 // a new zombies game: every door closed again
 function zdInit() {
   zdClear(true);
-  if (curMap !== ZOMB_MAP) return;
+  if (!zmapIs(curMap)) return;
+  zmapUse(curMap);
   ZD.list = ZDOORS.map(d => zdAdd(d, false)).concat(ZWALLS.map(d => zdAdd(d, true)));
   ZD.open.clear(); ZD.mine.clear(); ZD.pts = null;
-  ZD.up = zuBuild(); ZD.arrows = zdArrows(); try { zpBuild(); } catch (e) { reportError(e); } try { zsBuild(); } catch (e) { reportError(e); }
+  ZD.up = zuBuild(); ZD.arrows = zdArrows(); try { zpBuild(); } catch (e) { reportError(e); } try { zsBuild(); } catch (e) { reportError(e); } try { zmapBuildPads(); } catch (e) { reportError(e); }
   boxGridDirty = true; buildNav(); SPAWNS = null;
 }
 function zdClear(keepNav) {
-  zuRestore(); try { zpClear(); } catch (e) {} try { zsClear(); } catch (e) {}
+  zuRestore(); try { zpClear(); } catch (e) {} try { zsClear(); } catch (e) {} try { zmapClearPads(); } catch (e) {}
   if (ZD.arrows) { scene.remove(ZD.arrows); ZD.arrows = null; }
   if (!ZD.list.length && !ZD.up) return;
   for (const o of ZD.list) zdRemove(o); ZD.list = []; ZD.anim.length = 0;
@@ -135,7 +137,7 @@ function zdAnim(dt) {
 // where zombies can come from: every floor in the building (upstairs too); reachability is checked when spawning
 function zdSpawnPts() {
   if (ZD.pts) return ZD.pts;
-  if (curMap !== ZOMB_MAP) return (ZD.pts = buildSpawns());
+  if (!zmapIs(curMap)) return (ZD.pts = buildSpawns());
   const pts = [];
   for (let z = -40; z <= 40; z += 2.5) for (let x = -42; x <= 42; x += 2.5) {
     const c = cellOf(z) * NN + cellOf(x);
@@ -180,7 +182,7 @@ function zuBuild() {
   const beam = add(new THREE.CylinderGeometry(0.35, 0.6, 8, 12, 1, true), new THREE.MeshBasicMaterial({ color: 0xa04cff, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide }), 0, 6.5, 0); g.userData.beam = beam;
   const lt = new THREE.PointLight(0xa04cff, 1.6, 9, 2); lt.position.set(1.0, 1.8, 0); g.add(lt);
   // purple light strips along the room's walls
-  for (const [x, z, w, d] of [[-7.82, -24, 0.04, 18], [7.82, -24, 0.04, 18]]) add(new THREE.BoxGeometry(w, 0.06, d), glow, x - s.x, 3.4 - s.y, z - s.z);
+  for (const [x, z, w, d] of ZU_STRIPS) add(new THREE.BoxGeometry(w, 0.06, d), glow, x - s.x, 3.4 - s.y, z - s.z);
   g.position.set(s.x, s.y, s.z); scene.add(g);
   const box = mkBox(s.x, s.z, 1.3, 1.6, 2.6, { y: s.y, walk: false }); boxes.push(box);
   const proxy = new THREE.Mesh(new THREE.BoxGeometry(1.3, 2.6, 1.6), proxyMat); proxy.position.set(s.x, s.y + 1.3, s.z); proxy.visible = false; proxy.userData.ray = true; scene.add(proxy); proxy.updateMatrixWorld(); wallMeshes.push(proxy);
@@ -211,7 +213,7 @@ function zuApply() {
 }
 function zuNear() { const s = ZU_SPOT; return ZD.up && Math.hypot(P.x - s.x, P.z - s.z) < 2.4 && Math.abs((P.y || 0) - s.y) < 1.5; }
 function zdTick(dt) {
-  zdAnim(dt);
+  zdAnim(dt); try { worksTick(dt); zmapTick(dt); } catch (e) { reportError(e); }
   if (ZD.up) { const u = ZD.up, busy = u.t > 0; u.g.userData.beam.material.opacity = 0.08 + Math.sin(NOW * 3) * 0.04; if (busy) u.t -= dt;
     u.ring.rotation.y += dt * (busy ? 9 : 0.8); u.core.material.emissiveIntensity = 1.3 + Math.sin(NOW * 4) * 0.4 + (busy ? 2 : 0); u.lt.intensity = 1.4 + Math.sin(NOW * 4) * 0.3 + (busy ? 2.5 : 0); }
   if (ZD.arrows) ZD.arrows.userData.mat.opacity = 0.85 + Math.sin(NOW * 3) * 0.15;
