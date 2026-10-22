@@ -1,13 +1,14 @@
 {
- "version": "1.2.34",
+ "version": "1.2.36",
  "notes": [
-  "FIXED: in co-op, a player who had been revived or respawned could never take damage again. Everyone takes damage now.",
-  "DOORS SIMPLIFIED: 4 doors in a chain - MAIN CORRIDOR, NORTH WING, UPGRADE ROOM (the gun upgrader) and UPSTAIRS (the bridge). Every other way between the areas is boarded up, so no door can be walked or jumped around, including the bridge and the balcony rails.",
-  "Buying is easier: you can buy a door or a perk from further away and from the side.",
-  "PERK ANIMATIONS last longer, and you can sprint while they play.",
-  "FIXED floating blood, mould and writing: decals now only go on real floors, walls and ceilings, and never hang over doorways, the atrium or the stairwells.",
-  "FOUR SURVIVORS with their own voices: \"DOC\" REYES, TANYA \"TANK\" BRIGGS, LEROY \"SMOKES\" DAWSON and PENNY \"SPARKS\" HOLLOWAY. Pick yours in the Zombies lobby. They talk at the start, each round, doors, the box, the upgrader, going down, reviving and more - and react to every perk they smoke or eat. In co-op you hear your teammates too. Subtitles on screen; voice lines can be turned off in the lobby."
+  "SOUND PASS ACROSS THE WHOLE GAME: real 3D sound - you can hear if a shot or footstep is in front, behind, above or below you. Walls and floors muffle sound.",
+  "Every map has its own acoustics: long echoing reverb in the hospital and the airport terminal, tight rooms in the killhouse, open air with echoes on outdoor maps. Far-away gunfire sounds distant.",
+  "Guns hit harder with a fuller low end. New bullet impact and ricochet sounds on walls, and a thud when you hit a body. A close explosion leaves your ears ringing; at low health the world sounds muffled.",
+  "Footsteps match the floor: tile, snow, grass, sand, wood and stairs. A cleaner master mix that doesn't distort.",
+  "Zombies have real voices now: moans, a screech when they swing and a gurgle when they die. The hospital hums, drips, creaks and has something screaming somewhere far off.",
+  "CO-OP AMMO IS SHARED: ammo dropped by zombies shows up for everyone, and whoever grabs it picks it up for the whole squad. Buying the Ammo Crate refills the whole squad too.",
+  "CO-OP SOUND: you now hear your teammates' gunshots (they were silent before), their footsteps, their grenade explosions and their punches."
  ],
- "sha256": "8e76f421cb09a67cb3869494805e2b4f74aa7c567a876ec4de8efce6bc8becf2",
+ "sha256": "f3e395475c206ddcd7bb745e4ea058e1165f2c4c8766ae75554aab50332021c3",
  "minApp": "1.0.0"
 }
