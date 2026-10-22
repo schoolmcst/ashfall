@@ -1,14 +1,13 @@
 {
- "version": "1.2.36",
+ "version": "1.2.37",
  "notes": [
-  "SOUND PASS ACROSS THE WHOLE GAME: real 3D sound - you can hear if a shot or footstep is in front, behind, above or below you. Walls and floors muffle sound.",
-  "Every map has its own acoustics: long echoing reverb in the hospital and the airport terminal, tight rooms in the killhouse, open air with echoes on outdoor maps. Far-away gunfire sounds distant.",
-  "Guns hit harder with a fuller low end. New bullet impact and ricochet sounds on walls, and a thud when you hit a body. A close explosion leaves your ears ringing; at low health the world sounds muffled.",
-  "Footsteps match the floor: tile, snow, grass, sand, wood and stairs. A cleaner master mix that doesn't distort.",
-  "Zombies have real voices now: moans, a screech when they swing and a gurgle when they die. The hospital hums, drips, creaks and has something screaming somewhere far off.",
-  "CO-OP AMMO IS SHARED: ammo dropped by zombies shows up for everyone, and whoever grabs it picks it up for the whole squad. Buying the Ammo Crate refills the whole squad too.",
-  "CO-OP SOUND: you now hear your teammates' gunshots (they were silent before), their footsteps, their grenade explosions and their punches."
+  "ZOMBIES STORY: THE GREEN CURE. A drug trial at Blackwell General went wrong: a painkiller called LAZARUS-9 got sold on the street as NIGHTSHADE, and everyone who took it came back. The weed is the only thing keeping the four survivors human.",
+  "7 CHAPTERS: LIGHTS OUT (find 3 fuses and get the power on), HAROLD'S BADGE (a keycard on a body in the ER), BURN THE STASH (3 Nightshade stashes), PATIENT ZERO (a huge glowing purple boss - kill him and take his blood), THE PHARMACY, THE GREEN CURE (cook the cure for 60 seconds while the horde attacks) and an EPILOGUE with a cliffhanger.",
+  "Finish the story and you get every perk, an upgraded gun and 5000 points.",
+  "12 audio tapes hidden around the hospital tell how it all happened. Tapes you find stay found in the lobby.",
+  "The four survivors talk to each other at the start of every chapter and every few rounds, with subtitles.",
+  "Your current objective is shown on screen, and the lobby lists all 7 chapters. In co-op everything is shared: fuses, items, the boss and the cooking."
  ],
- "sha256": "f3e395475c206ddcd7bb745e4ea058e1165f2c4c8766ae75554aab50332021c3",
+ "sha256": "713bd42df5b887d77873f4c1d0521681fa81402f13957184b440c3dae302a519",
  "minApp": "1.0.0"
 }
