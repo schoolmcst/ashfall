@@ -166,6 +166,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
       try { onKill(e, head, !!boom); } catch (err) { reportError(err); }
       sfx.kill(head);
     }
+    if (e.zombie) try { sfx.zgurgle(at(e.group.position.x, e.group.position.z, 14, e.group.position.y)); } catch (err) {}
     if (e.zombie && typeof ZC !== 'undefined' && ZC.on) zcKilled(e, by, head);
     try { matchBotKilled(e, by, head, boom); } catch (err) { reportError(err); }
     { const gx = e.group.position.x, gz = e.group.position.z, gy = groundAt(gx, gz, e.group.position.y + 0.3), coop = e.zombie && typeof zcInGame === 'function' && zcInGame();

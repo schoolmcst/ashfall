@@ -187,7 +187,7 @@ function zombThink(e, i, dt) {
     if (e.avoidT > 0) { e.avoidT -= dt; mx = -nz * e.avoidDir + nx * 0.3; mz = nx * e.avoidDir + nz * 0.3; }
     else if (gridClear(g.position.x, g.position.z, T.x, T.z, g.position.y, T.y)) { mx = nx + -nz * e.lurch * 0.3; mz = nz + nx * e.lurch * 0.3; }
     else { const nd = T.me ? navDir(g.position.x, g.position.z, g.position.y) : flowDir(flowField(T.x, T.z, T.y), g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
-    if (dist < 1.3 && up) { mx = mz = 0; if (!(e.stunT > 0)) e.atkCd -= dt; if (e.atkCd <= 0 && !(e.stunT > 0)) { e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.7, 1.1); } }
+    if (dist < 1.3 && up) { mx = mz = 0; if (!(e.stunT > 0)) e.atkCd -= dt; if (e.atkCd <= 0 && !(e.stunT > 0)) { if (Math.random() < 0.6) try { sfx.zscreech(at(g.position.x, g.position.z, 14, g.position.y)); } catch (err) {} e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.7, 1.1); } }
   }
   const ml = Math.hypot(mx, mz), slow = (e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.45 : 1;
   const sp = ml > 0.01 ? e.speed * slow * (e.stunT > 0 ? 0.3 : 1) : 0;
@@ -199,7 +199,7 @@ function zombThink(e, i, dt) {
   const want = ml > 0.01 && dist > 2 ? Math.atan2(mx, mz) : Math.atan2(dx, dz); let dy = want - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 6);
   e.chk -= dt; if (e.chk <= 0) { e.chk = 0.7; if (sp > 0 && Math.hypot(g.position.x - e.lastX, g.position.z - e.lastZ) < 0.35) { e.avoidT = 0.9; e.avoidDir = Math.random() < 0.5 ? 1 : -1; } e.lastX = g.position.x; e.lastZ = g.position.z; }
   if (e.stunT > 0) e.stunT -= dt;
-  if ((e.growlT -= dt) <= 0) { e.growlT = rnd(3, 8); try { const o = at(g.position.x, g.position.z, 16); tone(e.kind === 'run' ? rnd(120, 160) : rnd(70, 110), rnd(0.35, 0.7), 0.05 * o.vol, 'sawtooth', null, o); } catch (err) {} }
+  if ((e.growlT -= dt) <= 0) { e.growlT = rnd(3, 8); try { sfx.zgroan(at(g.position.x, g.position.z, 16, g.position.y), e.kind === 'run'); } catch (err) {} }
   animZombie(e, dt, sp);
 }
 function animZombie(e, dt, sp) {

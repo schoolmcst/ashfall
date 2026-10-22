@@ -327,6 +327,7 @@ function loadMap(id) {
   const L = map.layout; for (const k of ['spawn', 'hp', 'flags', 'sites']) LAYOUT[k] = L[k].map(p => Object.assign({}, p));
   MENU_VIEW = map.menu || { x: 0, z: 0, r: 12.5, y: 2.1 };
   try { realTexRepatch(); } catch (e) {}
+  try { audioMap(id); } catch (e) {}
   try { if (renderer.shadowMap) renderer.shadowMap.needsUpdate = true; } catch (e) {}
   try { anisNow = -1; applyAnisotropy(); } catch (e) {}   // new map textures get the TEXTURE FILTERING setting
   MAP_BUILD_MS = Math.round(performance.now() - t0);

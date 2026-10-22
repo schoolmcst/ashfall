@@ -130,7 +130,7 @@ function zcRead() {
     let e = ZC.prox.get(id);
     if (!e) e = zcMakeProxy(id, z);
     e.tx = netNum(z[1], -ARENA, ARENA); e.tz = netNum(z[2], -ARENA, ARENA); e.ty = netNum(z[3], -5, 20); e.tyaw = (+z[4] || 0) / 100;
-    if (z[6] && !(e.atkT > 0)) e.atkT = 0.75;
+    if (z[6] && !(e.atkT > 0)) { e.atkT = 0.75; if (Math.random() < 0.6) try { sfx.zscreech(at(e.group.position.x, e.group.position.z, 14, e.group.position.y)); } catch (err) {} }
     e.frac = netNum(z[7], 0, 100, 100) / 100; if (e.php === undefined || e.php > e.maxHp * e.frac + 1) e.php = e.maxHp * e.frac;
   }
   for (const [id, e] of ZC.prox) if (!ids.has(id) && !killed.has(id)) { ZC.prox.delete(id); const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1); scene.remove(e.group); }
@@ -231,7 +231,7 @@ function zcClientFrame(dt) {
     const sp = dt > 0 ? Math.min(6, Math.hypot(g.position.x - ox, g.position.z - oz) / dt) : 0;
     e.spS = lerp(e.spS || 0, sp, Math.min(1, dt * 6));
     if (e.atkT > 0) e.atkT -= dt;
-    if ((e.growlT -= dt) <= 0) { e.growlT = rnd(3, 8); try { const o = at(g.position.x, g.position.z, 16); tone(e.kind === 'run' ? rnd(120, 160) : rnd(70, 110), rnd(0.35, 0.7), 0.05 * o.vol, 'sawtooth', null, o); } catch (err) {} }
+    if ((e.growlT -= dt) <= 0) { e.growlT = rnd(3, 8); try { sfx.zgroan(at(g.position.x, g.position.z, 16, g.position.y), e.kind === 'run'); } catch (err) {} }
     animZombie(e, dt, e.spS);
   }
 }
@@ -247,7 +247,7 @@ function zcProxyDie(e, head) {
   const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1);
   const dd = { e, t: 0, boom: false, dx: 0, dz: 0, head, a: [rnd(0.5, 1.4), rnd(0.5, 1.4), rnd(-0.4, 0.4), rnd(-0.4, 0.4)] };
   if (S.ragdoll) { try { dd.rd = makeRagdoll(e, new THREE.Vector3(0, 0, 1), false, head); } catch (err) { dd.rd = null; } }
-  dying.push(dd); if (e.rig.flash) e.rig.flash.visible = false;
+  dying.push(dd); if (e.rig.flash) e.rig.flash.visible = false; try { sfx.zgurgle(at(e.group.position.x, e.group.position.z, 14, e.group.position.y)); } catch (err) {}
   chunks('blood', _v.set(e.group.position.x, 1.2, e.group.position.z), 8, 3, 0.6);
 }
 function zcMyKill(e, head, melee) {

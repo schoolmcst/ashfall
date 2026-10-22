@@ -106,7 +106,7 @@ function updatePlayer(dt) {
   const fov = lerp(baseFov + (sprint ? 5 : 0), w.adsFov * baseFov / 75, G.ads);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   animateViewmodel(dt, hs, sprint, bobOn);
-  listener.x = P.x; listener.z = P.z; listener.yaw = P.yaw;
+  listener.x = P.x; listener.z = P.z; listener.yaw = P.yaw; listener.y = P.y + P.eye; listener.fy = P.y;
   $('cross').style.opacity = 0.9 * (1 - G.ads);
   return { moving, sprint };
 }
@@ -224,8 +224,8 @@ function shoot(moving) {
     if (ud.barrel) damageBarrel(ud.barrel, w.dmg * fall);
     if (ud.enemy) {
       const head = !!ud.head, armour = ud.enemy.type === 'heavy' && !ud.enemy.pvp ? (w.vsHeavy || 1) : 1, killed = damageEnemy(ud.enemy, w.dmg * fall * armour * (head ? w.head : (ud.mult || 1)), head, _sdir);
-      anyHit = true; anyKill = anyKill || killed; anyHead = anyHead || head; hitEffects(h, true);
-    } else hitEffects(h, false);
+      anyHit = true; anyKill = anyKill || killed; anyHead = anyHead || head; hitEffects(h, true); if (p === 0) try { sfx.flesh(); } catch (err) {}
+    } else { hitEffects(h, false); if (p === 0 || p === 3) try { sfx.impact(at(h.point.x, h.point.z, 9, h.point.y - 1.1), Math.random() < 0.14); } catch (err) {} }
     if (!w.stealth && (w.pellets === 1 ? (!w.auto || (G.shots & 1)) : p < 3)) addTracer(_muz, h.point, 0.045, w.pellets > 1 ? 0.01 : 0.014);
   }
   statShot(anyHit);
