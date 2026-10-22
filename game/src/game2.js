@@ -321,7 +321,7 @@ function die() {
   if (M.over) return;
   if (M.mode === 'zomb' && zpSelfRevive()) { G.state = 'playing'; return; }
   if (M.mode === 'zomb' && zcInGame()) { zcDown(); return; }
-  if (M.mode === 'zomb') { finishDeath(); return; }
+  if (M.mode === 'zomb') { try { zvSay('down'); } catch (e) {} finishDeath(); return; }
   if (inMatch() && !S.deathCam) { G.state = 'deathcam'; afterDeathInMatch(); return; }
   if (S.deathCam && G.state === 'playing') { startDeathCam(); return; }
   finishDeath();

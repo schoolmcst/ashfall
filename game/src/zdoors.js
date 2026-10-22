@@ -8,26 +8,29 @@
 const ZOMB_MAP = 'blackwell', ZU_COST = 5000;
 // ax 'x': a doorway along x at z = c, from x = a to b; ax 'z': along z at x = c
 const ZDOORS = [
-  { name: 'WEST LOBBY DOOR', cost: 750, ax: 'z', c: -8, a: 24.6, b: 26.4, y: 0, h: 2.4 },
-  { name: 'EAST LOBBY DOOR', cost: 750, ax: 'z', c: 8, a: 24.6, b: 26.4, y: 0, h: 2.4 },
   { name: 'MAIN CORRIDOR', cost: 1250, ax: 'x', c: 14, a: -7.875, b: 7.875, y: 0, h: 3.9, wide: true, path: true },
-  { name: 'WEST YARD', cost: 1000, ax: 'z', c: -12, a: 34.25, b: 44, y: 0, h: 3, wide: true },
-  { name: 'EAST YARD', cost: 1000, ax: 'z', c: 12, a: 34.25, b: 44, y: 0, h: 3, wide: true },
   { name: 'NORTH WING', cost: 1500, ax: 'x', c: -10, a: -10, b: 10, y: 0, h: 3.85, wide: true, path: true },
-  { name: 'WEST ATRIUM DOOR', cost: 1000, ax: 'z', c: -10, a: -5.8, b: -4.2, y: 0, h: 2.4 },
-  { name: 'EAST ATRIUM DOOR', cost: 1000, ax: 'z', c: 10, a: -5.8, b: -4.2, y: 0, h: 2.4 },
-  { name: 'WEST STAIRWELL', cost: 1000, ax: 'x', c: 10, a: -37.65, b: -36.35, y: 0, h: 2.4 },
-  { name: 'EAST STAIRWELL', cost: 1000, ax: 'x', c: 10, a: 36.35, b: 37.65, y: 0, h: 2.4 },
-  { name: 'BRIDGE · SOUTH END', cost: 1250, ax: 'x', c: 9.55, a: -1.3, b: 1.3, y: 4.2, h: 2.4 },
-  { name: 'BRIDGE · NORTH END', cost: 1250, ax: 'x', c: -9.55, a: -1.3, b: 1.3, y: 4.2, h: 2.4 },
-  ...[[-28, 0], [-16, 0], [16, 0], [28, 0], [-28, 4.2], [-16, 4.2], [16, 4.2], [28, 4.2]].map(([x, y]) => ({ name: y ? 'UPSTAIRS WARD DOOR' : 'WARD DOOR', cost: 1000, ax: 'x', c: 0, a: x - 0.7, b: x + 0.7, y, h: 2.4 })),
-  // the gun upgrader's room (the north lobby): the end of the purple arrows
   { name: 'UPGRADE ROOM', cost: 2000, ax: 'x', c: -14, a: -7.875, b: 7.875, y: 0, h: 3.9, wide: true, path: true },
-  { name: 'UPGRADE ROOM · WEST DOOR', cost: 1500, ax: 'z', c: -8, a: -26.4, b: -24.6, y: 0, h: 2.4 },
-  { name: 'UPGRADE ROOM · EAST DOOR', cost: 1500, ax: 'z', c: 8, a: -26.4, b: -24.6, y: 0, h: 2.4 },
+  { name: 'UPSTAIRS', cost: 1500, ax: 'x', c: 9.55, a: -1.3, b: 1.3, y: 4.2, h: 2.4 },
 ];
-// the outside strips along the east and west walls are closed for good in zombies (no way round to the north)
-const ZWALLS = [{ ax: 'x', c: 0, a: 40.2, b: 44, y: 0, h: 3.2 }, { ax: 'x', c: 0, a: -44, b: -40.2, y: 0, h: 3.2 }, { ax: 'x', c: -34, a: -2.4, b: 2.4, y: 0, h: 3.3 }];
+// boarded for good in zombies: every other way between the zones, so no paid door can be walked around
+//   start (south lobby + ambulance bay) | MAIN CORRIDOR | south ground floor + atrium | NORTH WING | north ground floor
+//   | UPGRADE ROOM | north lobby (the upgrader); the whole upper floor is behind UPSTAIRS (the bridge's south end)
+const ZWALLS = [
+  { ax: 'x', c: 0, a: 40.2, b: 44, y: 0, h: 3.2 }, { ax: 'x', c: 0, a: -44, b: -40.2, y: 0, h: 3.2 },   // outside strips: no way round north
+  { ax: 'x', c: -34, a: -2.4, b: 2.4, y: 0, h: 3.3 },                                                     // north main entrance
+  { ax: 'z', c: -8, a: 24.6, b: 26.4, y: 0, h: 2.4 }, { ax: 'z', c: 8, a: 24.6, b: 26.4, y: 0, h: 2.4 },   // south lobby side doors
+  { ax: 'z', c: -12, a: 34.25, b: 44, y: 0, h: 3, wide: true }, { ax: 'z', c: 12, a: 34.25, b: 44, y: 0, h: 3, wide: true },   // the yards
+  { ax: 'z', c: -10, a: -5.8, b: -4.2, y: 0, h: 2.4 }, { ax: 'z', c: 10, a: -5.8, b: -4.2, y: 0, h: 2.4 }, // atrium side doors (north half)
+  ...[-28, -16, 16, 28].map(x => ({ ax: 'x', c: 0, a: x - 0.7, b: x + 0.7, y: 0, h: 2.4 })),              // ward doors between the halves
+  ...[[-37, 10], [37, 10], [-37, -10], [37, -10]].map(([x, z]) => ({ ax: 'x', c: z, a: x - 0.65, b: x + 0.65, y: 0, h: 2.4 })),   // stairwells
+  { ax: 'z', c: -8, a: -26.4, b: -24.6, y: 0, h: 2.4 }, { ax: 'z', c: 8, a: -26.4, b: -24.6, y: 0, h: 2.4 }, // north lobby side doors
+  { ax: 'x', c: -9.55, a: -1.3, b: 1.3, y: 4.2, h: 2.4 },                                                  // the bridge's north end
+  // invisible: you cannot jump off the bridge or over the balcony rails to get round the bridge doors
+  { ax: 'z', c: -1.45, a: -10, b: -1.15, y: 4.2, h: 3.6, ghost: true }, { ax: 'z', c: -1.45, a: 1.15, b: 10, y: 4.2, h: 3.6, ghost: true },
+  { ax: 'z', c: 1.45, a: -10, b: -1.15, y: 4.2, h: 3.6, ghost: true }, { ax: 'z', c: 1.45, a: 1.15, b: 10, y: 4.2, h: 3.6, ghost: true },
+  ...[10.05, -10.05].flatMap(z => [{ ax: 'x', c: z, a: -10, b: -1.6, y: 4.2, h: 3.6, ghost: true }, { ax: 'x', c: z, a: 1.6, b: 10, y: 4.2, h: 3.6, ghost: true }]),
+];
 // purple arrows on the floor from the start to the gun upgrader
 const ZU_PATH = [[4.5, 31], [4.5, 27.5], [4.5, 24], [4.5, 20], [2.5, 16.4], [0.7, 12], [0.7, 9], [0.7, 5], [0.7, 2], [0.7, -1.5], [0.7, -4.5], [0.7, -8], [0.7, -12], [-1.5, -16.5], [-3.2, -20], [-4.6, -23.6], [-5.6, -26.2]];
 const ZU_SPOT = { x: -6.9, z: -27, y: 0 };
@@ -85,13 +88,14 @@ function zdArrows() {
 function zdAdd(d, perm) {
   const q = zdGeom(d), box = mkBox(q.x, q.z, q.w, q.dp, d.h, { y: d.y, walk: false });
   boxes.push(box);
+  if (d.ghost) return { d, box, proxy: null, g: null, perm, open: false };
   const proxy = new THREE.Mesh(new THREE.BoxGeometry(q.w, d.h, q.dp), proxyMat); proxy.position.set(q.x, d.y + d.h / 2, q.z); proxy.visible = false; proxy.userData.ray = true; scene.add(proxy); proxy.updateMatrixWorld(); wallMeshes.push(proxy);
-  return { d, box, proxy, g: zdVisual(d, perm), perm, open: false };
+  return { d, box, proxy, g: d.ghost ? null : zdVisual(d, perm), perm, open: false };
 }
 function zdRemove(o) {
   const i = boxes.indexOf(o.box); if (i >= 0) boxes.splice(i, 1);
-  const j = wallMeshes.indexOf(o.proxy); if (j >= 0) wallMeshes.splice(j, 1);
-  scene.remove(o.proxy); if (o.g) scene.remove(o.g);
+  if (o.proxy) { const j = wallMeshes.indexOf(o.proxy); if (j >= 0) wallMeshes.splice(j, 1); scene.remove(o.proxy); }
+  if (o.g) scene.remove(o.g);
 }
 // a new zombies game: every door closed again
 function zdInit() {
@@ -146,13 +150,13 @@ function zdDist(d) {
   return Math.abs((P.y || 0) - d.y) < 1.6 ? Math.hypot(du, v - d.c) : 99;
 }
 function zdPrompt() {
-  let best = null, bd = 1.9;
+  let best = null, bd = 2.3;
   for (const o of ZD.list) if (!o.perm && !o.open) { const dd = zdDist(o.d); if (dd < bd) { bd = dd; best = o; } }
   return best;
 }
 function zdBuy(o) {
   if (G.points < o.d.cost) return;
-  G.points -= o.d.cost; zdOpen(o.d.id, true);
+  G.points -= o.d.cost; zdOpen(o.d.id, true); zvSay('door', 0.8);
   showBanner(o.d.name, 'opened'); try { sfx.ui(); } catch (e) {}
 }
 
@@ -188,7 +192,7 @@ function zuBuy() {
   if (Z.up.has(w.def.id)) { showMsg('THIS GUN IS ALREADY UPGRADED'); return; }
   if (G.points < ZU_COST) return;
   G.points -= ZU_COST; Z.up.add(w.def.id); ZD.up.t = 1.6;
-  zombEquip(G.cur);
+  zombEquip(G.cur); setTimeout(() => zvSay('upgrade'), 1400);
   showBanner(zuName(w.def.name), 'UPGRADED · double damage · bigger magazine'); try { sfx.streak(); tone(220, 0.6, 0.12, 'sawtooth'); tone(330, 0.8, 0.08, 'triangle'); } catch (e) {}
 }
 // after every re-equip: upgraded guns get their stats and the purple glow (on a copy of the materials, put back later:

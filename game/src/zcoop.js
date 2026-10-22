@@ -76,6 +76,7 @@ function zcRead() {
       if (R.dn && !wasDn) feedLine(`<b>${R.n}</b> <span class="ft">IS DOWN</span>`);
       if (!R.a && wasA && wasDn) feedLine(`<b>${R.n}</b> <span class="ft">BLED OUT</span>`);
     }
+    if (R.inGame) zvRemote(R);
     // revives aimed at me
     if (Array.isArray(pr.rv)) for (const v of pr.rv) { if (!Array.isArray(v) || (+v[1] || 0) <= R.seenRv) continue; R.seenRv = +v[1] || 0; if (v[0] === ZC.me && ZC.down && !ZC.dead) zcRevived(R); }
     // doors someone else bought (the host collects them; everyone follows the host's list)
@@ -101,7 +102,7 @@ function zcRead() {
   if (ZC.fresh) { ZC.fresh = false; ZC.seenK = zcMaxSeq(H.zk, 4); ZC.seenA = zcMaxSeq(H.zt, 2); }
   const zr = Math.max(ZC.round, +H.zr | 0);
   if (zr > ZC.round) zcClientRound(zr);
-  if (ZC.active && !H.za && zr === ZC.round && zr > 0) showBanner(`ROUND ${zr} SURVIVED`, 'next round in 8 seconds');
+  if (ZC.active && !H.za && zr === ZC.round && zr > 0) { showBanner(`ROUND ${zr} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.6); }
   if (Array.isArray(H.zd)) for (const id of H.zd) if (!ZD.open.has(+id)) zdOpen(+id, false);
   ZC.round = zr; ZC.left = +H.zl | 0; ZC.active = !!H.za; Z.round = zr; G.wave = zr;
   // kills (mine get the points)
@@ -142,7 +143,7 @@ function zcPublish() {
   for (const [zid, h] of ZC.pend) { ZC.hseq++; ZC.hs.push([zid, Math.round(h.d), h.h ? 1 : 0, ZC.hseq, h.b ? 1 : 0, h.m ? 1 : 0]); }
   ZC.pend.clear(); while (ZC.hs.length > 24) ZC.hs.shift();
   const o = { zc: 1, n: NET.nick, g: inG ? ZC.gid : 0, x: r2(P.x), y: r2(P.y || 0), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch),
-    a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv, od: inG ? [...ZD.mine] : [] };
+    a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv, od: inG ? [...ZD.mine] : [], ch: ZL.char, vl: ZV.out };
   if (zcHost()) {
     Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, zr: Z.round, zd: inG ? [...ZD.open] : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
     o.zs = inG ? enemies.filter(e => e.zombie && !e.proxy).map(e => { const g = e.group.position; return [e.zid, r2(g.x), r2(g.z), r2(g.y), Math.round(e.group.rotation.y * 100), e.kind === 'run' ? 2 : e.kind === 'jog' ? 1 : 0, e.atkT > 0 ? 1 : 0, Math.round(clamp(e.hp / e.maxHp, 0, 1) * 100)]; }) : [];
@@ -256,7 +257,7 @@ function zcMyKill(e, head, melee) {
 function zcClientRound(r) {
   Z.round = r; G.wave = r; G.health = G.maxHp;
   if (ZC.dead) zcRespawn();
-  showBanner(`ROUND ${r}`, r === 1 ? 'here they come' : r % 5 === 0 ? 'they are getting faster' : 'survive together');
+  showBanner(`ROUND ${r}`, r === 1 ? 'here they come' : r % 5 === 0 ? 'they are getting faster' : 'survive together'); if (r > 1) setTimeout(() => zvSay('round', 0.6), 1200);
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
   zombHud(true);
 }
@@ -266,11 +267,12 @@ function zcClearProxies() { for (const e of ZC.prox.values()) { const i = enemie
 function zcDown() {
   try { zpLose(); } catch (e) {}
   ZC.down = true; ZC.downT = ZC_DOWN; G.health = 0; mouseDown = false; mouseAds = false;
+  zvSay('down');
   G.state = 'zdown'; showCenter('YOU ARE DOWN', 'a teammate can revive you · hold on'); try { sfx.hurt(); } catch (e) {}
 }
 function zcRevived(R) {
   ZC.down = false; G.state = 'playing'; G.health = G.maxHp; G.spawnProt = 1.5; hideCenter(); vig.style.opacity = 0;
-  showBanner('REVIVED', R ? 'by ' + R.n : ''); try { sfx.streak(); } catch (e) {}
+  showBanner('REVIVED', R ? 'by ' + R.n : ''); try { sfx.streak(); } catch (e) {} setTimeout(() => zvSay('revived'), 700);
   feedLine(`<b>${R ? R.n : '?'}</b> <span class="fw">REVIVED</span> <b>YOU</b>`);
 }
 function zcRespawn() {
@@ -302,7 +304,7 @@ function zcReviveTick(dt) {
   if (kb('use') || pad.use) {
     if (ZC.revWho !== best.peer) { ZC.revWho = best.peer; ZC.revT = 0; }
     ZC.revT += dt;
-    if (ZC.revT >= (zpHas('revive') ? ZC.revNeed / 2 : ZC.revNeed)) { ZC.revT = 0; ZC.rvseq++; ZC.rv.push([best.peer, ZC.rvseq]); while (ZC.rv.length > 6) ZC.rv.shift(); feedLine(`<b>YOU</b> <span class="fw">REVIVED</span> <b>${best.n}</b>`); G.points += 50; return ''; }
+    if (ZC.revT >= (zpHas('revive') ? ZC.revNeed / 2 : ZC.revNeed)) { ZC.revT = 0; ZC.rvseq++; ZC.rv.push([best.peer, ZC.rvseq]); while (ZC.rv.length > 6) ZC.rv.shift(); feedLine(`<b>YOU</b> <span class="fw">REVIVED</span> <b>${best.n}</b>`); G.points += 50; zvSay('reviving'); return ''; }
     return `REVIVING ${best.n} · ${Math.round(ZC.revT / (zpHas('revive') ? ZC.revNeed / 2 : ZC.revNeed) * 100)}%`;
   }
   ZC.revT = 0;
@@ -334,7 +336,7 @@ function zcTeamHud(force) {
   let t = $('zTeam');
   if (!t) { t = document.createElement('div'); t.id = 'zTeam'; ($('hud') || document.body).appendChild(t); const st = document.createElement('style'); st.textContent = `#zTeam{position:absolute;left:28px;bottom:262px;pointer-events:none;font:700 13px var(--font,system-ui);letter-spacing:.1em;color:#d8e8c8;text-shadow:0 1px 4px #000;line-height:1.6}#zTeam .dn{color:#ff6a5a}#zTeam .out{opacity:.45}`; document.head.appendChild(st); }
   const on = zcInGame() && G.state !== 'dead';
-  const html = on ? [...ZC.rem.values()].filter(R => R.inGame).map(R => `<div class="${R.dn ? 'dn' : !R.a ? 'out' : ''}">${R.n} · ${R.pts.toLocaleString()}${R.dn ? ' · DOWN' : !R.a ? ' · OUT' : ''}</div>`).join('') : '';
+  const html = on ? [...ZC.rem.values()].filter(R => R.inGame).map(R => `<div class="${R.dn ? 'dn' : !R.a ? 'out' : ''}">${R.n} <span style="color:${zvChar(R.pr && R.pr.ch).col}">${zvChar(R.pr && R.pr.ch).name}</span> · ${R.pts.toLocaleString()}${R.dn ? ' · DOWN' : !R.a ? ' · OUT' : ''}</div>`).join('') : '';
   if (force || t._h !== html) { t._h = html; t.innerHTML = html; }
 }
 

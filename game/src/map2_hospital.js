@@ -165,7 +165,10 @@ function bodyBag(x, z, y = 0, ry = 0, blood = true) {
 function hospGore() {
   goreMaterials();
   const r = makeRng(4242), H = HOSP.H, inBox = (x, z, y0, y1) => boxes.some(b => b.bot <= y0 && b.top >= y1 && x > b.minx && x < b.maxx && z > b.minz && z < b.maxz);
-  const floorAt = y => { for (let t = 0; t < 40; t++) { const x = (r() - 0.5) * 79, z = (r() - 0.5) * 67; if (y > 1 && Math.abs(x) < 10 && Math.abs(z) < 10 && Math.abs(x) > 1.3) continue; if (inBox(x, z, y + 0.05, y + 0.4)) continue; return [x, z]; } return null; };
+  // a spot with real floor under it (upstairs: a slab; no decals over the atrium or the stairwells) and nothing standing on it
+  const hasFloor = (x, z, y) => y < 0.5 || boxes.some(b => b.walk && Math.abs(b.top - y) < 0.06 && x > b.minx + 0.15 && x < b.maxx - 0.15 && z > b.minz + 0.15 && z < b.maxz - 0.15);
+  const hasCeil = (x, z, cy) => boxes.some(b => Math.abs(b.bot - cy) < 0.12 && x > b.minx + 0.2 && x < b.maxx - 0.2 && z > b.minz + 0.2 && z < b.maxz - 0.2);
+  const floorAt = y => { for (let t = 0; t < 40; t++) { const x = (r() - 0.5) * 79, z = (r() - 0.5) * 67; if (!hasFloor(x, z, y) || !hasFloor(x + 0.6, z + 0.6, y) || !hasFloor(x - 0.6, z - 0.6, y)) continue; if (inBox(x, z, y + 0.05, y + 0.4)) continue; return [x, z]; } return null; };
   const floorDecal = (key, x, z, y, s, rot = r() * TAU, sx = 1) => batchAdd(key, new THREE.PlaneGeometry(s * sx, s), mat4(x, y + 0.035 + r() * 0.004, z, -Math.PI / 2, 0, rot), false);
   // floors: pools, splatter, grime, puddles on both floors
   for (const y of [0, H]) {
@@ -173,7 +176,7 @@ function hospGore() {
     for (let i = 0; i < 90; i++) { const p = floorAt(y); if (p) floorDecal('goreGrime', p[0], p[1], y, 2 + r() * 3.5); }
     for (let i = 0; i < 12; i++) { const p = floorAt(y); if (p) floorDecal('goreWater', p[0], p[1], y, 1.2 + r() * 1.8); }
     // drag trails down the corridors
-    for (let i = 0; i < 26; i++) { const s = r() < 0.5 ? 1 : -1, zc = s * (i % 2 ? 12 + (r() - 0.5) * 2 : 25.5 + (r() - 0.5) * 1.2), xc = (r() - 0.5) * 70; if (y > 1 && Math.abs(xc) < 10 && Math.abs(zc) < 14) continue; floorDecal('goreDrag', xc, zc, y, 0.9, Math.PI / 2 + (r() < 0.5 ? 0 : Math.PI) + (r() - 0.5) * 0.2, 4 + r() * 3); }
+    for (let i = 0; i < 26; i++) { const s = r() < 0.5 ? 1 : -1, zc = s * (i % 2 ? 12 + (r() - 0.5) * 2 : 25.5 + (r() - 0.5) * 1.2), xc = (r() - 0.5) * 70; if (y > 1 && Math.abs(xc) < 10 && Math.abs(zc) < 14) continue; if (!hasFloor(xc - 2.5, zc, y) || !hasFloor(xc + 2.5, zc, y)) continue; floorDecal('goreDrag', xc, zc, y, 0.9, Math.PI / 2 + (r() < 0.5 ? 0 : Math.PI) + (r() - 0.5) * 0.2, 4 + r() * 3); }
   }
   // walls: walk out from random floor spots to the nearest wall and decorate its face
   const D4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
@@ -181,21 +184,24 @@ function hospGore() {
     const p = floorAt(y); if (!p) return null; const d = D4[(r() * 4) | 0];
     for (let t = 0.2; t < 5; t += 0.1) { const x = p[0] + d[0] * t, z = p[1] + d[1] * t;
       const b = boxes.find(b => b.bot <= y + 0.3 && b.top >= y + 2.3 && x > b.minx && x < b.maxx && z > b.minz && z < b.maxz && !b.walk);
-      if (b) { if (Math.min(b.maxx - b.minx, b.maxz - b.minz) > 0.7) return null; const fx = d[0] ? (d[0] > 0 ? b.minx - 0.012 : b.maxx + 0.012) : x, fz = d[1] ? (d[1] > 0 ? b.minz - 0.012 : b.maxz + 0.012) : z; return { x: fx, z: fz, ry: d[0] ? (d[0] > 0 ? -Math.PI / 2 : Math.PI / 2) : (d[1] > 0 ? Math.PI : 0) }; }
+      if (b) { if (Math.min(b.maxx - b.minx, b.maxz - b.minz) > 0.7) return null; const lo = d[0] ? b.minz : b.minx, hi = d[0] ? b.maxz : b.maxx, along = d[0] ? z : x; const fx = d[0] ? (d[0] > 0 ? b.minx - 0.012 : b.maxx + 0.012) : x, fz = d[1] ? (d[1] > 0 ? b.minz - 0.012 : b.maxz + 0.012) : z; return { x: fx, z: fz, ry: d[0] ? (d[0] > 0 ? -Math.PI / 2 : Math.PI / 2) : (d[1] > 0 ? Math.PI : 0), lo, hi, along, alongX: !d[0], bot: b.bot, top: b.top }; }
     } return null; };
   for (const y of [0, H]) {
-    for (let i = 0; i < 320; i++) { const w = wallSpot(y); if (!w) continue; const k = r(), key = k < 0.35 ? 'goreSplat' : k < 0.6 ? 'goreHand' : k < 0.85 ? 'goreGrime' : 'gorePool', s = key === 'goreGrime' ? 2 + r() * 2.2 : 1.0 + r() * 1.4;
-      batchAdd(key, new THREE.PlaneGeometry(s, s), mat4(w.x, y + (key === 'goreGrime' ? 0.8 + r() * 2 : 0.7 + r() * 1.1), w.z, 0, w.ry, key === 'goreHand' ? 0 : r() * TAU), false); }
-    for (let i = 0; i < 8; i++) { const w = wallSpot(y); if (w) goreWords(w.x, y + 1.6 + r() * 0.5, w.z, w.ry, (i + (y ? 3 : 0)) % 6); }
+    // a decal must sit wholly on its wall piece: shrink it to fit and keep it inside the piece's ends, floor and top
+    const fit = (w, s, cy) => { const span = w.hi - w.lo - 0.1; if (span < 0.5) return null; s = Math.min(s, span, (w.top - w.bot) - 0.1); const c = clamp(w.along, w.lo + 0.05 + s / 2, w.hi - 0.05 - s / 2); cy = clamp(cy, w.bot + s / 2 + 0.05, w.top - s / 2 - 0.05); return { s, c, cy, x: w.alongX ? c : w.x, z: w.alongX ? w.z : c }; };
+    for (let i = 0; i < 320; i++) { const w = wallSpot(y); if (!w) continue; const k = r(), key = k < 0.35 ? 'goreSplat' : k < 0.6 ? 'goreHand' : k < 0.85 ? 'goreGrime' : 'gorePool';
+      const f = fit(w, key === 'goreGrime' ? 2 + r() * 2.2 : 1.0 + r() * 1.4, y + (key === 'goreGrime' ? 0.8 + r() * 2 : 0.7 + r() * 1.1)); if (!f) continue;
+      batchAdd(key, new THREE.PlaneGeometry(f.s, f.s), mat4(f.x, f.cy, f.z, 0, w.ry, key === 'goreHand' ? 0 : r() * TAU), false); }
+    for (let i = 0; i < 8; i++) { const w = wallSpot(y); if (!w || w.hi - w.lo < 2.7) continue; const f = fit(w, 2.4, y + 1.7); if (f) goreWords(f.x, y + 1.6 + r() * 0.4, f.z, w.ry, (i + (y ? 3 : 0)) % 6); }
     // mould on the ceiling
-    for (let i = 0; i < 26; i++) { const p = floorAt(y); if (p) batchAdd('goreGrime', new THREE.PlaneGeometry(2 + r() * 2, 2 + r() * 2), mat4(p[0], y + (y ? H - 0.05 : H - 0.28), p[1], Math.PI / 2, 0, r() * TAU), false); }
+    for (let i = 0; i < 26; i++) { const p = floorAt(y); if (p && hasCeil(p[0], p[1], y ? 2 * H : H - 0.25)) batchAdd('goreGrime', new THREE.PlaneGeometry(2 + r() * 2, 2 + r() * 2), mat4(p[0], y + (y ? H - 0.05 : H - 0.28), p[1], Math.PI / 2, 0, r() * TAU), false); }
   }
   // the big messages people see first
   goreWords(-7.86, 2.1, 20, Math.PI / 2, 0, 3.2); goreWords(7.86, 2.1, -20, -Math.PI / 2, 1, 3.6); goreWords(-20, 2.0, 10.14, 0, 2, 2.6); goreWords(20, 2.0, -10.14, Math.PI, 3, 2.6);
   // body bags, debris, fallen ceiling tiles
   for (const [x, z, y, ry] of [[-3, 30, 0, 0.3], [5.5, -29, 0, 1.4], [-24, 12.4, 0, 1.6], [27, -12, 0, 1.5], [16, -6.5, 0, 0.2], [27.5, -2.5, 0, 1.6], [30.5, -2.5, 0, 1.5], [-30, 25.5, 0, 1.6], [12, 12, H, 1.55], [-26, -12.5, H, 1.6], [-16, 6, H, 0.4], [33, 20, 0, 0.1]]) bodyBag(x, z, y, ry);
   for (const y of [0, H]) for (let i = 0; i < 80; i++) { const p = floorAt(y); if (p) batchAdd(i % 4 ? 'paintWhite' : 'cloth3', new THREE.PlaneGeometry(0.21, 0.3), mat4(p[0], y + 0.04, p[1], -Math.PI / 2, 0, r() * TAU), false); }
-  for (const [x, z, y] of [[-14, 12, 0], [22, 12.5, 0], [-31, -12, 0], [6, 25.5, 0], [-18, -25.5, 0], [30, 12, H], [-12, -12, H], [18, 25.5, H]]) { const top = y + H - (y ? 0.03 : 0.27); B('hospCeil', 1.2, 0.03, 0.6, x, top - 0.6, z, 0.9, r(), 0.3, false); B('hospCeil', 1.2, 0.02, 0.6, x + 0.6, y + 0.05, z + 0.3, 0, r() * 3, 0, false); B('steel', 0.03, 0.9, 0.03, x - 0.5, top - 0.45, z, 0.4, 0, 0.3, false); }
+  for (const [x, z, y] of [[-14, 12, 0], [22, 12.5, 0], [-31, -12, 0], [6, 25.5, 0], [-18, -25.5, 0], [30, 12, H], [-12, -12, H], [18, 25.5, H]]) { if (!hasFloor(x, z, y)) continue; B('hospCeil', 1.2, 0.02, 0.6, x + 0.6, y + 0.03, z + 0.3, 0, r() * 3, 0, false); B('hospCeil', 0.6, 0.02, 0.6, x - 0.3, y + 0.04, z - 0.4, 0, r() * 3, 0, false); const top = y + H - (y ? 0.03 : 0.27); B('dark', 1.2, 0.04, 0.6, x, top - 0.02, z, 0, 0, 0, false); }
   // tipped-over furniture in the corridors
   for (const [x, z, y, ry] of [[-9, 12.6, 0, 0.4], [34, -13.2, 0, 0], [-22, 26, H, 1.2], [14, -25.9, 0, 0.1]]) { B('steel', 1.9, 0.62, 0.05, x, y + 0.31, z, 0, ry, 0); B('cloth1', 1.8, 0.5, 0.08, x, y + 0.3, z + 0.08, 0, ry, 0, false); }
   for (const [x, z, y] of [[3, 12.5, 0], [-36, 25, 0], [24, -11.5, H], [-6, -26, 0]]) { B('dark', 0.5, 0.45, 0.05, x, y + 0.03, z, Math.PI / 2, r() * 3, 0, false); B('dark', 0.5, 0.05, 0.45, x + 0.2, y + 0.25, z, 0, r() * 3, 1.2, false); }

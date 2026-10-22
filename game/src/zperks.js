@@ -49,7 +49,7 @@ function zpBuild() { ZP.machines = ZPERKS.map(zpMachine); }
 function zpClear() { for (const m of ZP.machines) zdRemove(m); ZP.machines = []; zpReset(); }
 function zpReset() { ZP.have.clear(); zpEndAnim(); if (typeof M !== 'undefined' && M && M.mode === 'zomb') { G.maxHp = 100; if (G.health > 100) G.health = 100; } zpHud(true); }
 function zpNear() {
-  for (const m of ZP.machines) { const s = m.p.at, fx = Math.round(Math.sin(s.q * Math.PI / 2)), fz = Math.round(Math.cos(s.q * Math.PI / 2)); if (Math.hypot(P.x - (s.x + fx * 0.9), P.z - (s.z + fz * 0.9)) < 1.3 && Math.abs((P.y || 0) - s.y) < 1.5) return m; }
+  for (const m of ZP.machines) { const s = m.p.at, fx = Math.round(Math.sin(s.q * Math.PI / 2)), fz = Math.round(Math.cos(s.q * Math.PI / 2)), dx = P.x - s.x, dz = P.z - s.z; if (Math.hypot(dx, dz) < 2.6 && dx * fx + dz * fz > 0.2 && Math.abs((P.y || 0) - s.y) < 1.5) return m; }
   return null;
 }
 function zpPrompt(m, use) {
@@ -61,6 +61,7 @@ function zpPrompt(m, use) {
 function zpBuy(p) {
   G.points -= p.cost; ZP.have.add(p.id); zpApply();
   zpStartAnim(p);
+  setTimeout(() => zvSay(p.anim), ({ bowl: 2.8, joint: 2.4, edible: 2.4 }[p.anim] || 2.5) * 1500);
   showBanner(p.name, p.desc); zpHud(true);
 }
 // stats that come from perks (called after any re-equip too)
@@ -127,7 +128,7 @@ const ZP_TRACKS = {
 function zpGlass(col) { return zpMat(col, { transparent: true, opacity: 0.72, roughness: 0.05, metalness: 0.1, emissive: new THREE.Color(col).multiplyScalar(0.12) }); }
 function zpStartAnim(p) {
   zpEndAnim();
-  const tr = ZP_TRACKS[p.anim], root = new THREE.Group(), R = zpHand(1, p.anim === 'edible' ? 0.75 : 1.0, p.anim === 'joint' ? 1.1 : 0.7), A = { t: 0, dur: tr.dur, root, R, p, puffs: [], sparks: [], tr };
+  const ZK = 1.5, tr = ZP_TRACKS[p.anim], root = new THREE.Group(), R = zpHand(1, p.anim === 'edible' ? 0.75 : 1.0, p.anim === 'joint' ? 1.1 : 0.7), A = { t: 0, k: ZK, dur: tr.dur, root, R, p, puffs: [], sparks: [], tr };   // ZK: everything plays half again as slow
   root.add(R);
   if (p.anim === 'bowl') {
     // spoon pipe: bowl, neck, stem and mouthpiece, swirled glass; lighter in the left hand
@@ -172,16 +173,16 @@ function zpStartAnim(p) {
   }
   vmScene.add(root);
   const gun = gunObjs[G.cur]; if (gun) gun.visible = false;
-  G.swapT = Math.max(G.swapT, tr.dur); G.reloading = false; mouseAds = false;
+  G.swapT = Math.max(G.swapT, tr.dur * ZK); G.reloading = false; mouseAds = false;
   A.cough = p.anim === 'bowl' && Math.random() < 0.5;
   ZP.anim = A;
   try {
-    if (p.anim === 'edible') { for (const t of [700, 1300, 1900]) setTimeout(() => { tone(220, 0.05, 0.05, 'square'); tone(160, 0.07, 0.04, 'triangle'); }, t); }
+    if (p.anim === 'edible') { for (const t of [700, 1300, 1900].map(v => v * ZK)) setTimeout(() => { tone(220, 0.05, 0.05, 'square'); tone(160, 0.07, 0.04, 'triangle'); }, t); }
     else {
-      if (p.anim === 'bowl') { setTimeout(() => { tone(1800, 0.03, 0.04, 'square'); burst(0.08, 3000, 0.05, 'highpass'); }, 800); }
-      setTimeout(() => burst(1.0, 600, 0.06, 'lowpass'), p.anim === 'bowl' ? 900 : 650);
-      setTimeout(() => burst(1.6, 380, 0.09, 'lowpass'), p.anim === 'bowl' ? 2250 : 1800);
-      if (A.cough) for (const t of [3000, 3250, 3480]) setTimeout(() => burst(0.14, 900, 0.12, 'bandpass'), t);
+      if (p.anim === 'bowl') { setTimeout(() => { tone(1800, 0.03, 0.04, 'square'); burst(0.08, 3000, 0.05, 'highpass'); }, 800 * ZK); }
+      setTimeout(() => burst(1.0 * ZK, 600, 0.06, 'lowpass'), (p.anim === 'bowl' ? 900 : 650) * ZK);
+      setTimeout(() => burst(1.6 * ZK, 380, 0.09, 'lowpass'), (p.anim === 'bowl' ? 2250 : 1800) * ZK);
+      if (A.cough) for (const t of [3000, 3250, 3480].map(v => v * ZK)) setTimeout(() => burst(0.14, 900, 0.12, 'bandpass'), t);
     }
   } catch (e) {}
 }
@@ -202,7 +203,7 @@ function zpTick(dt) {
   if (ZP.freeze) return;   // test pictures step the clock by hand
   if (ZP.wobT > 0) ZP.wobT -= dt;
   const a = ZP.anim; if (!a) return;
-  a.t += dt; const t = a.t, an = a.p.anim;
+  a.t += dt; const t = a.t / a.k, an = a.p.anim;
   zpKey(a.tr.R, t, a.R); if (a.L) zpKey(a.tr.L, t, a.L);
   // breathing sway on top of the keyframes
   a.root.position.set(Math.sin(t * 1.7) * 0.003, Math.sin(t * 2.3) * 0.003, 0);

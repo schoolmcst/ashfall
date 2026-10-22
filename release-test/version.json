@@ -1,13 +1,13 @@
 {
- "version": "1.2.33",
+ "version": "1.2.34",
  "notes": [
-  "6 PERK MACHINES around the hospital. Pay and your survivor hits a bowl, smokes a joint or eats a gummy - with real hands, a lighter, smoke, a glowing cherry and a haze when it kicks in. SECOND WIND (1500, solo: get back up once / co-op: revive twice as fast), DOUBLE DAB (2000, shoot faster), QUICK RIP (3000, reload twice as fast), ZOOMIES (2000, move faster), KUSH TANK (2500, 250 health), MUNCHIES (2500, 50% more points). You lose your perks when you go down.",
-  "ZOMBIES DAMAGE FIXED: every gun is tuned for zombies and keeps up as the rounds go on. The pistol drops round-1 zombies in two body shots; upgraded guns hit twice as hard. Zombie health grows more gently.",
-  "PUNCHING a zombie now knocks it back and cancels its swing, so it can't hit you straight back.",
-  "FOLLOW THE PURPLE ARROWS: the doors now lead to the gun upgrader, which has its own room (the north lobby, behind the new UPGRADE ROOM barricade). Every door has a price sign, and the doors on the way say TO THE GUN UPGRADER.",
-  "The GUN UPGRADER has a new look: a glowing purple core with spinning rings that speed up while it upgrades your gun.",
-  "Fixed: an upgraded gun's purple glow could stay on that gun in multiplayer."
+  "FIXED: in co-op, a player who had been revived or respawned could never take damage again. Everyone takes damage now.",
+  "DOORS SIMPLIFIED: 4 doors in a chain - MAIN CORRIDOR, NORTH WING, UPGRADE ROOM (the gun upgrader) and UPSTAIRS (the bridge). Every other way between the areas is boarded up, so no door can be walked or jumped around, including the bridge and the balcony rails.",
+  "Buying is easier: you can buy a door or a perk from further away and from the side.",
+  "PERK ANIMATIONS last longer, and you can sprint while they play.",
+  "FIXED floating blood, mould and writing: decals now only go on real floors, walls and ceilings, and never hang over doorways, the atrium or the stairwells.",
+  "FOUR SURVIVORS with their own voices: \"DOC\" REYES, TANYA \"TANK\" BRIGGS, LEROY \"SMOKES\" DAWSON and PENNY \"SPARKS\" HOLLOWAY. Pick yours in the Zombies lobby. They talk at the start, each round, doors, the box, the upgrader, going down, reviving and more - and react to every perk they smoke or eat. In co-op you hear your teammates too. Subtitles on screen; voice lines can be turned off in the lobby."
  ],
- "sha256": "a8a19374229c30f37d3dda6b3d7ef71b0b8aca726b188e90e5aaa29c49bb079c",
+ "sha256": "8e76f421cb09a67cb3869494805e2b4f74aa7c567a876ec4de8efce6bc8becf2",
  "minApp": "1.0.0"
 }

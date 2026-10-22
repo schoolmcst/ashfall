@@ -38,7 +38,7 @@ const fs = require('fs');
   const s1 = [await st(A), await st(B), await st(C)];
   // doors: a client buys one, the host buys one; everyone should see both open
   await ev(B, () => { const A_ = window.__A; A_.G.points = 5000; A_.zdBuy(A_.ZD.list.find(o => o.d.name === 'MAIN CORRIDOR')); });
-  await ev(A, () => { const A_ = window.__A; A_.G.points = 5000; A_.zdBuy(A_.ZD.list.find(o => o.d.name === 'WEST LOBBY DOOR')); });
+  await ev(A, () => { const A_ = window.__A; A_.G.points = 5000; A_.zdBuy(A_.ZD.list.find(o => o.d.name === 'NORTH WING')); });
   await A.waitForTimeout(5000);
   const doors = []; for (const p of pages) doors.push(await ev(p, () => window.__A.ZD.list.filter(o => o.open).map(o => o.d.name).sort().join(', ')));
   console.log('DOORS', JSON.stringify(doors));
@@ -75,6 +75,9 @@ const fs = require('fs');
   await C.keyboard.up('KeyE');
   await A.waitForTimeout(1500);
   const sRev = [await st(B), await st(C)];
+  // after being revived, BRAVO must be able to take damage again (spawn protection runs out)
+  await A.waitForTimeout(5000);
+  console.log('DMG', JSON.stringify(await ev(B, () => { const A_ = window.__A; if (A_.G.state === 'paused') A_.G.state = 'playing'; const h0 = A_.G.health, sp = A_.G.spawnProt; A_.G.maxHp = 100; A_.G.health = 100; A_.hurtPlayer(10, A_.P.x + 1, A_.P.z); return { state: A_.G.state, spawnProt: +sp.toFixed(2), before: 100, after: A_.G.health }; })));
   // host leaves in the middle: B or C takes over the zombies
   await ev(A, () => window.__A.toMenu());
   await A.waitForTimeout(14000); for (const p of [B, C]) await unpause(p);

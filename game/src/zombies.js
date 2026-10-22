@@ -23,6 +23,8 @@ function renderZLobby(focusSel) {
   $('lobSel').innerHTML =
     `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="z-start"><small>${zcStartLabel()[0]}</small><b>${zcStartLabel()[1]}</b></button></div>` + zcLobbyRows() +
     `<div class="cod-row cod-map"><small>MAP</small><b>${m ? m.name : ''}</b><span>start in the lobby · buy doors to open the hospital</span></div>` +
+    `<div class="cod-row"><small>CHARACTER</small><b style="color:${zvChar(ZL.char).col}">${zvChar(ZL.char).full}</b><span>${zvChar(ZL.char).bio}</span><div class="arw"><button class="mini" data-act="z-char-" aria-label="Previous character">&lsaquo;</button><button class="mini" data-act="z-char+" aria-label="Next character">&rsaquo;</button></div></div>` +
+    `<div class="cod-row"><small>VOICE LINES</small><b>${ZV.enabled ? 'ON' : 'OFF'}</b><span>spoken by your computer's voices, with subtitles</span><div class="arw"><button class="mini" data-act="z-voice" aria-label="Voice lines on or off">${ZV.enabled ? 'TURN OFF' : 'TURN ON'}</button></div></div>` +
     `<div class="cod-row"><small>STARTING GEAR</small><b>SERVICE 9 · 2 FRAGS</b><span>everyone starts the same · 500 points to spend</span></div>` +
     `<div class="cod-row"><small>MYSTERY CRATE · ${Z_BOX} POINTS</small><b>A RANDOM GUN</b><span>AMMO CRATE · ${Z_AMMO} POINTS · full ammo for your guns</span></div>` +
     `<div class="cod-row"><small>YOUR BEST</small><b>ROUND ${Z.best.round || 0}</b><span>${(Z.best.pts || 0).toLocaleString()} POINTS</span></div>`;
@@ -45,6 +47,8 @@ function zombAct(act) {
   if (act === 'z-net-' || act === 'z-net+') { ZL.net = ZL.net === 'coop' ? 'solo' : 'coop'; if (ZL.net === 'solo' && ZC.on) zcLeave(); ZC.err = ''; try { localStorage.setItem('ashfall.znet', ZL.net); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="${act}"]`); return true; }
   if (act === 'z-code') { const i = $('zCode'), c = i ? cleanCode(i.value) : ''; if (!c || c === 'public') { if (i) { i.focus(); i.placeholder = 'type a code first'; } return true; } ZL.code = c; zcJoin('code', c); return true; }
   if (act === 'z-leave') { zcLeave(); sfx.ui(); return true; }
+  if (act === 'z-char-' || act === 'z-char+') { const i = ZCHARS.findIndex(c => c.id === ZL.char), d = act.endsWith('+') ? 1 : -1; ZL.char = ZCHARS[(i + d + ZCHARS.length) % ZCHARS.length].id; try { localStorage.setItem('ashfall.zchar', ZL.char); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="${act}"]`); try { speechSynthesis.cancel(); } catch (e) {} const l = ZLINES[ZL.char].spawn; zvSpeak(ZL.char, l[(Math.random() * l.length) | 0]); return true; }
+  if (act === 'z-voice') { ZV.enabled = !ZV.enabled; try { localStorage.setItem('ashfall.zvoice', ZV.enabled ? 'on' : 'off'); if (!ZV.enabled) speechSynthesis.cancel(); } catch (e) {} sfx.ui(); renderZLobby('[data-act="z-voice"]'); return true; }
   if ((act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') && ZC.on && !zcHost()) return true;
   if (act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') return true;
   if (false) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(ZL.map)), d = act.endsWith('+') ? 1 : -1; ZL.map = L[(i + d + L.length) % L.length]; try { localStorage.setItem('ashfall.zmap', ZL.map); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="z-map${d > 0 ? '+' : '-'}"]`); return true; }
@@ -65,6 +69,7 @@ function zombStart(cfg) {
   if (ZC.on && ZC.inGame) zcStartLocal();
   G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
   showBanner('ZOMBIES', 'survive · 500 points to spend'); zombHud(true);
+  ZV.kills = 0; setTimeout(() => { try { if (M.mode === 'zomb' && G.state === 'playing') zvSay('spawn'); } catch (e) {} }, 2600);
 }
 function zombEquip(keepCur) {
   const g = Z.guns, gr = G.grenades; zuRestore();
@@ -145,18 +150,19 @@ function zombRound() {
   G.wave = Z.round; if (!(ZC.on && ZC.down)) G.health = G.maxHp; if (ZC.on && ZC.dead) zcRespawn();
   showBanner(`ROUND ${Z.round}`, Z.round === 1 ? 'here they come' : Z.round % 5 === 0 ? 'they are getting faster' : `${Z.toSpawn} zombies`);
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
-  zombHud(true);
+  zombHud(true); if (Z.round > 1) setTimeout(() => zvSay('round', 0.6), 1200);
 }
 function updateZombies(dt) {
+  if (G.spawnProt > 0) G.spawnProt = Math.max(0, G.spawnProt - dt);   // revive / respawn protection runs out (it only counted down in multiplayer before)
   if (zcInGame()) zcFrame(dt);
-  zdTick(dt);
+  zdTick(dt); zvTick(dt);
   if (zcInGame() && !zcHost()) { zombHud(); zombCrateTick(dt); return; }
   Z.targets = zombTargets();
   if (!Z.active) { Z.breakT -= dt; if (Z.breakT <= 0) zombRound(); }
   else {
     const cap = Math.min(24, 10 + Z.round);
     if (Z.toSpawn > 0) { Z.spawnT -= dt; if (Z.spawnT <= 0 && enemies.length < cap) { if (zombSpawn()) Z.toSpawn--; Z.spawnT = Math.max(0.35, 1.9 - Z.round * 0.13); } }
-    else if (!enemies.length) { Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); }
+    else if (!enemies.length) { Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.6); }
   }
   for (let i = 0; i < enemies.length; i++) zombThink(enemies[i], i, dt);
   zombHud();
@@ -233,6 +239,7 @@ function zombCrateTick(dt) {
     else if (dr) { msgTxt = `${dr.d.name} · ${dr.d.cost} POINTS · PRESS ${actName('use')}${G.points < dr.d.cost ? ' · NOT ENOUGH POINTS' : ''}`; if (use && G.points >= dr.d.cost) zdBuy(dr); }
     else if (zuNear()) { const w = WEAPONS[G.cur], done = w && Z.up && Z.up.has(w.def.id); msgTxt = done ? 'GUN UPGRADER · THIS GUN IS UPGRADED' : `GUN UPGRADER · UPGRADE ${w ? w.def.name : ''} · ${ZU_COST} POINTS · PRESS ${actName('use')}${G.points < ZU_COST ? ' · NOT ENOUGH POINTS' : ''}`; if (use && !done && G.points >= ZU_COST) zuBuy(); }
   }
+  if ((kb('use') || pad.use) && !Z.useHeld && msgTxt.includes('NOT ENOUGH POINTS')) zvSay('broke');
   Z.useHeld = kb('use') || pad.use;
   if (Z.boxT > 0) { Z.boxT -= dt; const lid = Z.crate.userData.lid; lid.position.y = 0.81 + Math.min(0.5, (1.4 - Z.boxT) * 1.2); lid.rotation.x = -Math.min(1.1, (1.4 - Z.boxT) * 2); if (Z.boxT <= 0) { lid.position.y = 0.81; lid.rotation.x = 0; } }
   if (pr.textContent !== msgTxt) { pr.textContent = msgTxt; pr.style.opacity = msgTxt ? 1 : 0; }
@@ -243,7 +250,7 @@ function zombBuyBox() {
   const have = new Set(Z.guns), pool = Z_POOL().filter(d => !have.has(d.id)), d = pool[(Math.random() * pool.length) | 0];
   if (Z.guns.length < 2) Z.guns.unshift(d.id); else Z.guns[G.cur] = d.id;
   zombEquip(Z.guns.indexOf(d.id));
-  showBanner(d.name, CATS[d.cat].name); try { sfx.streak(); } catch (e) {}
+  showBanner(d.name, CATS[d.cat].name); try { sfx.streak(); } catch (e) {} setTimeout(() => zvSay('box', 0.8), 900);
 }
 function zombBuyAmmo() { G.points -= Z_AMMO; WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = w.reserveMax || w.def.reserve; }); G.grenades = Math.max(G.grenades, 2); showMsg('AMMO REFILLED'); try { sfx.ui(); } catch (e) {} }
 // HUD: the round in big red numbers bottom-left, points above it
