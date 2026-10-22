@@ -23,6 +23,7 @@ function renderZLobby(focusSel) {
   $('lobSel').innerHTML =
     `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="z-start"><small>${zcStartLabel()[0]}</small><b>${zcStartLabel()[1]}</b></button></div>` + zcLobbyRows() +
     `<div class="cod-row cod-map"><small>MAP</small><b>${m ? m.name : ''}</b><span>start in the lobby · buy doors to open the hospital</span></div>` +
+    `<div class="cod-row"><small>STORY · 7 CHAPTERS</small><b style="color:#7adf6a">THE GREEN CURE</b><span>${zsDoneEver() ? 'COMPLETE ✓ · ' : ''}TAPES FOUND ${ZS.heard.size} / ${ZS_TAPES.length} · ${ZS_CHAPTERS.map((c, i) => `${i + 1} ${c.name}`).join(' · ')}</span></div>` +
     `<div class="cod-row"><small>CHARACTER</small><b style="color:${zvChar(ZL.char).col}">${zvChar(ZL.char).full}</b><span>${zvChar(ZL.char).bio}</span><div class="arw"><button class="mini" data-act="z-char-" aria-label="Previous character">&lsaquo;</button><button class="mini" data-act="z-char+" aria-label="Next character">&rsaquo;</button></div></div>` +
     `<div class="cod-row"><small>VOICE LINES</small><b>${ZV.enabled ? 'ON' : 'OFF'}</b><span>spoken by your computer's voices, with subtitles</span><div class="arw"><button class="mini" data-act="z-voice" aria-label="Voice lines on or off">${ZV.enabled ? 'TURN OFF' : 'TURN ON'}</button></div></div>` +
     `<div class="cod-row"><small>STARTING GEAR</small><b>SERVICE 9 · 2 FRAGS</b><span>everyone starts the same · 500 points to spend</span></div>` +
@@ -69,7 +70,7 @@ function zombStart(cfg) {
   if (ZC.on && ZC.inGame) zcStartLocal();
   G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
   showBanner('ZOMBIES', 'survive · 500 points to spend'); zombHud(true);
-  ZV.kills = 0; setTimeout(() => { try { if (M.mode === 'zomb' && G.state === 'playing') zvSay('spawn'); } catch (e) {} }, 2600);
+  ZV.kills = 0; try { zsIntro(); } catch (e) {}
 }
 function zombEquip(keepCur) {
   const g = Z.guns, gr = G.grenades; zuRestore();
@@ -150,12 +151,12 @@ function zombRound() {
   G.wave = Z.round; if (!(ZC.on && ZC.down)) G.health = G.maxHp; if (ZC.on && ZC.dead) zcRespawn();
   showBanner(`ROUND ${Z.round}`, Z.round === 1 ? 'here they come' : Z.round % 5 === 0 ? 'they are getting faster' : `${Z.toSpawn} zombies`);
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
-  zombHud(true); if (Z.round > 1) setTimeout(() => zvSay('round', 0.6), 1200);
+  zombHud(true); if (Z.round > 1) setTimeout(() => zvSay('round', 0.6), 1200); try { zsRoundTalk(Z.round); } catch (e) {}
 }
 function updateZombies(dt) {
   if (G.spawnProt > 0) G.spawnProt = Math.max(0, G.spawnProt - dt);   // revive / respawn protection runs out (it only counted down in multiplayer before)
   if (zcInGame()) zcFrame(dt);
-  zdTick(dt); zvTick(dt);
+  zdTick(dt); zvTick(dt); try { zsTick(dt); } catch (e) {}
   if (zcInGame() && !zcHost()) { zombHud(); zombCrateTick(dt); return; }
   Z.targets = zombTargets();
   if (!Z.active) { Z.breakT -= dt; if (Z.breakT <= 0) zombRound(); }
@@ -234,8 +235,9 @@ function zombCrateTick(dt) {
     if (!msgTxt && d < 2.3 && Math.abs(P.y - c.position.y) < 1.5 && G.state === 'playing') { msgTxt = `${c.userData.label} · ${cost} POINTS · PRESS ${actName('use')}${G.points < cost ? ' · NOT ENOUGH POINTS' : ''}`; if ((kb('use') || pad.use) && !Z.useHeld && G.points >= cost) fn(); }
   }
   if (!msgTxt && G.state === 'playing') {
-    const use = (kb('use') || pad.use) && !Z.useHeld, dr = zdPrompt(), pm = zpNear();
-    if (pm) msgTxt = zpPrompt(pm, use);
+    const use = (kb('use') || pad.use) && !Z.useHeld, dr = zdPrompt(), pm = zpNear(), sp = zsPrompt(use);
+    if (sp) msgTxt = sp;
+    else if (pm) msgTxt = zpPrompt(pm, use);
     else if (dr) { msgTxt = `${dr.d.name} · ${dr.d.cost} POINTS · PRESS ${actName('use')}${G.points < dr.d.cost ? ' · NOT ENOUGH POINTS' : ''}`; if (use && G.points >= dr.d.cost) zdBuy(dr); }
     else if (zuNear()) { const w = WEAPONS[G.cur], done = w && Z.up && Z.up.has(w.def.id); msgTxt = done ? 'GUN UPGRADER · THIS GUN IS UPGRADED' : `GUN UPGRADER · UPGRADE ${w ? w.def.name : ''} · ${ZU_COST} POINTS · PRESS ${actName('use')}${G.points < ZU_COST ? ' · NOT ENOUGH POINTS' : ''}`; if (use && !done && G.points >= ZU_COST) zuBuy(); }
   }

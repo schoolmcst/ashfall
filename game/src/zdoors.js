@@ -103,11 +103,11 @@ function zdInit() {
   if (curMap !== ZOMB_MAP) return;
   ZD.list = ZDOORS.map(d => zdAdd(d, false)).concat(ZWALLS.map(d => zdAdd(d, true)));
   ZD.open.clear(); ZD.mine.clear(); ZD.pts = null;
-  ZD.up = zuBuild(); ZD.arrows = zdArrows(); try { zpBuild(); } catch (e) { reportError(e); }
+  ZD.up = zuBuild(); ZD.arrows = zdArrows(); try { zpBuild(); } catch (e) { reportError(e); } try { zsBuild(); } catch (e) { reportError(e); }
   boxGridDirty = true; buildNav(); SPAWNS = null;
 }
 function zdClear(keepNav) {
-  zuRestore(); try { zpClear(); } catch (e) {}
+  zuRestore(); try { zpClear(); } catch (e) {} try { zsClear(); } catch (e) {}
   if (ZD.arrows) { scene.remove(ZD.arrows); ZD.arrows = null; }
   if (!ZD.list.length && !ZD.up) return;
   for (const o of ZD.list) zdRemove(o); ZD.list = []; ZD.anim.length = 0;

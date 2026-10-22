@@ -124,7 +124,7 @@ function boxesNear(x, z) {
   if (boxGridDirty || boxGridN !== boxes.length) rebuildBoxGrid();
   const gx = Math.floor((x - GORIG) / GCELL), gz = Math.floor((z - GORIG) / GCELL);
   if (gx < 0 || gz < 0 || gx >= GN || gz >= GN) return EMPTY;
-  return boxGrid[gx * GN + gz];
+  return boxGrid[gx * GN + gz] || EMPTY;
 }
 function resolve(pos, r, feetY) {
   for (const b of boxesNear(pos.x, pos.z)) {
