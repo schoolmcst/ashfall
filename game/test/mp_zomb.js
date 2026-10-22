@@ -37,8 +37,8 @@ const fs = require('fs');
   for (const p of pages) await unpause(p);
   const s1 = [await st(A), await st(B), await st(C)];
   // doors: a client buys one, the host buys one; everyone should see both open
-  await ev(B, () => { const A_ = window.__A; A_.G.points = 5000; A_.zdBuy(A_.ZD.list.find(o => o.d.name === 'MAIN CORRIDOR')); });
-  await ev(A, () => { const A_ = window.__A; A_.G.points = 5000; A_.zdBuy(A_.ZD.list.find(o => o.d.name === 'NORTH WING')); });
+  await ev(B, () => { const A_ = window.__A; A_.G.points = 5000; A_.zdBuy(A_.ZD.list.find(o => !o.perm && o.d.id === 0)); });
+  await ev(A, () => { const A_ = window.__A; A_.G.points = 5000; A_.zdBuy(A_.ZD.list.find(o => !o.perm && o.d.id === 1)); });
   await A.waitForTimeout(5000);
   const doors = []; for (const p of pages) doors.push(await ev(p, () => window.__A.ZD.list.filter(o => o.open).map(o => o.d.name).sort().join(', ')));
   console.log('DOORS', JSON.stringify(doors));

@@ -1,13 +1,13 @@
 {
- "version": "1.2.37",
+ "version": "1.2.38",
  "notes": [
-  "ZOMBIES STORY: THE GREEN CURE. A drug trial at Blackwell General went wrong: a painkiller called LAZARUS-9 got sold on the street as NIGHTSHADE, and everyone who took it came back. The weed is the only thing keeping the four survivors human.",
-  "7 CHAPTERS: LIGHTS OUT (find 3 fuses and get the power on), HAROLD'S BADGE (a keycard on a body in the ER), BURN THE STASH (3 Nightshade stashes), PATIENT ZERO (a huge glowing purple boss - kill him and take his blood), THE PHARMACY, THE GREEN CURE (cook the cure for 60 seconds while the horde attacks) and an EPILOGUE with a cliffhanger.",
-  "Finish the story and you get every perk, an upgraded gun and 5000 points.",
-  "12 audio tapes hidden around the hospital tell how it all happened. Tapes you find stay found in the lobby.",
-  "The four survivors talk to each other at the start of every chapter and every few rounds, with subtitles.",
-  "Your current objective is shown on screen, and the lobby lists all 7 chapters. In co-op everything is shared: fuses, items, the boss and the cooking."
+  "NEW ZOMBIES MAP: THE WORKS (story chapter two). Harold's truck led to the old Lazarus Pharmaceutical Works: a soot-black Victorian factory from 1891 with a gothic chapel, a graveyard, a foundry and the warehouse where the last NIGHTSHADE is made. Pick it with the MAP arrows in the zombies lobby.",
+  "Built to flow: the bottling hall in the middle opens every way and the whole factory is one big ring, so there are no dead ends. Train the horde round the chapel cloister garden or round the foundry furnace - two big loops that meet in the middle.",
+  "LAUNCH PADS: four pneumatic pads (loading dock, chapel garden, boiler house, foundry yard) fire you over the roofs once the pressure is on. They only go to parts of the factory you have opened and need 25 seconds to recharge.",
+  "6 doors to buy, the 6 perks spread round the factory, the gun upgrader in the boiler house. Firelight, candles, embers, smoke from the stack, and the chapel bell tolls at the start of every round.",
+  "7 NEW CHAPTERS: PRESSURE (3 valve wheels), THE FOREMAN'S KEY, BURN THE PALLETS, HAROLD (a huge boss - kill him and take his ledger), THE FORMULA, FLOOD THE LINES (pump the cure through the bottling lines for 60 seconds while the horde attacks) and an EPILOGUE with a new cliffhanger.",
+  "12 new tapes about the factory's dark past, new scenes and conversations for the four survivors. Each map's story and tapes are saved separately. Co-op works on the new map too."
  ],
- "sha256": "713bd42df5b887d77873f4c1d0521681fa81402f13957184b440c3dae302a519",
+ "sha256": "0b24e2b62971ddb8c01ff64390e1b1a231053378a51188402df8516001db6db7",
  "minApp": "1.0.0"
 }

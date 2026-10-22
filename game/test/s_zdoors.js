@@ -2,7 +2,7 @@
 const fs = require('fs'), path = require('path');
 module.exports = async p => {
   const out = process.env.SHOTS || '/tmp';
-  const snap = async (n, setup) => { const u = await p.evaluate(setup => { const A = window.__A; const s = document.getElementById('hcSplash'); if (s) s.remove(); A.G.noRender = false; if (setup) new Function('A', setup)(A); return true; }, setup || ''); await p.waitForTimeout(1500); await p.screenshot({ path: path.join(out, n + '.png') }); await p.evaluate(() => { window.__A.G.noRender = true; }); };
+  const snap = async (n, setup) => { const u = await p.evaluate(setup => { const A = window.__A; const s = document.getElementById('hcSplash'); if (s) s.remove(); A.G.noRender = false; if (setup) new Function('A', setup)(A); return true; }, setup || ''); await p.waitForTimeout(1500); await p.screenshot({ path: path.join(out, n + '.png'), timeout: 120000 }); await p.evaluate(() => { window.__A.G.noRender = true; }); };
   const r = {};
   r.start = await p.evaluate(() => {
     const A = window.__A; A.openZLobby(); const lob = document.querySelector('#lobSel').innerText.replace(/\n/g, ' | ').slice(0, 200);
