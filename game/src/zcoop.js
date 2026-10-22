@@ -77,6 +77,7 @@ function zcRead() {
       if (!R.a && wasA && wasDn) feedLine(`<b>${R.n}</b> <span class="ft">BLED OUT</span>`);
     }
     if (R.inGame) zvRemote(R);
+    zcReadShared(R, !host && R.ho);
     // revives aimed at me
     if (Array.isArray(pr.rv)) for (const v of pr.rv) { if (!Array.isArray(v) || (+v[1] || 0) <= R.seenRv) continue; R.seenRv = +v[1] || 0; if (v[0] === ZC.me && ZC.down && !ZC.dead) zcRevived(R); }
     // doors someone else bought (the host collects them; everyone follows the host's list)
@@ -90,7 +91,7 @@ function zcRead() {
       damageEnemy(e, netNum(h[1], 0, 2000), !!h[2], d, !!h[4], { zc: p.peer, melee: !!h[5] });
     }
     // their shots: muzzle flash and tracer from their soldier
-    const sh = +pr.sh | 0; if (sh > R.sh) { const n = Math.min(2, sh - R.sh); R.sh = sh; if (R.av && R.inGame) for (let i = 0; i < n; i++) try { netRemoteShot({ bot: R.av, yw: R.yw, pt: R.pt }); } catch (e) {} }
+    const sh = +pr.sh | 0; if (sh > R.sh) { const n = Math.min(2, sh - R.sh); R.sh = sh; if (R.av && R.inGame) for (let i = 0; i < n; i++) try { netRemoteShot({ bot: R.av, yw: R.yw, pt: R.pt, far: 70 }); } catch (e) {} }
   }
   for (const [peer, R] of ZC.rem) if (!seen.has(peer)) { zcDropAvatar(R); ZC.rem.delete(peer); if (ZC.inGame && R.n) feedLine(`<b>${R.n}</b> <span class="fw">LEFT</span>`); }
   if (host) return;
@@ -143,9 +144,9 @@ function zcPublish() {
   for (const [zid, h] of ZC.pend) { ZC.hseq++; ZC.hs.push([zid, Math.round(h.d), h.h ? 1 : 0, ZC.hseq, h.b ? 1 : 0, h.m ? 1 : 0]); }
   ZC.pend.clear(); while (ZC.hs.length > 24) ZC.hs.shift();
   const o = { zc: 1, n: NET.nick, g: inG ? ZC.gid : 0, x: r2(P.x), y: r2(P.y || 0), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch),
-    a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv, od: inG ? [...ZD.mine] : [], ch: ZL.char, vl: ZV.out };
+    a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv, od: inG ? [...ZD.mine] : [], ch: ZL.char, vl: ZV.out, pk: inG ? ZC.pk : [], ev: inG ? ZC.ev : [] };
   if (zcHost()) {
-    Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, zr: Z.round, zd: inG ? [...ZD.open] : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
+    Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, zr: Z.round, zd: inG ? [...ZD.open] : [], dp: inG ? [...ZC.drops].filter(([, d]) => performance.now() - d.t < 40000).map(([id, d]) => [id, r2(d.x), r2(d.z), r2(d.y)]) : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
     o.zs = inG ? enemies.filter(e => e.zombie && !e.proxy).map(e => { const g = e.group.position; return [e.zid, r2(g.x), r2(g.z), r2(g.y), Math.round(e.group.rotation.y * 100), e.kind === 'run' ? 2 : e.kind === 'jog' ? 1 : 0, e.atkT > 0 ? 1 : 0, Math.round(clamp(e.hp / e.maxHp, 0, 1) * 100)]; }) : [];
   }
   ZC.room.presence(o);
@@ -159,7 +160,7 @@ function zcHostStart() {
   zcEnterGame(mp, 1 + ((Math.random() * 1e9) | 0));
 }
 function zcEnterGame(mp, gid) {
-  ZC.gid = gid; ZC.inGame = true; ZC.down = ZC.dead = false; ZC.round = 0; ZC.active = false; ZC.fresh = true; ZC.k = 0; ZC.overT = 0;
+  ZC.gid = gid; ZC.inGame = true; ZC.down = ZC.dead = false; zcResetShared(); ZC.round = 0; ZC.active = false; ZC.fresh = true; ZC.k = 0; ZC.overT = 0;
   zcClearProxies();
   for (const R of ZC.rem.values()) zcDropAvatar(R);
   startMatch('zomb', { map: mp, coop: true });
@@ -320,7 +321,9 @@ function zcAvatars(dt) {
     const e = R.av, g = e.group, ox = g.position.x, oz = g.position.z, k = Math.min(1, dt * 14);
     if (Math.hypot(R.x - ox, R.z - oz) > 6) g.position.set(R.x, R.y, R.z); else { g.position.x += (R.x - ox) * k; g.position.z += (R.z - oz) * k; g.position.y += (R.y - g.position.y) * k; }
     let dy = R.yw + Math.PI - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 16);
-    animEnemy(e, dt, dt > 0 ? Math.min(6, Math.hypot(g.position.x - ox, g.position.z - oz) / dt) : 0);
+    const sp = dt > 0 ? Math.min(9, Math.hypot(g.position.x - ox, g.position.z - oz) / dt) : 0;
+    animEnemy(e, dt, Math.min(6, sp));
+    e.fsD = (e.fsD || 0) + dt * sp; if (sp > 1 && e.fsD > (sp > 6 ? 2.0 : 1.6) && !R.dn) { e.fsD = 0; const d = Math.hypot(g.position.x - P.x, g.position.z - P.z); if (d < 45) try { sfx.estep(at(g.position.x, g.position.z, 12)); } catch (err) {} }
     g.rotation.x = lerp(g.rotation.x, R.dn ? -1.35 : 0, Math.min(1, dt * 6)); if (R.dn) g.position.y = R.y + 0.25;
   }
 }
@@ -408,3 +411,52 @@ function zcWireLobby() {
   i.oninput = () => { ZL.code = cleanCode(i.value); try { localStorage.setItem('ashfall.zcode', ZL.code); } catch (e) {} };
 }
 (() => { const s = document.createElement('style'); s.textContent = `.z-code{align-items:flex-end}.z-leave{width:auto!important;padding:0 10px;font-size:11px;letter-spacing:.12em}`; document.head.appendChild(s); })();
+
+/* ---------- shared drops and sounds in co-op
+   Drops: the host decides when a dead zombie drops ammo and lists the drops (dp); everyone sees them. Whoever walks
+   over one picks it up for the whole squad: they list it (pk) and every survivor gets the ammo.
+   The ammo crate refills the whole squad too. Sounds: teammates' gunshots (the shot counter), footsteps (from their
+   movement), grenade blasts and punches (events, ev) are played where they happen. */
+Object.assign(ZC, { drops: new Map(), dropSeq: 0, taken: new Set(), pk: [], ev: [], evSeq: 0 });
+function zcResetShared() { ZC.drops.clear(); ZC.taken.clear(); ZC.pk = []; ZC.ev = []; for (const R of ZC.rem.values()) { R.seenEv = undefined; } }
+function zcDrop(x, z, y) {
+  const id = ++ZC.dropSeq; ZC.drops.set(id, { x, z, y, t: performance.now() }); zcSpawnDrop(id, x, z, y);
+}
+function zcSpawnDrop(id, x, z, y) { if (ZC.taken.has(id) || pickups.some(k => k.sid === id)) return; dropPickup(x, z, y); const k = pickups[pickups.length - 1]; if (k) { k.sid = id; k.life = 40; } }
+function zcRemoveDrop(id) { for (let i = pickups.length - 1; i >= 0; i--) if (pickups[i].sid === id) { scene.remove(pickups[i].m); pickups.splice(i, 1); } if (zcHost()) ZC.drops.delete(id); }
+// a drop's ammo: everyone gets it, whoever picked it up
+function zcDropAmmo(who) {
+  const eqMax = EQUIP[G.equip] ? EQUIP[G.equip].max : 2;
+  for (const w of WEAPONS) w.reserve = Math.min(w.reserveMax || w.reserve, w.reserve + Math.ceil(w.magSize * 1.2));
+  if (G.grenades < eqMax) G.grenades++;
+  try { sfx.pickup(); } catch (e) {} showMsg(who ? `${who} PICKED UP AMMO FOR THE SQUAD` : 'AMMO FOR THE WHOLE SQUAD');
+}
+// I walked over a shared drop
+function zcTakeDrop(k) {
+  if (ZC.taken.has(k.sid)) return; ZC.taken.add(k.sid); ZC.pk.push(k.sid); while (ZC.pk.length > 10) ZC.pk.shift();
+  zcRemoveDrop(k.sid); zcDropAmmo('');
+}
+function zcEvent(type, p) { if (!zcInGame()) return; ZC.evSeq++; ZC.ev.push([type, r2(p.x), r2(p.y || 0), r2(p.z), ZC.evSeq]); while (ZC.ev.length > 8) ZC.ev.shift(); }
+// called from zcRead for each teammate (and from the client's host read for the drop list)
+function zcReadShared(R, host) {
+  const pr = R.pr || {};
+  if (Array.isArray(pr.pk)) for (const id of pr.pk) { const n = +id; if (!n || ZC.taken.has(n)) continue; ZC.taken.add(n); zcRemoveDrop(n); if (R.inGame) zcDropAmmo(R.n); }
+  if (Array.isArray(pr.ev)) {
+    if (R.seenEv === undefined) R.seenEv = pr.ev.reduce((m, v) => Math.max(m, +v[4] || 0), 0);
+    for (const v of pr.ev) {
+      if (!Array.isArray(v) || (+v[4] || 0) <= R.seenEv) continue; R.seenEv = +v[4] || 0;
+      if (!R.inGame) continue;
+      const p = { x: netNum(v[1], -ARENA, ARENA), y: netNum(v[2], -5, 20), z: netNum(v[3], -ARENA, ARENA) };
+      try {
+        if (v[0] === 'b') { sfx.explode(at(p.x, p.z, 34)); explosionFx(new THREE.Vector3(p.x, p.y, p.z), 1); }
+        else if (v[0] === 'm') sfx.thud(at(p.x, p.z, 14));
+        else if (v[0] === 'ammo') { WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = w.reserveMax || w.def.reserve; }); G.grenades = Math.max(G.grenades, 2); showMsg(`${R.n} BOUGHT AMMO FOR THE SQUAD`); sfx.ui(); }
+      } catch (e) {}
+    }
+  }
+  if (host && Array.isArray(pr.dp)) {   // the host's drop list: show new ones, clear the ones that are gone
+    const ids = new Set();
+    for (const d of pr.dp) { if (!Array.isArray(d)) continue; const id = +d[0]; ids.add(id); zcSpawnDrop(id, netNum(d[1], -ARENA, ARENA), netNum(d[2], -ARENA, ARENA), netNum(d[3], -5, 20)); }
+    for (let i = pickups.length - 1; i >= 0; i--) if (pickups[i].sid && !ids.has(pickups[i].sid)) { scene.remove(pickups[i].m); pickups.splice(i, 1); }
+  }
+}

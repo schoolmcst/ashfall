@@ -252,7 +252,7 @@ function zombBuyBox() {
   zombEquip(Z.guns.indexOf(d.id));
   showBanner(d.name, CATS[d.cat].name); try { sfx.streak(); } catch (e) {} setTimeout(() => zvSay('box', 0.8), 900);
 }
-function zombBuyAmmo() { G.points -= Z_AMMO; WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = w.reserveMax || w.def.reserve; }); G.grenades = Math.max(G.grenades, 2); showMsg('AMMO REFILLED'); try { sfx.ui(); } catch (e) {} }
+function zombBuyAmmo() { G.points -= Z_AMMO; if (typeof zcEvent === 'function') zcEvent('ammo', P); WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = w.reserveMax || w.def.reserve; }); G.grenades = Math.max(G.grenades, 2); showMsg('AMMO REFILLED'); try { sfx.ui(); } catch (e) {} }
 // HUD: the round in big red numbers bottom-left, points above it
 function zombHud(force) {
   let h = $('zHud');

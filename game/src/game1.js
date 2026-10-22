@@ -273,7 +273,7 @@ const EQ_MAT = {};
 function melee() {
   if (G.state !== 'playing' || G.meleeT > 0 || G.swapT > 0 || G.throwT > 0) return;
   G.meleeT = 0.55; G.fireT = Math.max(G.fireT, 0.5); G.reloading = false; G.inspectT = 0; G.burstLeft = 0;
-  burst(0.12, 1800, 0.25, 'bandpass'); rumble(0.3, 0.5, 90);
+  burst(0.12, 1800, 0.25, 'bandpass'); rumble(0.3, 0.5, 90); if (typeof zcEvent === 'function') zcEvent('m', P);
   setTimeout(() => {
     if (G.state !== 'playing') return;
     const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw); let best = null, bd = 2.4;
@@ -405,7 +405,7 @@ function blastClear(p, x, y, z) {
 }
 function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
   const dp = Math.hypot(P.x - p.x, P.y + 1 - p.y, P.z - p.z);
-  sfx.explode(at(p.x, p.z, 30)); explosionFx(p, 1);
+  sfx.explode(at(p.x, p.z, 30)); explosionFx(p, 1); if (by === 'player' && typeof zcEvent === 'function') zcEvent('b', p);
   for (const e of enemies.slice()) {
     if (by === 'player' && isFriend(e)) continue;
     if (by && by.group && (e === by ? false : e.team === by.team)) continue;   // a bot's grenade spares its own team

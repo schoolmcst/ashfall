@@ -135,7 +135,7 @@ function netPublish() {
     a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
-function netShot() { if (NET.on) NET.sh++; }
+function netShot() { if (NET.on) NET.sh++; if (typeof ZC !== 'undefined' && ZC.on) ZC.sh++; }
 // called by damageEnemy() for a remote soldier: record the hit for its owner to apply
 // hit records: [victim, damage, head, seq, kind] - kind 1 = explosion (Blast Vest), 2 = stun at [x, y, z] (Tactical Mask)
 function netHit(e, dmg, head, by, boom) {
@@ -181,7 +181,7 @@ function netRemoteShot(R) {
   raycaster.set(from, _nf); raycaster.far = 80; const h = raycaster.intersectObjects(wallMeshes, false)[0];
   addTracer(from, h ? h.point : from.clone().addScaledVector(_nf, 80), 0.05, 0.016);
   enemyFlashLight.position.copy(from); enemyFlashLight.intensity = 3; enemyFlashLight.userData.t = 0.05;
-  sfx.enemy(at(e.group.position.x, e.group.position.z, 24));
+  sfx.enemy(at(e.group.position.x, e.group.position.z, R.far || 24));
 }
 function netFeedName(R) { return R ? nameHtml(R.entry) : '?'; }
 function netTick(dt) {

@@ -168,7 +168,8 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
     }
     if (e.zombie && typeof ZC !== 'undefined' && ZC.on) zcKilled(e, by, head);
     try { matchBotKilled(e, by, head, boom); } catch (err) { reportError(err); }
-    if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(e.group.position.x, e.group.position.z, groundAt(e.group.position.x, e.group.position.z, e.group.position.y + 0.3));
+    { const gx = e.group.position.x, gz = e.group.position.z, gy = groundAt(gx, gz, e.group.position.y + 0.3), coop = e.zombie && typeof zcInGame === 'function' && zcInGame();
+      if (coop) { if (Math.random() < 0.22) zcDrop(gx, gz, gy); } else if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(gx, gz, gy); }   // co-op: the host's drops are shared
     _n.set(0, 1, 0); _v3.set(e.group.position.x, 0, e.group.position.z - 0.2); addDecal(_v3, _n, 'blood', 1.3);
     chunks('blood', _v.set(e.group.position.x, 1.2, e.group.position.z), 8, 3, 0.6);
     return true;
@@ -215,12 +216,13 @@ function updatePickups(dt) {
   if (G.waveActive && totalAmmo() === 0 && pickups.length === 0) { const sp = randomOpenSpot(5, 10); dropPickup(sp.x, sp.z, sp.y); showMsg('SUPPLY DROP NEARBY'); }
   for (let i = pickups.length - 1; i >= 0; i--) {
     const k = pickups[i]; k.t += dt; k.m.rotation.y += dt * 1.5; k.m.position.y = (k.y || 0) + 0.3 + Math.sin(k.t * 3) * 0.05;
+    if (k.sid && Math.hypot(k.x - P.x, k.z - P.z) < 1.4 && Math.abs(P.y - (k.y || 0)) < 1.5 && G.state === 'playing') { zcTakeDrop(k); continue; }
     if (Math.hypot(k.x - P.x, k.z - P.z) < 1.4 && Math.abs(P.y - (k.y || 0)) < 1.5) {
       const sc = perk('scavenger'), eqMax = EQUIP[G.equip].max;
       for (const w of WEAPONS) w.reserve = Math.min(w.reserveMax, w.reserve + Math.ceil(w.magSize * (sc ? 1.6 : 0.8)));
       if (G.grenades < eqMax && (sc || Math.random() < 0.4)) G.grenades++;
       sfx.pickup(); showMsg('AMMO RESUPPLIED'); scene.remove(k.m); pickups.splice(i, 1);
-    } else if (k.t > k.life) { scene.remove(k.m); pickups.splice(i, 1); }
+    } else if (k.t > k.life && !k.sid) { scene.remove(k.m); pickups.splice(i, 1); }
   }
 }
 

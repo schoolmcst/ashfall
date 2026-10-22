@@ -59,6 +59,19 @@ const fs = require('fs');
   });
   await A.waitForTimeout(1500);
   const s2 = [await st(A), await st(B), await st(C)];
+  // shared drop: the host drops ammo at C, C picks it up, everyone gets ammo; and C's shots reach the others
+  const before = []; for (const p of pages) before.push(await ev(p, () => { const w = window.__A.W[0]; w.reserve = 0; return 0; }));
+  await ev(A, () => { const A_ = window.__A, R = [...A_.ZC.rem.values()].find(r => r.n === 'CHARLIE'); A_.zcDrop(R.x + 3, R.z, R.y); });
+  await A.waitForTimeout(2500);
+  const seen = await ev(C, () => window.__A.pickups ? window.__A.pickups.filter(k => k.sid).length : -1);
+  await ev(C, () => { const A_ = window.__A, k = A_.pickups.find(k => k.sid); if (k) { A_.G.state = 'playing'; Object.assign(A_.P, { x: k.x, z: k.z, y: k.y || 0 }); } });
+  await A.waitForTimeout(3000);
+  const after = []; for (const p of pages) after.push(await ev(p, () => ({ reserve: window.__A.W[0].reserve, drops: window.__A.pickups.filter(k => k.sid).length })));
+  const sh0 = await ev(A, () => { const R = [...window.__A.ZC.rem.values()].find(r => r.n === 'CHARLIE'); return R ? R.sh : -1; });
+  await ev(C, () => { const A_ = window.__A; for (let i = 0; i < 3; i++) A_.netShot(); });
+  await A.waitForTimeout(1500);
+  const sh1 = await ev(A, () => { const R = [...window.__A.ZC.rem.values()].find(r => r.n === 'CHARLIE'); return R ? R.sh : -1; });
+  console.log('SHARED', JSON.stringify({ seenOnC: seen, after, shotsSeenByHost: [sh0, sh1] }));
   console.log('DOORS2', JSON.stringify(await ev(C, () => ({ open: window.__A.ZD.list.filter(o => o.open).map(o => o.d.name), n: window.__A.ZD.list.length, inGame: window.__A.ZC.inGame, gid: window.__A.ZC.gid, hzd: (() => { for (const R of window.__A.ZC.rem.values()) if (R.ho) return [R.pr.zd, R.pr.gid]; })() }))));
   // pictures: C looks at B, zombies around
   await ev(C, () => { const A_ = window.__A, P = A_.P, R = [...A_.ZC.rem.values()].find(r => r.n === 'BRAVO'); if (R) { P.x = R.x + 4; P.z = R.z + 2; P.y = R.y; P.yaw = Math.atan2(-(R.x - P.x), -(R.z - P.z)); P.pitch = -0.05; } });
