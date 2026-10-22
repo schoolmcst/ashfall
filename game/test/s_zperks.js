@@ -2,7 +2,7 @@
 const path = require('path');
 module.exports = async p => {
   const out = process.env.SHOTS || '/tmp', r = {};
-  const shot = async n => { await p.screenshot({ path: path.join(out, n + '.png') }); };
+  const shot = async n => { await p.screenshot({ path: path.join(out, n + '.png'), timeout: 120000 }); };
   r.start = await p.evaluate(() => { const A = window.__A; A.ZL.net = 'solo'; A.openZLobby(); A.zombAct('z-start'); A.G.noRender = true; const s = document.getElementById('hcSplash'); if (s) s.remove();
     return { machines: A.ZP.machines.length, hp: [1, 5, 10, 15].map(r => Math.round(A.zombHp(r))), mul: (() => { A.Z.round = 1; const a = A.zombGunMul(false); A.Z.round = 10; const b = A.zombGunMul(false); A.Z.round = 0; return [a, +b.toFixed(2)]; })() }; });
   // buy three perks, one of each animation; pictures in the middle of each
