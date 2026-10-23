@@ -1,10 +1,12 @@
 {
- "version": "1.2.39",
+ "version": "1.2.40",
  "notes": [
-  "ZOMBIES RUNS FASTER: the zombies maps had 40 to 80 real lights (lamps, candles, fires, glows) and every one cost every pixel every frame. Now only the 12 that matter most near you are real at any moment and they hand over as you move, so it looks the same and runs much lighter, especially on Macs and laptops.",
-  "No more hitches when you pick up story items or a boss appears (the game was recompiling its shaders each time).",
-  "Shadows in zombies are redrawn every other frame, and zombies re-plan their path a few times a second instead of every frame (every frame when they are close to you)."
+  "ZOMBIES VOICE LINES: the survivors talk much less - at least 25 seconds between lines, lines never pile up behind each other (teammates' too), and every kind of line waits longer before it comes again. Going down, perks and the upgrader still always get a line.",
+  "VOICE SETTINGS moved to SETTINGS > AUDIO: a ZOMBIES VOICE LINES switch and a VOICE LINES VOLUME slider. Story scenes still show subtitles when voices are off.",
+  "PLAY WITH OR WITHOUT THE STORY: a new MODE row in the zombies lobby - STORY or CLASSIC (just the rounds: no quests, boss or scenes, and the launch pads work from the start). In co-op the host picks.",
+  "LESS FREEZING: the zombies' route to you was rebuilt for every half metre you moved (up to 25 ms each on the hospital, a stutter when sprinting). Now it updates every metre or so and reuses its memory, so there are no more garbage-collection pauses.",
+  "SMOOTHER ON MACS AND LAPTOPS: base Apple M1/M2/M3 chips and Intel/AMD built-in graphics now get the MEDIUM preset automatically (they were getting HIGH). If you set your graphics yourself, nothing changes. Zombie and boss shaders are prepared at the start, so the first zombie and the boss no longer hitch, and fire and smoke on THE WORKS only run near you."
  ],
- "sha256": "4b216bcaf35faaddf7fa1a867896c343b45ea676985b2b8f0be77151948f8156",
+ "sha256": "d239f2b2495626bafeaeab846a20859a4e5be26095fc9848624da95cae274f90",
  "minApp": "1.0.0"
 }

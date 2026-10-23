@@ -731,7 +731,7 @@ const SHADOWQ = {
 const FXQ = { low: 0.35, medium: 0.65, high: 1, ultra: 1.5 };
 const DEFAULTS = {
   quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
-  master: 80, sfx: 100, ambience: 60, music: 50,
+  master: 80, sfx: 100, ambience: 60, music: 50, zvoice: true, zvoiceVol: 70,
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,
@@ -1180,9 +1180,9 @@ try {
   const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
   GPU_NAME = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
   if (/RTX|RX\s?[5-9]\d{3}|RX\s?[6-9]\d{2}\b|Radeon Pro W|Arc.*A7|Apple M\d (Pro|Max|Ultra)|GTX 1[0-9]80|GTX 1070/i.test(GPU_NAME)) AUTO_TIER = 'ultra';
-  else if (/Intel|UHD|Iris|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic|Apple GPU/i.test(GPU_NAME)) AUTO_TIER = 'medium';
+  else if (/Intel|UHD|Iris|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic|Apple GPU|Apple M\d|Radeon Pro [45]\d\d\b|Radeon\(TM\) Graphics|Vega \d/i.test(GPU_NAME)) AUTO_TIER = 'medium';   // laptops and Macs (base M chips, Intel / AMD integrated)
 } catch (e) {}
-if (NEED_AUTO_DERIVE && S.quality === 'auto') { applyPreset(AUTO_TIER); saveSettings(); }
+if ((NEED_AUTO_DERIVE || S.autoV !== 2) && S.quality === 'auto') { applyPreset(AUTO_TIER); S.autoV = 2; saveSettings(); }   // autoV 2: re-checked once after Macs and laptops moved to MEDIUM
 else if (CFG5) {   // saved before 1.2.11: keep what they had, and fill the new detail settings from their preset
   const k = qKey(), q = QUALITY[k] || QUALITY.high;
   Object.assign(S, { anis: q.anis, grass: q.grass, fxQ: q.fx, texQ: q.tex >= 512 ? 'high' : 'low', shadowDist: 100 });
@@ -2100,7 +2100,9 @@ function nodeOf(x, z, y) {
 function flowField(x, z, y) {
   const node = nodeOf(x, z, y); if (node < 0) return null;
   let f = FLOW.get(node); if (f) { f.used = NOW; return f.d; }
-  const d = new Int32Array(NN * NN * NL).fill(-1), q = flowQ;
+  let d = null;
+  if (FLOW.size > 40) { let ok = null, ou = 1e9; FLOW.forEach((v, k) => { if (v.used < ou) { ou = v.used; ok = k; } }); d = FLOW.get(ok).d; FLOW.delete(ok); }   // reuse the oldest field's memory
+  if (!d || d.length !== NN * NN * NL) d = new Int32Array(NN * NN * NL); d.fill(-1); const q = flowQ;
   let head = 0, tail = 0; q[tail++] = node; d[node] = 0;
   while (head < tail) {
     const nd0 = q[head++], c = (nd0 / NL) | 0, l = nd0 % NL, cx = c % NN, cz = (c / NN) | 0, h = lvH[nd0], st = lvS[nd0];
@@ -2115,7 +2117,6 @@ function flowField(x, z, y) {
       }
     }
   }
-  if (FLOW.size > 40) { let ok = null, ou = 1e9; FLOW.forEach((v, k) => { if (v.used < ou) { ou = v.used; ok = k; } }); FLOW.delete(ok); }
   FLOW.set(node, { d, used: NOW });
   return d;
 }
@@ -5510,11 +5511,13 @@ function worksTick(dt) {
     if (f.steady) continue;
     f.t -= dt; if (f.t <= 0) { f.on = !f.on; f.t = f.on ? rnd(0.4, 5) : rnd(0.03, 0.2); f.l.intensity = f.on ? f.i : f.i * 0.1; }
   }
+  const cx = camera.position.x, cz = camera.position.z;
   for (const e of WORKS.fx) {
-    if (e.k === 'fire' && Math.random() < dt * 6) puff(e.x + rnd(-0.15, 0.15), e.y, e.z + rnd(-0.15, 0.15), { color: 0xffa040, size: 0.05, grow: -0.02, life: 1.2, vy: 1.4, op: 0.9 });
-    if (e.k === 'furnace' && Math.random() < dt * 10) puff(e.x + rnd(-1.5, 1.5), e.y, e.z + 0.2, { color: 0xff7a2a, size: 0.04, grow: -0.01, life: 1.6, vy: 1.8, op: 0.9 });
-    if (e.k === 'stack' && Math.random() < dt * 3) puff(e.x + rnd(-0.8, 0.8), e.y, e.z + rnd(-0.8, 0.8), { color: 0x3a3a38, size: 1.2, grow: 1.4, life: 6, vy: 1.6, op: 0.4 });
-    if (e.k === 'candle' && Math.random() < dt * 1.5) puff(e.x, e.y, e.z, { color: 0x8a8a8a, size: 0.03, grow: 0.08, life: 2, vy: 0.35, op: 0.25 });
+    if (e.k !== 'stack' && Math.abs(e.x - cx) + Math.abs(e.z - cz) > 26) continue;
+    if (e.k === 'fire' && Math.random() < dt * 3) puff(e.x + rnd(-0.15, 0.15), e.y, e.z + rnd(-0.15, 0.15), { minor: true, color: 0xffa040, size: 0.05, grow: -0.02, life: 1.2, vy: 1.4, op: 0.9 });
+    if (e.k === 'furnace' && Math.random() < dt * 5) puff(e.x + rnd(-1.5, 1.5), e.y, e.z + 0.2, { minor: true, color: 0xff7a2a, size: 0.04, grow: -0.01, life: 1.6, vy: 1.8, op: 0.9 });
+    if (e.k === 'stack' && Math.random() < dt * 1.2) puff(e.x + rnd(-0.8, 0.8), e.y, e.z + rnd(-0.8, 0.8), { minor: true, color: 0x3a3a38, size: 1.2, grow: 1.4, life: 6, vy: 1.6, op: 0.4 });
+    if (e.k === 'candle' && Math.random() < dt * 0.8) puff(e.x, e.y, e.z, { minor: true, color: 0x8a8a8a, size: 0.03, grow: 0.08, life: 2, vy: 0.35, op: 0.25 });
   }
 }
 // the power is on: the hall lamps stop flickering
@@ -7045,12 +7048,14 @@ function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
 {
-"v": "1.2.39",
+"v": "1.2.40",
 "d": "2026-10-23",
 "n": [
-"ZOMBIES RUNS FASTER: the zombies maps had 40 to 80 real lights (lamps, candles, fires, glows) and every one cost every pixel every frame. Now only the 12 that matter most near you are real at any moment and they hand over as you move, so it looks the same and runs much lighter, especially on Macs and laptops.",
-"No more hitches when you pick up story items or a boss appears (the game was recompiling its shaders each time).",
-"Shadows in zombies are redrawn every other frame, and zombies re-plan their path a few times a second instead of every frame (every frame when they are close to you)."
+"ZOMBIES VOICE LINES: the survivors talk much less - at least 25 seconds between lines, lines never pile up behind each other (teammates' too), and every kind of line waits longer before it comes again. Going down, perks and the upgrader still always get a line.",
+"VOICE SETTINGS moved to SETTINGS > AUDIO: a ZOMBIES VOICE LINES switch and a VOICE LINES VOLUME slider. Story scenes still show subtitles when voices are off.",
+"PLAY WITH OR WITHOUT THE STORY: a new MODE row in the zombies lobby - STORY or CLASSIC (just the rounds: no quests, boss or scenes, and the launch pads work from the start). In co-op the host picks.",
+"LESS FREEZING: the zombies' route to you was rebuilt for every half metre you moved (up to 25 ms each on the hospital, a stutter when sprinting). Now it updates every metre or so and reuses its memory, so there are no more garbage-collection pauses.",
+"SMOOTHER ON MACS AND LAPTOPS: base Apple M1/M2/M3 chips and Intel/AMD built-in graphics now get the MEDIUM preset automatically (they were getting HIGH). If you set your graphics yourself, nothing changes. Zombie and boss shaders are prepared at the start, so the first zombie and the boss no longer hitch, and fire and smoke on THE WORKS only run near you."
 ]
 },
 {
@@ -13215,6 +13220,7 @@ const hcWait = setInterval(() => { if (typeof G !== 'undefined' && G.state === '
    (250: full ammo). No loadout: everyone starts the same. */
 MODES.zomb = { name: 'ZOMBIES', short: 'ZOMBIES', icon: 'ZMB', desc: 'Survive round after round of the dead. Start with a pistol, earn points, and buy guns from the Mystery Crate.', teams: false, respawn: 0, score: 0, time: 0, unit: 'ROUNDS' };
 const ZL = { on: false, map: 'blackwell', net: 'solo', code: '' };
+ZL.story = true; try { ZL.story = localStorage.getItem('ashfall.zstoryon') !== 'off'; } catch (e) {}
 try { const zm = localStorage.getItem('ashfall.zmap'); if (['blackwell', 'works'].includes(zm)) ZL.map = zm; } catch (e) {}
 try { ZL.net = localStorage.getItem('ashfall.znet') === 'coop' ? 'coop' : 'solo'; ZL.code = localStorage.getItem('ashfall.zcode') || ''; } catch (e) {}
 const Z = { zid: 0, targets: [], round: 0, toSpawn: 0, spawnT: 0, breakT: 0, active: false, guns: [], crate: null, ammo: null, boxT: 0, best: { round: 0, pts: 0 } };
@@ -13233,9 +13239,10 @@ function renderZLobby(focusSel) {
   $('lobSel').innerHTML =
     `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="z-start"><small>${zcStartLabel()[0]}</small><b>${zcStartLabel()[1]}</b></button></div>` + zcLobbyRows() +
     `<div class="cod-row cod-map"><small>MAP · ${zc.chapter}</small><b>${m ? m.name : ''}</b><span>${zc.mapLine}</span><div class="arw"><button class="mini" data-act="z-map-" aria-label="Previous map">&lsaquo;</button><button class="mini" data-act="z-map+" aria-label="Next map">&rsaquo;</button></div></div>` +
-    `<div class="cod-row"><small>STORY · ${zc.chapter} · 7 CHAPTERS</small><b style="color:#7adf6a">${sx.text.title}</b><span>${zmapStoryDone(mid) ? 'COMPLETE ✓ · ' : ''}TAPES FOUND ${zmapTapes(mid)} / ${sx.tapes.length} · ${sx.chapters.map((c, i) => `${i + 1} ${c.name}`).join(' · ')}</span></div>` +
+    `<div class="cod-row"><small>MODE</small><b>${zsWanted() ? 'STORY' : 'CLASSIC · NO STORY'}</b><span>${zsWanted() ? 'quests, a boss, tapes and the survivors\' scenes' : 'just the rounds: no quests, boss or scenes · launch pads work from the start'}${ZC.on && !zcHost() ? ' · the host picks' : ''}</span><div class="arw"><button class="mini" data-act="z-story" aria-label="Story or classic">&lsaquo;</button><button class="mini" data-act="z-story" aria-label="Story or classic">&rsaquo;</button></div></div>` +
+    `<div class="cod-row"${zsWanted() ? '' : ' style="opacity:.45"'}><small>STORY · ${zc.chapter} · 7 CHAPTERS</small><b style="color:#7adf6a">${sx.text.title}</b><span>${zmapStoryDone(mid) ? 'COMPLETE ✓ · ' : ''}TAPES FOUND ${zmapTapes(mid)} / ${sx.tapes.length} · ${sx.chapters.map((c, i) => `${i + 1} ${c.name}`).join(' · ')}</span></div>` +
     `<div class="cod-row"><small>CHARACTER</small><b style="color:${zvChar(ZL.char).col}">${zvChar(ZL.char).full}</b><span>${zvChar(ZL.char).bio}</span><div class="arw"><button class="mini" data-act="z-char-" aria-label="Previous character">&lsaquo;</button><button class="mini" data-act="z-char+" aria-label="Next character">&rsaquo;</button></div></div>` +
-    `<div class="cod-row"><small>VOICE LINES</small><b>${ZV.enabled ? 'ON' : 'OFF'}</b><span>spoken by your computer's voices, with subtitles</span><div class="arw"><button class="mini" data-act="z-voice" aria-label="Voice lines on or off">${ZV.enabled ? 'TURN OFF' : 'TURN ON'}</button></div></div>` +
+    
     `<div class="cod-row"><small>STARTING GEAR</small><b>SERVICE 9 · 2 FRAGS</b><span>everyone starts the same · 500 points to spend</span></div>` +
     `<div class="cod-row"><small>MYSTERY CRATE · ${Z_BOX} POINTS</small><b>A RANDOM GUN</b><span>AMMO CRATE · ${Z_AMMO} POINTS · full ammo for your guns</span></div>` +
     `<div class="cod-row"><small>YOUR BEST</small><b>ROUND ${Z.best.round || 0}</b><span>${(Z.best.pts || 0).toLocaleString()} POINTS</span></div>`;
@@ -13259,6 +13266,7 @@ function zombAct(act) {
   if (act === 'z-code') { const i = $('zCode'), c = i ? cleanCode(i.value) : ''; if (!c || c === 'public') { if (i) { i.focus(); i.placeholder = 'type a code first'; } return true; } ZL.code = c; zcJoin('code', c); return true; }
   if (act === 'z-leave') { zcLeave(); sfx.ui(); return true; }
   if (act === 'z-char-' || act === 'z-char+') { const i = ZCHARS.findIndex(c => c.id === ZL.char), d = act.endsWith('+') ? 1 : -1; ZL.char = ZCHARS[(i + d + ZCHARS.length) % ZCHARS.length].id; try { localStorage.setItem('ashfall.zchar', ZL.char); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="${act}"]`); try { speechSynthesis.cancel(); } catch (e) {} const l = ZLINES[ZL.char].spawn; zvSpeak(ZL.char, l[(Math.random() * l.length) | 0]); return true; }
+  if (act === 'z-story') { if (ZC.on && !zcHost()) return true; ZL.story = !ZL.story; try { localStorage.setItem('ashfall.zstoryon', ZL.story ? 'on' : 'off'); } catch (e) {} sfx.ui(); renderZLobby('[data-act="z-story"]'); return true; }
   if (act === 'z-voice') { ZV.enabled = !ZV.enabled; try { localStorage.setItem('ashfall.zvoice', ZV.enabled ? 'on' : 'off'); if (!ZV.enabled) speechSynthesis.cancel(); } catch (e) {} sfx.ui(); renderZLobby('[data-act="z-voice"]'); return true; }
   if ((act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') && ZC.on && !zcHost()) return true;
   if (act === 'z-map-' || act === 'z-map+') { const L = ZMAP_LIST, i = Math.max(0, L.indexOf(ZL.map)), d = act.endsWith('+') ? 1 : -1; ZL.map = L[(i + d + L.length) % L.length]; try { localStorage.setItem('ashfall.zmap', ZL.map); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="${act}"]`); return true; }
@@ -13278,10 +13286,20 @@ function zombStart(cfg) {
   zombEquip(); G.grenades = 2; G.points = 500; G.score = 0;
   Z.up = new Set(); zdInit(); zombEquip();
   zombCrates();
+  zombWarm();
   if (ZC.on && ZC.inGame) zcStartLocal();
   G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
   showBanner('ZOMBIES', 'survive · 500 points to spend'); zombHud(true);
   ZV.kills = 0; try { zsIntro(); } catch (e) {}
+}
+// compile the zombie and boss shaders now, while the screen is still the start banner, not when the first one appears
+function zombWarm() {
+  try {
+    const a = makeZombie(P.x, P.z - 3, P.y || 0), b = makeZombie(P.x + 1, P.z - 3, P.y || 0); zsMakeBoss(b); for (const l of b.group.children.filter(o => o.isLight)) b.group.remove(l);   // same light count as the game (no extra shader variant)
+    renderer.compile(scene, camera);
+    for (const e of [a, b]) { const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1); scene.remove(e.group); }
+    Z.zid = 0;
+  } catch (e) { reportError(e); }
 }
 function zombEquip(keepCur) {
   const g = Z.guns, gr = G.grenades; zuRestore();
@@ -13347,6 +13365,17 @@ function makeZombie(x, z, y) {
   enemies.push(e);
   return e;
 }
+// the zombies' route map toward me: rebuilt when I have moved more than a metre or so (it used to be rebuilt for
+// every half-metre cell I stepped into, up to 25 ms each on the hospital: stutter when sprinting)
+function zombNav() {
+  const y = P.y || 0;
+  if (navTarget < 0 || !navField || Z.navX === undefined || Math.hypot(P.x - Z.navX, P.z - Z.navZ) > 1.25 || Math.abs(y - Z.navY) > 1) { Z.navX = P.x; Z.navZ = P.z; Z.navY = y; updateNav(P.x, P.z, y); }
+}
+function zombFieldFor(T) {
+  const F = Z.fields || (Z.fields = {}), k = T.peer || 'p'; let c = F[k];
+  if (!c || c.gen !== Z.navGen || Math.hypot(T.x - c.x, T.z - c.z) > 1.25 || Math.abs((T.y || 0) - c.y) > 1) c = F[k] = { x: T.x, z: T.z, y: T.y || 0, gen: Z.navGen, d: flowField(T.x, T.z, T.y || 0) };
+  return c.d;
+}
 function zombSpawn() {
   const pts = zdSpawnPts(), T = Z.targets || []; if (!pts.length || !T.length) return null;
   for (let t = 0; t < 80; t++) {
@@ -13362,7 +13391,7 @@ function zombRound() {
   G.wave = Z.round; if (!(ZC.on && ZC.down)) G.health = G.maxHp; if (ZC.on && ZC.dead) zcRespawn();
   showBanner(`ROUND ${Z.round}`, Z.round === 1 ? 'here they come' : Z.round % 5 === 0 ? 'they are getting faster' : `${Z.toSpawn} zombies`);
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
-  zombHud(true); if (Z.round > 1) setTimeout(() => zvSay('round', 0.6), 1200); try { zsRoundTalk(Z.round); } catch (e) {}
+  zombHud(true); if (Z.round > 1) setTimeout(() => zvSay('round', 0.3), 1200); try { zsRoundTalk(Z.round); } catch (e) {}
 }
 function updateZombies(dt) {
   if (G.spawnProt > 0) G.spawnProt = Math.max(0, G.spawnProt - dt);   // revive / respawn protection runs out (it only counted down in multiplayer before)
@@ -13374,7 +13403,7 @@ function updateZombies(dt) {
   else {
     const cap = Math.min(24, 10 + Z.round);
     if (Z.toSpawn > 0) { Z.spawnT -= dt; if (Z.spawnT <= 0 && enemies.length < cap) { if (zombSpawn()) Z.toSpawn--; Z.spawnT = Math.max(0.35, 1.9 - Z.round * 0.13); } }
-    else if (!enemies.length) { Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.6); }
+    else if (!enemies.length) { Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.3); }
   }
   for (let i = 0; i < enemies.length; i++) zombThink(enemies[i], i, dt);
   zombHud();
@@ -13401,7 +13430,7 @@ function zombThink(e, i, dt) {
     else {
       e.navT = dist < 6 ? 0 : 0.14 + Math.random() * 0.08;
       if (gridClear(g.position.x, g.position.z, T.x, T.z, g.position.y, T.y)) { mx = nx + -nz * e.lurch * 0.3; mz = nz + nx * e.lurch * 0.3; }
-      else { const nd = T.me ? navDir(g.position.x, g.position.z, g.position.y) : flowDir(flowField(T.x, T.z, T.y), g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
+      else { const nd = T.me ? navDir(g.position.x, g.position.z, g.position.y) : flowDir(zombFieldFor(T), g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
       e.mvx = mx; e.mvz = mz;
     }
     if (dist < 1.3 && up) { mx = mz = 0; if (!(e.stunT > 0)) e.atkCd -= dt; if (e.atkCd <= 0 && !(e.stunT > 0)) { if (Math.random() < 0.6) try { sfx.zscreech(at(g.position.x, g.position.z, 14, g.position.y)); } catch (err) {} e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.7, 1.1); } }
@@ -13468,7 +13497,7 @@ function zombBuyBox() {
   const have = new Set(Z.guns), pool = Z_POOL().filter(d => !have.has(d.id)), d = pool[(Math.random() * pool.length) | 0];
   if (Z.guns.length < 2) Z.guns.unshift(d.id); else Z.guns[G.cur] = d.id;
   zombEquip(Z.guns.indexOf(d.id));
-  showBanner(d.name, CATS[d.cat].name); try { sfx.streak(); } catch (e) {} setTimeout(() => zvSay('box', 0.8), 900);
+  showBanner(d.name, CATS[d.cat].name); try { sfx.streak(); } catch (e) {} setTimeout(() => zvSay('box', 0.5), 900);
 }
 function zombBuyAmmo() { G.points -= Z_AMMO; if (typeof zcEvent === 'function') zcEvent('ammo', P); WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = w.reserveMax || w.def.reserve; }); G.grenades = Math.max(G.grenades, 2); showMsg('AMMO REFILLED'); try { sfx.ui(); } catch (e) {} }
 // HUD: the round in big red numbers bottom-left, points above it
@@ -13595,13 +13624,13 @@ function zcRead() {
   if (host) return;
   // ---- as a client: follow the host
   const H = zcHostPres(); if (!H) return;
-  ZC.hostLobbyMap = typeof H.ml === 'string' ? H.ml : '';
+  ZC.hostLobbyMap = typeof H.ml === 'string' ? H.ml : ''; ZC.hostStory = H.so !== 0;
   if (H.st === 'play' && +H.gid && +H.gid !== ZC.gid && typeof H.mp === 'string' && MAPS[H.mp]) { zcEnterGame(H.mp, +H.gid); return; }
   if (!ZC.inGame || +H.gid !== ZC.gid) return;
   if (ZC.fresh) { ZC.fresh = false; ZC.seenK = zcMaxSeq(H.zk, 4); ZC.seenA = zcMaxSeq(H.zt, 2); }
   const zr = Math.max(ZC.round, +H.zr | 0);
   if (zr > ZC.round) zcClientRound(zr);
-  if (ZC.active && !H.za && zr === ZC.round && zr > 0) { showBanner(`ROUND ${zr} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.6); }
+  if (ZC.active && !H.za && zr === ZC.round && zr > 0) { showBanner(`ROUND ${zr} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.3); }
   if (Array.isArray(H.zd)) for (const id of H.zd) if (!ZD.open.has(+id)) zdOpen(+id, false);
   ZC.round = zr; ZC.left = +H.zl | 0; ZC.active = !!H.za; Z.round = zr; G.wave = zr;
   // kills (mine get the points)
@@ -13644,7 +13673,7 @@ function zcPublish() {
   const o = { zc: 1, n: NET.nick, g: inG ? ZC.gid : 0, x: r2(P.x), y: r2(P.y || 0), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch),
     a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv, od: inG ? [...ZD.mine] : [], ch: ZL.char, vl: ZV.out, pk: inG ? ZC.pk : [], ev: inG ? ZC.ev : [], qi: inG ? [...ZS.mine] : [] };
   if (zcHost()) {
-    Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, zr: Z.round, qf: inG ? [...ZS.flags] : [], qc: inG ? +ZS.cook.toFixed(3) : -1, qb: inG && ZS.bloodItem && ZS.bloodItem.g ? [r2(ZS.bloodItem.at.x), r2(ZS.bloodItem.at.z), r2(ZS.bloodItem.at.y)] : 0, zd: inG ? [...ZD.open] : [], dp: inG ? [...ZC.drops].filter(([, d]) => performance.now() - d.t < 40000).map(([id, d]) => [id, r2(d.x), r2(d.z), r2(d.y)]) : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
+    Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, so: ZL.story ? 1 : 0, zr: Z.round, qf: inG ? [...ZS.flags] : [], qc: inG ? +ZS.cook.toFixed(3) : -1, qb: inG && ZS.bloodItem && ZS.bloodItem.g ? [r2(ZS.bloodItem.at.x), r2(ZS.bloodItem.at.z), r2(ZS.bloodItem.at.y)] : 0, zd: inG ? [...ZD.open] : [], dp: inG ? [...ZC.drops].filter(([, d]) => performance.now() - d.t < 40000).map(([id, d]) => [id, r2(d.x), r2(d.z), r2(d.y)]) : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
     o.zs = inG ? enemies.filter(e => e.zombie && !e.proxy).map(e => { const g = e.group.position; return [e.zid, r2(g.x), r2(g.z), r2(g.y), Math.round(e.group.rotation.y * 100), e.boss ? 3 : e.kind === 'run' ? 2 : e.kind === 'jog' ? 1 : 0, e.atkT > 0 ? 1 : 0, Math.round(clamp(e.hp / e.maxHp, 0, 1) * 100)]; }) : [];
   }
   ZC.room.presence(o);
@@ -13756,7 +13785,7 @@ function zcMyKill(e, head, melee) {
 function zcClientRound(r) {
   Z.round = r; G.wave = r; G.health = G.maxHp;
   if (ZC.dead) zcRespawn();
-  showBanner(`ROUND ${r}`, r === 1 ? 'here they come' : r % 5 === 0 ? 'they are getting faster' : 'survive together'); if (r > 1) setTimeout(() => zvSay('round', 0.6), 1200); try { zsRoundTalk(r); } catch (e) {}
+  showBanner(`ROUND ${r}`, r === 1 ? 'here they come' : r % 5 === 0 ? 'they are getting faster' : 'survive together'); if (r > 1) setTimeout(() => zvSay('round', 0.3), 1200); try { zsRoundTalk(r); } catch (e) {}
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
   zombHud(true);
 }
@@ -14085,7 +14114,7 @@ function zdOpen(id, bought) {
   const i = boxes.indexOf(o.box); if (i >= 0) boxes.splice(i, 1);
   const j = wallMeshes.indexOf(o.proxy); if (j >= 0) wallMeshes.splice(j, 1); scene.remove(o.proxy);
   ZD.anim.push({ g: o.g, t: 0, o });
-  boxGridDirty = true; buildNav();
+  boxGridDirty = true; buildNav(); Z.navGen = (Z.navGen || 0) + 1;
   try { tone(140, 0.25, 0.12, 'square'); tone(90, 0.5, 0.1, 'sawtooth'); } catch (e) {}
   return true;
 }
@@ -14120,7 +14149,7 @@ function zdPrompt() {
 }
 function zdBuy(o) {
   if (G.points < o.d.cost) return;
-  G.points -= o.d.cost; zdOpen(o.d.id, true); zvSay('door', 0.8);
+  G.points -= o.d.cost; zdOpen(o.d.id, true); zvSay('door', 0.5);
   showBanner(o.d.name, 'opened'); try { sfx.ui(); } catch (e) {}
 }
 
@@ -14538,8 +14567,11 @@ const ZLINES = {
     edible: ['It is so cute! Sorry, little bear! Chomp!', 'I ate a bear! Not a real one! A gummy one! Obviously!', 'Wait, how much was in that? Oh no. Oh yes.', 'If I start giggling at zombies, that is the gummy talking.', 'Delicious! Dangerous! Deliciously dangerous!'],
   },
 };
-const ZV = { voices: [], vmap: {}, last: {}, cd: {}, seq: 0, out: [], kills: 0, lowT: 0, enabled: true, sub: null };
-ZL.char = 'smokes'; try { const c = localStorage.getItem('ashfall.zchar'); if (ZCHARS.some(x => x.id === c)) ZL.char = c; ZV.enabled = localStorage.getItem('ashfall.zvoice') !== 'off'; } catch (e) {}
+const ZV = { voices: [], vmap: {}, last: {}, cd: {}, seq: 0, out: [], kills: 0, lowT: 0, sub: null, gap: 0, _off: false };
+// on / off and the volume live in SETTINGS > AUDIO (S.zvoice, S.zvoiceVol); the old lobby switch is carried over once
+Object.defineProperty(ZV, 'enabled', { get() { return !ZV._off && typeof S !== 'undefined' && S.zvoice !== false && (S.zvoiceVol === undefined || S.zvoiceVol > 0); }, set(v) { ZV._off = !v; } });
+const zvVol = () => (typeof S !== 'undefined' && S.zvoiceVol !== undefined ? S.zvoiceVol : 70) / 100;
+ZL.char = 'smokes'; try { const c = localStorage.getItem('ashfall.zchar'); if (ZCHARS.some(x => x.id === c)) ZL.char = c; if (localStorage.getItem('ashfall.zvoice') === 'off' && typeof S !== 'undefined') { S.zvoice = false; localStorage.removeItem('ashfall.zvoice'); try { saveSettings(); } catch (e) {} } } catch (e) {}
 const zvChar = id => ZCHARS.find(c => c.id === id) || ZCHARS[0];
 
 /* ---------- picking a computer voice for each survivor (different ones where the computer has them) */
@@ -14560,22 +14592,27 @@ try { if (window.speechSynthesis) { zvLoadVoices(); speechSynthesis.onvoiceschan
 /* ---------- saying a line */
 function zvSpeak(charId, text, vol = 1) {
   const c = zvChar(charId);
-  zvSubtitle(c, text);
   if (!ZV.enabled) return;
+  try { if (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending)) return; } catch (e) {}   // never queue lines up behind each other
+  zvSubtitle(c, text);
   try {
     if (!window.speechSynthesis) return;
     if (!ZV.voices.length) zvLoadVoices();
     const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id];
-    if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(vol * ((typeof S !== 'undefined' && S.master !== undefined ? S.master : 80) / 100), 0, 1);
+    if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(vol * zvVol() * ((typeof S !== 'undefined' && S.master !== undefined ? S.master : 80) / 100), 0, 1);
     speechSynthesis.speak(u);
   } catch (e) {}
 }
 // a moment happened to me: maybe say something (cooldowns stop it getting chatty), and tell my teammates
-const ZV_CD = { round: 25, roundEnd: 20, door: 6, box: 8, upgrade: 5, down: 3, revived: 3, reviving: 3, streak: 30, ammo: 35, broke: 12, spawn: 0, bowl: 0, joint: 0, edible: 0 };
+const ZV_CD = { round: 90, roundEnd: 75, door: 30, box: 30, upgrade: 20, down: 15, revived: 15, reviving: 20, streak: 120, ammo: 90, broke: 45, spawn: 0, bowl: 0, joint: 0, edible: 0 };
+// some moments always get their line (going down, perks, the upgrade); everything else waits for a quiet gap
+const ZV_KEY = new Set(['down', 'revived', 'bowl', 'joint', 'edible', 'upgrade']), ZV_GAP = 25;
 function zvSay(moment, chance = 1) {
   if (typeof M === 'undefined' || !M || M.mode !== 'zomb') return;
+  if (!ZV.enabled || (typeof ZS !== 'undefined' && ZS.playing)) return;
   const now = performance.now() / 1000; if ((ZV.cd[moment] || 0) > now || Math.random() > chance) return;
-  ZV.cd[moment] = now + (ZV_CD[moment] || 8);
+  if (!ZV_KEY.has(moment) && now < ZV.gap) return;
+  ZV.cd[moment] = now + (ZV_CD[moment] || 30); ZV.gap = now + ZV_GAP;
   const lines = (ZLINES[ZL.char] || {})[moment]; if (!lines || !lines.length) return;
   let i = (Math.random() * lines.length) | 0; if (lines.length > 1 && i === ZV.last[moment]) i = (i + 1) % lines.length; ZV.last[moment] = i;
   zvSpeak(ZL.char, lines[i]);
@@ -14588,7 +14625,7 @@ function zvRemote(R) {
   for (const v of list) {
     if (!Array.isArray(v) || (+v[2] || 0) <= R.seenVl) continue; R.seenVl = +v[2] || 0;
     const ch = ZCHARS.some(c => c.id === R.pr.ch) ? R.pr.ch : 'doc', line = ((ZLINES[ch] || {})[v[0]] || [])[+v[1] | 0];
-    if (line) zvSpeak(ch, line, 0.75);
+    const now = performance.now() / 1000; if (line && (ZV_KEY.has(v[0]) || now >= ZV.gap) && !(typeof ZS !== 'undefined' && ZS.playing)) { ZV.gap = now + ZV_GAP; zvSpeak(ch, line, 0.75); }
   }
 }
 function zvSubtitle(c, text) {
@@ -14600,8 +14637,8 @@ function zvSubtitle(c, text) {
 // every frame in zombies: low-ammo and kill-streak lines
 function zvTick(dt) {
   if (!M || M.mode !== 'zomb' || G.state !== 'playing') return;
-  const w = WEAPONS[G.cur]; if (w && w.ammo + w.reserve <= Math.max(3, w.magSize * 0.5) && w.reserve <= 0) zvSay('ammo', 0.7);
-  if (G.kills >= ZV.kills + 15) { ZV.kills = G.kills; zvSay('streak', 0.6); }
+  const w = WEAPONS[G.cur]; if (w && w.ammo + w.reserve <= Math.max(3, w.magSize * 0.5) && w.reserve <= 0) zvSay('ammo', 0.4);
+  if (G.kills >= ZV.kills + 25) { ZV.kills = G.kills; zvSay('streak', 0.4); }
 }
 /* ================================================================== ZOMBIES STORY: "THE GREEN CURE" (seven chapters)
    Blackwell General ran a secret trial of a painkiller, LAZARUS-9. DOC signed off on it. SMOKES found the leftover
@@ -14697,6 +14734,8 @@ function zsLoadTapes() { ZS.heard.clear(); try { for (const t of JSON.parse(loca
 zsLoadTapes();
 const zsDoneEver = key => { try { return localStorage.getItem(key || ZS_TEXT.keyDone) === 'done'; } catch (e) { return false; } };
 const zsHas = id => ZS.flags.has(id);
+// story on or off for this game (the lobby's MODE row; in co-op the host's choice counts)
+const zsWanted = () => (typeof ZC !== 'undefined' && ZC.on && !zcHost() && ZC.hostStory !== undefined) ? ZC.hostStory : ZL.story !== false;
 const zsFuses = () => ['f1', 'f2', 'f3'].filter(zsHas).length, zsStashes = () => ['st1', 'st2', 'st3'].filter(zsHas).length;
 // which chapter we are on, from what has happened
 function zsChapterNow() { if (ZS.done) return 6; if (!zsHas('power')) return 0; if (!zsHas('card')) return 1; if (zsStashes() < 3) return 2; if (!zsHas('blood')) return 3; if (!zsHas('jar')) return 4; return 5; }
@@ -14748,6 +14787,7 @@ function zsBuild() {
   zsClear();
   if (!zmapIs(curMap)) return;
   Object.assign(ZS, { cook: -1, cookT: 0, done: false, chapter: -1, bossOut: false, boss: null, bloodItem: null }); ZS.flags.clear(); ZS.mine.clear(); ZS.said.clear();
+  ZS.off = !zsWanted(); if (ZS.off) return;
   ZS.objs = ZS_ITEMS.map(it => ({ it, g: zsMake(it) }));
   ZS.tapes = ZS_TAPES.map((t, i) => ({ t, i, g: zsMake({ kind: 'tape', at: t.at }) }));
   ZS.station = zsStation(); ZS.fusebox = zsFuseBox();
@@ -14809,7 +14849,7 @@ const ZS_SAY = {
   smokes: { fuse: 'Fuse. Shiny. Like a tiny glowing joint.', card: 'Keycard. Huh. I used to just prop the door open.', stash: 'Aw, man. That is my old merchandise. Goodbye, retirement.', jar: 'Oh, hello, beautiful. I have dreamed of you.', blood: 'Eddie\'s blood. Sorry, Eddie. You were my best customer.', cook: 'Okay, okay, it is cooking. Smells like redemption.' },
   sparks: { fuse: 'Fuse! Yes! I love fuses! Fuses love me!', card: 'Keycard! Shiny! Okay, lab, here we come!', stash: 'Burn it, burn it, burn it!', jar: 'Is it weird that this is the most medical thing I have seen tonight?', blood: 'Ew ew ew. Okay. Got it. Ew.', cook: 'It is bubbling! Is it supposed to bubble? Hold them off!' },
 };
-function zsLine(k) { if (ZS.playing) return; const t = (ZS_SAY[ZL.char] || {})[k]; if (t) zvSpeak(ZL.char, t); }
+function zsLine(k) { if (ZS.playing || Math.random() > 0.5) return; const t = (ZS_SAY[ZL.char] || {})[k]; if (t) zvSpeak(ZL.char, t); }
 // a new chapter: scene, banner, objective; chapter 4 also brings out Patient Zero
 function zsCheckChapter() {
   const c = zsChapterNow(); if (c === ZS.chapter) { zsHud(); return; }
@@ -14858,14 +14898,14 @@ function zsDialog(lines, done) {
     let fired = false; const go = () => { if (fired) return; fired = true; setTimeout(next, 250); };
     const ms = 1600 + text.length * 62;
     try {
-      if (ZV.enabled && window.speechSynthesis) { const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id]; if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp((S.master !== undefined ? S.master : 80) / 100, 0, 1); u.onend = go; speechSynthesis.speak(u); setTimeout(go, ms * 1.6); }
+      if (ZV.enabled && window.speechSynthesis) { const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id]; if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(zvVol() * (S.master !== undefined ? S.master : 80) / 100, 0, 1); u.onend = go; speechSynthesis.speak(u); setTimeout(go, ms * 1.6); }
       else setTimeout(go, ms);
     } catch (e) { setTimeout(go, ms); }
   };
   next();
 }
 // group talk every few rounds (called from the round start)
-function zsRoundTalk(r) { try { zmapRound(r); } catch (e) {} const s = ZS_ROUNDS[r]; if (s && !ZS.said.has(r)) { ZS.said.add(r); setTimeout(() => zsDialog(s), 3500); } }
+function zsRoundTalk(r) { try { zmapRound(r); } catch (e) {} if (ZS.off) return; const s = ZS_ROUNDS[r]; if (s && !ZS.said.has(r)) { ZS.said.add(r); setTimeout(() => zsDialog(s), 3500); } }
 function zsStartCookReq() { if (zcInGame() && !zcHost()) zcEvent('cook', P); else zsStartCook(); }
 function zsStartCook() {
   if (ZS.cook >= 0 || ZS.done || zsChapterNow() < 5) return;
@@ -14875,6 +14915,7 @@ function zsStartCook() {
 }
 // every frame (the host runs the boss and the cooking; everyone draws)
 function zsTick(dt) {
+  if (ZS.off) return;
   for (const o of ZS.objs.concat(ZS.tapes, ZS.bloodItem ? [ZS.bloodItem] : [])) if (o.g) { o.g.rotation.y += dt * 1.2; o.g.userData.beam.material.opacity = 0.08 + Math.sin(NOW * 3) * 0.05; }
   if (ZS.boss && enemies.includes(ZS.boss)) { const g = ZS.boss.group.position; ZS.boss.bossLast = { x: g.x, z: g.z, y: g.y }; }
   if (ZS.boss && !enemies.includes(ZS.boss)) zsBossDied(ZS.boss);
@@ -14901,7 +14942,7 @@ function zsBar(on) {
 function zsHud(force) {
   let h = $('zQuest');
   if (!h) { h = document.createElement('div'); h.id = 'zQuest'; ($('hud') || document.body).appendChild(h); const st = document.createElement('style'); st.textContent = `#zQuest{position:absolute;right:28px;top:200px;max-width:300px;text-align:right;pointer-events:none;font:700 12px var(--font,system-ui);letter-spacing:.12em;color:#dfe8d0;text-shadow:0 1px 4px #000;line-height:1.5}#zQuest b{display:block;color:#7adf6a;letter-spacing:.2em;font-size:11px}`; document.head.appendChild(st); }
-  if (force === false) { h.innerHTML = ''; return; }
+  if (force === false || ZS.off) { h.innerHTML = ''; return; }
   const c = zsChapterNow(), ch = ZS_CHAPTERS[c];
   let extra = c === 0 ? ` (${zsFuses()}/3)` : c === 2 ? ` (${zsStashes()}/3)` : '';
   const html = typeof M !== 'undefined' && M && M.mode === 'zomb' ? `<b>${ZS_TEXT.title} · CHAPTER ${c + 1} OF 7</b>${ch.name} · ${ch.goal}${extra}` : '';
@@ -14932,6 +14973,7 @@ function zsFromPeer(R) {
 }
 // the intro, every game (any key or 6 seconds hides the title; the voices finish over gameplay)
 function zsIntro() {
+  if (ZS.off) { ZS.chapter = 0; return; }
   let o = $('zIntro'); if (!o) { o = document.createElement('div'); o.id = 'zIntro'; document.body.appendChild(o); const st = document.createElement('style'); st.textContent = `#zIntro{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(20,4,30,.75),rgba(0,0,0,.92));color:#e8e2d0;pointer-events:none;transition:opacity 1.2s;text-align:center}#zIntro b{font:900 54px Georgia,serif;letter-spacing:.12em;color:#7adf6a;text-shadow:0 0 30px rgba(90,223,106,.5)}#zIntro small{font:700 13px var(--font,system-ui);letter-spacing:.4em;margin-top:10px;color:#b06cff}#zIntro em{font:14px var(--font,system-ui);margin-top:26px;opacity:.6;font-style:normal;letter-spacing:.2em}`; document.head.appendChild(st); }
   o.innerHTML = `<small>${ZS_TEXT.place}</small><b>${ZS_TEXT.title}</b><small>${zsDoneEver() ? 'STORY COMPLETE · PLAY IT AGAIN' : ZS_TEXT.introSub}</small><em>${ZS_TEXT.introEm}</em>`;
   o.style.opacity = 1; o.style.display = '';
@@ -15104,6 +15146,7 @@ function zmapBuildPads() {
     g.position.set(p.x, p.y, p.z); scene.add(g);
     ZM.pads.push({ p, g, glow, lt, beam, ring });
   }
+  if (ZS.off) ZM.powered = true;   // no story: the launch pads work from the start
 }
 function zmapClearPads() { for (const o of ZM.pads) scene.remove(o.g); ZM.pads = []; ZM.fly = null; }
 function zmapPowerPads() { ZM.powered = true; }
@@ -15131,7 +15174,7 @@ function zmapLaunch(a, b) {
   showBanner('LAUNCH!', 'to the ' + b.name.toLowerCase());
   try { burst(0.9, 900, 0.35, 'lowpass'); tone(90, 0.6, 0.25, 'sawtooth', 400); burst(0.5, 4000, 0.12, 'highpass'); } catch (e) {}
   try { for (let i = 0; i < 14; i++) puff(a.x + rnd(-1, 1), 0.2, a.z + rnd(-1, 1), { color: 0xd8d0c0, size: 0.4, grow: 1.2, life: 1.4, vy: 1.5, op: 0.5 }); } catch (e) {}
-  if (typeof zvSay === 'function') setTimeout(() => { try { zvSay('streak', 0.4); } catch (e) {} }, 500);
+  if (typeof zvSay === 'function') setTimeout(() => { try { zvSay('streak', 0.2); } catch (e) {} }, 500);
 }
 // the flight: up and over the roofs, then straight down onto the pad
 function zmapFly(dt) {
@@ -15193,6 +15236,58 @@ function zlpTick(dt) {
   if ((ZLP.scanT -= dt) <= 0) { ZLP.scanT = 1; zlpAdopt(); }
   if ((ZLP.t -= dt) <= 0) { ZLP.t = 0.12; zlpAssign(); return; }
   for (const l of ZLP.pool) { const v = l.userData.v; if (v) { l.intensity = v.l.intensity; if (v.par !== scene) { v.par.updateWorldMatrix(true, false); l.position.copy(v.l.position).applyMatrix4(v.par.matrixWorld); } } }   // flicker, moving lights
+}
+
+/* ---------- #zbench: a zombies benchmark (used to measure a machine, e.g. a friend's Mac)
+   #zbench[&map=works|blackwell][&r=http://127.0.0.1:8765]: starts a solo zombies game, opens every door, turns the
+   power on, keeps 20 zombies coming, fires constantly and pans the camera. It measures OLD lighting (every lamp a real
+   light) then NEW lighting (the light pool), 20 seconds each, and shows the numbers (and POSTs them to r if given). */
+const ZB = { on: false };
+function zbOpts() { const h = (location.hash || '').replace(/^#zbench&?/, ''), o = {}; for (const kv of h.split('&')) { const [k, v] = kv.split('='); if (k) o[k] = decodeURIComponent(v || ''); } return o; }
+function zbStats(d) {
+  const s = d.slice().sort((a, b) => a - b), n = s.length || 1, sum = s.reduce((a, b) => a + b, 0) || 1, worst = s.slice(Math.floor(n * 0.99));
+  return { avgFps: +(n / sum * 1000).toFixed(1), low1Fps: +(worst.length / (worst.reduce((a, b) => a + b, 0) || 1) * 1000).toFixed(1), p95ms: +(s[Math.floor(n * 0.95)] || 0).toFixed(1), maxMs: +(s[n - 1] || 0).toFixed(1), frames: n, lights: (() => { let k = 0; scene.traverse(o => { if (o.isPointLight) k++; }); return k; })() };
+}
+function startZBench() {
+  const o = zbOpts(), map = zmapIs(o.map) ? o.map : 'works'; ZB.on = true; ZB.o = o; ZB.res = { map, ua: navigator.userAgent, dpr: window.devicePixelRatio, gpu: (typeof gpuName === 'function' ? gpuName() : ''), settings: { quality: S.quality, shadows: S.shadows, renderScale: S.renderScale, dynRes: S.dynRes } };
+  S.dynRes = false; try { applyPR(); } catch (e) {}
+  ZL.net = 'solo'; ZL.map = map; ZV.enabled = false; startMatch('zomb', { map });
+  setTimeout(zbSetup, 4000);
+}
+function zbSetup() {
+  for (const d of ZDOORS) zdOpen(d.id, false);
+  for (const id of ['f1', 'f2', 'f3']) zsFlag(id); zsPower();
+  ZS.playing = true; Z.breakT = 1e9; Z.active = true; Z.toSpawn = 0;
+  const sp = curMap === 'works' ? { x: 0, z: 8 } : { x: 0, z: 18 }; Object.assign(P, { x: sp.x, z: sp.z, y: 0 });
+  const cv = renderer.domElement; ZB.res.resolution = `${cv.width}x${cv.height}`;
+  zbPhase('old');
+}
+function zbFill() {
+  const pts = zdSpawnPts().filter(p => { const d = Math.hypot(p.x - P.x, p.z - P.z); return d > 7 && d < 22 && p.y < 1; });
+  while (enemies.filter(e => e.zombie).length < 20 && pts.length) { const p = pts[(Math.random() * pts.length) | 0]; const e = makeZombie(p.x, p.z, p.y); e.kind = 'walk'; e.speed = 1.2; }
+}
+function zbPhase(name) {
+  if (name === 'old') zlpStop(); else zlpStart();
+  showBanner('ZOMBIES BENCHMARK', name === 'old' ? 'old lighting · 20 seconds · hands off' : 'new lighting · 20 seconds · hands off');
+  const d = []; let last = performance.now(), t0 = last;
+  const step = now => {
+    if (!ZB.on) return;
+    const dt = now - last; last = now;
+    G.health = G.maxHp = 1e9; P.yaw += dt / 1000 * 0.35; P.pitch = -0.08; mouseDown = true;
+    const w = WEAPONS[G.cur]; if (w) { w.ammo = w.magSize; G.reloading = false; }
+    if (now - t0 > 3000 && document.visibilityState !== 'hidden' && dt < 500) d.push(dt);
+    if (((now - t0) | 0) % 500 < 20) zbFill();
+    if (now - t0 < 23000) requestAnimationFrame(step);
+    else { ZB.res[name] = zbStats(d); if (name === 'old') zbPhase('new'); else zbDone(); }
+  };
+  requestAnimationFrame(step);
+}
+function zbDone() {
+  ZB.on = false; mouseDown = false; const r = ZB.res; window.__zbench = r;
+  try { console.log('ASHFALL ZBENCH', JSON.stringify(r)); } catch (e) {}
+  if (ZB.o.r) try { fetch(ZB.o.r, { method: 'POST', mode: 'no-cors', body: JSON.stringify(r) }); } catch (e) {}
+  let el = $('zbOut'); if (!el) { el = document.createElement('pre'); el.id = 'zbOut'; el.style.cssText = 'position:fixed;inset:10% 20%;z-index:99;background:rgba(0,0,0,.88);color:#cfe;font:16px/1.5 monospace;padding:24px;white-space:pre-wrap;overflow:auto'; document.body.appendChild(el); }
+  el.textContent = `ZOMBIES BENCHMARK · ${r.map.toUpperCase()}\n\nOLD LIGHTING: ${r.old.avgFps} fps avg · 1% low ${r.old.low1Fps} · worst ${r.old.maxMs} ms · ${r.old.lights} lights\nNEW LIGHTING: ${r.new.avgFps} fps avg · 1% low ${r.new.low1Fps} · worst ${r.new.maxMs} ms · ${r.new.lights} lights\n\n${r.gpu}\n${r.resolution} @ ${r.dpr}x`;
 }
 /* ================================================================== on-screen keyboard (controller)
    Pressing A on a text box (friend code, callsign, private match code) opens this. D-pad / stick moves, A types the
@@ -15309,6 +15404,8 @@ const SCHEMA = {
     { k: 'sfx', t: 'range', name: 'EFFECTS VOLUME', min: 0, max: 100, step: 5, fmt: pct },
     { k: 'music', t: 'range', name: 'MUSIC VOLUME', hint: 'Menu and lobby music', min: 0, max: 100, step: 5, fmt: pct },
     { k: 'ambience', t: 'range', name: 'AMBIENCE VOLUME', hint: 'Wind and distant artillery', min: 0, max: 100, step: 5, fmt: pct },
+    { k: 'zvoice', t: 'toggle', name: 'ZOMBIES VOICE LINES', hint: 'The four survivors talk and joke (spoken by your computer, with subtitles). Story scenes still show subtitles when this is off' },
+    { k: 'zvoiceVol', t: 'range', name: 'VOICE LINES VOLUME', hint: 'How loud the survivors\' voices are', min: 0, max: 100, step: 5, fmt: pct },
   ],
   CONTROLS: [
     { k: 'sens', t: 'range', name: 'MOUSE SENSITIVITY', min: 20, max: 300, step: 5, fmt: pct },
@@ -15369,6 +15466,7 @@ const gpuShort = () => { let n = String(GPU_NAME || 'UNKNOWN'); const m = /^ANGL
   return n.replace(/^ANGLE Metal Renderer:\s*/i, '').replace(/\s*\(0x[0-9a-f]+\)/ig, '').replace(/\s*Direct3D.*$|\s*vs_\d.*$|\s*OpenGL.*$/i, '').trim().toUpperCase().slice(0, 48); };
 const dispInfo = () => { const d = window.devicePixelRatio || 1; return `${Math.round(screen.width * d)}×${Math.round(screen.height * d)} · ${HW.hz} HZ`; };
 function applySetting(k) {
+  if ((k === 'zvoice' || k === 'zvoiceVol') && !(S.zvoice && S.zvoiceVol > 0)) try { speechSynthesis.cancel(); } catch (e) {}
   if (k === 'quality') { if (S.quality !== 'custom') applyPreset(qKey()); renderSettings(); }
   else if (DETAIL_KEYS.has(k) && S.quality !== 'custom') { S.quality = 'custom'; const seg = document.querySelector('#setBody .seg[data-k="quality"]'); if (seg) [...seg.children].forEach(c => c.classList.toggle('on', c.dataset.v === 'custom')); }
   if (VIDEO_KEYS.has(k)) applyVideoSettings();
@@ -15848,7 +15946,7 @@ function tick(dt) {
     clickQueued = false;
     if (w.ammo === 0 && !G.reloading && w.reserve > 0 && G.swapT <= 0 && G.fireT <= 0) startReload();
     const used = inMatch() ? playerInteract(dt, kb('use') || pad.use) : false;
-    if (inMatch()) { updateBots(dt); updateMatch(dt); } else if (M.mode === 'zomb') { updateNav(P.x, P.z); updateZombies(dt); } else { updateNav(P.x, P.z); updateWaves(dt); updateEnemies(dt); }
+    if (inMatch()) { updateBots(dt); updateMatch(dt); } else if (M.mode === 'zomb') { zombNav(); updateZombies(dt); } else { updateNav(P.x, P.z); updateWaves(dt); updateEnemies(dt); }
     updateGrenades(dt); updatePickups(dt); updateHud();
   } else if (G.state === 'menu') { menuCamera(); updateMenuSoldiers(dt); }
   else if (M.mode === 'zomb' && typeof ZC !== 'undefined' && ZC.on && ZC.inGame && (G.state === 'paused' || G.state === 'zdown' || G.state === 'zspec')) { try { zcBackTick(dt); } catch (err) { reportError(err); } }
@@ -15923,6 +16021,7 @@ function bootStep(i) {
   if (i >= BOOT.length) {
     setLoad(1, 'READY'); ready = true; G.state = 'menu';
     if (typeof location !== 'undefined' && /^#bench/.test(location.hash || '')) setTimeout(() => { if (G.state === 'menu') startBench(); }, 600);
+    if (typeof location !== 'undefined' && /^#zbench/.test(location.hash || '')) setTimeout(() => { if (G.state === 'menu') startZBench(); }, 600);
     // #look: a quiet still view of cover and concrete (no enemies) for checking materials
     if (typeof location !== 'undefined' && /^#look/.test(location.hash || '')) setTimeout(() => {
       clearMenuSoldiers(); resetGame(); G.state = 'playing'; G.breakT = 1e9; showScreen(null);
@@ -15944,7 +16043,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, zombNav, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
