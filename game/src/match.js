@@ -21,11 +21,13 @@ const MODES = {
   odom: { name: 'ONLINE TURF WAR', short: 'ONLINE TURF', icon: 'DOM', desc: 'Real people, domination: take and hold the three grow spots A, B and C. Every spot you hold scores.', teams: true, respawn: 4, score: 150, time: 0, perTeam: 6, unit: 'POINTS', online: true, base: 'dom' },
   oinf: { name: 'ONLINE CONTACT HIGH', short: 'ONLINE INFECTED', icon: 'INF', desc: 'Real people, infected: one turns, and everyone they kill joins them. Survive the clock or spread it to everyone.', teams: true, respawn: 2.5, score: 1, time: 0, perTeam: 6, unit: 'ROUNDS', online: true, base: 'inf' },
   ogf: { name: 'ONLINE BACK ALLEY', short: 'ONLINE 2V2', icon: '2V2', desc: 'Real people, 2 against 2, one life a round, the same random loadout for everyone. First to 6 rounds.', teams: true, respawn: 0, score: 6, time: 0, perTeam: 2, unit: 'ROUNDS', online: true, base: 'gf' },
+  rhp: { name: 'RANKED HARDPOINT', short: 'RANKED HP', icon: 'RNK', desc: 'Ranked play, 4 v 4 Hardpoint. Wins raise your SR, losses lower it; climb from SEED to KUSH KING.', teams: true, respawn: 4, score: 200, time: 0, perTeam: 4, unit: 'POINTS', online: true, base: 'hp', ranked: true },
+  rsnd: { name: 'RANKED SEARCH & DESTROY', short: 'RANKED S&D', icon: 'RNK', desc: 'Ranked play, 4 v 4 Search & Destroy, first to 6 rounds. Wins raise your SR, losses lower it.', teams: true, respawn: 0, score: 6, time: 0, perTeam: 4, unit: 'ROUNDS', online: true, base: 'snd', ranked: true },
   osnd: { name: 'ONLINE SEARCH & DESTROY', short: 'ONLINE S&D', icon: 'S&D', desc: 'Real people, one life per round. Attackers plant the bomb at A or B, defenders stop them. First to 4 rounds.', teams: true, respawn: 0, score: 4, time: 0, perTeam: 5, unit: 'ROUNDS', online: true, base: 'snd' },
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oinf', 'ogf', 'osnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'inf', 'gf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'inf', 'gf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 // bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
@@ -238,7 +240,7 @@ function nameHtml(en) {
   if (!en) return '';
   if (en.isPlayer) return '<b>YOU</b>';
   const col = !M.def.teams ? TEAM_COL[1] : TEAM_COL[en.team === M.myTeam ? 0 : 1];
-  return `<span style="color:${col}">${en.name}</span>`;
+  return `<span style="color:${col}">${en.tag ? '[' + en.tag + '] ' : ''}${en.name}</span>`;
 }
 // called for every bot death (killer: 'player', a bot, or a string for barrels/explosions)
 function matchBotKilled(e, by, head, boom) {
@@ -792,7 +794,7 @@ function showResults(winner, won) {
   $('resBoard').innerHTML = scoreboardHtml();
   const kd = MS.deaths ? (MS.kills / MS.deaths).toFixed(2) : MS.kills.toFixed(2), acc = MS.shots ? Math.round(MS.hits / MS.shots * 100) : 0;
   $('resMine').innerHTML = [['KILLS', MS.kills], ['DEATHS', MS.deaths], ['K/D', kd], ['ACCURACY', acc + '%'], ['HEADSHOTS', MS.heads], ['BEST STREAK', MS.bestStreak], ['LONGEST KILL', Math.round(MS.longest) + ' M'], ['SCORE', M.me ? M.me.score : G.score]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
-  try { const g = PROG.lastGain, box = $('resXP') || (() => { const d = document.createElement('div'); d.id = 'resXP'; const m = $('resMine'), side = document.createElement('div'); side.className = 'res-side'; m.parentNode.insertBefore(side, m); side.append(m, d); return d; })(); box.innerHTML = g && Date.now() - g.t < 8000 ? progResultsHtml(g) : ''; } catch (e) {}
+  try { const g = PROG.lastGain, box = $('resXP') || (() => { const d = document.createElement('div'); d.id = 'resXP'; const m = $('resMine'), side = document.createElement('div'); side.className = 'res-side'; m.parentNode.insertBefore(side, m); side.append(m, d); return d; })(); box.innerHTML = (typeof rankResHtml === 'function' ? rankResHtml() : '') + (g && Date.now() - g.t < 8000 ? progResultsHtml(g) : ''); } catch (e) {}
   M.nextT = M.online ? INTERMISSION_ON : INTERMISSION_OFF;
   $('resAgain').textContent = M.online ? 'READY' : 'PLAY NOW'; $('resAgain').style.display = M.online ? 'none' : '';
   $('resLobby').textContent = M.online ? 'LEAVE MATCH' : 'LOBBY';

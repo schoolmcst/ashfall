@@ -1,10 +1,11 @@
 {
- "version": "1.2.52",
+ "version": "1.2.53",
  "notes": [
-  "PLAY OF THE GAME: your best multi-kill of the match (2 or more kills close together; headshots and long shots count extra) plays from your own eyes before the scoreboard - the soldiers you got walk their real paths and drop. Click or press any key to skip; turn it off in Settings > GAMEPLAY.",
-  "FINISHERS: melee someone from behind (or catch them not looking) for a takedown - you swing in, the gun thrusts, they go down hard. +100 and one of three names: ROLLED UP, PUFF PUFF PASS OUT, SMOKED.",
-  "WEAPON INSPECT (F / D-pad down) now depends on the gun: pistols spin, shotguns pump and turn, snipers and marksman rifles look down the scope, SMGs flip, rifles and LMGs turn over and check the mag."
+  "RANKED PLAY: two new online playlists, RANKED HARDPOINT and RANKED SEARCH & DESTROY (4 v 4). Every match moves your skill rating (SR): wins add, losses take, how you played nudges it, and leaving early costs 25. The first 5 are placement matches. Climb SEED, SPROUT, BUD, FLOWER, TOP SHELF to KUSH KING.",
+  "DAILY JOBS: three small jobs every day at the top of THE PLUG'S LIST (WEEKLY), 1,200 XP and 100 DZ each.",
+  "CREWS: make a crew with a name and a 2-4 letter tag, or join a friend's, in the friends leaderboard's new CREW tab. Your tag shows by your name in online matches, and the CREW tab ranks your crew. The leaderboard also gets a RANKED tab.",
+  "EVENTS: HAUNTED HARVEST starts tomorrow (Oct 24 - Nov 2): double XP, and play 3 matches for its calling card. Also coming: a DOUBLE XP WEEKEND on the first weekend of every month, the SEASON FINALE (Dec 26-31) and the 4/20 FESTIVAL (double XP, +420 DZ a match and a calling card)."
  ],
- "sha256": "6f8a321decf72490d98b5edc6530be821af5fab78aed64723bce4c18b96832e0",
+ "sha256": "b239423bf20122dbc35105b5ddb997dfc042368a66825a730672c5fd502be864",
  "minApp": "1.0.0"
 }

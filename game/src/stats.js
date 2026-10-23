@@ -32,6 +32,7 @@ function finishMatchStats(won) {
   if (!MS.active || G.bench) return; MS.active = false;
   if (M && M.mode === 'range') return;   // the firing range counts for nothing
   try { wkMatch(won, false); } catch (e) { reportError(e); }
+  try { rankMatch(won, false); evMatch(false); } catch (e) { reportError(e); }
   const st = careerOf(M.online), mode = statModeKey();
   st.matches++; if (won === 1) st.wins++; else if (won === -1) st.losses++; else if (won === 0) st.draws++;
   for (const k of ['kills', 'deaths', 'heads', 'shots', 'hits', 'time', 'plants', 'defuses', 'caps', 'returns', 'hpTime']) st[k] += MS[k];
@@ -49,6 +50,7 @@ function commitPartialStats() {
   if (!MS.active || G.bench) return; MS.active = false;
   if (M && M.mode === 'range') return;
   try { wkMatch(null, true); } catch (e) { reportError(e); }
+  try { rankMatch(null, true); } catch (e) { reportError(e); }
   if (!MS.kills && !MS.deaths && !MS.shots && MS.time < 10) return;
   const st = careerOf(M.online), mode = statModeKey(), played = MS.time >= 120;
   if (played) st.matches++;

@@ -85,8 +85,9 @@ function wkMatch(won, partial) {
   const v = {
     kills: mp ? MS.kills : 0, heads: mp ? MS.heads : 0, wins: mp && won === 1 && !partial ? 1 : 0, played: mp && !partial ? 1 : 0, online: mp && M.online && !partial ? 1 : 0,
     bags: MS.bags | 0, turf: MS.turf | 0, obj: (MS.plants | 0) + (MS.defuses | 0) + Math.max(0, (MS.caps | 0) - (MS.turf | 0)), hpTime: MS.hpTime | 0, streaks: MS.streaks | 0,
-    zkills: zomb ? MS.kills : 0, zround: zomb ? (Z.round | 0) : 0, longest: mp ? Math.floor(MS.longest || 0) : 0, bestStreak: mp ? MS.bestStreak | 0 : 0,
+    zkills: zomb ? MS.kills : 0, zround: zomb ? (Z.round | 0) : 0, longest: mp ? Math.floor(MS.longest || 0) : 0, bestStreak: mp ? MS.bestStreak | 0 : 0, finishers: MS.finishers | 0,
   };
+  try { djMatch(v); } catch (e) { reportError(e); }
   for (const q of W.list) {
     if (q.done) continue; const d = WKD[q.id]; if (!d) continue;
     q.have = d.max ? Math.max(q.have, v[q.id] | 0) : q.have + (v[q.id] | 0);
@@ -109,7 +110,7 @@ function renderWeekly() {
   const W = wkState(), left = Math.max(0, wkEnds() - Date.now()), dd = Math.floor(left / 864e5), hh = Math.floor(left / 36e5) % 24, done = W.list.filter(q => q.done).length;
   $('wkTop').innerHTML = progCardHtml();
   $('wkHead').innerHTML = `<div class="wk-h"><b>${done} / 6</b><small>JOBS DONE</small></div><div class="wk-plug"><b>THE PLUG'S LIST</b><p>Six jobs from your plug, new every Monday. Each pays XP and DZ when the match ends; do all six for a free PRESTIGE chance box.</p></div><div class="wk-t"><small>NEW LIST IN</small><b>${dd}D ${hh}H</b></div>`;
-  $('wkList').innerHTML = W.list.map(q => { const d = WKD[q.id]; if (!d) return ''; const f = Math.min(1, q.have / q.n);
+  $('wkList').innerHTML = `<div class="dj-wrap" style="grid-column:1/-1">${djHtml()}</div><div class="dj-h" style="grid-column:1/-1"><b>THIS WEEK</b></div>` + W.list.map(q => { const d = WKD[q.id]; if (!d) return ''; const f = Math.min(1, q.have / q.n);
     return `<div class="wk-c${q.done ? ' done' : ''}"><div class="wk-ic">${wkIcon(q.id)}</div><div class="wk-m"><b>${d.name}</b><p>${d.d.replace('{n}', q.n)}</p><div class="pg-bar"><s style="width:${f * 100}%"></s></div><small>${q.done ? 'DONE' : `${q.have} / ${q.n}`}</small></div><div class="wk-r"><span>+${d.xp.toLocaleString()} XP</span><span>${dzIcon()}+${d.dz}</span></div></div>`; }).join('') +
     `<div class="wk-c bonus${W.bonus ? ' done' : ''}"><div class="wk-ic"><span class="bp-crate" style="--bc:#f2b84b"><span>P</span></span></div><div class="wk-m"><b>THE PLUG'S BONUS</b><p>Finish all six jobs this week</p><div class="pg-bar"><s style="width:${done / 6 * 100}%"></s></div><small>${W.bonus ? 'PAID · OPEN IT IN REWARDS' : done + ' / 6'}</small></div><div class="wk-r"><span>FREE PRESTIGE BOX</span></div></div>`;
 }

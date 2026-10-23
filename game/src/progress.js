@@ -265,12 +265,14 @@ const PRES_COL = ['#7fd16b', '#5fc24a', '#3fae5a', '#2f9a7a', '#2e86c1', '#7b5cf
 const PRES_FIN = { 3: 'pr_chrome', 6: 'pr_resin', 10: 'pr_frost' };
 PRES_NAMES.forEach((nm, i) => { const n = i + 1, col = PRES_COL[i];
   COSM.push({ id: 'pr_bn_' + n, name: `P${n} · ${nm}`, kind: 'banner', r: n < 4 ? 1 : n < 8 ? 2 : 3, pres: n, g: { t: n < 4 ? 'grad' : n < 8 ? 'rays' : 'stars', c: n < 4 ? ['#0d1a0d', '#1f3a1a', col] : n < 8 ? ['#0b1410', col] : ['#05040b', col, '#1a3a1a'], em: ['leaf', col, '#0b0c0d', String(n)] } }); });
+COSM.push({ id: 'ev_haunt', name: 'HAUNTED HARVEST', kind: 'banner', r: 2, ev: 1, g: { t: 'stars', c: ['#0d0614', '#ff7a2a', '#3a1450'], em: ['skull', '#ff7a2a', '#120a14'] } });
+COSM.push({ id: 'ev_420', name: '4/20 FEST', kind: 'banner', r: 3, ev: 1, g: { t: 'rays', c: ['#0b1a0b', '#7fd16b'], em: ['leaf', '#7fd16b', '#0b0c0d', '420'] } });
 COSM.push({ id: 'pr_chrome', name: 'GREENHOUSE CHROME', kind: 'skin', r: 2, pres: 3, g: { t: 'solid', c: [0x2f8a4a], fx: 'brushed' }, m: { rough: 0.12, metal: 0.95 } });
 COSM.push({ id: 'pr_resin', name: 'AMBER RESIN', kind: 'skin', r: 3, pres: 6, g: { t: 'solid', c: [0xa8541a], fx: 'bands' }, m: { rough: 0.18, metal: 0.25 } });
 COSM.push({ id: 'pr_frost', name: 'FROSTED TRICHOME', kind: 'camo', r: 3, pres: 10, g: { t: 'hex', c: [0xe8f2ea, 0xcfe3d4, 0xf8fff9, 0xb8d4c0], line: 0x7fd16b, glowLine: true }, m: { rough: 0.3, metal: 0.5 } });
 const COS = Object.fromEntries(COSM.map(c => [c.id, c]));
 const LEVEL_ITEM = Object.fromEntries(COSM.filter(c => c.lvl).map(c => [c.lvl, c.id]));
-const BOX_POOL = COSM.filter(c => !c.lvl && c.kind !== 'sticker' && !c.secret && !c.bp && !c.pres);   // battle pass items never drop from boxes
+const BOX_POOL = COSM.filter(c => !c.lvl && c.kind !== 'sticker' && !c.secret && !c.bp && !c.pres && !c.ev);   // battle pass items never drop from boxes
 
 /* ---------- saved progress */
 const progBlank = () => ({ v: 1, xp: 0, dz: 0, owned: {}, equip: { all: null, guns: {} }, stk: { all: null, guns: {} }, chm: { all: null, guns: {} }, banner: 'bn_default', daily: { last: '', streak: 0 }, boxes: 0, drops: [], lastGain: null, init: false });
@@ -331,6 +333,7 @@ function progMatchXP(won, partial) {
   }
   let sum = rows.reduce((s, r) => s + r[1], 0);
   if (online && sum) { const b = Math.round(sum * 0.25); rows.push(['ONLINE BONUS +25%', b]); sum += b; }
+  try { const ev = evActive(); if (ev && ev.xp > 1 && sum) { const b = Math.round(sum * (ev.xp - 1)); rows.push([ev.name + ' · ' + ev.xp + '× XP', b]); sum += b; } } catch (e) {}
   if (!sum) return null;
   const before = PROG.xp; PROG.xp = Math.min(XP_AT[MAXLVL], PROG.xp + sum);
   const g = grantLevels(before, PROG.xp), bp = typeof bpGain === 'function' ? bpGain(sum) : null;
@@ -736,8 +739,8 @@ const secretKey = (id, gun) => id + '@' + gun;
 function ownsFor(id, gunId) { const c = COS[id]; return !!c && ((c.secret && !c.universal) || c.grind ? !!PROG.owned[secretKey(id, gunId)] : !!PROG.owned[id]); }
 function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; if (!id || !COS[id]) return null; if (((COS[id].secret && !COS[id].universal) || COS[id].grind) && own !== id) return null; return ownsFor(id, gunId) ? id : null; }
 function refreshHeldCamos() { try { (WEAPONS || []).forEach((w, i) => { if (gunObjs[i] && w && w.def) { applyCamo(gunObjs[i], camoFor(w.def.id)); applySticker(gunObjs[i], stickerFor(w.def.id)); applyCharm(gunObjs[i], charmFor(w.def.id)); } }); } catch (e) {} }
-const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]] && !COS[k.split('@')[0]].grind && !COS[k.split('@')[0]].pres).length;
-const publicCount = () => COSM.filter(c => !c.secret && !c.grind && !c.pres).length;
+const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]] && !COS[k.split('@')[0]].grind && !COS[k.split('@')[0]].pres && !COS[k.split('@')[0]].ev).length;
+const publicCount = () => COSM.filter(c => !c.secret && !c.grind && !c.pres && !c.ev).length;
 
 /* ---------- weapon pictures for the Locker (rendered one per frame, cached per gun + camo + sticker) */
 const THUMB = { cache: {}, q: [], scene: null, cam: null, rt: null, buf: null };
@@ -826,7 +829,7 @@ const cosmSwatch = (id, N = 64) => { try { return cosmCanvas(id, N).cc.toDataURL
 const SWATCH = {};
 function swatchUrl(id) { return SWATCH[id] || (SWATCH[id] = cosmSwatch(id, 72)); }
 function lockerGuns() { return ARMORY.filter(d => CATS[d.cat] && (CATS[d.cat].slot === 'primary' || CATS[d.cat].slot === 'secondary')); }
-function howToGet(c) { if (c.pres) return 'REACH PRESTIGE ' + c.pres; return c.lvl ? 'REACH LEVEL ' + c.lvl : 'FOUND IN CHANCE BOXES'; }
+function howToGet(c) { if (c.pres) return 'REACH PRESTIGE ' + c.pres; if (c.ev) return 'PLAY 3 MATCHES IN ITS EVENT'; return c.lvl ? 'REACH LEVEL ' + c.lvl : 'FOUND IN CHANCE BOXES'; }
 const kindName = c => c.secret ? 'CAMO' : ({ camo: 'CAMO', skin: 'SKIN', sticker: 'STICKER', charm: 'CHARM', banner: 'BANNER' })[c.kind] || 'ITEM';
 function openLocker() {
   if (curScreen !== 'locker' && curScreen !== 'rewards') LK.ret = curScreen || 'lobby';
