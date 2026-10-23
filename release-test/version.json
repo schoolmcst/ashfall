@@ -1,11 +1,11 @@
 {
- "version": "1.2.45",
+ "version": "1.2.46",
  "notes": [
-  "NEW ZOMBIES MAP: TERMINAL 9 (story chapter three, FLIGHT 909). The airport cargo terminal at night: the cargo office, a baggage hall with carousel 9 to loop round, DEPARTURES with the duty free in the middle, CUSTOMS & QUARANTINE with x-ray lanes, sniffer-dog kennels and the room of confiscated weed - and out on the apron, FLIGHT 909 itself. Walk up the cargo ramp or the airstairs into its hold, where the gun upgrader is.",
-  "BAGGAGE CHUTES fire you between the cargo office, departures, customs and the apron once the power is on. 6 doors, 6 perks, 5 wall stashes, 4 boarded windows.",
-  "7 NEW CHAPTERS: BLACKOUT, THE PILOT'S BADGE, BURN THE CARGO, THE BUYER (a huge boss in an expensive suit), THE CURE, FUEL UP (pump the cure into the plane's spray tanks for 60 seconds while the horde attacks) and an EPILOGUE where Flight 909 takes off... 12 new tapes and new scenes.",
-  "NEW WONDER WEAPON: THE CROP DUSTER sprays a lingering cloud of green cure - zombies inside it melt. Rare from the mystery crate on TERMINAL 9, and the reward for finishing FLIGHT 909."
+  "NEW MODE: BAGGED UP (kill confirmed). Everyone drops their stash bag when they die - grab enemy bags to score (BAGGED, +100), grab your own team's to stop them scoring (STASH SAVED, +50). Offline with bots and ONLINE.",
+  "NEW MODE: TURF WAR (domination). Three grow spots, A, B and C, each a weed plant under a grow lamp. Stand in one to take it (faster with more of you); every spot your team holds scores. Offline with bots and ONLINE, and both new modes are in private matches.",
+  "KILLCAM: when you die you now see it over your killer's shoulder first - their name, their gun, the distance, and a marker where you went down. Turn it off in Settings (KILLCAM).",
+  "4 NEW SCORESTREAKS: DEALER DRONE (a drone flies a very loud package to the nearest enemy), SMOKE OUT (counter-UAV: jams the enemy radar and spy planes for 30 s and makes their aim hazy), TRAP HOUSE TURRET (a sentry gun guards your spot for 30 s) and HIGH FLYER (a gunship circles the map shelling enemies for 22 s). Pick them in SCORESTREAKS."
  ],
- "sha256": "61911ce37d68c55abf45df97b837dc8abbb46b937c3868435dc14c02e902da8c",
+ "sha256": "eba19b1a5d14125c7e6cf5a9b52b874c27493f5cefd3266bcd13cd36622a1391",
  "minApp": "1.0.0"
 }

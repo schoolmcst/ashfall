@@ -27,8 +27,9 @@ function startDeathCam() {
     $('kcSub').textContent = inMatch() ? `${M.me.kills} KILLS  ·  ${M.me.deaths} DEATHS` : `WAVE ${G.wave}  ·  ${G.kills} KILLS`;
   }
   focus = k ? null : new THREE.Vector3(E.x, 0.4, E.z);
-  G.dc = { t: 0, dur: inMatch() ? 2.6 : 3.6, E, look0, end, killer: k, focus, orbit: 0, done: false };
-  $('killcam').classList.remove('hide');
+  G.dc = { t: 0, dur: inMatch() ? 2.6 : 3.6, E, look0, end, killer: k, focus, orbit: 0, done: false, kcT: k && S.killcam !== false ? KC_VIEW : 0 };
+  $('killcam').classList.remove('hide'); $('killcam').classList.toggle('kcv', !!G.dc.kcT);
+  if (G.dc.kcT) { $('kcName').textContent = 'KILLCAM · ' + (k.name || k.type || 'enemy').toUpperCase(); $('kcSub').textContent = `${weaponLabel(k) || 'their gun'}  ·  ${Math.round(Math.hypot(E.x - _dcK.x, E.z - _dcK.z))} M  ·  ${Math.max(0, Math.round(k.hp))} HP LEFT`; }
   sfx.hurt();
 }
 // k: 0..1 progress along the shot
@@ -49,6 +50,11 @@ function aimDeathCam(dt, k) {
 }
 function updateDeathCam(dt) {
   const dc = G.dc; if (!dc) { finishDeath(); return; }
+  if (dc.kcT > 0) {   // KILLCAM: over the killer's shoulder, looking at where you died
+    dc.kcT -= dt; killcamView(dc, 1 - dc.kcT / KC_VIEW);
+    if (dc.kcT <= 0) { kcYou(null); $('killcam').classList.remove('kcv'); camera.fov = baseFov; camera.updateProjectionMatrix(); if (inMatch()) { dc.done = true; finishDeath(); return; } kcBanner(dc.killer); $('kcName').textContent = 'KILLED BY ' + (dc.killer.name || dc.killer.type || 'enemy').toUpperCase(); }
+    return;
+  }
   dc.t += dt;
   aimDeathCam(dt, dc.t / dc.dur);
   if (dc.t >= dc.dur + 0.8) { dc.done = true; finishDeath(); }
@@ -64,3 +70,31 @@ function kcBanner(k) {
   card.style.backgroundImage = `linear-gradient(90deg,rgba(0,0,0,.55),rgba(0,0,0,.1)),url(${bannerUrl(id)})`; card.classList.add('bn');
 }
 (() => { const s = document.createElement('style'); s.textContent = '#killcam .kc-card.bn{padding:0 130px 0 22px;text-align:left;background-size:cover;background-position:center;min-width:420px;aspect-ratio:4/1;display:flex;flex-direction:column;justify-content:center;border:1px solid rgba(255,255,255,.25)}#killcam .kc-card.bn .kc-name,#killcam .kc-card.bn .kc-sub{text-shadow:0 1px 3px #000,0 0 8px #000}'; document.head.appendChild(s); })();
+
+/* ---------- KILLCAM: the killer's view of your death, over their shoulder, zooming in on where you went down */
+const KC_VIEW = 2.3, _kcF = new THREE.Vector3(), _kcP = new THREE.Vector3();
+function killcamView(dc, k) {
+  const e = dc.killer; e.rig.head.getWorldPosition(_dcK);
+  _kcF.set(dc.E.x - _dcK.x, 0, dc.E.z - _dcK.z); const dist = _kcF.length() || 1; _kcF.divideScalar(dist);
+  const side = new THREE.Vector3(-_kcF.z, 0, _kcF.x);
+  _kcP.copy(_dcK).addScaledVector(_kcF, -1.25).addScaledVector(side, -0.62); _kcP.y += 0.22;
+  // never through a wall behind them
+  _dcA.subVectors(_kcP, _dcK); const len = _dcA.length(); _dcRay.set(_dcK, _dcA.normalize()); _dcRay.far = len;
+  const hit = _dcRay.intersectObjects(wallMeshes, false)[0]; if (hit) _kcP.copy(_dcK).addScaledVector(_dcA, Math.max(0.2, hit.distance - 0.15));
+  camera.position.copy(_kcP);
+  kcYou(dc);
+  _dcL.set(dc.E.x, dc.E.y - 0.45 - 0.5 * Math.min(1, k * 1.5), dc.E.z);   // the body drops
+  camera.lookAt(_dcL);
+  camera.fov = baseFov * (1 - 0.32 * dcEase(Math.min(1, k * 1.6)) * Math.min(1, dist / 18)); camera.updateProjectionMatrix();   // far kills zoom in more
+}
+(() => { const s = document.createElement('style'); s.textContent = '#killcam.kcv::before,#killcam.kcv::after{content:"";position:fixed;left:0;right:0;height:9vh;background:#000;z-index:-1}#killcam.kcv::before{top:0}#killcam.kcv::after{bottom:0}#killcam.kcv .kc-card{border-left:4px solid #ff4a3a}#killcam.kcv .kc-name::before{content:"\\25CF  ";color:#ff4a3a;animation:kcrec 1s steps(2) infinite}@keyframes kcrec{50%{opacity:0}}'; document.head.appendChild(s); })();
+// where you were standing, marked in the killcam (you have no body of your own to see)
+function kcYou(dc) {
+  if (!kcYou.s) { const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d'); g.fillStyle = 'rgba(255,74,58,.85)'; g.strokeStyle = '#000'; g.lineWidth = 5; g.beginPath(); g.moveTo(64, 104); g.lineTo(40, 70); g.lineTo(88, 70); g.closePath(); g.fill(); g.stroke(); g.font = 'bold 34px sans-serif'; g.textAlign = 'center'; g.lineWidth = 6; g.strokeText('YOU', 64, 52); g.fillStyle = '#fff'; g.fillText('YOU', 64, 52);
+    kcYou.s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), depthTest: false, transparent: true })); kcYou.s.renderOrder = 9; }
+  const sp = kcYou.s;
+  if (!dc) { if (sp.parent) sp.parent.remove(sp); return; }
+  if (!sp.parent) scene.add(sp);
+  const d = Math.hypot(dc.E.x - camera.position.x, dc.E.z - camera.position.z), k = 0.05 * Math.max(6, d);
+  sp.scale.set(k, k, 1); sp.position.set(dc.E.x, dc.E.y + 0.2, dc.E.z);
+}

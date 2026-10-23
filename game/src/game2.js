@@ -252,6 +252,7 @@ const rctx = $('radar').getContext('2d');
 function drawRadar() {
   if (!S.radar) return;
   const c = rctx, W = 140, R = 62, scale = R / 45;
+  if (typeof stkJammed === 'function' && stkJammed()) { stkRadarJam(c, W); return; }
   c.clearRect(0, 0, W, W);
   c.strokeStyle = 'rgba(255,255,255,.15)'; c.beginPath(); c.arc(W / 2, W / 2, R / 2, 0, 7); c.stroke();
   c.fillStyle = '#9ec45f'; c.beginPath(); c.moveTo(W / 2, W / 2 - 6); c.lineTo(W / 2 - 4, W / 2 + 4); c.lineTo(W / 2 + 4, W / 2 + 4); c.fill();

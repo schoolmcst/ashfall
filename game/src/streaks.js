@@ -9,14 +9,22 @@ const STK_ICON = {
   mortar: '<path d="M12 3 V9 M12 9 L8 21 M12 9 L16 21 M6 14 H18"/><circle cx="12" cy="3.5" r="1.6"/>',
   vuav: '<circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="3.5"/><path d="M12 2 V6 M12 18 V22 M2 12 H6 M18 12 H22"/>',
   air: '<path d="M2 13 L22 9 L22 11 L14 13 L16 20 L13 20 L10 14 L4 15 Z"/>',
+  drone: '<rect x="9" y="10" width="6" height="4" rx="1"/><path d="M9 11 L5 8 M15 11 L19 8 M9 13 L5 16 M15 13 L19 16"/><ellipse cx="5" cy="8" rx="3" ry="1"/><ellipse cx="19" cy="8" rx="3" ry="1"/><ellipse cx="5" cy="16" rx="3" ry="1"/><ellipse cx="19" cy="16" rx="3" ry="1"/><path d="M12 14 V18"/><rect x="10.5" y="18" width="3" height="3"/>',
+  cuav: '<circle cx="8" cy="12" r="4"/><circle cx="14" cy="9" r="4.5"/><circle cx="16" cy="15" r="4"/><path d="M3 21 L21 3"/>',
+  sentry: '<path d="M12 13 L6 21 M12 13 L18 21 M12 13 V21"/><rect x="7" y="6" width="9" height="7" rx="1"/><path d="M16 9 H22"/><circle cx="10" cy="9.5" r="1.2"/>',
+  gunship: '<path d="M2 12 H22 M8 12 L5 5 H8 L12 12 M8 12 L5 19 H8 L12 12 M18 12 L20 8 M18 12 L20 16"/><path d="M12 12 L14 21" stroke-dasharray="1.5 1.5"/>',
 };
 const STREAKS = {
+  drone:  { name: 'DEALER DRONE', cost: 750, cd: 55, desc: 'A delivery drone flies to the nearest enemy and drops off a very loud package.' },
   uav:    { name: 'UAV', cost: 550, cd: 45, desc: 'A spy plane shows every enemy on your radar and screen for 25 seconds.' },
   supply: { name: 'SUPPLY DROP', cost: 650, cd: 50, desc: 'Refills all your ammo and grenades and heals you to full.' },
+  cuav:   { name: 'SMOKE OUT', cost: 900, cd: 60, desc: 'Counter-UAV: a thick cloud of smoke jams the enemy radar and spy planes for 30 seconds, and their aim gets hazy.' },
   armor:  { name: 'BODY ARMOR', cost: 850, cd: 60, desc: '+40 health until you die.' },
   mortar: { name: 'MORTAR STRIKE', cost: 1050, cd: 70, desc: 'Three mortar shells land on enemy positions.' },
+  sentry: { name: 'TRAP HOUSE TURRET', cost: 1150, cd: 70, desc: 'A sentry turret guards the spot in front of you for 30 seconds and shoots every enemy it sees.' },
   vuav:   { name: 'ADVANCED UAV', cost: 1400, cd: 80, desc: 'Shows every enemy and the way they are facing for 35 seconds.' },
   air:    { name: 'AIRSTRIKE', cost: 1700, cd: 90, desc: 'A jet carpet-bombs a line straight through the enemy.' },
+  gunship: { name: 'HIGH FLYER', cost: 2100, cd: 110, desc: 'A gunship circles high over the map for 22 seconds and shells every enemy it can see from the sky.' },
 };
 const STK_KEY = 'ashfall.streaks.v1';
 let STK_SEL = ['uav', 'mortar', 'air'];
@@ -28,7 +36,7 @@ const stkOn = () => typeof M !== 'undefined' && M && inMatch() && M.mode !== 'gu
 // earned again until its own cd (seconds) has passed
 const STK_USE_CD = 15;
 const STK = { pts: 0, got: new Set(), have: [], uavT: 0, vuav: false, jobs: [], useCd: 0, cd: {} };
-function stkReset() { STK.pts = 0; STK.got.clear(); STK.have = []; STK.uavT = 0; STK.vuav = false; STK.jobs = []; STK.useCd = 0; STK.cd = {}; stkHud(true); }
+function stkReset() { stk2Clear(); STK.pts = 0; STK.got.clear(); STK.have = []; STK.uavT = 0; STK.vuav = false; STK.jobs = []; STK.useCd = 0; STK.cd = {}; stkHud(true); }
 function stkDeath() { STK.pts = 0; STK.got.clear(); stkHud(true); }
 function stkAdd(pts) {
   if (!stkOn()) return;
@@ -59,6 +67,7 @@ function stkUse() {
     STK.jobs.push({ t: 1.6, fn: () => stkJet(t.x, t.z, dx, dz) });
     for (let k = -3; k <= 3; k++) { const x = t.x + dx * k * 3.6, z = t.z + dz * k * 3.6; if (Math.hypot(x - P.x, z - P.z) > 6) STK.jobs.push({ t: 2.3 + (k + 3) * 0.13, fn: () => stkBoom(x, z, 5.5, 1.1) }); }
   }
+  else if (STK2[id]) STK2[id]();
   stkHud(true);
 }
 // up to n enemy spots, away from you (strikes never land on top of you)
@@ -80,14 +89,14 @@ function updateStreaks(dt) {
   if (STK.useCd > 0) STK.useCd = Math.max(0, STK.useCd - dt);
   for (const k in STK.cd) if (STK.cd[k] > 0) STK.cd[k] = Math.max(0, STK.cd[k] - dt);
   if (STK.uavT > 0) { STK.uavT -= dt; if (STK.uavT <= 0) { STK.uavT = 0; STK.vuav = false; } }
-  stkMarks(); stkHud(false);
+  stk2Update(dt); stkMarks(); stkHud(false);
 }
-const stkSeen = e => STK.uavT > 0 && !isFriend(e) && !e.ghost;   // Shadow players don't show on a UAV
+const stkSeen = e => STK.uavT > 0 && !isFriend(e) && !e.ghost && !stkJammed();   // Shadow players don't show on a UAV
 // on-screen enemy diamonds while a UAV is up (the advanced one adds the way they face)
 const _sv = new THREE.Vector3();
 function stkMarks() {
   const lay = $('uavMarks'); if (!lay) return;
-  const on = STK.uavT > 0 && (G.state === 'playing' || G.state === 'paused');
+  const on = STK.uavT > 0 && !stkJammed() && (G.state === 'playing' || G.state === 'paused');
   if (!on) { if (lay._n) { lay.innerHTML = ''; lay._n = 0; } return; }
   const list = enemies.filter(e => !isFriend(e)), W = innerWidth, H = innerHeight;
   while (lay.children.length < list.length) { const d = document.createElement('i'); lay.appendChild(d); }
@@ -106,14 +115,14 @@ function stkHud(force) {
   const on = stkOn() && (G.state === 'playing' || G.state === 'paused' || G.state === 'respawning' || G.state === 'deathcam');
   if (box._on !== on) { box._on = on; box.classList.toggle('hide', !on); }
   if (!on) return;
-  const key = STK_SEL.join() + '|' + STK.pts + '|' + STK.have.join() + '|' + Math.ceil(STK.uavT) + '|' + Math.ceil(STK.useCd) + '|' + STK_SEL.map(k => Math.ceil(STK.cd[k] || 0)).join();
+  const key = stk2Hud() + STK_SEL.join() + '|' + STK.pts + '|' + STK.have.join() + '|' + Math.ceil(STK.uavT) + '|' + Math.ceil(STK.useCd) + '|' + STK_SEL.map(k => Math.ceil(STK.cd[k] || 0)).join();
   if (!force && box._k === key) return; box._k = key;
   const list = STK_SEL.slice().sort((a, b) => STREAKS[a].cost - STREAKS[b].cost);
   box.innerHTML = list.map(id => {
     const s = STREAKS[id], have = STK.have.includes(id), cd = Math.ceil(STK.cd[id] || 0), p = have ? 1 : (STK.got.has(id) || cd) ? 0 : clamp(STK.pts / s.cost, 0, 1);
     const wait = have && STK.useCd > 0;
     return `<div class="stk${have && !wait ? ' ready' : ''}${cd && !have ? ' cd' : ''}"><div class="stk-fill" style="height:${(p * 100).toFixed(0)}%"></div>${stkIcon(id)}<span>${have ? (wait ? Math.ceil(STK.useCd) + 's' : actName('streak')) : cd ? cd + 's' : s.cost}</span></div>`;
-  }).join('') + (STK.uavT > 0 ? `<div class="stk-uav">${STK.vuav ? 'ADV UAV' : 'UAV'} ${Math.ceil(STK.uavT)}</div>` : '') + `<div class="stk-pts">${STK.pts}</div>`;
+  }).join('') + (STK.uavT > 0 ? `<div class="stk-uav">${STK.vuav ? 'ADV UAV' : 'UAV'} ${stkJammed() ? 'JAMMED' : Math.ceil(STK.uavT)}</div>` : '') + stk2Hud() + `<div class="stk-pts">${STK.pts}</div>`;
 }
 
 /* ---------- SCORESTREAKS tab: pick three */

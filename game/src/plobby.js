@@ -6,8 +6,8 @@
 const PRIV_KEY = 'ashfall.priv.v1';
 let PRIVCFG = { md: 'tdm', mp: 'random', b: 6, tl: 10, sc: 40 };
 try { const o = JSON.parse(localStorage.getItem(PRIV_KEY) || 'null'); if (o && typeof o === 'object') Object.assign(PRIVCFG, o); } catch (e) {}
-const PRIV_SC = { tdm: [10, 150, 5], ffa: [5, 60, 5], gun: [20, 20, 1], hp: [50, 300, 10], ctf: [1, 10, 1], snd: [1, 8, 1] };
-const PRIV_MODE = { tdm: 'otdm', ffa: 'offa', gun: 'ogun', hp: 'ohp', ctf: 'octf', snd: 'osnd' };
+const PRIV_SC = { tdm: [10, 150, 5], ffa: [5, 60, 5], gun: [20, 20, 1], hp: [50, 300, 10], ctf: [1, 10, 1], kc: [10, 100, 5], dom: [50, 300, 10], snd: [1, 8, 1] };
+const PRIV_MODE = { tdm: 'otdm', ffa: 'offa', gun: 'ogun', hp: 'ohp', ctf: 'octf', kc: 'okc', dom: 'odom', snd: 'osnd' };
 function privClean(c) {
   const md = PRIV_SC[c.md] ? c.md : 'tdm', L = PRIV_SC[md];
   return { md, mp: c.mp === 'random' || (MAPS[c.mp] && !MAPS[c.mp].hidden) ? c.mp : 'random', b: clamp(+c.b | 0, 0, 11), tl: clamp(+c.tl | 0, 0, 30), sc: md === 'gun' ? GUN_LADDER.length : clamp(+c.sc | 0 || L[0], L[0], L[1]) };
@@ -30,7 +30,7 @@ function privApply() {
   M.cfg.score = c.sc; M.cfg.time = c.md === 'snd' ? 0 : c.tl;
   if (M.def !== MODES[want]) {
     M.mode = MODES[want].base || want; M.def = MODES[want]; NET.mode = want; M.myTeam = 0; if (M.me) M.me.team = 0;
-    M.hp = M.ctf = M.snd = null; M.teamScore = [0, 0]; if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } objSetup(); if (M.mode === 'gun') equipGunGame(0); else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
+    M.hp = M.ctf = M.snd = null; m2Setup(); M.teamScore = [0, 0]; if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } objSetup(); if (M.mode === 'gun') equipGunGame(0); else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
     for (const [, R] of NET.rem) { netDropBot(R, false); const i = M.entries.indexOf(R.entry); if (i >= 0) M.entries.splice(i, 1); }
     NET.rem.clear(); netClearBots(); NET.quietT = performance.now() + 2500;
     NET.teamSet = false; NET.joinedAt = performance.now() / 1000 - 1.5;
@@ -100,11 +100,11 @@ function renderPlobby(full) {
   if (!full && NET.priv.key === key) return; NET.priv.key = key;
   const box = $('plSet'); box.innerHTML = '';
   const rows = [
-    { name: 'MODE', t: 'seg', opts: [['tdm', 'TDM'], ['ffa', 'FFA'], ['gun', 'GUN GAME'], ['hp', 'HARDPOINT'], ['ctf', 'CTF'], ['snd', 'S&D']], get: () => c.md, set: v => { c.md = v; c.sc = clamp(MODES[PRIV_MODE[v]].score, PRIV_SC[v][0], PRIV_SC[v][1]); } },
+    { name: 'MODE', t: 'seg', opts: [['tdm', 'TDM'], ['ffa', 'FFA'], ['gun', 'GUN GAME'], ['hp', 'HARDPOINT'], ['ctf', 'CTF'], ['kc', 'BAGGED UP'], ['dom', 'TURF WAR'], ['snd', 'S&D']], get: () => c.md, set: v => { c.md = v; c.sc = clamp(MODES[PRIV_MODE[v]].score, PRIV_SC[v][0], PRIV_SC[v][1]); } },
     { name: 'MAP', t: 'seg', opts: MAP_CHOICES().map(id => [id, id === 'random' ? 'RANDOM' : MAPS[id].name]), get: () => c.mp, set: v => { c.mp = v; } },
     { name: 'BOTS', hint: 'On top of the real players', t: 'range', min: 0, max: 11, step: 1, get: () => c.b, set: v => { c.b = v; }, fmt: v => v || 'NONE' },
     ...(c.md === 'snd' ? [] : [{ name: 'TIME LIMIT', hint: 'The leader wins when time runs out', t: 'range', min: 0, max: 30, step: 1, get: () => c.tl, set: v => { c.tl = v; }, fmt: v => v ? v + ' MIN' : 'NONE' }]),
-    ...(c.md === 'gun' ? [] : [{ name: c.md === 'snd' ? 'ROUNDS TO WIN' : c.md === 'hp' ? 'POINTS TO WIN' : c.md === 'ctf' ? 'CAPTURES TO WIN' : 'KILL LIMIT', hint: c.md === 'tdm' ? 'Team kills to win' : c.md === 'ffa' ? 'Kills to win' : '', t: 'range', min: PRIV_SC[c.md][0], max: PRIV_SC[c.md][1], step: PRIV_SC[c.md][2], get: () => c.sc, set: v => { c.sc = v; }, fmt: v => v }]),
+    ...(c.md === 'gun' ? [] : [{ name: c.md === 'snd' ? 'ROUNDS TO WIN' : c.md === 'hp' || c.md === 'dom' ? 'POINTS TO WIN' : c.md === 'ctf' ? 'CAPTURES TO WIN' : c.md === 'kc' ? 'BAGS TO WIN' : 'KILL LIMIT', hint: c.md === 'tdm' ? 'Team kills to win' : c.md === 'ffa' ? 'Kills to win' : '', t: 'range', min: PRIV_SC[c.md][0], max: PRIV_SC[c.md][1], step: PRIV_SC[c.md][2], get: () => c.sc, set: v => { c.sc = v; }, fmt: v => v }]),
   ];
   const changed = redraw => { NET.priv.cfg = privClean(c); Object.assign(c, NET.priv.cfg); PRIVCFG = Object.assign({}, c); privSave(); privApply(); if (c.mp !== 'random') netSwitchMap(c.mp); NET.priv.key = (host ? 'h' : 'g') + JSON.stringify(c); if (redraw) { renderPlobby(true); } };
   for (const it of rows) {
