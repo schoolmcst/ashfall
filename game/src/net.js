@@ -113,7 +113,7 @@ function netSwitchMap(id) {
   if (!MAPS[id] || id === curMap) return;
   loadMap(id);
   if (!M || !M.online) return;
-  if (M.hp || M.ctf || M.snd || M.kc || M.dom) objSetup();
+  if (M.hp || M.ctf || M.snd || M.kc || M.dom || M.inf || M.gf) objSetup();
   if (M.me && M.me.alive && G.state === 'playing') placePlayer(pickSpawnFor(M.myTeam, sideOf(M.myTeam)));
   for (const en of M.entries) if (en.bot && !en.bot.net && enemies.includes(en.bot)) { const p = pickSpawnFor(en.team, sideOf(en.team)); en.bot.group.position.set(p.x, p.y || 0, p.z); en.bot.goal = null; }
   showBanner(mapName(id), MAPS[id].place.toLowerCase());
@@ -194,7 +194,7 @@ function netTick(dt) {
     NET.teamSet = true; NET.me = netSelf();
     if (M.def.teams) {
       const c = [0, 0]; for (const p of peers) if (!p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot) c[p.presence.tm === 1 ? 1 : 0]++;
-      M.myTeam = M.me.team = c[1] < c[0] ? 1 : 0;
+      M.myTeam = M.me.team = M.mode === 'inf' ? 0 : c[1] < c[0] ? 1 : 0;
       // in a party: join the team a party member is already on
       try { const names = new Set(partyMembers().filter(m => !m.me).map(m => m.name)); const mate = peers.find(p => !p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot && names.has(cleanNick(p.presence.n))); if (mate) M.myTeam = M.me.team = mate.presence.tm === 1 ? 1 : 0; } catch (e) {}
     }
@@ -292,7 +292,7 @@ function netTick(dt) {
   if (M.mode === 'gun') {   // gun game: your level is your kill count this round
     for (const en of M.entries) { const lv = Math.min(en.kills | 0, GUN_LADDER.length); if (en.level !== lv) { en.level = lv; if (en.isPlayer && lv < GUN_LADDER.length) { equipGunGame(lv); if (lv) { popScore(`LEVEL ${lv + 1}`, 'big', ARM[GUN_LADDER[lv]].name); sfx.streak(); } } else if (en.botLabel && en.bot && lv < GUN_LADDER.length) botGunProfile(en.bot, GUN_LADDER[lv]); } }
   }
-  if (M.def.teams && !M.hp && !M.ctf && !M.snd && !M.kc && !M.dom) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
+  if (M.def.teams && !M.hp && !M.ctf && !M.snd && !M.kc && !M.dom && !M.inf && !M.gf) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
   // remember who was about to win, in case another game ends the round a moment before ours does
   { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
@@ -341,6 +341,7 @@ function clearWorldFx() { for (const g of grenadesInFlight) scene.remove(g.m); g
 
 /* ---------- bots that fill empty spots (the host runs them; everyone else sees them like players) */
 const BOT_FILL = { teams: 6, ffa: 8 }, WARMUP = 15;
+const botFillTeams = () => M.mode === 'gf' ? 2 : BOT_FILL.teams;
 const warmLeft = () => Math.max(0, (NET.warmEnd || 0) - performance.now() / 1000);
 function netNewBot(team) {
   const names = BOT_NAMES.filter(n => !M.entries.some(e => e.name === n.toUpperCase() + ' BOT'));
@@ -372,7 +373,7 @@ function netBots(dt) {
     const add = wl <= 0 && (NET.addT = (NET.addT || 0) - 0.5) <= 0;   // add one bot every 1.5 s; remove extras at once
     const pw = NET.priv ? (!NET.priv.started || G.holdT > 0 ? (M.def.teams ? [0, 0] : 0) : NET.priv.pub ? null : privBotWant(humans)) : null;
     if (M.def.teams) for (let t = 0; t < 2; t++) {
-      const mine = bots.filter(b => b.team === t), want = pw ? pw[t] : wl > 0 ? 0 : Math.max(0, BOT_FILL.teams - humans[t]);
+      const mine = bots.filter(b => b.team === t), want = pw ? pw[t] : wl > 0 ? 0 : M.mode === 'inf' ? (t === 0 ? Math.max(0, 2 * BOT_FILL.teams - hum - bots.filter(b => b.team === 1).length) : bots.filter(b => b.team === 1).length) : Math.max(0, botFillTeams() - humans[t]);
       for (let i = mine.length - 1; i >= want; i--) netRemoveBot(mine[i]);
       if (mine.length < want && add) { netNewBot(t); NET.addT = NET.priv ? 0.3 : 1.5; }
     } else {

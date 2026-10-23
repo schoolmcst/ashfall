@@ -1,11 +1,9 @@
 {
- "version": "1.2.49",
+ "version": "1.2.50",
  "notes": [
-  "PERFORMANCE MODE: one switch for slow computers (base MacBooks, laptops with built-in graphics) - lower resolution, no shadows or grass, fewer effects, no ragdolls and fewer lamps in zombies. It's in Settings > VIDEO and one tap away in the pause menu; turning it off puts your settings back. If a match runs under 35 FPS for 20 seconds, the game suggests it.",
-  "FRAME GRAPH (Settings > VIDEO): your frame times, FPS, the slowest 1% of frames and the draw calls in the corner, to show where the game slows down.",
-  "MAP VOTING: between online rounds, vote for the next map from three on the results screen. The most votes win (private matches with a fixed map skip it).",
-  "NEW GRENADES (pick them in your class): the HOTBOX GRENADE throws a thick smoke cloud for 14 s that nobody can see through, bots included; the SKUNK BOMB blinds anyone looking at it with a green flash, then leaves a stink cloud where enemies can't aim. Everyone online sees the clouds."
+  "NEW MODE: CONTACT HIGH (infected). Everyone starts as a survivor, then one player turns. The infected glow green, have no guns, run faster and kill with one hit up close - and anyone they get joins them. Survive 5 minutes, or spread it to everyone. Offline with bots, online and in private matches.",
+  "NEW MODE: BACK ALLEY (2v2 gunfight). Two against two, one life a round, 40 seconds. Everyone gets the SAME random loadout (new every two rounds); when time runs out the team with more health left wins. First to 6 rounds. Offline, online and in private matches."
  ],
- "sha256": "899561a413eb047d7fc05fdb185834baeae8c40731d81b526229178a19193cbd",
+ "sha256": "d10096d9450fa6dda9e10306ca771bb4cac4c1b8434494292a2184e442dcf49d",
  "minApp": "1.0.0"
 }

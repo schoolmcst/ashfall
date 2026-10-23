@@ -77,7 +77,7 @@ function updatePlayer(dt) {
   const moving = fwd !== 0 || str !== 0;
   const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
   if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
-  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
+  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
   if (G.reloading) speed *= 0.85;
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
@@ -193,6 +193,7 @@ function animateViewmodel(dt, hs, sprint, bobOn) {
 /* ------------------------------------------------------------------ shooting */
 const _fwd = new THREE.Vector3(), _right = new THREE.Vector3(), _muz = new THREE.Vector3(), _org = new THREE.Vector3(), _sdir = new THREE.Vector3();
 function shoot(moving) {
+  if (M && M.infMe) { melee(); return; }
   const w = WEAPONS[G.cur], u = gunObjs[G.cur].userData;
   netShot(); w.ammo--; G.fireT = w.interval * (typeof zpHas === 'function' && zpHas('double') ? 0.75 : 1); G.shotT = 0; G.shots++; G.cycled = false;
   if (w.burst) { G.burstLeft = G.burstLeft > 0 ? G.burstLeft - 1 : w.burst - 1; if (G.burstLeft > 0 && w.ammo > 0) G.fireT = w.burstGap; else G.burstLeft = 0; }
@@ -293,7 +294,7 @@ function melee() {
   }, 130);
 }
 function throwGrenade() {
-  if (G.grenades <= 0 || G.state !== 'playing') return;
+  if (G.grenades <= 0 || G.state !== 'playing' || (M && M.infMe)) return;
   if (!gGeo && hasModel('props', 'grenade')) { const gg = modelGeos('props', 'grenade'); gGeo = mergeGeos(Object.keys(gg).map(k => ({ g: gg[k] }))); gMat = new THREE.MeshStandardMaterial({ color: C(0x3a4630), metalness: 0.5, roughness: 0.5 }); }
   if (!gGeo) { gGeo = mergeGeos([{ g: Sp(0.055, 10, 8), m: mat4(0, 0, 0, 0, 0, 0, 1, 1.25, 1) }, { g: Cy(0.022, 0.022, 0.03, 8), m: mat4(0, 0.075, 0) }, { g: Bx(0.012, 0.012, 0.07), m: mat4(0.03, 0.08, 0) }]); gMat = new THREE.MeshStandardMaterial({ color: C(0x3a4630), metalness: 0.5, roughness: 0.55 }); }
   const eq = EQUIP[G.equip] || EQUIP.frag;

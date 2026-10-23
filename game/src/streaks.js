@@ -31,7 +31,7 @@ let STK_SEL = ['uav', 'mortar', 'air'];
 try { const a = JSON.parse(localStorage.getItem(STK_KEY) || 'null'); if (Array.isArray(a) && a.length && a.every(k => STREAKS[k])) STK_SEL = a.slice(0, 3); } catch (e) {}
 const stkSave = () => { try { localStorage.setItem(STK_KEY, JSON.stringify(STK_SEL)); } catch (e) {} };
 const stkIcon = (id, cls = '') => `<svg class="stk-ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${STK_ICON[id] || ''}</svg>`;
-const stkOn = () => typeof M !== 'undefined' && M && inMatch() && M.mode !== 'gun' && M.mode !== 'snd' && !G.bench;
+const stkOn = () => typeof M !== 'undefined' && M && inMatch() && M.mode !== 'gun' && M.mode !== 'snd' && M.mode !== 'gf' && !M.infMe && !G.bench;
 // cooldowns: after you call in a streak you must wait STK_USE_CD seconds before calling another, and that streak can't be
 // earned again until its own cd (seconds) has passed
 const STK_USE_CD = 15;
