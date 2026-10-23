@@ -201,7 +201,7 @@ function zcBecomeHost() {
 /* ---------- the host's side: who the zombies chase, their swings, kills */
 function zombTargets() {
   const t = [];
-  if (!ZC.on || (!ZC.down && !ZC.dead && (G.state === 'playing' || G.state === 'paused'))) t.push({ x: P.x, y: P.y || 0, z: P.z, me: true });
+  if ((!ZC.on || (!ZC.down && !ZC.dead && (G.state === 'playing' || G.state === 'paused'))) && !(typeof mcCloud === 'function' && mcCloud())) t.push({ x: P.x, y: P.y || 0, z: P.z, me: true });
   if (zcInGame()) for (const R of ZC.rem.values()) if (R.inGame && R.a && !R.dn) t.push({ x: R.x, y: R.y, z: R.z, peer: R.peer });
   return t;
 }

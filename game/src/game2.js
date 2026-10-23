@@ -327,6 +327,7 @@ function die() {
   mouseDown = false; mouseAds = false; G.streak = 0; statDeath(); stkDeath();
   try { matchPlayerKilled(G.killer); } catch (err) { reportError(err); }
   if (M.over) return;
+  if (M.mode === 'zomb' && typeof mcRevive === 'function' && mcRevive()) { G.state = 'playing'; return; }
   if (M.mode === 'zomb' && zpSelfRevive()) { G.state = 'playing'; return; }
   if (M.mode === 'zomb' && zcInGame()) { zcDown(); return; }
   if (M.mode === 'zomb') { try { zvSay('down'); } catch (e) {} finishDeath(); return; }

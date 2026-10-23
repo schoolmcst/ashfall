@@ -29,6 +29,7 @@ function renderZLobby(focusSel) {
     `<div class="cod-row"${zsWanted() ? '' : ' style="opacity:.45"'}><small>STORY · ${zc.chapter} · 7 CHAPTERS</small><b style="color:#7adf6a">${sx.text.title}</b><span>${zmapStoryDone(mid) ? 'COMPLETE ✓ · ' : ''}TAPES FOUND ${zmapTapes(mid)} / ${sx.tapes.length} · ${sx.chapters.map((c, i) => `${i + 1} ${c.name}`).join(' · ')}</span></div>` +
     `<div class="cod-row"><small>CHARACTER</small><b style="color:${zvChar(ZL.char).col}">${zvChar(ZL.char).full}</b><span>${zvChar(ZL.char).bio}</span><div class="arw"><button class="mini" data-act="z-char-" aria-label="Previous character">&lsaquo;</button><button class="mini" data-act="z-char+" aria-label="Next character">&rsaquo;</button></div></div>` +
     
+    (typeof mcRow === 'function' ? mcRow() : '') +
     `<div class="cod-row"><small>STARTING GEAR</small><b>SERVICE 9 · 2 FRAGS</b><span>everyone starts the same · 500 points to spend</span></div>` +
     `<div class="cod-row"><small>MYSTERY CRATE · ${Z_BOX} POINTS</small><b>A RANDOM GUN</b><span>AMMO CRATE · ${Z_AMMO} POINTS · full ammo for your guns</span></div>` +
     `<div class="cod-row"><small>YOUR BEST · ${m ? m.name : ''}</small><b>ROUND ${zstOf(mid).best}</b><span>${zstOf(mid).pts.toLocaleString()} POINTS · ${zstOf(mid).kills.toLocaleString()} KILLS · ${zstOf(mid).games} GAMES${zstOf(mid).story ? ' · STORY DONE ' + zstOf(mid).story + '×' : ''}${zwwFor(mid) ? ' · WONDER WEAPON: ' + zwwFor(mid).name : ''}</span></div>`;
@@ -52,6 +53,7 @@ function zombAct(act) {
   if (act === 'z-code') { const i = $('zCode'), c = i ? cleanCode(i.value) : ''; if (!c || c === 'public') { if (i) { i.focus(); i.placeholder = 'type a code first'; } return true; } ZL.code = c; zcJoin('code', c); return true; }
   if (act === 'z-leave') { zcLeave(); sfx.ui(); return true; }
   if (act === 'z-char-' || act === 'z-char+') { const i = ZCHARS.findIndex(c => c.id === ZL.char), d = act.endsWith('+') ? 1 : -1; ZL.char = ZCHARS[(i + d + ZCHARS.length) % ZCHARS.length].id; try { localStorage.setItem('ashfall.zchar', ZL.char); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="${act}"]`); try { speechSynthesis.cancel(); } catch (e) {} const l = ZLINES[ZL.char].spawn; zvSpeak(ZL.char, l[(Math.random() * l.length) | 0]); return true; }
+  if (act === 'z-candy') { mcPicker(); return true; }
   if (act === 'z-story') { if (ZC.on && !zcHost()) return true; ZL.story = !ZL.story; try { localStorage.setItem('ashfall.zstoryon', ZL.story ? 'on' : 'off'); } catch (e) {} sfx.ui(); renderZLobby('[data-act="z-story"]'); return true; }
   if (act === 'z-voice') { ZV.enabled = !ZV.enabled; try { localStorage.setItem('ashfall.zvoice', ZV.enabled ? 'on' : 'off'); if (!ZV.enabled) speechSynthesis.cancel(); } catch (e) {} sfx.ui(); renderZLobby('[data-act="z-voice"]'); return true; }
   if ((act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') && ZC.on && !zcHost()) return true;
@@ -69,7 +71,7 @@ function zombStart(cfg) {
   buildSpawns();
   const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z);
   Object.assign(Z, { zid: 0, round: 0, toSpawn: 0, spawnT: 0, breakT: ZC.on && ZC.inGame ? 6 : 4, active: false, guns: ['sidearm'], boxT: 0 });
-  zombEquip(); G.grenades = 2; G.points = 500; G.score = 0;
+  zombEquip(); G.grenades = 2; G.points = 500; G.score = 0; try { mcReset(); } catch (e) {}
   Z.up = new Set(); Z.wwOn = new Set(); Z.statDone = false; zdInit(); zombEquip();
   zombCrates();
   zombWarm();
@@ -319,7 +321,7 @@ function zombCrateTick(dt) {
 }
 function zombBuyBox() {
   if (Z.boxT > 0) return;
-  G.points -= zboxCost(); Z.boxT = 1.4;
+  G.points -= zboxCost(); if (typeof MC !== 'undefined') MC.freeBox = false; Z.boxT = 1.4;
   const ww = zwwFor(curMap); if (ww && Z.round >= 3 && !Z.guns.includes(ww.base) && Math.random() < 0.07) { setTimeout(() => zwwGive(curMap), 900); return; }   // rarely: the map's wonder weapon
   const have = new Set(Z.guns), pool = Z_POOL().filter(d => !have.has(d.id)), d = pool[(Math.random() * pool.length) | 0];
   if (Z.guns.length < 2) Z.guns.unshift(d.id); else Z.guns[G.cur] = d.id;

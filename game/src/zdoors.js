@@ -208,13 +208,13 @@ function zuApply() {
     if (!Z.up.has(w.def.id)) return;
     w.dmg *= 2; w.magSize = Math.ceil(w.magSize * 1.5); w.reserveMax = (w.reserveMax || w.def.reserve) * 2; w.ammo = w.magSize; w.reserve = w.reserveMax; w.name = zuName(w.def.name); w.upgraded = true;
     const g = gunObjs[i]; if (!g) return;
-    const tint = mt => { const c = mt.clone(); if (c.emissive) { c.emissive = new THREE.Color(0x7a2cff); c.emissiveIntensity = 0.55; } if (c.color) c.color.lerp(new THREE.Color(0x6a3aa8), 0.35); return c; };
+    const tint = mt => zuCamoMat(mt);   // the map's animated upgrade camo (candy.js)
     g.traverse(m => { if (!m.isMesh || ZD.tinted.some(t => t[0] === m)) return; ZD.tinted.push([m, m.material]); m.material = Array.isArray(m.material) ? m.material.map(tint) : tint(m.material); });
   });
 }
 function zuNear() { const s = ZU_SPOT; return ZD.up && Math.hypot(P.x - s.x, P.z - s.z) < 2.4 && Math.abs((P.y || 0) - s.y) < 1.5; }
 function zdTick(dt) {
-  zdAnim(dt); try { worksTick(dt); airpTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); zwwCloudTick(dt); } catch (e) { reportError(e); }
+  zdAnim(dt); try { zuCamoTick(dt); mcTick(); } catch (e) {} try { worksTick(dt); airpTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); zwwCloudTick(dt); } catch (e) { reportError(e); }
   if (ZD.up) { const u = ZD.up, busy = u.t > 0; u.g.userData.beam.material.opacity = 0.08 + Math.sin(NOW * 3) * 0.04; if (busy) u.t -= dt;
     u.ring.rotation.y += dt * (busy ? 9 : 0.8); u.core.material.emissiveIntensity = 1.3 + Math.sin(NOW * 4) * 0.4 + (busy ? 2 : 0); u.lt.intensity = 1.4 + Math.sin(NOW * 4) * 0.3 + (busy ? 2.5 : 0); }
   if (ZD.arrows) ZD.arrows.userData.mat.opacity = 0.85 + Math.sin(NOW * 3) * 0.15;

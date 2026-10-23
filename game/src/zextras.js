@@ -17,7 +17,7 @@ const ZPU_TYPES = [
 const ZPU = { list: new Map(), mine: new Set(), seq: 0, fx: {}, ev: [], evSeq: 0, taken: new Set(), seenEv: undefined, round: -1, n: 0, tex: {} };
 const zpuOn = id => (ZPU.fx[id] || 0) > NOW;
 const zpuPts = () => zpuOn('dbl') ? 2 : 1;
-const zboxCost = () => zpuOn('sale') ? 42 : Z_BOX;
+const zboxCost = () => typeof MC !== 'undefined' && MC.freeBox ? 0 : zpuOn('sale') ? 42 : Z_BOX;
 const zpuDef = id => ZPU_TYPES.find(t => t.id === id);
 
 /* ---------- the floating icons */

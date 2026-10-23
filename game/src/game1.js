@@ -53,6 +53,7 @@ function hurtPlayer(dmg, fx, fz, boom) {
   if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0 || G.holdT > 0) return;
   if (boom && perk('flak')) dmg *= 0.65;
   if (!boom && G.state === 'playing') { const kn = perk('iron') ? 0.3 : 1; P.pitch += rnd(0.004, 0.012) * kn; P.yaw += rnd(-0.008, 0.008) * kn; }   // getting shot knocks your aim
+  if (typeof mcRock === 'function' && M && M.mode === 'zomb' && mcRock()) dmg *= 0.5;
   G.health -= dmg; G.lastHit = G.time; G.shake = Math.max(G.shake, 0.012);
   vig.style.opacity = clamp(0.45 + ((G.maxHp || 100) - G.health) / 120 * (100 / (G.maxHp || 100)), 0, 1);
   setTimeout(() => { vig.style.opacity = G.health < 0.35 * (G.maxHp || 100) ? 0.5 : 0; }, 160);
@@ -77,7 +78,7 @@ function updatePlayer(dt) {
   const moving = fwd !== 0 || str !== 0;
   const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
   if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
-  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
+  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof mcFizz === 'function' && M && M.mode === 'zomb' && mcFizz() ? 1.25 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
   if (G.reloading) speed *= 0.85;
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
