@@ -1,11 +1,19 @@
 {
  "version": "1.2.48",
  "notes": [
-  "FASTER FIRST LOAD: the loading screen is much shorter (about 6 s down to under 2 s on our test machine). The sky reflections now build just after the menu appears, and your gun's shaders get ready when the first match starts, not on the loading screen.",
-  "COLOUR-BLIND MODE (Settings > GAMEPLAY): DEUTERANOPIA (blue / amber), PROTANOPIA (blue / yellow) or TRITANOPIA (teal / pink) team colours. Changes the scoreboard, kill feed, radar, UAV marks, objectives, stash bags and grow spots.",
-  "FIELD OF VIEW: new ADS FIELD OF VIEW option (Settings > VIDEO). AFFECTED zooms in from your FOV; INDEPENDENT makes every sight zoom the same at any FOV. FOV checked from 60 to 110.",
-  "BETTER VOICES: the survivors now get the best voices your computer has (natural / premium voices first, never the joke ones like Bubbles or Zarvox on a Mac), with gentler pitch so they sound less robotic. New VOICE LINES SPEED slider (Settings > AUDIO) - you hear a sample when you change it."
+  "NEW ZOMBIES MAP: TERMINAL 9 - story chapter three, FLIGHT 909. An airport cargo terminal with baggage chutes to fast-travel, the plane's cargo hold, 7 new chapters, 12 tapes and a boss in an expensive suit.",
+  "WONDER WEAPONS: one per zombies map - THE BONG CANNON, THE PRESSURE GUN and THE CROP DUSTER. Rare from the mystery crate, and your reward for finishing each story.",
+  "ZOMBIES POWER-UPS (RE-UP, HOTBOX, DOUBLE BAG, KUSH BOMB, THE FIXER, 420 SALE) and WALL STASHES - guns behind purple stencils you can buy off the wall.",
+  "NEW ZOMBIES: STRAY ROUNDS (junkie dogs every 5th round), FIENDS that crawl, BLOATERS that burst into smoke, and BARRICADED WINDOWS to board back up. Zombies stats per map, and a ZOMBIES tab on the friends leaderboard.",
+  "NEW MODE: BAGGED UP (kill confirmed) - everyone drops a stash bag when they die. Bag enemy bags to score, save your team's. Offline, online and private matches.",
+  "NEW MODE: TURF WAR (domination) - take and hold three grow spots, A, B and C. Offline, online and private matches.",
+  "KILLCAM: see your death over your killer's shoulder (turn it off in Settings).",
+  "4 NEW SCORESTREAKS: DEALER DRONE, SMOKE OUT (counter-UAV), TRAP HOUSE TURRET and HIGH FLYER (gunship).",
+  "WEEKLY CHALLENGES: THE PLUG'S LIST - six new jobs every Monday for XP and DZ, and a free PRESTIGE box for doing all six. PRESTIGE: at level 100 go back to level 1 and keep everything - 10 prestiges, each with an emblem, calling card, DZ and a box, plus 3 new finishes.",
+  "THE STASH YARD: a firing range and tutorial on the main menu.",
+  "FASTER FIRST LOAD, COLOUR-BLIND MODES (Settings > GAMEPLAY) and an ADS FIELD OF VIEW option (Settings > VIDEO).",
+  "BETTER ZOMBIES VOICES: the best voices your computer has, gentler pitch, and a VOICE LINES SPEED slider."
  ],
- "sha256": "540ecb5dd4030be07dec9da3bf413063cd4b21217ba360c231714ef5ed6b327e",
+ "sha256": "1c9d483e820bcfbb457dd739489b61d68a4d187fc51e36f7eb9d7b78b4936b9e",
  "minApp": "1.0.0"
 }
