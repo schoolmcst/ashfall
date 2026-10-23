@@ -739,7 +739,7 @@ const DEFAULTS = {
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,
-  crosshair: 'cross', crosshairColor: 'white', hitMarkers: true, ragdoll: true, deathCam: true, killcam: true, cbMode: 'off', adsFov: 'affected', dmgIndicator: true, radar: true, difficulty: 'regular',
+  crosshair: 'cross', crosshairColor: 'white', hitMarkers: true, ragdoll: true, deathCam: true, killcam: true, potg: true, cbMode: 'off', adsFov: 'affected', dmgIndicator: true, radar: true, difficulty: 'regular',
 };
 const S = Object.assign({}, DEFAULTS);
 const STORE = 'ashfall.settings.v1', BEST = 'ashfall.best.v1';
@@ -6550,7 +6550,7 @@ function updatePlayer(dt) {
   const moving = fwd !== 0 || str !== 0;
   const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
   if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
-  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
+  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
   if (G.reloading) speed *= 0.85;
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
@@ -6605,6 +6605,8 @@ function animateViewmodel(dt, hs, sprint, bobOn) {
   G.airK = lerp(G.airK || 0, P.onGround ? 0 : 1, clamp(dt * 6, 0, 1)); vy += G.airK * 0.018 * sAmt; rx += G.airK * 0.05 * sAmt;
   // grenade throw: rifle drops out of the way while the arm swings
   if (G.throwT > 0) { G.throwT = Math.max(0, G.throwT - dt); const t = Math.sin((1 - G.throwT / 0.6) * Math.PI); vy -= t * 0.28; rx -= t * 0.6; rz += t * 0.35; vx += t * 0.06; }
+  // a finisher: the gun thrusts forward, then pulls back
+  if (G.finT > 0) { const t = 1 - G.finT / 1.3, a = smooth(0.15, 0.32, t) * (1 - smooth(0.55, 0.9, t)); vz -= a * 0.32; vy += a * 0.06; rx -= a * 0.4; rz += a * 0.25; vx -= a * 0.05; }
   // melee: a quick bash with the weapon
   if (G.meleeT > 0) { G.meleeT = Math.max(0, G.meleeT - dt); const t = Math.sin((1 - G.meleeT / 0.55) * Math.PI); vx -= t * 0.12; vz -= t * 0.16; vy += t * 0.03; ry += t * 0.9; rz += t * 0.5; rx -= t * 0.15; }
   // inspect (F / D-pad down): turn the weapon over, look at the other side, bring it back
@@ -6612,8 +6614,7 @@ function animateViewmodel(dt, hs, sprint, bobOn) {
     if (isFiring() || G.reloading || G.adsOn || sprint || G.swapT > 0 || G.throwT > 0) G.inspectT = 0;
     else {
       G.inspectT = Math.max(0, G.inspectT - dt); const ip = 1 - G.inspectT / 2.6;
-      const A = smooth(0, 0.22, ip) * (1 - smooth(0.42, 0.55, ip)), B = smooth(0.45, 0.6, ip) * (1 - smooth(0.82, 1, ip));
-      ry += A * 0.95 - B * 0.55; rz += A * 0.55 - B * 0.35; rx += B * 0.3 + A * 0.08; vx -= A * 0.07 - B * 0.03; vy += A * 0.05 + B * 0.04; vz += (A + B) * 0.05;
+      const d = inspectPose(w.def.cat, ip, u); vx += d[0]; vy += d[1]; vz += d[2]; rx += d[3]; ry += d[4]; rz += d[5];
     }
   }
   G.shotT += dt;
@@ -6759,6 +6760,7 @@ function melee() {
       if ((dx * fx + dz * fz) / (d || 1) < 0.62) continue;
       best = e; bd = d;
     }
+    if (best && !(M && M.infMe) && finCheck(best)) { finStart(best); return; }
     if (best) {
       const dir = new THREE.Vector3(best.group.position.x - P.x, 0, best.group.position.z - P.z).normalize();
       sfx.thud({ vol: 1 }); G.shake = Math.max(G.shake, 0.02);
@@ -6930,6 +6932,54 @@ function updateProjectile(g, dt) {
   m.position.copy(_pb); m.lookAt(_pa.copy(_pb).sub(_pd));
   if (g.proj === 'rocket' && (g.trailT -= dt) <= 0) { g.trailT = 0.025; puff(_pb.x, _pb.y, _pb.z, { color: 0xaaa69e, size: 0.2, grow: 0.9, life: 1.3, vy: 0.2, op: 0.3, minor: 1 }); }
   return false;
+}
+/* ================================================================== weapon inspect by class, and finishing moves
+   INSPECT (F / D-pad down) now depends on the gun: pistols get a spin, shotguns a pump and a look down the tube,
+   snipers and marksman rifles a look down the scope, SMGs a quick flip, rifles and LMGs turn over and check the mag.
+   FINISHERS: melee someone from behind (or anyone you catch unaware within reach) for a takedown: your view swings in,
+   the gun thrusts, they go down hard, +100. Three themed names. You can't be hurt for the second it takes. */
+// [vx, vy, vz, rx, ry, rz] offsets for inspect progress ip (0..1)
+function inspectPose(cat, ip, u) {
+  const sm = smooth, A = sm(0, 0.22, ip) * (1 - sm(0.42, 0.55, ip)), B = sm(0.45, 0.6, ip) * (1 - sm(0.82, 1, ip)), all = sm(0, 0.12, ip) * (1 - sm(0.86, 1, ip));
+  if (cat === 'pi') { const spin = sm(0.25, 0.6, ip) * TAU; return [-all * 0.05, all * 0.06, all * 0.04, all * 0.15, A * 0.6 - B * 0.4, spin]; }
+  if (cat === 'sg') { const pump = Math.sin(sm(0.5, 0.8, ip) * Math.PI * 2) * all; return [-A * 0.06, A * 0.07 + all * 0.02, pump * 0.06, A * 0.35 + B * 0.1, A * 0.5, A * 0.8 - B * 0.2]; }
+  if (cat === 'sr' || cat === 'mr') return [-all * 0.11, all * 0.08, all * 0.08 + B * 0.04, all * 0.12 - B * 0.2, A * 0.25, A * 0.15 + B * 0.55];
+  if (cat === 'smg') { const f = Math.sin(sm(0.1, 0.9, ip) * Math.PI * 2); return [-all * 0.05, all * 0.05, all * 0.04, all * 0.1, f * 0.7, f * 0.6]; }
+  // rifles, LMGs, launchers: turn it over, then drop the mag a little and look at it
+  if (u && u.mag && u.magBase && cat !== 'la') { const m = sm(0.6, 0.7, ip) * (1 - sm(0.8, 0.9, ip)); u.mag.position.y = u.magBase.y - m * 0.05; }
+  return [-A * 0.07 + B * 0.03, A * 0.05 + B * 0.04, (A + B) * 0.05, B * 0.3 + A * 0.08, A * 0.95 - B * 0.55, A * 0.55 - B * 0.35];
+}
+const FIN_NAMES = ['ROLLED UP', 'PUFF PUFF PASS OUT', 'SMOKED'];
+// melee hit `e` from where you stand: a finisher when you are behind them (or they are not looking at you)
+function finCheck(e) {
+  if (!e || !e.group || e.dog || e.boss || G.finT > 0) return false;
+  const p = e.group.position, fx = Math.sin(e.group.rotation.y), fz = Math.cos(e.group.rotation.y), dx = P.x - p.x, dz = P.z - p.z, d = Math.hypot(dx, dz) || 1;
+  const behind = (fx * dx + fz * dz) / d < -0.35, unaware = e.entry && !e.net && !e.tgt;
+  return behind || (unaware && Math.random() < 0.5);
+}
+function finStart(e) {
+  G.finT = 1.3; G.finE = e; G.finName = FIN_NAMES[(Math.random() * FIN_NAMES.length) | 0]; G.finYaw = Math.atan2(-(e.group.position.x - P.x), -(e.group.position.z - P.z));
+  G.spawnProt = Math.max(G.spawnProt || 0, 1.3); G.fireT = Math.max(G.fireT, 1.3);
+  if (e.entry && !e.net) { e.stunT = Math.max(e.stunT || 0, 1.5); e.cd = Math.max(e.cd || 0, 1.5); }
+  try { burst(0.25, 900, 0.3, 'lowpass'); } catch (err) {}
+}
+function finTick(dt) {
+  if (!(G.finT > 0)) return;
+  const e = G.finE, before = G.finT; G.finT = Math.max(0, G.finT - dt);
+  // turn to face them and lean in
+  let dy = G.finYaw - P.yaw; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; P.yaw += dy * Math.min(1, dt * 10); P.pitch += (-0.12 - P.pitch) * Math.min(1, dt * 8);
+  P.vx = P.vz = 0; G.shake = Math.max(G.shake, 0.004);
+  if (before > 0.7 && G.finT <= 0.7 && e) {   // the hit lands
+    if (enemies.includes(e)) {
+      const dir = new THREE.Vector3(e.group.position.x - P.x, 0.25, e.group.position.z - P.z).normalize();
+      e.finisher = true; damageEnemy(e, 999, false, dir, false, 'player');
+      try { sfx.thud({ vol: 1 }); sfx.kill(false); } catch (err) {}
+      G.shake = Math.max(G.shake, 0.03); rumble(0.7, 0.7, 200);
+      G.score += 100; if (M && M.me && inMatch()) M.me.score += 100; popScore('+100', 'big', 'FINISHER · ' + G.finName);
+      MS.finishers = (MS.finishers || 0) + 1;
+    }
+  }
+  if (G.finT <= 0) G.finE = null;
 }
 /* ================================================================== gameplay: enemies, waves, pickups, HUD, flow */
 const TYPES = {
@@ -7317,10 +7367,10 @@ function saveStats() { try { localStorage.setItem(STATS_KEY, JSON.stringify(STAT
 let MS = null;
 function blankMatch() { return { kills: 0, deaths: 0, heads: 0, shots: 0, hits: 0, streak: 0, bestStreak: 0, longest: 0, time: 0, plants: 0, defuses: 0, caps: 0, returns: 0, hpTime: 0, weapons: {} }; }
 MS = blankMatch();
-function startMatchStats() { MS = blankMatch(); MS.active = true; }
+function startMatchStats() { MS = blankMatch(); MS.active = true; try { potgReset(); } catch (e) {} }
 const wstat = id => MS.weapons[id] || (MS.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 });
 function statShot(hit) { if (!MS.active || G.bench) return; const w = WEAPONS[G.cur]; MS.shots++; if (hit) MS.hits++; if (w) { const s = wstat(w.def.id); s.shots++; if (hit) s.hits++; } }
-function statKill(e, head, boom) { statKillAt(e.group.position.x, e.group.position.z, head, boom); }
+function statKill(e, head, boom) { try { potgKill(e, head, Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z)); } catch (err) {} statKillAt(e.group.position.x, e.group.position.z, head, boom); }
 // a kill where the victim is somewhere (online kills can arrive after the victim's body is gone)
 function statKillAt(x, z, head, boom) {
   if (!MS.active || G.bench) return;
@@ -7401,10 +7451,12 @@ function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
 {
-"v": "1.2.51",
+"v": "1.2.52",
 "d": "2026-10-23",
 "n": [
-"NEW MAP: THE GREENHOUSE. An indoor grow operation: a glass greenhouse full of grow benches under purple lamps (low cover, plants to hide behind, some panes broken out), a drying barn with buds hanging on racks and a mezzanine at each end, and a loading dock with a box truck on the flank. Works in every multiplayer mode, offline and online, and in map voting."
+"PLAY OF THE GAME: your best multi-kill of the match (2 or more kills close together; headshots and long shots count extra) plays from your own eyes before the scoreboard - the soldiers you got walk their real paths and drop. Click or press any key to skip; turn it off in Settings > GAMEPLAY.",
+"FINISHERS: melee someone from behind (or catch them not looking) for a takedown - you swing in, the gun thrusts, they go down hard. +100 and one of three names: ROLLED UP, PUFF PUFF PASS OUT, SMOKED.",
+"WEAPON INSPECT (F / D-pad down) now depends on the gun: pistols spin, shotguns pump and turn, snipers and marksman rifles look down the scope, SMGs flip, rifles and LMGs turn over and check the mag."
 ]
 },
 {
@@ -8534,6 +8586,7 @@ function playerInteract(dt, held) {
 /* ---------- per-frame match update */
 function updateMatch(dt) {
   if (!inMatch() || M.over) return;
+  try { potgTick(dt); } catch (e) {}
   if (G.holdT > 0) { if (G.state === 'respawning' && !(M.online && !NET.teamSet)) respawnPlayer(); updateModeHud(false); return; }
   M.t += dt;
   if (G.spawnProt > 0) G.spawnProt -= dt;
@@ -8601,6 +8654,7 @@ function showResults(winner, won) {
   $('resAgain').textContent = M.online ? 'READY' : 'PLAY NOW'; $('resAgain').style.display = M.online ? 'none' : '';
   $('resLobby').textContent = M.online ? 'LEAVE MATCH' : 'LOBBY';
   updateResNext();
+  { let w = false; try { w = potgWanted(); } catch (e) {} if (w) { showScreen(null); potgPlay(() => { if (G.state === 'over') showScreen('results'); }); return; } }
   showScreen('results');
 }
 // time between matches: the scoreboard stays up, then the next match starts by itself
@@ -9913,6 +9967,106 @@ function kcYou(dc) {
   const d = Math.hypot(dc.E.x - camera.position.x, dc.E.z - camera.position.z), k = 0.05 * Math.max(6, d);
   sp.scale.set(k, k, 1); sp.position.set(dc.E.x, dc.E.y + 0.2, dc.E.z);
 }
+/* ================================================================== PLAY OF THE GAME
+   While you play, the last 14 seconds are kept 15 times a second: where you were and where you looked, every soldier
+   around you, your shots and kills. Each kill scores the 6 seconds before it (kills x 10, headshots and long shots
+   extra); the best moment of the match is kept (with 1.5 s after the last kill). When the match ends it plays from your
+   eyes before the scoreboard: ghost soldiers walk the recorded paths, your shots flash, the ones you got fall.
+   Press any key / click to skip. Matches only (not zombies), and only if you got at least two kills in the moment. */
+const POTG = { buf: [], acc: 0, kills: [], best: null, pend: null, keys: new WeakMap(), nkey: 0, play: null };
+const POTG_HZ = 15, POTG_KEEP = 14;
+function potgReset() { POTG.buf = []; POTG.kills = []; POTG.best = null; POTG.pend = null; POTG.acc = 0; POTG.keys = new WeakMap(); POTG.nkey = 0; POTG.shots = 0; }
+function potgKey(o) { let k = POTG.keys.get(o); if (k === undefined) { k = ++POTG.nkey; POTG.keys.set(o, k); } return k; }
+function potgShot() { POTG.shots = (POTG.shots || 0) + 1; }
+function potgTick(dt) {
+  if (POTG.play) return;
+  if (!inMatch() || M.mode === 'range' || G.bench || G.noRender && !G.potgTest || G.state !== 'playing') return;
+  POTG.acc += dt; if (POTG.acc < 1 / POTG_HZ) return; POTG.acc = 0;
+  const t = M.t, ents = [];
+  for (const e of enemies) if (e.group && e.rig && !e.zombie && e.group.visible !== false) ents.push([potgKey(e.entry || e), e.group.position.x, e.group.position.y, e.group.position.z, e.group.rotation.y, e.type || 'rifleman', e.team === M.myTeam && M.def.teams ? 1 : 0, e.inf ? 1 : 0, e.crouchK || 0]);
+  POTG.buf.push({ t, p: [P.x, P.y, P.z, P.yaw, P.pitch, P.eye], cur: G.cur, ads: G.ads, sh: POTG.shots || 0, e: ents });
+  POTG.shots = 0;
+  while (POTG.buf.length && POTG.buf[0].t < t - POTG_KEEP) POTG.buf.shift();
+  if (POTG.pend && t >= POTG.pend.until) { POTG.best = { score: POTG.pend.score, kills: POTG.pend.kills, heads: POTG.pend.heads, frames: POTG.buf.filter(f => f.t >= POTG.pend.from), dead: POTG.pend.dead.slice() }; POTG.pend = null; }
+}
+// a kill of yours (victim object, head, distance)
+function potgKill(e, head, dist) {
+  if (POTG.play || !inMatch() || M.mode === 'range') return;
+  const t = M.t; POTG.kills.push({ t, head, dist, key: e ? potgKey(e.entry || e) : 0 });
+  POTG.kills = POTG.kills.filter(k => k.t > t - 6);
+  const ks = POTG.kills, score = ks.length * 10 + ks.filter(k => k.head).length * 3 + ks.filter(k => k.dist > 30).length * 3;
+  const cur = POTG.pend || POTG.best;
+  if (ks.length >= 2 && (!cur || score > cur.score)) {
+    POTG.pend = { score, kills: ks.length, heads: ks.filter(k => k.head).length, from: Math.max(ks[0].t - 3.5, t - 9), until: t + 1.5, dead: ks.map(k => [k.key, k.t]) };
+  } else if (POTG.pend && score >= POTG.pend.score) { POTG.pend.until = t + 1.5; POTG.pend.dead = ks.map(k => [k.key, k.t]); POTG.pend.score = score; POTG.pend.kills = ks.length; }
+}
+const potgName = n => ['', 'KILL', 'DOUBLE KILL', 'TRIPLE KILL', 'QUAD FEED', 'FIVE-PIECE', 'SIX PACK'][Math.min(n, 6)] || n + ' KILLS';
+function potgWanted() { if (POTG.pend) { const p = POTG.pend; POTG.best = { score: p.score, kills: p.kills, heads: p.heads, frames: POTG.buf.filter(f => f.t >= p.from), dead: p.dead.slice() }; POTG.pend = null; } return !!(POTG.best && POTG.best.frames.length > 10 && S.potg !== false); }
+// play it, then done()
+function potgPlay(done) {
+  const B = POTG.best; if (!B) { done(); return; }
+  const ghosts = new Map(), hidden = [];
+  for (const e of enemies) if (e.group && e.group.visible) { e.group.visible = false; hidden.push(e.group); }
+  for (const d of (typeof dying !== 'undefined' ? dying : [])) if (d.e && d.e.group && d.e.group.visible) { d.e.group.visible = false; hidden.push(d.e.group); }
+  const ov = document.createElement('div'); ov.id = 'potgOv';
+  ov.innerHTML = `<div class="po-tag"><b>PLAY OF THE GAME</b><span>${(M.me && M.me.name === 'YOU' ? (NET.nick || 'YOU') : 'YOU').toUpperCase()} · ${potgName(B.kills)}${B.heads ? ` · ${B.heads} HEADSHOT${B.heads > 1 ? 'S' : ''}` : ''}</span></div><div class="po-skip">CLICK OR PRESS ANY KEY TO SKIP</div>`;
+  document.body.appendChild(ov);
+  const t0 = B.frames[0].t, t1 = B.frames[B.frames.length - 1].t, dead = new Map(B.dead);
+  POTG.play = { t: 0, len: t1 - t0, t0, frames: B.frames, ghosts, hidden, ov, done, dead, fi: 0, prevFov: camera.fov };
+  const skip = () => potgStop(); POTG.play.skip = skip;
+  setTimeout(() => { addEventListener('keydown', skip, { once: true }); addEventListener('mousedown', skip, { once: true }); }, 400);
+  try { sfx.streak(); } catch (e) {}
+}
+function potgGhost(id, type) {
+  const g = POTG.play.ghosts; if (g.has(id)) return g.get(id);
+  const rig = cloneSoldier(type || 'rifleman'); rig.root.rotation.order = 'YXZ'; scene.add(rig.root);
+  const o = { rig, aim: 0.9, phase: Math.random() * 6, phase0: 0, holding: true, crouchK: 0, last: null, fallT: -1 }; g.set(id, o); return o;
+}
+function potgFrame(dt) {
+  const Pl = POTG.play; if (!Pl) return false;
+  Pl.t += dt; const T = Pl.t0 + Pl.t, F = Pl.frames;
+  while (Pl.fi < F.length - 2 && F[Pl.fi + 1].t <= T) { Pl.fi++; const f = F[Pl.fi]; if (f.sh) potgFlash(f); }
+  const a = F[Pl.fi], b = F[Math.min(Pl.fi + 1, F.length - 1)], k = b.t > a.t ? clamp((T - a.t) / (b.t - a.t), 0, 1) : 0;
+  const lerpA = (x, y) => { let d = y - x; while (d > Math.PI) d -= TAU; while (d < -Math.PI) d += TAU; return x + d * k; };
+  camera.position.set(lerp(a.p[0], b.p[0], k), lerp(a.p[1], b.p[1], k) + lerp(a.p[5], b.p[5], k), lerp(a.p[2], b.p[2], k));
+  camera.rotation.set(lerp(a.p[4], b.p[4], k), lerpA(a.p[3], b.p[3]), 0);
+  const fov = lerp(baseFov, (WEAPONS[a.cur] ? adsFovFor(WEAPONS[a.cur], baseFov) : baseFov), lerp(a.ads, b.ads, k)); if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
+  const seen = new Set();
+  for (const ea of a.e) {
+    const id = ea[0], eb = b.e.find(q => q[0] === id) || ea, o = potgGhost(id, ea[5]); seen.add(id);
+    const x = lerp(ea[1], eb[1], k), y = lerp(ea[2], eb[2], k), z = lerp(ea[3], eb[3], k);
+    const sp = o.last ? Math.hypot(x - o.last[0], z - o.last[1]) / Math.max(dt, 1e-3) : 0; o.last = [x, z];
+    const dk = Pl.dead.get(id);
+    if (dk !== undefined && T >= dk) { if (o.fallT < 0) o.fallT = 0; o.fallT += dt; const f = Math.min(1, o.fallT / 0.5); o.rig.root.rotation.x = -f * 1.45; o.rig.root.position.set(x, y + 0.1 - f * 0.1, z); o.rig.root.rotation.y = lerpA(ea[4], eb[4]); continue; }
+    o.rig.root.visible = true; o.rig.root.position.set(x, y, z); o.rig.root.rotation.set(0, lerpA(ea[4], eb[4]), 0); o.crouchK = ea[8];
+    try { animEnemy(o, dt, Math.min(6, sp)); } catch (err) {}
+  }
+  for (const [id, o] of Pl.ghosts) if (!seen.has(id) && !(Pl.dead.get(id) !== undefined && T >= Pl.dead.get(id))) o.rig.root.visible = false;
+  if (Pl.t >= Pl.len + 0.6) potgStop();
+  return true;
+}
+function potgFlash(f) {
+  try {
+    const dir = new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion), from = camera.position.clone().addScaledVector(dir, 0.6);
+    from.y -= 0.12; addTracer(from, from.clone().addScaledVector(dir, 60), 0.05, 0.018);
+    const u = gunObjs[G.cur] && gunObjs[G.cur].userData; if (u && u.flash) { u.flash.visible = true; G.flashT = 0.05; }
+    sfx.shot ? sfx.shot() : 0;
+  } catch (e) {}
+}
+function potgStop() {
+  const Pl = POTG.play; if (!Pl) return; POTG.play = null;
+  removeEventListener('keydown', Pl.skip); removeEventListener('mousedown', Pl.skip);
+  for (const [, o] of Pl.ghosts) scene.remove(o.rig.root);
+  for (const g of Pl.hidden) g.visible = true;
+  Pl.ov.remove(); camera.fov = Pl.prevFov || baseFov; camera.updateProjectionMatrix();
+  POTG.best = null;
+  try { Pl.done(); } catch (e) { reportError(e); }
+}
+(() => { const s = document.createElement('style'); s.textContent = `#potgOv{position:fixed;inset:0;z-index:30;pointer-events:none}
+#potgOv::before,#potgOv::after{content:"";position:absolute;left:0;right:0;height:8vh;background:#000}#potgOv::before{top:0}#potgOv::after{bottom:0}
+#potgOv .po-tag{position:absolute;left:4vw;bottom:12vh;padding:10px 18px;background:linear-gradient(90deg,rgba(0,0,0,.75),rgba(0,0,0,0));border-left:4px solid #7fd16b}
+#potgOv .po-tag b{display:block;font-size:13px;letter-spacing:.4em;color:#9ef07a}#potgOv .po-tag span{display:block;font-size:30px;font-weight:800;letter-spacing:.1em;color:#fff;text-shadow:0 2px 6px #000}
+#potgOv .po-skip{position:absolute;right:3vw;bottom:9vh;font-size:11px;letter-spacing:.2em;color:rgba(255,255,255,.6)}`; document.head.appendChild(s); })();
 /* ================================================================== polish: kill feed, score popups, streaks, explosive barrels,
    low-health effects, ammo prompts, dynamic crosshair, enemy footsteps */
 
@@ -11669,7 +11823,7 @@ function netPublish() {
     a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
-function netShot() { if (NET.on) NET.sh++; if (typeof ZC !== 'undefined' && ZC.on) ZC.sh++; }
+function netShot() { try { potgShot(); } catch (e) {} if (NET.on) NET.sh++; if (typeof ZC !== 'undefined' && ZC.on) ZC.sh++; }
 // called by damageEnemy() for a remote soldier: record the hit for its owner to apply
 // hit records: [victim, damage, head, seq, kind] - kind 1 = explosion (Blast Vest), 2 = stun at [x, y, z] (Tactical Mask)
 function netHit(e, dmg, head, by, boom) {
@@ -17665,6 +17819,7 @@ const SCHEMA = {
     { k: 'crosshairColor', t: 'seg', name: 'CROSSHAIR COLOUR', opts: [['white', 'WHITE'], ['green', 'GREEN'], ['yellow', 'YELLOW'], ['red', 'RED'], ['cyan', 'CYAN']] },
     { k: 'ragdoll', t: 'toggle', name: 'RAGDOLL PHYSICS', hint: 'Bodies fall and tumble with physics instead of a canned animation' },
     { k: 'deathCam', t: 'toggle', name: 'DEATH CAM', hint: 'Slow-motion shot of whoever killed you before the K.I.A. screen' },
+    { k: 'potg', t: 'toggle', name: 'PLAY OF THE GAME', hint: 'Your best multi-kill of the match plays before the scoreboard' },
     { k: 'killcam', t: 'toggle', name: 'KILLCAM', hint: 'With the death cam on: see your death over the killer\'s shoulder first' },
     { k: 'hitMarkers', t: 'toggle', name: 'HIT MARKERS' },
     { k: 'dmgIndicator', t: 'toggle', name: 'DAMAGE DIRECTION INDICATOR' },
@@ -18142,6 +18297,7 @@ function menuCamera() {
   if (camera.fov !== 52) { camera.fov = 52; camera.updateProjectionMatrix(); }
 }
 function tick(dt) {
+  if (POTG.play) { try { potgFrame(dt); } catch (e) { reportError(e); try { potgStop(); } catch (er) {} } }
   pollPad(dt);
   try { rpTick(dt); } catch (e) {}
   if (G.holdT > 0 && M && !G.bench && G.state !== 'over' && G.state !== 'plobby') updateHold(dt);
@@ -18165,6 +18321,7 @@ function tick(dt) {
     else if (G.burstLeft > 0 && G.fireT <= 0 && !G.reloading && G.swapT <= 0 && w.ammo > 0 && G.state === 'playing') shoot(moving);
     clickQueued = false;
     if (w.ammo === 0 && !G.reloading && w.reserve > 0 && G.swapT <= 0 && G.fireT <= 0) startReload();
+    try { finTick(dt); } catch (e) {}
     const used = inMatch() ? playerInteract(dt, kb('use') || pad.use) : false;
     if (inMatch()) { updateBots(dt); updateMatch(dt); } else if (M.mode === 'zomb') { zombNav(); updateZombies(dt); } else { updateNav(P.x, P.z); updateWaves(dt); updateEnemies(dt); }
     updateGrenades(dt); updatePickups(dt); updateHud();
@@ -18201,7 +18358,7 @@ try {
   document.addEventListener('visibilitychange', bgSync); setInterval(bgSync, 3000);
 } catch (e) {}
 function renderFrame() {
-  const showVm = viewmodel && (G.state === 'playing' || G.state === 'paused') && !G.scoped && !(M && M.infMe);
+  const showVm = viewmodel && (G.state === 'playing' || G.state === 'paused' || POTG.play) && !G.scoped && !(M && M.infMe);
   if (viewmodel) viewmodel.visible = !!showVm;
   const wob = typeof ZP !== 'undefined' && ZP.wobT > 0, crz = camera.rotation.z, cpy = camera.position.y; if (wob) zpWobble();
   renderer.clear(); renderer.render(scene, camera);
@@ -18266,7 +18423,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

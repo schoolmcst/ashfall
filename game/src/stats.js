@@ -12,10 +12,10 @@ function saveStats() { try { localStorage.setItem(STATS_KEY, JSON.stringify(STAT
 let MS = null;
 function blankMatch() { return { kills: 0, deaths: 0, heads: 0, shots: 0, hits: 0, streak: 0, bestStreak: 0, longest: 0, time: 0, plants: 0, defuses: 0, caps: 0, returns: 0, hpTime: 0, weapons: {} }; }
 MS = blankMatch();
-function startMatchStats() { MS = blankMatch(); MS.active = true; }
+function startMatchStats() { MS = blankMatch(); MS.active = true; try { potgReset(); } catch (e) {} }
 const wstat = id => MS.weapons[id] || (MS.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 });
 function statShot(hit) { if (!MS.active || G.bench) return; const w = WEAPONS[G.cur]; MS.shots++; if (hit) MS.hits++; if (w) { const s = wstat(w.def.id); s.shots++; if (hit) s.hits++; } }
-function statKill(e, head, boom) { statKillAt(e.group.position.x, e.group.position.z, head, boom); }
+function statKill(e, head, boom) { try { potgKill(e, head, Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z)); } catch (err) {} statKillAt(e.group.position.x, e.group.position.z, head, boom); }
 // a kill where the victim is somewhere (online kills can arrive after the victim's body is gone)
 function statKillAt(x, z, head, boom) {
   if (!MS.active || G.bench) return;

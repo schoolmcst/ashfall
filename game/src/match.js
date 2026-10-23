@@ -729,6 +729,7 @@ function playerInteract(dt, held) {
 /* ---------- per-frame match update */
 function updateMatch(dt) {
   if (!inMatch() || M.over) return;
+  try { potgTick(dt); } catch (e) {}
   if (G.holdT > 0) { if (G.state === 'respawning' && !(M.online && !NET.teamSet)) respawnPlayer(); updateModeHud(false); return; }
   M.t += dt;
   if (G.spawnProt > 0) G.spawnProt -= dt;
@@ -796,6 +797,7 @@ function showResults(winner, won) {
   $('resAgain').textContent = M.online ? 'READY' : 'PLAY NOW'; $('resAgain').style.display = M.online ? 'none' : '';
   $('resLobby').textContent = M.online ? 'LEAVE MATCH' : 'LOBBY';
   updateResNext();
+  { let w = false; try { w = potgWanted(); } catch (e) {} if (w) { showScreen(null); potgPlay(() => { if (G.state === 'over') showScreen('results'); }); return; } }
   showScreen('results');
 }
 // time between matches: the scoreboard stays up, then the next match starts by itself

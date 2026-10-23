@@ -30,7 +30,7 @@ const DEFAULTS = {
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,
-  crosshair: 'cross', crosshairColor: 'white', hitMarkers: true, ragdoll: true, deathCam: true, killcam: true, cbMode: 'off', adsFov: 'affected', dmgIndicator: true, radar: true, difficulty: 'regular',
+  crosshair: 'cross', crosshairColor: 'white', hitMarkers: true, ragdoll: true, deathCam: true, killcam: true, potg: true, cbMode: 'off', adsFov: 'affected', dmgIndicator: true, radar: true, difficulty: 'regular',
 };
 const S = Object.assign({}, DEFAULTS);
 const STORE = 'ashfall.settings.v1', BEST = 'ashfall.best.v1';

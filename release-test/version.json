@@ -1,8 +1,10 @@
 {
- "version": "1.2.51",
+ "version": "1.2.52",
  "notes": [
-  "NEW MAP: THE GREENHOUSE. An indoor grow operation: a glass greenhouse full of grow benches under purple lamps (low cover, plants to hide behind, some panes broken out), a drying barn with buds hanging on racks and a mezzanine at each end, and a loading dock with a box truck on the flank. Works in every multiplayer mode, offline and online, and in map voting."
+  "PLAY OF THE GAME: your best multi-kill of the match (2 or more kills close together; headshots and long shots count extra) plays from your own eyes before the scoreboard - the soldiers you got walk their real paths and drop. Click or press any key to skip; turn it off in Settings > GAMEPLAY.",
+  "FINISHERS: melee someone from behind (or catch them not looking) for a takedown - you swing in, the gun thrusts, they go down hard. +100 and one of three names: ROLLED UP, PUFF PUFF PASS OUT, SMOKED.",
+  "WEAPON INSPECT (F / D-pad down) now depends on the gun: pistols spin, shotguns pump and turn, snipers and marksman rifles look down the scope, SMGs flip, rifles and LMGs turn over and check the mag."
  ],
- "sha256": "8896f23f7914fba61b0ee9fdd0cc3cf5349f3b5882dd567d8593d4a9ba03d107",
+ "sha256": "6f8a321decf72490d98b5edc6530be821af5fab78aed64723bce4c18b96832e0",
  "minApp": "1.0.0"
 }

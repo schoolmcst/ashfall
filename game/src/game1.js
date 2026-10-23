@@ -77,7 +77,7 @@ function updatePlayer(dt) {
   const moving = fwd !== 0 || str !== 0;
   const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
   if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
-  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
+  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
   if (G.reloading) speed *= 0.85;
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
@@ -132,6 +132,8 @@ function animateViewmodel(dt, hs, sprint, bobOn) {
   G.airK = lerp(G.airK || 0, P.onGround ? 0 : 1, clamp(dt * 6, 0, 1)); vy += G.airK * 0.018 * sAmt; rx += G.airK * 0.05 * sAmt;
   // grenade throw: rifle drops out of the way while the arm swings
   if (G.throwT > 0) { G.throwT = Math.max(0, G.throwT - dt); const t = Math.sin((1 - G.throwT / 0.6) * Math.PI); vy -= t * 0.28; rx -= t * 0.6; rz += t * 0.35; vx += t * 0.06; }
+  // a finisher: the gun thrusts forward, then pulls back
+  if (G.finT > 0) { const t = 1 - G.finT / 1.3, a = smooth(0.15, 0.32, t) * (1 - smooth(0.55, 0.9, t)); vz -= a * 0.32; vy += a * 0.06; rx -= a * 0.4; rz += a * 0.25; vx -= a * 0.05; }
   // melee: a quick bash with the weapon
   if (G.meleeT > 0) { G.meleeT = Math.max(0, G.meleeT - dt); const t = Math.sin((1 - G.meleeT / 0.55) * Math.PI); vx -= t * 0.12; vz -= t * 0.16; vy += t * 0.03; ry += t * 0.9; rz += t * 0.5; rx -= t * 0.15; }
   // inspect (F / D-pad down): turn the weapon over, look at the other side, bring it back
@@ -139,8 +141,7 @@ function animateViewmodel(dt, hs, sprint, bobOn) {
     if (isFiring() || G.reloading || G.adsOn || sprint || G.swapT > 0 || G.throwT > 0) G.inspectT = 0;
     else {
       G.inspectT = Math.max(0, G.inspectT - dt); const ip = 1 - G.inspectT / 2.6;
-      const A = smooth(0, 0.22, ip) * (1 - smooth(0.42, 0.55, ip)), B = smooth(0.45, 0.6, ip) * (1 - smooth(0.82, 1, ip));
-      ry += A * 0.95 - B * 0.55; rz += A * 0.55 - B * 0.35; rx += B * 0.3 + A * 0.08; vx -= A * 0.07 - B * 0.03; vy += A * 0.05 + B * 0.04; vz += (A + B) * 0.05;
+      const d = inspectPose(w.def.cat, ip, u); vx += d[0]; vy += d[1]; vz += d[2]; rx += d[3]; ry += d[4]; rz += d[5];
     }
   }
   G.shotT += dt;
@@ -286,6 +287,7 @@ function melee() {
       if ((dx * fx + dz * fz) / (d || 1) < 0.62) continue;
       best = e; bd = d;
     }
+    if (best && !(M && M.infMe) && finCheck(best)) { finStart(best); return; }
     if (best) {
       const dir = new THREE.Vector3(best.group.position.x - P.x, 0, best.group.position.z - P.z).normalize();
       sfx.thud({ vol: 1 }); G.shake = Math.max(G.shake, 0.02);
