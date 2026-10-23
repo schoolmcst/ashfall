@@ -46,7 +46,7 @@ function wall(x0, z0, x1, z1, h, key, o = {}) {
     piece(a, h0, 0, h);
     piece(h0, h1, 0, hl.b || 0);                         // sill
     piece(h0, h1, (hl.b || 0) + hl.h, h);                // lintel
-    if (hl.b > 0.5 && hl.h < 2 && o.glass !== false) {   // window: clear glass you can see through, but it stops bullets
+    if (hl.b > 0.5 && hl.h < 2 && o.glass !== false && !hl.open) {   // window: clear glass you can see through, but it stops bullets
       const c = hl.at, gm = mat4(x0 + sx * c, y + hl.b + hl.h / 2, z0 + sz * c), gw = alongX ? hl.w : 0.04, gd = alongX ? 0.04 : hl.w;
       batchAdd('windowGlass', new THREE.BoxGeometry(gw, hl.h, gd), gm, false); rayAdd(new THREE.BoxGeometry(gw, hl.h, gd), gm);
       boxes.push(mkBox(x0 + sx * c, z0 + sz * c, alongX ? hl.w : 0.1, alongX ? 0.1 : hl.w, hl.h, { y: y + hl.b, walk: false }));

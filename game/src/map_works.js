@@ -116,9 +116,9 @@ function buildWorks() {
   // ---- outside the walls: solid, so nobody (and no path) gets round the outside
   for (const [x, z, w, d] of [[0, -42.1, 92, 3.7], [0, 42.1, 92, 3.7], [-43.4, 0, 2.3, 92], [43.4, 0, 2.3, 92]]) blk(x, z, w, d, 9, 'dark', { noDraw: true });
   // ---- outer walls
-  wkZ(-42, -40, -16, 12, 'gothStone'); wkZ(-42, -16, 16, 6, 'soot'); wkZ(-42, 16, 40, 4.5, 'soot');
-  wkZ(42, -40, -16, 8, 'soot'); wkZ(42, -16, 40, 6, 'soot');
-  wkX(-40, -42, -12, 12, 'gothStone'); wkX(-40, -12, 12, 9, 'soot'); wkX(-40, 12, 42, 8, 'soot');
+  wkZ(-42, -40, -16, 12, 'gothStone'); wkZ(-42, -16, 16, 6, 'soot', [[10, 1.6, 1.0, 1.4]]); wkZ(-42, 16, 40, 4.5, 'soot', [[28, 1.6, 1.0, 1.4]]);
+  wkZ(42, -40, -16, 8, 'soot'); wkZ(42, -16, 40, 6, 'soot', [[-8, 1.6, 1.0, 1.4], [30, 1.6, 1.0, 1.4]]);
+  wkX(-40, -42, -12, 12, 'gothStone'); wkX(-40, -12, 12, 9, 'soot', [[-6, 1.6, 1.0, 1.4]]); wkX(-40, 12, 42, 8, 'soot', [[24, 1.6, 1.0, 1.4]]);
   wkX(40, -42, -12, 4.5, 'soot'); wkX(40, -12, -5, 5, 'soot'); wkX(40, 5, 12, 5, 'soot'); wkX(40, 12, 42, 6, 'soot');
   blk(0, 40, 10, 0.3, 4, 'ironBlack', { noDraw: true });                                                          // the dock gate (chained)
   for (let x = -4.8; x <= 4.8; x += 0.4) CYL('ironBlack', 0.03, 0.03, 3.8, 6, x, 1.9, 40, 0, 0, 0, false);

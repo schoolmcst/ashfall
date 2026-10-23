@@ -135,6 +135,9 @@ ZMAPCFG.works.stash = [
   { gun: 'marc', cost: 2000, x: 41.73, z: 6, y: 0, q: 3 },           // the foundry yard
   { gun: 'hailstorm', cost: 2500, x: -11.73, z: -19, y: 0, q: 1 },   // the boiler house
 ];
+// boarded windows in the outer walls (q = the way into the building)
+ZMAPCFG.blackwell.windows = [{ x: 40, z: 19, y: 0, q: 3 }, { x: 40, z: -19, y: 0, q: 3 }, { x: -40, z: 19, y: 0, q: 1 }, { x: -40, z: -19, y: 0, q: 1 }];
+ZMAPCFG.works.windows = [{ x: -42, z: 10, y: 0, q: 1 }, { x: -42, z: 28, y: 0, q: 1 }, { x: 42, z: -8, y: 0, q: 3 }, { x: 42, z: 30, y: 0, q: 3 }, { x: 24, z: -40, y: 0, q: 0 }, { x: -6, z: -40, y: 0, q: 0 }];
 try { AUD_PROF.works = { len: 2.6, pow: 2.5, wet: 0.42, echo: 0.22, dark: 0.45, amb: 'hall', surf: 'concrete' }; } catch (e) {}
 const zmapCfg = id => ZMAPCFG[id] || ZMAPCFG.blackwell;
 const zmapStoryDone = id => zsDoneEver(zmapCfg(id).story.text.keyDone);

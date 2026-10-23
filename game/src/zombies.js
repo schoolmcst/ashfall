@@ -188,13 +188,17 @@ function zombSpawnPoint() {
   }
   return null;
 }
-function zombSpawn() { const p = zombSpawnPoint(); return p ? makeZombie(p.x, p.z, p.y) : null; }
+function zombSpawn() {
+  if (Z.dogRound) { const p = zombSpawnPoint(); return p ? zdogSpawn(p) : null; }
+  if (Math.random() < 0.45) { const W = zwinPick(); if (W) return zwinSpawn(W); }   // some come in through the boarded windows
+  const p = zombSpawnPoint(); if (!p) return null; const e = makeZombie(p.x, p.z, p.y); zspRoll(e); return e;
+}
 // a zombie that ends up far away (over ~40 m by the route) or cut off from everyone for a few seconds is brought back:
 // it disappears and comes in again near the survivors, keeping its health (fewer stragglers, less for the game to run)
 function zombRecall(dt) {
   if ((Z.recallT = (Z.recallT || 0) - dt) > 0) return; Z.recallT = 1;
   for (const e of enemies) {
-    if (!e.zombie || e.proxy || e.hp <= 0) continue;
+    if (!e.zombie || e.proxy || e.hp <= 0 || e.win) continue;
     const g = e.group.position, d = zombRouteDist(g.x, g.z, g.y);
     if (d >= 0 && d <= 80) { e.farT = 0; continue; }
     if ((e.farT = (e.farT || 0) + 1) < 3) continue;
@@ -203,9 +207,9 @@ function zombRecall(dt) {
   }
 }
 function zombRound() {
-  Z.round++; Z.toSpawn = Math.min(80, 6 + (Z.round - 1) * 3); Z.spawnT = 1; Z.active = true;
+  Z.round++; Z.toSpawn = Math.min(80, 6 + (Z.round - 1) * 3); Z.spawnT = 1; Z.active = true; try { zspRoundStart(Z.round); } catch (e) { reportError(e); }
   G.wave = Z.round; if (!(ZC.on && ZC.down)) G.health = G.maxHp; if (ZC.on && ZC.dead) zcRespawn();
-  showBanner(`ROUND ${Z.round}`, Z.round === 1 ? 'here they come' : Z.round % 5 === 0 ? 'they are getting faster' : `${Z.toSpawn} zombies`);
+  if (!Z.dogRound) showBanner(`ROUND ${Z.round}`, Z.round === 1 ? 'here they come' : Z.round % 5 === 0 ? 'they are getting faster' : `${Z.toSpawn} zombies`);
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
   zombHud(true); if (Z.round > 1) setTimeout(() => zvSay('round', 0.3), 1200); try { zsRoundTalk(Z.round); } catch (e) {}
 }
@@ -219,7 +223,7 @@ function updateZombies(dt) {
   else {
     const cap = Math.min(24, 10 + Z.round);
     if (Z.toSpawn > 0) { Z.spawnT -= dt; if (Z.spawnT <= 0 && enemies.length < cap) { if (zombSpawn()) Z.toSpawn--; Z.spawnT = Math.max(0.35, 1.9 - Z.round * 0.13); } }
-    else if (!enemies.length) { Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.3); }
+    else if (!enemies.length) { try { zspRoundEnd(); } catch (e) {} Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.3); }
   }
   zombRecall(dt);
   for (let i = 0; i < enemies.length; i++) zombThink(enemies[i], i, dt);
@@ -233,6 +237,7 @@ function zombPick(e) {
   e.tgKey = best ? (best.me ? 'me' : best.peer) : ''; return best;
 }
 function zombThink(e, i, dt) {
+  if (e.win) { zwinThink(e, dt); return; }
   const T = zombPick(e), g = e.group;
   if (!T) { e.atkT = Math.max(0, e.atkT - dt); botGround(g, dt); animZombie(e, dt, 0); return; }
   const dx = T.x - g.position.x, dz = T.z - g.position.z, dist = Math.max(Math.hypot(dx, dz), 0.001), nx = dx / dist, nz = dz / dist;
@@ -240,7 +245,7 @@ function zombThink(e, i, dt) {
   let mx = 0, mz = 0;
   if (e.atkT > 0) {   // mid-swing: stand and hit
     e.atkT -= dt;
-    if (!e.hitDone && e.atkT < 0.3) { e.hitDone = true; if (dist < 1.75 && up) { if (!T.me) zcSwing(T.peer, 34, e); else if (G.state === 'playing' || G.state === 'paused') { G.killer = null; hurtPlayer(34, g.position.x, g.position.z); try { sfx.melee && sfx.melee(); } catch (err) {} } } }
+    if (!e.hitDone && e.atkT < 0.3) { e.hitDone = true; if (dist < 1.75 && up) { if (!T.me) zcSwing(T.peer, e.dmg || 34, e); else if (G.state === 'playing' || G.state === 'paused') { G.killer = null; hurtPlayer(e.dmg || 34, g.position.x, g.position.z); try { sfx.melee && sfx.melee(); } catch (err) {} } } }
   } else {
     if (e.avoidT > 0) { e.avoidT -= dt; mx = -nz * e.avoidDir + nx * 0.3; mz = nx * e.avoidDir + nz * 0.3; }
     else if ((e.navT = (e.navT || 0) - dt) > 0 && e.mvx !== undefined) { mx = e.mvx; mz = e.mvz; }   // re-plan a few times a second (every frame when close)
@@ -266,6 +271,8 @@ function zombThink(e, i, dt) {
   animZombie(e, dt, sp);
 }
 function animZombie(e, dt, sp) {
+  if (e.dog) return animDog(e, dt, sp);
+  if (e.crawl) return animCrawl(e, dt, sp);
   const r = e.rig, run = e.kind === 'run', amp = clamp(sp / 2.4, 0, 1.4);
   e.phase += dt * sp * (run ? 2.6 : 2.2);
   const s = Math.sin(e.phase), c = Math.cos(e.phase), sway = Math.sin(NOW * 1.3 + e.phase0) * 0.08;
@@ -297,8 +304,9 @@ function zombCrateTick(dt) {
     if (!msgTxt && d < 2.3 && Math.abs(P.y - c.position.y) < 1.5 && G.state === 'playing') { msgTxt = `${c.userData.label} · ${cost} POINTS · PRESS ${actName('use')}${G.points < cost ? ' · NOT ENOUGH POINTS' : ''}`; if ((kb('use') || pad.use) && !Z.useHeld && G.points >= cost) fn(); }
   }
   if (!msgTxt && G.state === 'playing') {
-    const use = (kb('use') || pad.use) && !Z.useHeld, dr = zdPrompt(), pm = zpNear(), sp = zsPrompt(use), wb = zwbNear();
+    const use = (kb('use') || pad.use) && !Z.useHeld, dr = zdPrompt(), pm = zpNear(), sp = zsPrompt(use), wb = zwbNear(), wn = zwinNear();
     if (sp) msgTxt = sp;
+    else if (wn) msgTxt = zwinPrompt(wn, kb('use') || pad.use, dt);
     else if (wb) msgTxt = zwbPrompt(wb, use);
     else if (pm) msgTxt = zpPrompt(pm, use);
     else if (dr) { msgTxt = `${dr.d.name} · ${dr.d.cost} POINTS · PRESS ${actName('use')}${G.points < dr.d.cost ? ' · NOT ENOUGH POINTS' : ''}`; if (use && G.points >= dr.d.cost) zdBuy(dr); }

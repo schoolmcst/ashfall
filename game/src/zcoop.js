@@ -134,7 +134,7 @@ function zcRead() {
     if (z[6] && !(e.atkT > 0)) { e.atkT = 0.75; if (Math.random() < 0.6) try { sfx.zscreech(at(e.group.position.x, e.group.position.z, 14, e.group.position.y)); } catch (err) {} }
     e.frac = netNum(z[7], 0, 100, 100) / 100; if (e.php === undefined || e.php > e.maxHp * e.frac + 1) e.php = e.maxHp * e.frac;
   }
-  for (const [id, e] of ZC.prox) if (!ids.has(id) && !killed.has(id)) { ZC.prox.delete(id); const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1); scene.remove(e.group); }
+  for (const [id, e] of ZC.prox) if (!ids.has(id) && !killed.has(id)) { if (e.bloat) try { zblCloud(e.group.position.x, e.group.position.z, e.group.position.y); } catch (err) {} ZC.prox.delete(id); const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1); scene.remove(e.group); }
   if (H.st === 'over' && ZC.inGame && G.state !== 'dead') zcGameOver();
 }
 const zcMaxSeq = (list, i) => Array.isArray(list) ? list.reduce((m, h) => Math.max(m, Array.isArray(h) ? (+h[i] || 0) : 0), 0) : 0;
@@ -148,8 +148,8 @@ function zcPublish() {
     a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv, od: inG ? [...ZD.mine] : [], ch: ZL.char, vl: ZV.out, pk: inG ? ZC.pk : [], ev: inG ? ZC.ev : [], qi: inG ? [...ZS.mine] : [] };
   if (zcHost()) {
     Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, so: ZL.story ? 1 : 0, zr: Z.round, qf: inG ? [...ZS.flags] : [], qc: inG ? +ZS.cook.toFixed(3) : -1, qb: inG && ZS.bloodItem && ZS.bloodItem.g ? [r2(ZS.bloodItem.at.x), r2(ZS.bloodItem.at.z), r2(ZS.bloodItem.at.y)] : 0, zd: inG ? [...ZD.open] : [], dp: inG ? [...ZC.drops].filter(([, d]) => performance.now() - d.t < 40000).map(([id, d]) => [id, r2(d.x), r2(d.z), r2(d.y)]) : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
-    if (inG) try { zpuPresence(o); } catch (e) {}
-    o.zs = inG ? enemies.filter(e => e.zombie && !e.proxy).map(e => { const g = e.group.position; return [e.zid, r2(g.x), r2(g.z), r2(g.y), Math.round(e.group.rotation.y * 100), e.boss ? 3 : e.kind === 'run' ? 2 : e.kind === 'jog' ? 1 : 0, e.atkT > 0 ? 1 : 0, Math.round(clamp(e.hp / e.maxHp, 0, 1) * 100)]; }) : [];
+    if (inG) try { zpuPresence(o); zwinPresence(o); } catch (e) {}
+    o.zs = inG ? enemies.filter(e => e.zombie && !e.proxy).map(e => { const g = e.group.position; return [e.zid, r2(g.x), r2(g.z), r2(g.y), Math.round(e.group.rotation.y * 100), e.dog ? 4 : e.crawl ? 5 : e.bloat ? 6 : e.boss ? 3 : e.kind === 'run' ? 2 : e.kind === 'jog' ? 1 : 0, e.atkT > 0 ? 1 : 0, Math.round(clamp(e.hp / e.maxHp, 0, 1) * 100)]; }) : [];
   }
   ZC.room.presence(o);
 }
@@ -219,8 +219,8 @@ function zcHostFrame(dt) {
 
 /* ---------- the client's side: copies of the host's zombies */
 function zcMakeProxy(id, z) {
-  const e = makeZombie(+z[1] || 0, +z[2] || 0, +z[3] || 0);
-  e.kind = ['walk', 'jog', 'run', 'run'][+z[5] | 0] || 'walk'; if (+z[5] === 3) try { zsMakeBoss(e); } catch (err) {} e.proxy = true; e.zid = id; e.hp = 1e9; e.maxHp = zombHp(Math.max(1, ZC.round));
+  const kd = +z[5] | 0, e = kd === 4 ? makeDog(+z[1] || 0, +z[2] || 0, +z[3] || 0) : makeZombie(+z[1] || 0, +z[2] || 0, +z[3] || 0);
+  e.kind = ['walk', 'jog', 'run', 'run', 'run', 'walk', 'walk'][kd] || 'walk'; if (kd === 3) try { zsMakeBoss(e); } catch (err) {} if (kd === 5) zspMake(e, 'fiend'); if (kd === 6) zspMake(e, 'bloat'); e.proxy = true; e.zid = id; e.hp = 1e9; e.maxHp = zombHp(Math.max(1, ZC.round));
   e.group.rotation.y = (+z[4] || 0) / 100; e.tx = e.group.position.x; e.tz = e.group.position.z; e.ty = e.group.position.y; e.tyaw = e.group.rotation.y;
   ZC.prox.set(id, e); return e;
 }
@@ -248,7 +248,8 @@ function zcProxyDie(e, head) {
   ZC.prox.delete(e.zid);
   const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1);
   const dd = { e, t: 0, boom: false, dx: 0, dz: 0, head, a: [rnd(0.5, 1.4), rnd(0.5, 1.4), rnd(-0.4, 0.4), rnd(-0.4, 0.4)] };
-  if (S.ragdoll) { try { dd.rd = makeRagdoll(e, new THREE.Vector3(0, 0, 1), false, head); } catch (err) { dd.rd = null; } }
+  if (S.ragdoll && !e.dog) { try { dd.rd = makeRagdoll(e, new THREE.Vector3(0, 0, 1), false, head); } catch (err) { dd.rd = null; } }
+  if (e.bloat) try { zblCloud(e.group.position.x, e.group.position.z, e.group.position.y); } catch (err) {}
   dying.push(dd); if (e.rig.flash) e.rig.flash.visible = false; try { sfx.zgurgle(at(e.group.position.x, e.group.position.z, 14, e.group.position.y)); } catch (err) {}
   chunks('blood', _v.set(e.group.position.x, 1.2, e.group.position.z), 8, 3, 0.6);
 }
@@ -260,7 +261,8 @@ function zcMyKill(e, head, melee) {
 function zcClientRound(r) {
   Z.round = r; G.wave = r; G.health = G.maxHp;
   if (ZC.dead) zcRespawn();
-  showBanner(`ROUND ${r}`, r === 1 ? 'here they come' : r % 5 === 0 ? 'they are getting faster' : 'survive together'); if (r > 1) setTimeout(() => zvSay('round', 0.3), 1200); try { zsRoundTalk(r); } catch (e) {}
+  const strays = r >= 5 && r % 5 === 0; try { zspFog(strays); } catch (e) {}
+  if (strays) showBanner(`ROUND ${r} · STRAYS`, 'junkie dogs got into the stash · watch your feet'); else showBanner(`ROUND ${r}`, r === 1 ? 'here they come' : r % 5 === 0 ? 'they are getting faster' : 'survive together'); if (r > 1) setTimeout(() => zvSay('round', 0.3), 1200); try { zsRoundTalk(r); } catch (e) {}
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
   zombHud(true);
 }
@@ -454,11 +456,12 @@ function zcReadShared(R, host) {
         else if (v[0] === 'm') sfx.thud(at(p.x, p.z, 14));
         else if (v[0] === 'cook' && zcHost()) zsStartCook();
         else if (typeof v[0] === 'string' && v[0].startsWith('pu')) zpuFromEvent(v[0], R.n);
+        else if (typeof v[0] === 'string' && v[0].startsWith('wr')) zwinFromEvent(v[0]);
         else if (v[0] === 'ammo') { WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = w.reserveMax || w.def.reserve; }); G.grenades = Math.max(G.grenades, 2); showMsg(`${R.n} BOUGHT AMMO FOR THE SQUAD`); sfx.ui(); }
       } catch (e) {}
     }
   }
-  if (host) try { zpuFromHost(pr); } catch (e) {}
+  if (host) try { zpuFromHost(pr); zwinFromHost(pr); } catch (e) {}
   if (host && Array.isArray(pr.dp)) {   // the host's drop list: show new ones, clear the ones that are gone
     const ids = new Set();
     for (const d of pr.dp) { if (!Array.isArray(d)) continue; const id = +d[0]; ids.add(id); zcSpawnDrop(id, netNum(d[1], -ARENA, ARENA), netNum(d[2], -ARENA, ARENA), netNum(d[3], -5, 20)); }

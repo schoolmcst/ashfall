@@ -159,8 +159,9 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (e.hp <= 0) {
     enemies.splice(enemies.indexOf(e), 1);
     const dd = { e, t: 0, boom: !!boom, dx: dir ? dir.x : 0, dz: dir ? dir.z : 0, head, a: [rnd(0.5, 1.4), rnd(0.5, 1.4), rnd(-0.4, 0.4), rnd(-0.4, 0.4)] };
-    if (S.ragdoll) { try { dd.rd = makeRagdoll(e, dir, boom, head); } catch (err) { dd.rd = null; reportError(err); } }
+    if (S.ragdoll && !e.dog) { try { dd.rd = makeRagdoll(e, dir, boom, head); } catch (err) { dd.rd = null; reportError(err); } }
     dying.push(dd);
+    if (e.zombie) try { if (e.bloat) zblCloud(e.group.position.x, e.group.position.z, e.group.position.y); if (e.dog) Z.lastDog = { x: e.group.position.x, z: e.group.position.z, y: groundAt(e.group.position.x, e.group.position.z, e.group.position.y + 0.3) }; if (e.win && e.win.occ === e) e.win.occ = null; } catch (err) {}
     e.rig.flash.visible = false;
     if (by === 'player') {
       G.kills++; G.score += 100 + (head ? 50 : 0); statKill(e, head, !!boom);
@@ -188,6 +189,7 @@ function updateDying(dt) {
       continue;
     }
     const k = Math.min(d.t / 0.6, 1), ease = k * k * (3 - 2 * k);
+    if (d.e.dog) { root.rotation.z = (Math.PI / 2) * ease; root.position.y = 0.05 * ease; if (d.t > 12) { scene.remove(root); dying.splice(i, 1); } continue; }   // a stray falls on its side
     root.rotation.x = -(Math.PI / 2) * ease * 1.02; root.position.y = 0.3 * s * ease;
     if (d.boom && d.t < 0.45) { root.position.x += d.dx * 5 * dt * (1 - d.t / 0.45); root.position.z += d.dz * 5 * dt * (1 - d.t / 0.45); }
     r.armL.rotation.set(lerp(-1.2, -0.3, ease), 0.3, d.a[0] * ease); r.armR.rotation.set(lerp(-0.95, -0.2, ease), -0.3, -d.a[1] * ease);

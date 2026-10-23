@@ -11,11 +11,11 @@ const HOSP = { H: 4.2, OUT: 40, ZO: 34 };
 // wall helpers that take holes in world coordinates: [centre, width, sill = 0, height = 2.4]
 function hWX(z, xa, xb, y, key, holes = [], t = 0.25, h = HOSP.H) {
   const a = Math.min(xa, xb), b = Math.max(xa, xb);
-  wall(a, z, b, z, h, key, { y, t, glass: true, holes: holes.map(q => ({ at: q[0] - a, w: q[1], b: q[2] || 0, h: q[3] || 2.4 })) });
+  wall(a, z, b, z, h, key, { y, t, glass: true, holes: holes.map(q => ({ at: q[0] - a, w: q[1], b: q[2] || 0, h: q[3] || 2.4, open: !!q[4] })) });
 }
 function hWZ(x, za, zb, y, key, holes = [], t = 0.25, h = HOSP.H) {
   const a = Math.min(za, zb), b = Math.max(za, zb);
-  wall(x, a, x, b, h, key, { y, t, glass: true, holes: holes.map(q => ({ at: q[0] - a, w: q[1], b: q[2] || 0, h: q[3] || 2.4 })) });
+  wall(x, a, x, b, h, key, { y, t, glass: true, holes: holes.map(q => ({ at: q[0] - a, w: q[1], b: q[2] || 0, h: q[3] || 2.4, open: !!q[4] })) });
 }
 
 // ---------------------------------------------------------------- hospital props (all (x, z, y, q); back of the piece is local -z)
@@ -227,7 +227,7 @@ function buildHospital() {
       for (const sx of [1, -1]) {
         const X = v => v * sx;
         // outer side wall x = +-40 (ground: an exit at the end of each corridor)
-        hWZ(X(OUT), 0, Z(ZO), y, OK, (up ? [[12, 2, 1.1, 1.4], [25.5, 1.6, 1.1, 1.4]] : [[12, 2.2, 0, 2.6], [25.5, 1.6, 0, 2.4]]).concat([[5, 1.6, 1.1, 1.4], [19, 1.6, 1.1, 1.4], [30.5, 1.6, 1.1, 1.4]]).map(q => [Z(q[0]), q[1], q[2], q[3]]), 0.4);
+        hWZ(X(OUT), 0, Z(ZO), y, OK, (up ? [[12, 2, 1.1, 1.4], [25.5, 1.6, 1.1, 1.4]] : [[12, 2.2, 0, 2.6], [25.5, 1.6, 0, 2.4]]).concat([[5, 1.6, 1.1, 1.4], [19, 1.6, 1.1, 1.4, 1], [30.5, 1.6, 1.1, 1.4]]).map(q => [Z(q[0]), q[1], q[2], q[3], q[4]]), 0.4);
         // corridor A, south side (z = 14): a door into each row-1 room
         hWX(Z(14), X(8), X(OUT), y, IK, [12, 20, 28, 36].map(c => [X(c), 1.4]));
         // corridor A, north side (z = 10): rooms A, B and the stairwell
