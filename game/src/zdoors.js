@@ -124,7 +124,7 @@ function zdOpen(id, bought) {
   const i = boxes.indexOf(o.box); if (i >= 0) boxes.splice(i, 1);
   const j = wallMeshes.indexOf(o.proxy); if (j >= 0) wallMeshes.splice(j, 1); scene.remove(o.proxy);
   ZD.anim.push({ g: o.g, t: 0, o });
-  boxGridDirty = true; buildNav();
+  boxGridDirty = true; buildNav(); Z.navGen = (Z.navGen || 0) + 1;
   try { tone(140, 0.25, 0.12, 'square'); tone(90, 0.5, 0.1, 'sawtooth'); } catch (e) {}
   return true;
 }
@@ -159,7 +159,7 @@ function zdPrompt() {
 }
 function zdBuy(o) {
   if (G.points < o.d.cost) return;
-  G.points -= o.d.cost; zdOpen(o.d.id, true); zvSay('door', 0.8);
+  G.points -= o.d.cost; zdOpen(o.d.id, true); zvSay('door', 0.5);
   showBanner(o.d.name, 'opened'); try { sfx.ui(); } catch (e) {}
 }
 

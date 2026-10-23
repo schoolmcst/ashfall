@@ -98,13 +98,13 @@ function zcRead() {
   if (host) return;
   // ---- as a client: follow the host
   const H = zcHostPres(); if (!H) return;
-  ZC.hostLobbyMap = typeof H.ml === 'string' ? H.ml : '';
+  ZC.hostLobbyMap = typeof H.ml === 'string' ? H.ml : ''; ZC.hostStory = H.so !== 0;
   if (H.st === 'play' && +H.gid && +H.gid !== ZC.gid && typeof H.mp === 'string' && MAPS[H.mp]) { zcEnterGame(H.mp, +H.gid); return; }
   if (!ZC.inGame || +H.gid !== ZC.gid) return;
   if (ZC.fresh) { ZC.fresh = false; ZC.seenK = zcMaxSeq(H.zk, 4); ZC.seenA = zcMaxSeq(H.zt, 2); }
   const zr = Math.max(ZC.round, +H.zr | 0);
   if (zr > ZC.round) zcClientRound(zr);
-  if (ZC.active && !H.za && zr === ZC.round && zr > 0) { showBanner(`ROUND ${zr} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.6); }
+  if (ZC.active && !H.za && zr === ZC.round && zr > 0) { showBanner(`ROUND ${zr} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.3); }
   if (Array.isArray(H.zd)) for (const id of H.zd) if (!ZD.open.has(+id)) zdOpen(+id, false);
   ZC.round = zr; ZC.left = +H.zl | 0; ZC.active = !!H.za; Z.round = zr; G.wave = zr;
   // kills (mine get the points)
@@ -147,7 +147,7 @@ function zcPublish() {
   const o = { zc: 1, n: NET.nick, g: inG ? ZC.gid : 0, x: r2(P.x), y: r2(P.y || 0), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch),
     a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv, od: inG ? [...ZD.mine] : [], ch: ZL.char, vl: ZV.out, pk: inG ? ZC.pk : [], ev: inG ? ZC.ev : [], qi: inG ? [...ZS.mine] : [] };
   if (zcHost()) {
-    Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, zr: Z.round, qf: inG ? [...ZS.flags] : [], qc: inG ? +ZS.cook.toFixed(3) : -1, qb: inG && ZS.bloodItem && ZS.bloodItem.g ? [r2(ZS.bloodItem.at.x), r2(ZS.bloodItem.at.z), r2(ZS.bloodItem.at.y)] : 0, zd: inG ? [...ZD.open] : [], dp: inG ? [...ZC.drops].filter(([, d]) => performance.now() - d.t < 40000).map(([id, d]) => [id, r2(d.x), r2(d.z), r2(d.y)]) : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
+    Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, so: ZL.story ? 1 : 0, zr: Z.round, qf: inG ? [...ZS.flags] : [], qc: inG ? +ZS.cook.toFixed(3) : -1, qb: inG && ZS.bloodItem && ZS.bloodItem.g ? [r2(ZS.bloodItem.at.x), r2(ZS.bloodItem.at.z), r2(ZS.bloodItem.at.y)] : 0, zd: inG ? [...ZD.open] : [], dp: inG ? [...ZC.drops].filter(([, d]) => performance.now() - d.t < 40000).map(([id, d]) => [id, r2(d.x), r2(d.z), r2(d.y)]) : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
     o.zs = inG ? enemies.filter(e => e.zombie && !e.proxy).map(e => { const g = e.group.position; return [e.zid, r2(g.x), r2(g.z), r2(g.y), Math.round(e.group.rotation.y * 100), e.boss ? 3 : e.kind === 'run' ? 2 : e.kind === 'jog' ? 1 : 0, e.atkT > 0 ? 1 : 0, Math.round(clamp(e.hp / e.maxHp, 0, 1) * 100)]; }) : [];
   }
   ZC.room.presence(o);
@@ -259,7 +259,7 @@ function zcMyKill(e, head, melee) {
 function zcClientRound(r) {
   Z.round = r; G.wave = r; G.health = G.maxHp;
   if (ZC.dead) zcRespawn();
-  showBanner(`ROUND ${r}`, r === 1 ? 'here they come' : r % 5 === 0 ? 'they are getting faster' : 'survive together'); if (r > 1) setTimeout(() => zvSay('round', 0.6), 1200); try { zsRoundTalk(r); } catch (e) {}
+  showBanner(`ROUND ${r}`, r === 1 ? 'here they come' : r % 5 === 0 ? 'they are getting faster' : 'survive together'); if (r > 1) setTimeout(() => zvSay('round', 0.3), 1200); try { zsRoundTalk(r); } catch (e) {}
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
   zombHud(true);
 }

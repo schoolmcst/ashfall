@@ -16,9 +16,9 @@ try {
   const gl = renderer.getContext(), ext = gl.getExtension('WEBGL_debug_renderer_info');
   GPU_NAME = String(ext ? gl.getParameter(ext.UNMASKED_RENDERER_WEBGL) : gl.getParameter(gl.RENDERER));
   if (/RTX|RX\s?[5-9]\d{3}|RX\s?[6-9]\d{2}\b|Radeon Pro W|Arc.*A7|Apple M\d (Pro|Max|Ultra)|GTX 1[0-9]80|GTX 1070/i.test(GPU_NAME)) AUTO_TIER = 'ultra';
-  else if (/Intel|UHD|Iris|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic|Apple GPU/i.test(GPU_NAME)) AUTO_TIER = 'medium';
+  else if (/Intel|UHD|Iris|Mali|Adreno|PowerVR|SwiftShader|llvmpipe|Microsoft Basic|Apple GPU|Apple M\d|Radeon Pro [45]\d\d\b|Radeon\(TM\) Graphics|Vega \d/i.test(GPU_NAME)) AUTO_TIER = 'medium';   // laptops and Macs (base M chips, Intel / AMD integrated)
 } catch (e) {}
-if (NEED_AUTO_DERIVE && S.quality === 'auto') { applyPreset(AUTO_TIER); saveSettings(); }
+if ((NEED_AUTO_DERIVE || S.autoV !== 2) && S.quality === 'auto') { applyPreset(AUTO_TIER); S.autoV = 2; saveSettings(); }   // autoV 2: re-checked once after Macs and laptops moved to MEDIUM
 else if (CFG5) {   // saved before 1.2.11: keep what they had, and fill the new detail settings from their preset
   const k = qKey(), q = QUALITY[k] || QUALITY.high;
   Object.assign(S, { anis: q.anis, grass: q.grass, fxQ: q.fx, texQ: q.tex >= 512 ? 'high' : 'low', shadowDist: 100 });

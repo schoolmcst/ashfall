@@ -92,6 +92,8 @@ function zsLoadTapes() { ZS.heard.clear(); try { for (const t of JSON.parse(loca
 zsLoadTapes();
 const zsDoneEver = key => { try { return localStorage.getItem(key || ZS_TEXT.keyDone) === 'done'; } catch (e) { return false; } };
 const zsHas = id => ZS.flags.has(id);
+// story on or off for this game (the lobby's MODE row; in co-op the host's choice counts)
+const zsWanted = () => (typeof ZC !== 'undefined' && ZC.on && !zcHost() && ZC.hostStory !== undefined) ? ZC.hostStory : ZL.story !== false;
 const zsFuses = () => ['f1', 'f2', 'f3'].filter(zsHas).length, zsStashes = () => ['st1', 'st2', 'st3'].filter(zsHas).length;
 // which chapter we are on, from what has happened
 function zsChapterNow() { if (ZS.done) return 6; if (!zsHas('power')) return 0; if (!zsHas('card')) return 1; if (zsStashes() < 3) return 2; if (!zsHas('blood')) return 3; if (!zsHas('jar')) return 4; return 5; }
@@ -143,6 +145,7 @@ function zsBuild() {
   zsClear();
   if (!zmapIs(curMap)) return;
   Object.assign(ZS, { cook: -1, cookT: 0, done: false, chapter: -1, bossOut: false, boss: null, bloodItem: null }); ZS.flags.clear(); ZS.mine.clear(); ZS.said.clear();
+  ZS.off = !zsWanted(); if (ZS.off) return;
   ZS.objs = ZS_ITEMS.map(it => ({ it, g: zsMake(it) }));
   ZS.tapes = ZS_TAPES.map((t, i) => ({ t, i, g: zsMake({ kind: 'tape', at: t.at }) }));
   ZS.station = zsStation(); ZS.fusebox = zsFuseBox();
@@ -204,7 +207,7 @@ const ZS_SAY = {
   smokes: { fuse: 'Fuse. Shiny. Like a tiny glowing joint.', card: 'Keycard. Huh. I used to just prop the door open.', stash: 'Aw, man. That is my old merchandise. Goodbye, retirement.', jar: 'Oh, hello, beautiful. I have dreamed of you.', blood: 'Eddie\'s blood. Sorry, Eddie. You were my best customer.', cook: 'Okay, okay, it is cooking. Smells like redemption.' },
   sparks: { fuse: 'Fuse! Yes! I love fuses! Fuses love me!', card: 'Keycard! Shiny! Okay, lab, here we come!', stash: 'Burn it, burn it, burn it!', jar: 'Is it weird that this is the most medical thing I have seen tonight?', blood: 'Ew ew ew. Okay. Got it. Ew.', cook: 'It is bubbling! Is it supposed to bubble? Hold them off!' },
 };
-function zsLine(k) { if (ZS.playing) return; const t = (ZS_SAY[ZL.char] || {})[k]; if (t) zvSpeak(ZL.char, t); }
+function zsLine(k) { if (ZS.playing || Math.random() > 0.5) return; const t = (ZS_SAY[ZL.char] || {})[k]; if (t) zvSpeak(ZL.char, t); }
 // a new chapter: scene, banner, objective; chapter 4 also brings out Patient Zero
 function zsCheckChapter() {
   const c = zsChapterNow(); if (c === ZS.chapter) { zsHud(); return; }
@@ -253,14 +256,14 @@ function zsDialog(lines, done) {
     let fired = false; const go = () => { if (fired) return; fired = true; setTimeout(next, 250); };
     const ms = 1600 + text.length * 62;
     try {
-      if (ZV.enabled && window.speechSynthesis) { const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id]; if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp((S.master !== undefined ? S.master : 80) / 100, 0, 1); u.onend = go; speechSynthesis.speak(u); setTimeout(go, ms * 1.6); }
+      if (ZV.enabled && window.speechSynthesis) { const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id]; if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(zvVol() * (S.master !== undefined ? S.master : 80) / 100, 0, 1); u.onend = go; speechSynthesis.speak(u); setTimeout(go, ms * 1.6); }
       else setTimeout(go, ms);
     } catch (e) { setTimeout(go, ms); }
   };
   next();
 }
 // group talk every few rounds (called from the round start)
-function zsRoundTalk(r) { try { zmapRound(r); } catch (e) {} const s = ZS_ROUNDS[r]; if (s && !ZS.said.has(r)) { ZS.said.add(r); setTimeout(() => zsDialog(s), 3500); } }
+function zsRoundTalk(r) { try { zmapRound(r); } catch (e) {} if (ZS.off) return; const s = ZS_ROUNDS[r]; if (s && !ZS.said.has(r)) { ZS.said.add(r); setTimeout(() => zsDialog(s), 3500); } }
 function zsStartCookReq() { if (zcInGame() && !zcHost()) zcEvent('cook', P); else zsStartCook(); }
 function zsStartCook() {
   if (ZS.cook >= 0 || ZS.done || zsChapterNow() < 5) return;
@@ -270,6 +273,7 @@ function zsStartCook() {
 }
 // every frame (the host runs the boss and the cooking; everyone draws)
 function zsTick(dt) {
+  if (ZS.off) return;
   for (const o of ZS.objs.concat(ZS.tapes, ZS.bloodItem ? [ZS.bloodItem] : [])) if (o.g) { o.g.rotation.y += dt * 1.2; o.g.userData.beam.material.opacity = 0.08 + Math.sin(NOW * 3) * 0.05; }
   if (ZS.boss && enemies.includes(ZS.boss)) { const g = ZS.boss.group.position; ZS.boss.bossLast = { x: g.x, z: g.z, y: g.y }; }
   if (ZS.boss && !enemies.includes(ZS.boss)) zsBossDied(ZS.boss);
@@ -296,7 +300,7 @@ function zsBar(on) {
 function zsHud(force) {
   let h = $('zQuest');
   if (!h) { h = document.createElement('div'); h.id = 'zQuest'; ($('hud') || document.body).appendChild(h); const st = document.createElement('style'); st.textContent = `#zQuest{position:absolute;right:28px;top:200px;max-width:300px;text-align:right;pointer-events:none;font:700 12px var(--font,system-ui);letter-spacing:.12em;color:#dfe8d0;text-shadow:0 1px 4px #000;line-height:1.5}#zQuest b{display:block;color:#7adf6a;letter-spacing:.2em;font-size:11px}`; document.head.appendChild(st); }
-  if (force === false) { h.innerHTML = ''; return; }
+  if (force === false || ZS.off) { h.innerHTML = ''; return; }
   const c = zsChapterNow(), ch = ZS_CHAPTERS[c];
   let extra = c === 0 ? ` (${zsFuses()}/3)` : c === 2 ? ` (${zsStashes()}/3)` : '';
   const html = typeof M !== 'undefined' && M && M.mode === 'zomb' ? `<b>${ZS_TEXT.title} · CHAPTER ${c + 1} OF 7</b>${ch.name} · ${ch.goal}${extra}` : '';
@@ -327,6 +331,7 @@ function zsFromPeer(R) {
 }
 // the intro, every game (any key or 6 seconds hides the title; the voices finish over gameplay)
 function zsIntro() {
+  if (ZS.off) { ZS.chapter = 0; return; }
   let o = $('zIntro'); if (!o) { o = document.createElement('div'); o.id = 'zIntro'; document.body.appendChild(o); const st = document.createElement('style'); st.textContent = `#zIntro{position:fixed;inset:0;z-index:30;display:flex;flex-direction:column;align-items:center;justify-content:center;background:radial-gradient(ellipse at center,rgba(20,4,30,.75),rgba(0,0,0,.92));color:#e8e2d0;pointer-events:none;transition:opacity 1.2s;text-align:center}#zIntro b{font:900 54px Georgia,serif;letter-spacing:.12em;color:#7adf6a;text-shadow:0 0 30px rgba(90,223,106,.5)}#zIntro small{font:700 13px var(--font,system-ui);letter-spacing:.4em;margin-top:10px;color:#b06cff}#zIntro em{font:14px var(--font,system-ui);margin-top:26px;opacity:.6;font-style:normal;letter-spacing:.2em}`; document.head.appendChild(st); }
   o.innerHTML = `<small>${ZS_TEXT.place}</small><b>${ZS_TEXT.title}</b><small>${zsDoneEver() ? 'STORY COMPLETE · PLAY IT AGAIN' : ZS_TEXT.introSub}</small><em>${ZS_TEXT.introEm}</em>`;
   o.style.opacity = 1; o.style.display = '';

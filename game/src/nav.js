@@ -82,7 +82,9 @@ function nodeOf(x, z, y) {
 function flowField(x, z, y) {
   const node = nodeOf(x, z, y); if (node < 0) return null;
   let f = FLOW.get(node); if (f) { f.used = NOW; return f.d; }
-  const d = new Int32Array(NN * NN * NL).fill(-1), q = flowQ;
+  let d = null;
+  if (FLOW.size > 40) { let ok = null, ou = 1e9; FLOW.forEach((v, k) => { if (v.used < ou) { ou = v.used; ok = k; } }); d = FLOW.get(ok).d; FLOW.delete(ok); }   // reuse the oldest field's memory
+  if (!d || d.length !== NN * NN * NL) d = new Int32Array(NN * NN * NL); d.fill(-1); const q = flowQ;
   let head = 0, tail = 0; q[tail++] = node; d[node] = 0;
   while (head < tail) {
     const nd0 = q[head++], c = (nd0 / NL) | 0, l = nd0 % NL, cx = c % NN, cz = (c / NN) | 0, h = lvH[nd0], st = lvS[nd0];
@@ -97,7 +99,6 @@ function flowField(x, z, y) {
       }
     }
   }
-  if (FLOW.size > 40) { let ok = null, ou = 1e9; FLOW.forEach((v, k) => { if (v.used < ou) { ou = v.used; ok = k; } }); FLOW.delete(ok); }
   FLOW.set(node, { d, used: NOW });
   return d;
 }

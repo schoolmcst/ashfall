@@ -80,8 +80,11 @@ const ZLINES = {
     edible: ['It is so cute! Sorry, little bear! Chomp!', 'I ate a bear! Not a real one! A gummy one! Obviously!', 'Wait, how much was in that? Oh no. Oh yes.', 'If I start giggling at zombies, that is the gummy talking.', 'Delicious! Dangerous! Deliciously dangerous!'],
   },
 };
-const ZV = { voices: [], vmap: {}, last: {}, cd: {}, seq: 0, out: [], kills: 0, lowT: 0, enabled: true, sub: null };
-ZL.char = 'smokes'; try { const c = localStorage.getItem('ashfall.zchar'); if (ZCHARS.some(x => x.id === c)) ZL.char = c; ZV.enabled = localStorage.getItem('ashfall.zvoice') !== 'off'; } catch (e) {}
+const ZV = { voices: [], vmap: {}, last: {}, cd: {}, seq: 0, out: [], kills: 0, lowT: 0, sub: null, gap: 0, _off: false };
+// on / off and the volume live in SETTINGS > AUDIO (S.zvoice, S.zvoiceVol); the old lobby switch is carried over once
+Object.defineProperty(ZV, 'enabled', { get() { return !ZV._off && typeof S !== 'undefined' && S.zvoice !== false && (S.zvoiceVol === undefined || S.zvoiceVol > 0); }, set(v) { ZV._off = !v; } });
+const zvVol = () => (typeof S !== 'undefined' && S.zvoiceVol !== undefined ? S.zvoiceVol : 70) / 100;
+ZL.char = 'smokes'; try { const c = localStorage.getItem('ashfall.zchar'); if (ZCHARS.some(x => x.id === c)) ZL.char = c; if (localStorage.getItem('ashfall.zvoice') === 'off' && typeof S !== 'undefined') { S.zvoice = false; localStorage.removeItem('ashfall.zvoice'); try { saveSettings(); } catch (e) {} } } catch (e) {}
 const zvChar = id => ZCHARS.find(c => c.id === id) || ZCHARS[0];
 
 /* ---------- picking a computer voice for each survivor (different ones where the computer has them) */
@@ -102,22 +105,27 @@ try { if (window.speechSynthesis) { zvLoadVoices(); speechSynthesis.onvoiceschan
 /* ---------- saying a line */
 function zvSpeak(charId, text, vol = 1) {
   const c = zvChar(charId);
-  zvSubtitle(c, text);
   if (!ZV.enabled) return;
+  try { if (window.speechSynthesis && (speechSynthesis.speaking || speechSynthesis.pending)) return; } catch (e) {}   // never queue lines up behind each other
+  zvSubtitle(c, text);
   try {
     if (!window.speechSynthesis) return;
     if (!ZV.voices.length) zvLoadVoices();
     const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id];
-    if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(vol * ((typeof S !== 'undefined' && S.master !== undefined ? S.master : 80) / 100), 0, 1);
+    if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(vol * zvVol() * ((typeof S !== 'undefined' && S.master !== undefined ? S.master : 80) / 100), 0, 1);
     speechSynthesis.speak(u);
   } catch (e) {}
 }
 // a moment happened to me: maybe say something (cooldowns stop it getting chatty), and tell my teammates
-const ZV_CD = { round: 25, roundEnd: 20, door: 6, box: 8, upgrade: 5, down: 3, revived: 3, reviving: 3, streak: 30, ammo: 35, broke: 12, spawn: 0, bowl: 0, joint: 0, edible: 0 };
+const ZV_CD = { round: 90, roundEnd: 75, door: 30, box: 30, upgrade: 20, down: 15, revived: 15, reviving: 20, streak: 120, ammo: 90, broke: 45, spawn: 0, bowl: 0, joint: 0, edible: 0 };
+// some moments always get their line (going down, perks, the upgrade); everything else waits for a quiet gap
+const ZV_KEY = new Set(['down', 'revived', 'bowl', 'joint', 'edible', 'upgrade']), ZV_GAP = 25;
 function zvSay(moment, chance = 1) {
   if (typeof M === 'undefined' || !M || M.mode !== 'zomb') return;
+  if (!ZV.enabled || (typeof ZS !== 'undefined' && ZS.playing)) return;
   const now = performance.now() / 1000; if ((ZV.cd[moment] || 0) > now || Math.random() > chance) return;
-  ZV.cd[moment] = now + (ZV_CD[moment] || 8);
+  if (!ZV_KEY.has(moment) && now < ZV.gap) return;
+  ZV.cd[moment] = now + (ZV_CD[moment] || 30); ZV.gap = now + ZV_GAP;
   const lines = (ZLINES[ZL.char] || {})[moment]; if (!lines || !lines.length) return;
   let i = (Math.random() * lines.length) | 0; if (lines.length > 1 && i === ZV.last[moment]) i = (i + 1) % lines.length; ZV.last[moment] = i;
   zvSpeak(ZL.char, lines[i]);
@@ -130,7 +138,7 @@ function zvRemote(R) {
   for (const v of list) {
     if (!Array.isArray(v) || (+v[2] || 0) <= R.seenVl) continue; R.seenVl = +v[2] || 0;
     const ch = ZCHARS.some(c => c.id === R.pr.ch) ? R.pr.ch : 'doc', line = ((ZLINES[ch] || {})[v[0]] || [])[+v[1] | 0];
-    if (line) zvSpeak(ch, line, 0.75);
+    const now = performance.now() / 1000; if (line && (ZV_KEY.has(v[0]) || now >= ZV.gap) && !(typeof ZS !== 'undefined' && ZS.playing)) { ZV.gap = now + ZV_GAP; zvSpeak(ch, line, 0.75); }
   }
 }
 function zvSubtitle(c, text) {
@@ -142,6 +150,6 @@ function zvSubtitle(c, text) {
 // every frame in zombies: low-ammo and kill-streak lines
 function zvTick(dt) {
   if (!M || M.mode !== 'zomb' || G.state !== 'playing') return;
-  const w = WEAPONS[G.cur]; if (w && w.ammo + w.reserve <= Math.max(3, w.magSize * 0.5) && w.reserve <= 0) zvSay('ammo', 0.7);
-  if (G.kills >= ZV.kills + 15) { ZV.kills = G.kills; zvSay('streak', 0.6); }
+  const w = WEAPONS[G.cur]; if (w && w.ammo + w.reserve <= Math.max(3, w.magSize * 0.5) && w.reserve <= 0) zvSay('ammo', 0.4);
+  if (G.kills >= ZV.kills + 25) { ZV.kills = G.kills; zvSay('streak', 0.4); }
 }

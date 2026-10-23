@@ -162,6 +162,7 @@ function zmapBuildPads() {
     g.position.set(p.x, p.y, p.z); scene.add(g);
     ZM.pads.push({ p, g, glow, lt, beam, ring });
   }
+  if (ZS.off) ZM.powered = true;   // no story: the launch pads work from the start
 }
 function zmapClearPads() { for (const o of ZM.pads) scene.remove(o.g); ZM.pads = []; ZM.fly = null; }
 function zmapPowerPads() { ZM.powered = true; }
@@ -189,7 +190,7 @@ function zmapLaunch(a, b) {
   showBanner('LAUNCH!', 'to the ' + b.name.toLowerCase());
   try { burst(0.9, 900, 0.35, 'lowpass'); tone(90, 0.6, 0.25, 'sawtooth', 400); burst(0.5, 4000, 0.12, 'highpass'); } catch (e) {}
   try { for (let i = 0; i < 14; i++) puff(a.x + rnd(-1, 1), 0.2, a.z + rnd(-1, 1), { color: 0xd8d0c0, size: 0.4, grow: 1.2, life: 1.4, vy: 1.5, op: 0.5 }); } catch (e) {}
-  if (typeof zvSay === 'function') setTimeout(() => { try { zvSay('streak', 0.4); } catch (e) {} }, 500);
+  if (typeof zvSay === 'function') setTimeout(() => { try { zvSay('streak', 0.2); } catch (e) {} }, 500);
 }
 // the flight: up and over the roofs, then straight down onto the pad
 function zmapFly(dt) {

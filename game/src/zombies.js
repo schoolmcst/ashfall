@@ -6,6 +6,7 @@
    (250: full ammo). No loadout: everyone starts the same. */
 MODES.zomb = { name: 'ZOMBIES', short: 'ZOMBIES', icon: 'ZMB', desc: 'Survive round after round of the dead. Start with a pistol, earn points, and buy guns from the Mystery Crate.', teams: false, respawn: 0, score: 0, time: 0, unit: 'ROUNDS' };
 const ZL = { on: false, map: 'blackwell', net: 'solo', code: '' };
+ZL.story = true; try { ZL.story = localStorage.getItem('ashfall.zstoryon') !== 'off'; } catch (e) {}
 try { const zm = localStorage.getItem('ashfall.zmap'); if (['blackwell', 'works'].includes(zm)) ZL.map = zm; } catch (e) {}
 try { ZL.net = localStorage.getItem('ashfall.znet') === 'coop' ? 'coop' : 'solo'; ZL.code = localStorage.getItem('ashfall.zcode') || ''; } catch (e) {}
 const Z = { zid: 0, targets: [], round: 0, toSpawn: 0, spawnT: 0, breakT: 0, active: false, guns: [], crate: null, ammo: null, boxT: 0, best: { round: 0, pts: 0 } };
@@ -24,9 +25,10 @@ function renderZLobby(focusSel) {
   $('lobSel').innerHTML =
     `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="z-start"><small>${zcStartLabel()[0]}</small><b>${zcStartLabel()[1]}</b></button></div>` + zcLobbyRows() +
     `<div class="cod-row cod-map"><small>MAP · ${zc.chapter}</small><b>${m ? m.name : ''}</b><span>${zc.mapLine}</span><div class="arw"><button class="mini" data-act="z-map-" aria-label="Previous map">&lsaquo;</button><button class="mini" data-act="z-map+" aria-label="Next map">&rsaquo;</button></div></div>` +
-    `<div class="cod-row"><small>STORY · ${zc.chapter} · 7 CHAPTERS</small><b style="color:#7adf6a">${sx.text.title}</b><span>${zmapStoryDone(mid) ? 'COMPLETE ✓ · ' : ''}TAPES FOUND ${zmapTapes(mid)} / ${sx.tapes.length} · ${sx.chapters.map((c, i) => `${i + 1} ${c.name}`).join(' · ')}</span></div>` +
+    `<div class="cod-row"><small>MODE</small><b>${zsWanted() ? 'STORY' : 'CLASSIC · NO STORY'}</b><span>${zsWanted() ? 'quests, a boss, tapes and the survivors\' scenes' : 'just the rounds: no quests, boss or scenes · launch pads work from the start'}${ZC.on && !zcHost() ? ' · the host picks' : ''}</span><div class="arw"><button class="mini" data-act="z-story" aria-label="Story or classic">&lsaquo;</button><button class="mini" data-act="z-story" aria-label="Story or classic">&rsaquo;</button></div></div>` +
+    `<div class="cod-row"${zsWanted() ? '' : ' style="opacity:.45"'}><small>STORY · ${zc.chapter} · 7 CHAPTERS</small><b style="color:#7adf6a">${sx.text.title}</b><span>${zmapStoryDone(mid) ? 'COMPLETE ✓ · ' : ''}TAPES FOUND ${zmapTapes(mid)} / ${sx.tapes.length} · ${sx.chapters.map((c, i) => `${i + 1} ${c.name}`).join(' · ')}</span></div>` +
     `<div class="cod-row"><small>CHARACTER</small><b style="color:${zvChar(ZL.char).col}">${zvChar(ZL.char).full}</b><span>${zvChar(ZL.char).bio}</span><div class="arw"><button class="mini" data-act="z-char-" aria-label="Previous character">&lsaquo;</button><button class="mini" data-act="z-char+" aria-label="Next character">&rsaquo;</button></div></div>` +
-    `<div class="cod-row"><small>VOICE LINES</small><b>${ZV.enabled ? 'ON' : 'OFF'}</b><span>spoken by your computer's voices, with subtitles</span><div class="arw"><button class="mini" data-act="z-voice" aria-label="Voice lines on or off">${ZV.enabled ? 'TURN OFF' : 'TURN ON'}</button></div></div>` +
+    
     `<div class="cod-row"><small>STARTING GEAR</small><b>SERVICE 9 · 2 FRAGS</b><span>everyone starts the same · 500 points to spend</span></div>` +
     `<div class="cod-row"><small>MYSTERY CRATE · ${Z_BOX} POINTS</small><b>A RANDOM GUN</b><span>AMMO CRATE · ${Z_AMMO} POINTS · full ammo for your guns</span></div>` +
     `<div class="cod-row"><small>YOUR BEST</small><b>ROUND ${Z.best.round || 0}</b><span>${(Z.best.pts || 0).toLocaleString()} POINTS</span></div>`;
@@ -50,6 +52,7 @@ function zombAct(act) {
   if (act === 'z-code') { const i = $('zCode'), c = i ? cleanCode(i.value) : ''; if (!c || c === 'public') { if (i) { i.focus(); i.placeholder = 'type a code first'; } return true; } ZL.code = c; zcJoin('code', c); return true; }
   if (act === 'z-leave') { zcLeave(); sfx.ui(); return true; }
   if (act === 'z-char-' || act === 'z-char+') { const i = ZCHARS.findIndex(c => c.id === ZL.char), d = act.endsWith('+') ? 1 : -1; ZL.char = ZCHARS[(i + d + ZCHARS.length) % ZCHARS.length].id; try { localStorage.setItem('ashfall.zchar', ZL.char); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="${act}"]`); try { speechSynthesis.cancel(); } catch (e) {} const l = ZLINES[ZL.char].spawn; zvSpeak(ZL.char, l[(Math.random() * l.length) | 0]); return true; }
+  if (act === 'z-story') { if (ZC.on && !zcHost()) return true; ZL.story = !ZL.story; try { localStorage.setItem('ashfall.zstoryon', ZL.story ? 'on' : 'off'); } catch (e) {} sfx.ui(); renderZLobby('[data-act="z-story"]'); return true; }
   if (act === 'z-voice') { ZV.enabled = !ZV.enabled; try { localStorage.setItem('ashfall.zvoice', ZV.enabled ? 'on' : 'off'); if (!ZV.enabled) speechSynthesis.cancel(); } catch (e) {} sfx.ui(); renderZLobby('[data-act="z-voice"]'); return true; }
   if ((act === 'z-map-' || act === 'z-map+' || act === 'map-' || act === 'map+' || act === 'mode-' || act === 'mode+') && ZC.on && !zcHost()) return true;
   if (act === 'z-map-' || act === 'z-map+') { const L = ZMAP_LIST, i = Math.max(0, L.indexOf(ZL.map)), d = act.endsWith('+') ? 1 : -1; ZL.map = L[(i + d + L.length) % L.length]; try { localStorage.setItem('ashfall.zmap', ZL.map); } catch (e) {} sfx.ui(); renderZLobby(`[data-act="${act}"]`); return true; }
@@ -69,10 +72,20 @@ function zombStart(cfg) {
   zombEquip(); G.grenades = 2; G.points = 500; G.score = 0;
   Z.up = new Set(); zdInit(); zombEquip();
   zombCrates();
+  zombWarm();
   if (ZC.on && ZC.inGame) zcStartLocal();
   G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
   showBanner('ZOMBIES', 'survive · 500 points to spend'); zombHud(true);
   ZV.kills = 0; try { zsIntro(); } catch (e) {}
+}
+// compile the zombie and boss shaders now, while the screen is still the start banner, not when the first one appears
+function zombWarm() {
+  try {
+    const a = makeZombie(P.x, P.z - 3, P.y || 0), b = makeZombie(P.x + 1, P.z - 3, P.y || 0); zsMakeBoss(b); for (const l of b.group.children.filter(o => o.isLight)) b.group.remove(l);   // same light count as the game (no extra shader variant)
+    renderer.compile(scene, camera);
+    for (const e of [a, b]) { const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1); scene.remove(e.group); }
+    Z.zid = 0;
+  } catch (e) { reportError(e); }
 }
 function zombEquip(keepCur) {
   const g = Z.guns, gr = G.grenades; zuRestore();
@@ -138,6 +151,17 @@ function makeZombie(x, z, y) {
   enemies.push(e);
   return e;
 }
+// the zombies' route map toward me: rebuilt when I have moved more than a metre or so (it used to be rebuilt for
+// every half-metre cell I stepped into, up to 25 ms each on the hospital: stutter when sprinting)
+function zombNav() {
+  const y = P.y || 0;
+  if (navTarget < 0 || !navField || Z.navX === undefined || Math.hypot(P.x - Z.navX, P.z - Z.navZ) > 1.25 || Math.abs(y - Z.navY) > 1) { Z.navX = P.x; Z.navZ = P.z; Z.navY = y; updateNav(P.x, P.z, y); }
+}
+function zombFieldFor(T) {
+  const F = Z.fields || (Z.fields = {}), k = T.peer || 'p'; let c = F[k];
+  if (!c || c.gen !== Z.navGen || Math.hypot(T.x - c.x, T.z - c.z) > 1.25 || Math.abs((T.y || 0) - c.y) > 1) c = F[k] = { x: T.x, z: T.z, y: T.y || 0, gen: Z.navGen, d: flowField(T.x, T.z, T.y || 0) };
+  return c.d;
+}
 function zombSpawn() {
   const pts = zdSpawnPts(), T = Z.targets || []; if (!pts.length || !T.length) return null;
   for (let t = 0; t < 80; t++) {
@@ -153,7 +177,7 @@ function zombRound() {
   G.wave = Z.round; if (!(ZC.on && ZC.down)) G.health = G.maxHp; if (ZC.on && ZC.dead) zcRespawn();
   showBanner(`ROUND ${Z.round}`, Z.round === 1 ? 'here they come' : Z.round % 5 === 0 ? 'they are getting faster' : `${Z.toSpawn} zombies`);
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
-  zombHud(true); if (Z.round > 1) setTimeout(() => zvSay('round', 0.6), 1200); try { zsRoundTalk(Z.round); } catch (e) {}
+  zombHud(true); if (Z.round > 1) setTimeout(() => zvSay('round', 0.3), 1200); try { zsRoundTalk(Z.round); } catch (e) {}
 }
 function updateZombies(dt) {
   if (G.spawnProt > 0) G.spawnProt = Math.max(0, G.spawnProt - dt);   // revive / respawn protection runs out (it only counted down in multiplayer before)
@@ -165,7 +189,7 @@ function updateZombies(dt) {
   else {
     const cap = Math.min(24, 10 + Z.round);
     if (Z.toSpawn > 0) { Z.spawnT -= dt; if (Z.spawnT <= 0 && enemies.length < cap) { if (zombSpawn()) Z.toSpawn--; Z.spawnT = Math.max(0.35, 1.9 - Z.round * 0.13); } }
-    else if (!enemies.length) { Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.6); }
+    else if (!enemies.length) { Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.3); }
   }
   for (let i = 0; i < enemies.length; i++) zombThink(enemies[i], i, dt);
   zombHud();
@@ -192,7 +216,7 @@ function zombThink(e, i, dt) {
     else {
       e.navT = dist < 6 ? 0 : 0.14 + Math.random() * 0.08;
       if (gridClear(g.position.x, g.position.z, T.x, T.z, g.position.y, T.y)) { mx = nx + -nz * e.lurch * 0.3; mz = nz + nx * e.lurch * 0.3; }
-      else { const nd = T.me ? navDir(g.position.x, g.position.z, g.position.y) : flowDir(flowField(T.x, T.z, T.y), g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
+      else { const nd = T.me ? navDir(g.position.x, g.position.z, g.position.y) : flowDir(zombFieldFor(T), g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
       e.mvx = mx; e.mvz = mz;
     }
     if (dist < 1.3 && up) { mx = mz = 0; if (!(e.stunT > 0)) e.atkCd -= dt; if (e.atkCd <= 0 && !(e.stunT > 0)) { if (Math.random() < 0.6) try { sfx.zscreech(at(g.position.x, g.position.z, 14, g.position.y)); } catch (err) {} e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.7, 1.1); } }
@@ -259,7 +283,7 @@ function zombBuyBox() {
   const have = new Set(Z.guns), pool = Z_POOL().filter(d => !have.has(d.id)), d = pool[(Math.random() * pool.length) | 0];
   if (Z.guns.length < 2) Z.guns.unshift(d.id); else Z.guns[G.cur] = d.id;
   zombEquip(Z.guns.indexOf(d.id));
-  showBanner(d.name, CATS[d.cat].name); try { sfx.streak(); } catch (e) {} setTimeout(() => zvSay('box', 0.8), 900);
+  showBanner(d.name, CATS[d.cat].name); try { sfx.streak(); } catch (e) {} setTimeout(() => zvSay('box', 0.5), 900);
 }
 function zombBuyAmmo() { G.points -= Z_AMMO; if (typeof zcEvent === 'function') zcEvent('ammo', P); WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = w.reserveMax || w.def.reserve; }); G.grenades = Math.max(G.grenades, 2); showMsg('AMMO REFILLED'); try { sfx.ui(); } catch (e) {} }
 // HUD: the round in big red numbers bottom-left, points above it

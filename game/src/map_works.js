@@ -275,11 +275,13 @@ function worksTick(dt) {
     if (f.steady) continue;
     f.t -= dt; if (f.t <= 0) { f.on = !f.on; f.t = f.on ? rnd(0.4, 5) : rnd(0.03, 0.2); f.l.intensity = f.on ? f.i : f.i * 0.1; }
   }
+  const cx = camera.position.x, cz = camera.position.z;
   for (const e of WORKS.fx) {
-    if (e.k === 'fire' && Math.random() < dt * 6) puff(e.x + rnd(-0.15, 0.15), e.y, e.z + rnd(-0.15, 0.15), { color: 0xffa040, size: 0.05, grow: -0.02, life: 1.2, vy: 1.4, op: 0.9 });
-    if (e.k === 'furnace' && Math.random() < dt * 10) puff(e.x + rnd(-1.5, 1.5), e.y, e.z + 0.2, { color: 0xff7a2a, size: 0.04, grow: -0.01, life: 1.6, vy: 1.8, op: 0.9 });
-    if (e.k === 'stack' && Math.random() < dt * 3) puff(e.x + rnd(-0.8, 0.8), e.y, e.z + rnd(-0.8, 0.8), { color: 0x3a3a38, size: 1.2, grow: 1.4, life: 6, vy: 1.6, op: 0.4 });
-    if (e.k === 'candle' && Math.random() < dt * 1.5) puff(e.x, e.y, e.z, { color: 0x8a8a8a, size: 0.03, grow: 0.08, life: 2, vy: 0.35, op: 0.25 });
+    if (e.k !== 'stack' && Math.abs(e.x - cx) + Math.abs(e.z - cz) > 26) continue;
+    if (e.k === 'fire' && Math.random() < dt * 3) puff(e.x + rnd(-0.15, 0.15), e.y, e.z + rnd(-0.15, 0.15), { minor: true, color: 0xffa040, size: 0.05, grow: -0.02, life: 1.2, vy: 1.4, op: 0.9 });
+    if (e.k === 'furnace' && Math.random() < dt * 5) puff(e.x + rnd(-1.5, 1.5), e.y, e.z + 0.2, { minor: true, color: 0xff7a2a, size: 0.04, grow: -0.01, life: 1.6, vy: 1.8, op: 0.9 });
+    if (e.k === 'stack' && Math.random() < dt * 1.2) puff(e.x + rnd(-0.8, 0.8), e.y, e.z + rnd(-0.8, 0.8), { minor: true, color: 0x3a3a38, size: 1.2, grow: 1.4, life: 6, vy: 1.6, op: 0.4 });
+    if (e.k === 'candle' && Math.random() < dt * 0.8) puff(e.x, e.y, e.z, { minor: true, color: 0x8a8a8a, size: 0.03, grow: 0.08, life: 2, vy: 0.35, op: 0.25 });
   }
 }
 // the power is on: the hall lamps stop flickering
