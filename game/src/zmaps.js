@@ -252,3 +252,55 @@ function zlpTick(dt) {
   if ((ZLP.t -= dt) <= 0) { ZLP.t = 0.12; zlpAssign(); return; }
   for (const l of ZLP.pool) { const v = l.userData.v; if (v) { l.intensity = v.l.intensity; if (v.par !== scene) { v.par.updateWorldMatrix(true, false); l.position.copy(v.l.position).applyMatrix4(v.par.matrixWorld); } } }   // flicker, moving lights
 }
+
+/* ---------- #zbench: a zombies benchmark (used to measure a machine, e.g. a friend's Mac)
+   #zbench[&map=works|blackwell][&r=http://127.0.0.1:8765]: starts a solo zombies game, opens every door, turns the
+   power on, keeps 20 zombies coming, fires constantly and pans the camera. It measures OLD lighting (every lamp a real
+   light) then NEW lighting (the light pool), 20 seconds each, and shows the numbers (and POSTs them to r if given). */
+const ZB = { on: false };
+function zbOpts() { const h = (location.hash || '').replace(/^#zbench&?/, ''), o = {}; for (const kv of h.split('&')) { const [k, v] = kv.split('='); if (k) o[k] = decodeURIComponent(v || ''); } return o; }
+function zbStats(d) {
+  const s = d.slice().sort((a, b) => a - b), n = s.length || 1, sum = s.reduce((a, b) => a + b, 0) || 1, worst = s.slice(Math.floor(n * 0.99));
+  return { avgFps: +(n / sum * 1000).toFixed(1), low1Fps: +(worst.length / (worst.reduce((a, b) => a + b, 0) || 1) * 1000).toFixed(1), p95ms: +(s[Math.floor(n * 0.95)] || 0).toFixed(1), maxMs: +(s[n - 1] || 0).toFixed(1), frames: n, lights: (() => { let k = 0; scene.traverse(o => { if (o.isPointLight) k++; }); return k; })() };
+}
+function startZBench() {
+  const o = zbOpts(), map = zmapIs(o.map) ? o.map : 'works'; ZB.on = true; ZB.o = o; ZB.res = { map, ua: navigator.userAgent, dpr: window.devicePixelRatio, gpu: (typeof gpuName === 'function' ? gpuName() : ''), settings: { quality: S.quality, shadows: S.shadows, renderScale: S.renderScale, dynRes: S.dynRes } };
+  S.dynRes = false; try { applyPR(); } catch (e) {}
+  ZL.net = 'solo'; ZL.map = map; ZV.enabled = false; startMatch('zomb', { map });
+  setTimeout(zbSetup, 4000);
+}
+function zbSetup() {
+  for (const d of ZDOORS) zdOpen(d.id, false);
+  for (const id of ['f1', 'f2', 'f3']) zsFlag(id); zsPower();
+  ZS.playing = true; Z.breakT = 1e9; Z.active = true; Z.toSpawn = 0;
+  const sp = curMap === 'works' ? { x: 0, z: 8 } : { x: 0, z: 18 }; Object.assign(P, { x: sp.x, z: sp.z, y: 0 });
+  const cv = renderer.domElement; ZB.res.resolution = `${cv.width}x${cv.height}`;
+  zbPhase('old');
+}
+function zbFill() {
+  const pts = zdSpawnPts().filter(p => { const d = Math.hypot(p.x - P.x, p.z - P.z); return d > 7 && d < 22 && p.y < 1; });
+  while (enemies.filter(e => e.zombie).length < 20 && pts.length) { const p = pts[(Math.random() * pts.length) | 0]; const e = makeZombie(p.x, p.z, p.y); e.kind = 'walk'; e.speed = 1.2; }
+}
+function zbPhase(name) {
+  if (name === 'old') zlpStop(); else zlpStart();
+  showBanner('ZOMBIES BENCHMARK', name === 'old' ? 'old lighting · 20 seconds · hands off' : 'new lighting · 20 seconds · hands off');
+  const d = []; let last = performance.now(), t0 = last;
+  const step = now => {
+    if (!ZB.on) return;
+    const dt = now - last; last = now;
+    G.health = G.maxHp = 1e9; P.yaw += dt / 1000 * 0.35; P.pitch = -0.08; mouseDown = true;
+    const w = WEAPONS[G.cur]; if (w) { w.ammo = w.magSize; G.reloading = false; }
+    if (now - t0 > 3000 && document.visibilityState !== 'hidden' && dt < 500) d.push(dt);
+    if (((now - t0) | 0) % 500 < 20) zbFill();
+    if (now - t0 < 23000) requestAnimationFrame(step);
+    else { ZB.res[name] = zbStats(d); if (name === 'old') zbPhase('new'); else zbDone(); }
+  };
+  requestAnimationFrame(step);
+}
+function zbDone() {
+  ZB.on = false; mouseDown = false; const r = ZB.res; window.__zbench = r;
+  try { console.log('ASHFALL ZBENCH', JSON.stringify(r)); } catch (e) {}
+  if (ZB.o.r) try { fetch(ZB.o.r, { method: 'POST', mode: 'no-cors', body: JSON.stringify(r) }); } catch (e) {}
+  let el = $('zbOut'); if (!el) { el = document.createElement('pre'); el.id = 'zbOut'; el.style.cssText = 'position:fixed;inset:10% 20%;z-index:99;background:rgba(0,0,0,.88);color:#cfe;font:16px/1.5 monospace;padding:24px;white-space:pre-wrap;overflow:auto'; document.body.appendChild(el); }
+  el.textContent = `ZOMBIES BENCHMARK · ${r.map.toUpperCase()}\n\nOLD LIGHTING: ${r.old.avgFps} fps avg · 1% low ${r.old.low1Fps} · worst ${r.old.maxMs} ms · ${r.old.lights} lights\nNEW LIGHTING: ${r.new.avgFps} fps avg · 1% low ${r.new.low1Fps} · worst ${r.new.maxMs} ms · ${r.new.lights} lights\n\n${r.gpu}\n${r.resolution} @ ${r.dpr}x`;
+}
