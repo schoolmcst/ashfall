@@ -30,9 +30,9 @@ module.exports = async p => {
   await shot('is_hud');
   // chapter 1: valves and the pressure panel
   const I = await p.evaluate(() => Object.fromEntries(window.__A.ZS_ITEMS.map(it => [it.id, it.at])));
-  await look('is_valve', I.v1.x + 1.8, I.v1.z + 1.6, 0, I.v1.x, I.v1.z, 0.05);
+  await look('is_valve', I.f1.x + 1.8, I.f1.z + 1.6, 0, I.f1.x, I.f1.z, 0.05);
   r.padOff = await p.evaluate(() => { const A = window.__A; return A.ZM.powered; });
-  for (const f of ['v1', 'v2', 'v3']) await use(I[f].x + 0.4, I[f].z);
+  for (const f of ['f1', 'f2', 'f3']) await use(I[f].x + 0.4, I[f].z);
   r.panel = await use(-5.7, 1.5); r.powered = await p.evaluate(() => window.__A.ZM.powered);
   await look('is_panel', -4.2, 3.5, 0, -6.6, 1.5, 1.4);
   // launch pad: dock to the garden
