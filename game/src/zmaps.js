@@ -213,7 +213,7 @@ function zmapRound() {
    ZL_POOL real lights exist, never added or removed; each fraction of a second they take the place of the lamps that
    matter most near you (bright and close). The map's own lights stay as "virtual" lights: they keep flickering and the
    pool copies them. Lights made later (items, the boss) are adopted by a rescan. */
-const ZL_POOL = 8;
+const ZL_POOL = 12;
 const ZLP = { on: false, pool: [], virt: [], t: 0, scanT: 0 };
 const zlpSkip = l => l === muzzleLight || l === enemyFlashLight || ZLP.pool.includes(l);
 function zlpAdopt() {
@@ -240,7 +240,7 @@ function zlpAssign() {
     v.par.updateWorldMatrix(true, false); v.w.copy(v.l.position).applyMatrix4(v.par.matrixWorld);
     const d2 = (v.w.x - cx) ** 2 + (v.w.y - cy) ** 2 * 1.5 + (v.w.z - cz) ** 2, R = (v.l.distance || 12) + 6;
     if (d2 > R * R * 4) continue;
-    v.score = Math.max(0.05, v.l.intensity) * (v.l.distance || 12) / (1 + d2); cand.push(v);
+    const D = v.l.distance || 12; v.score = Math.max(0.05, v.l.intensity) * D * D / (D * D + d2); cand.push(v);
   }
   cand.sort((a, b) => b.score - a.score);
   ZLP.pool.forEach((l, i) => { const v = cand[i]; l.userData.v = v || null; if (!v) { l.intensity = 0; return; } l.position.copy(v.w); l.color.copy(v.l.color); l.distance = v.l.distance; l.decay = v.l.decay; l.intensity = v.l.intensity; });
