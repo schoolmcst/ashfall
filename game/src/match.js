@@ -18,6 +18,7 @@ const MODES = {
   okc: { name: 'ONLINE BAGGED UP', short: 'ONLINE BAGS', icon: 'BAG', desc: 'Real people, kill confirmed: everyone drops their stash bag when they die. Bag the enemy\'s to score, save your own team\'s.', teams: true, respawn: 3, score: 40, time: 0, perTeam: 6, unit: 'BAGS', online: true, base: 'kc' },
   odom: { name: 'ONLINE TURF WAR', short: 'ONLINE TURF', icon: 'DOM', desc: 'Real people, domination: take and hold the three grow spots A, B and C. Every spot you hold scores.', teams: true, respawn: 4, score: 150, time: 0, perTeam: 6, unit: 'POINTS', online: true, base: 'dom' },
   osnd: { name: 'ONLINE SEARCH & DESTROY', short: 'ONLINE S&D', icon: 'S&D', desc: 'Real people, one life per round. Attackers plant the bomb at A or B, defenders stop them. First to 4 rounds.', teams: true, respawn: 0, score: 4, time: 0, perTeam: 5, unit: 'ROUNDS', online: true, base: 'snd' },
+  range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
 const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'osnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'snd', 'surv'];
@@ -145,6 +146,7 @@ function startMatch(mode, custom) {
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
   resetGame();
   if (mode === 'zomb') { zombStart(cfg); return; }
+  if (mode === 'range') { rangeStart(cfg); return; }
   if (mode === 'surv') { if (curMap !== 'ruins') { buildSpawns(); const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z); } G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); matchHold(false); return; }
   buildSpawns();
   G.breakT = 1e9; G.waveActive = false; G.maxHp = M.maxHp; G.health = M.maxHp;
@@ -720,6 +722,7 @@ function updateMatch(dt) {
   if (M.mode === 'ctf') updateCtf(dt);
   if (M.mode === 'snd') updateSnd(dt);
   m2Update(dt);
+  if (M.mode === 'range') rangeTick(dt);
   if (M.cfg.time && M.mode !== 'snd' && !M.online && M.t >= M.cfg.time * 60) { timeUp(); return; }
   if (G.state === 'respawning') { G.respT -= dt; showCenter(M.online && !NET.teamSet ? (NET.app ? 'FINDING A MATCH' : 'JOINING ROOM') : 'RESPAWNING', M.online && !NET.teamSet && NET.app && P2P.current ? String(P2P.current.status || '').toUpperCase() : Math.max(0, G.respT).toFixed(1)); if (G.respT <= 0 && !(M.online && !NET.teamSet)) respawnPlayer(); }
   if (G.state === 'spectate') updateSpectate(dt);
@@ -803,7 +806,7 @@ function scoreboardHtml() {
 /* ---------- HUD: score bar, centre message, objective markers */
 const fmtT = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 function updateModeHud(force) {
-  if (M.mode === 'zomb') { const el = $('mhud'), sv = $('stats'); el.classList.add('hide'); el._on = false; if (sv) { sv.style.display = 'none'; sv._surv = undefined; } return; }
+  if (M.mode === 'zomb' || M.mode === 'range') { const el = $('mhud'), sv = $('stats'); el.classList.add('hide'); el._on = false; if (sv) { sv.style.display = 'none'; sv._surv = undefined; } return; }
   const el = $('mhud'), surv = M.mode === 'surv' || !!G.bench;
   const sv = $('stats'); if (sv && sv._surv !== surv) { sv._surv = surv; sv.style.display = surv ? '' : 'none'; }
   if (surv) { if (el._on !== false) { el._on = false; el.classList.add('hide'); } return; }

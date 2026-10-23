@@ -231,7 +231,7 @@ function domUpdate(dt) {
   if (D.acc >= DOM_TICK) { D.acc -= DOM_TICK; for (let t = 0; t < 2; t++) M.teamScore[t] += domHeld(t); checkScoreLimit(); }
   domVisual(dt);
 }
-function domMine(p) { MS.caps = (MS.caps || 0) + 1; G.score += 150; popScore('+150', 'big', `${p.n} SECURED`); }
+function domMine(p) { MS.caps = (MS.caps || 0) + 1; MS.turf = (MS.turf || 0) + 1; G.score += 150; popScore('+150', 'big', `${p.n} SECURED`); }
 // online, not the host: a spot your team just took while you stood in it
 function domMyCapture() {
   for (const p of M.dom.pts) {

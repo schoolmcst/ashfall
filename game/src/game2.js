@@ -367,6 +367,6 @@ function leaveGame() {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   spawnMenuSoldiers();
 }
-function clearMatch() { try { netLeave(); } catch (e) {} try { zombClear(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
+function clearMatch() { try { rangeClear(); } catch (e) {} try { netLeave(); } catch (e) {} try { zombClear(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
 function toMenu() { leaveGame(); showScreen('menu'); }
 function toLobby() { if (G.state !== 'menu') leaveGame(); renderLobby(); showScreen('lobby'); }

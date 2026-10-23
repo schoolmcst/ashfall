@@ -1,11 +1,10 @@
 {
- "version": "1.2.46",
+ "version": "1.2.47",
  "notes": [
-  "NEW MODE: BAGGED UP (kill confirmed). Everyone drops their stash bag when they die - grab enemy bags to score (BAGGED, +100), grab your own team's to stop them scoring (STASH SAVED, +50). Offline with bots and ONLINE.",
-  "NEW MODE: TURF WAR (domination). Three grow spots, A, B and C, each a weed plant under a grow lamp. Stand in one to take it (faster with more of you); every spot your team holds scores. Offline with bots and ONLINE, and both new modes are in private matches.",
-  "KILLCAM: when you die you now see it over your killer's shoulder first - their name, their gun, the distance, and a marker where you went down. Turn it off in Settings (KILLCAM).",
-  "4 NEW SCORESTREAKS: DEALER DRONE (a drone flies a very loud package to the nearest enemy), SMOKE OUT (counter-UAV: jams the enemy radar and spy planes for 30 s and makes their aim hazy), TRAP HOUSE TURRET (a sentry gun guards your spot for 30 s) and HIGH FLYER (a gunship circles the map shelling enemies for 22 s). Pick them in SCORESTREAKS."
+  "WEEKLY CHALLENGES: THE PLUG'S LIST. Six jobs from your plug every week (new list each Monday) - kills, headshots, wins, bagging stash bags, taking grow spots, zombie rounds and more. Each pays XP and DZ; do all six for a free PRESTIGE chance box. Find it under WEEKLY.",
+  "PRESTIGE: at level 100 press PRESTIGE to go back to level 1 and keep everything you own. Ten prestiges, SEEDLING to KUSH KING: each gives a prestige emblem on your card, a calling card, 2,000 DZ and a free PRESTIGE box. Prestige 3, 6 and 10 add new finishes: GREENHOUSE CHROME, AMBER RESIN and FROSTED TRICHOME.",
+  "NEW: THE STASH YARD - a firing range and tutorial on the main menu. Targets from 8 to 40 m (some strafe), a checklist of the basics with your keys, live accuracy, and a free DEALER DRONE to try. Change guns from the pause menu. 500 DZ the first time you finish it; nothing there counts for XP or stats."
  ],
- "sha256": "eba19b1a5d14125c7e6cf5a9b52b874c27493f5cefd3266bcd13cd36622a1391",
+ "sha256": "58773407bba9b81d90de2e7fddd1c2c4d1b54d89bf1c5b3c81e7a159571773c2",
  "minApp": "1.0.0"
 }

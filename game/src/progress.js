@@ -259,9 +259,18 @@ for (const [name, tier, kind, t, r, c, gx, mx, track] of BP_ITEMS) {
   else if (flat) COSM.push(Object.assign(base, { g: Object.assign({ t, c }, gx || {}) }));
   else COSM.push(Object.assign(base, { g: Object.assign({ t, c }, gx || {}), m: mx || undefined }));
 }
+// ---- PRESTIGE: a calling card (banner) for every prestige, and three finishes (gold stays the weapon-grind reward)
+const PRES_NAMES = ['SEEDLING', 'SPROUT', 'CLONE', 'VEG', 'PRE-FLOWER', 'IN BLOOM', 'TRICHOME', 'HARVEST', 'CURED', 'KUSH KING'];
+const PRES_COL = ['#7fd16b', '#5fc24a', '#3fae5a', '#2f9a7a', '#2e86c1', '#7b5cff', '#c14bff', '#ff4fa3', '#ff7a2a', '#ffd23a'];
+const PRES_FIN = { 3: 'pr_chrome', 6: 'pr_resin', 10: 'pr_frost' };
+PRES_NAMES.forEach((nm, i) => { const n = i + 1, col = PRES_COL[i];
+  COSM.push({ id: 'pr_bn_' + n, name: `P${n} · ${nm}`, kind: 'banner', r: n < 4 ? 1 : n < 8 ? 2 : 3, pres: n, g: { t: n < 4 ? 'grad' : n < 8 ? 'rays' : 'stars', c: n < 4 ? ['#0d1a0d', '#1f3a1a', col] : n < 8 ? ['#0b1410', col] : ['#05040b', col, '#1a3a1a'], em: ['leaf', col, '#0b0c0d', String(n)] } }); });
+COSM.push({ id: 'pr_chrome', name: 'GREENHOUSE CHROME', kind: 'skin', r: 2, pres: 3, g: { t: 'solid', c: [0x2f8a4a], fx: 'brushed' }, m: { rough: 0.12, metal: 0.95 } });
+COSM.push({ id: 'pr_resin', name: 'AMBER RESIN', kind: 'skin', r: 3, pres: 6, g: { t: 'solid', c: [0xa8541a], fx: 'bands' }, m: { rough: 0.18, metal: 0.25 } });
+COSM.push({ id: 'pr_frost', name: 'FROSTED TRICHOME', kind: 'camo', r: 3, pres: 10, g: { t: 'hex', c: [0xe8f2ea, 0xcfe3d4, 0xf8fff9, 0xb8d4c0], line: 0x7fd16b, glowLine: true }, m: { rough: 0.3, metal: 0.5 } });
 const COS = Object.fromEntries(COSM.map(c => [c.id, c]));
 const LEVEL_ITEM = Object.fromEntries(COSM.filter(c => c.lvl).map(c => [c.lvl, c.id]));
-const BOX_POOL = COSM.filter(c => !c.lvl && c.kind !== 'sticker' && !c.secret && !c.bp);   // battle pass items never drop from boxes
+const BOX_POOL = COSM.filter(c => !c.lvl && c.kind !== 'sticker' && !c.secret && !c.bp && !c.pres);   // battle pass items never drop from boxes
 
 /* ---------- saved progress */
 const progBlank = () => ({ v: 1, xp: 0, dz: 0, owned: {}, equip: { all: null, guns: {} }, stk: { all: null, guns: {} }, chm: { all: null, guns: {} }, banner: 'bn_default', daily: { last: '', streak: 0 }, boxes: 0, drops: [], lastGain: null, init: false });
@@ -307,7 +316,7 @@ if (!PROG.init) {
 
 /* ---------- match XP (called when a match is filed in the career) */
 function progMatchXP(won, partial) {
-  if (!MS || G.bench) return null;
+  if (!MS || G.bench || (M && M.mode === 'range')) return null;
   const online = !!(M && M.online), rows = [];
   const add = (label, n) => { if (n > 0) rows.push([label, Math.round(n)]); };
   add('KILLS ×' + MS.kills, MS.kills * 100);
@@ -341,7 +350,8 @@ ${up ? `<div class="pg-res-up">+${gain.dz} DZ${gain.items.map(id => ` · <i styl
 // level badge + XP bar + DZ for the player cards
 function progCardHtml() {
   const i = lvlInfo(PROG.xp);
-  return `<div class="pg-card"><span class="pg-badge">${i.l}</span><div class="pg-cardr"><div class="pg-bar sm"><s style="width:${i.frac * 100}%"></s></div><small>${i.l >= MAXLVL ? 'MAX LEVEL' : `${i.into.toLocaleString()} / ${i.need.toLocaleString()} XP`}</small></div><span class="pg-dz">${dzIcon()}${PROG.dz.toLocaleString()}</span></div>`;
+  const pr = PROG.pres | 0;
+  return `<div class="pg-card">${pr ? `<span class="pg-pres" title="PRESTIGE ${pr}" style="background-image:url(${presEmblem(pr)})"></span>` : ''}<span class="pg-badge">${i.l}</span><div class="pg-cardr"><div class="pg-bar sm"><s style="width:${i.frac * 100}%"></s></div><small>${i.l >= MAXLVL ? (pr < PRES_MAX ? '<button class="pg-presbtn" data-act="pr-open">PRESTIGE ' + (pr + 1) + ' READY</button>' : 'MAX PRESTIGE · MAX LEVEL') : `${i.into.toLocaleString()} / ${i.need.toLocaleString()} XP`}</small></div><span class="pg-dz">${dzIcon()}${PROG.dz.toLocaleString()}</span></div>`;
 }
 const dzIcon = () => '<i class="dzi">DZ</i>';
 
@@ -500,6 +510,7 @@ function stickerPaint(c, N) {
     text: badge, star: () => star(64, 66, 54, 22), bolt: () => P([[72, 8], [26, 72], [58, 72], [46, 120], [102, 50], [68, 50]]), target: () => { x.beginPath(); x.arc(64, 64, 52, 0, Math.PI * 2); },
     skull, spade, flame: () => flame(1), shield, wings: () => { x.beginPath(); wing(1); x.fill(); wing(-1); x.fill(); x.beginPath(); x.arc(64, 72, 16, 0, Math.PI * 2); },
     rad: () => { x.beginPath(); x.arc(64, 64, 54, 0, Math.PI * 2); }, eye: () => { x.beginPath(); x.moveTo(8, 64); x.quadraticCurveTo(64, 10, 120, 64); x.quadraticCurveTo(64, 118, 8, 64); x.closePath(); },
+    leaf: () => { x.beginPath(); for (let i = -3; i <= 3; i++) { const a = i * 0.42; x.ellipse(64 + Math.sin(a) * 40 * (1 - Math.abs(i) * 0.12), 96 - Math.cos(a) * 40 * (1 - Math.abs(i) * 0.12), 10, 42 * (1 - Math.abs(i) * 0.13), a, 0, Math.PI * 2); x.closePath(); } x.rect(60, 92, 8, 30); },
     crown, dz: hex, phoenix: () => { x.beginPath(); wing(1); x.fill(); wing(-1); x.fill(); flame(0.6, 10); }, gem,
   }[g.d] || (() => star(64, 64, 54, 22));
   // border: the silhouette, fat white stroke
@@ -520,6 +531,7 @@ function stickerPaint(c, N) {
   else if (g.d === 'eye') { x.beginPath(); x.arc(64, 64, 24, 0, Math.PI * 2); x.fill(); x.fillStyle = A; x.beginPath(); x.arc(64, 64, 11, 0, Math.PI * 2); x.fill(); x.fillStyle = '#ffffff'; x.beginPath(); x.arc(56, 56, 5, 0, Math.PI * 2); x.fill(); }
   else if (g.d === 'crown') { for (const [cx, cy] of [[14, 38], [64, 26], [114, 38]]) { x.beginPath(); x.arc(cx, cy, 7, 0, Math.PI * 2); x.fill(); } x.fillRect(22, 80, 84, 8); }
   else if (g.d === 'dz') { x.fillStyle = B; T('DZ', 44, 66); }
+  else if (g.d === 'leaf') { x.save(); x.translate(64, 96); x.scale(0.62, 0.62); x.translate(-64, -96); x.beginPath(); for (let i = -3; i <= 3; i++) { const a = i * 0.42; x.ellipse(64 + Math.sin(a) * 40 * (1 - Math.abs(i) * 0.12), 96 - Math.cos(a) * 40 * (1 - Math.abs(i) * 0.12), 10, 42 * (1 - Math.abs(i) * 0.13), a, 0, Math.PI * 2); x.closePath(); } x.fill(); x.restore(); if (g.txt) { x.fillStyle = '#ffffff'; x.strokeStyle = '#000000'; x.lineWidth = 6; x.font = '900 34px Arial, sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.strokeText(g.txt, 64, 74); x.fillText(g.txt, 64, 74); } }
   else if (g.d === 'gem') { x.globalAlpha = 0.55; P([[46, 24], [64, 44], [30, 44]]); x.fill(); P([[82, 24], [98, 44], [64, 44]]); x.fill(); P([[64, 44], [98, 44], [64, 110]]); x.fill(); x.globalAlpha = 1; }
   x.restore();
   return { cc: cv, ec: null };
@@ -724,8 +736,8 @@ const secretKey = (id, gun) => id + '@' + gun;
 function ownsFor(id, gunId) { const c = COS[id]; return !!c && ((c.secret && !c.universal) || c.grind ? !!PROG.owned[secretKey(id, gunId)] : !!PROG.owned[id]); }
 function camoFor(gunId) { const own = PROG.equip.guns && PROG.equip.guns[gunId]; if (own === 'none') return null; const id = own || PROG.equip.all; if (!id || !COS[id]) return null; if (((COS[id].secret && !COS[id].universal) || COS[id].grind) && own !== id) return null; return ownsFor(id, gunId) ? id : null; }
 function refreshHeldCamos() { try { (WEAPONS || []).forEach((w, i) => { if (gunObjs[i] && w && w.def) { applyCamo(gunObjs[i], camoFor(w.def.id)); applySticker(gunObjs[i], stickerFor(w.def.id)); applyCharm(gunObjs[i], charmFor(w.def.id)); } }); } catch (e) {} }
-const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]] && !COS[k.split('@')[0]].grind).length;
-const publicCount = () => COSM.filter(c => !c.secret && !c.grind).length;
+const ownedCount = () => Object.keys(PROG.owned).filter(k => COS[k.split('@')[0]] && !COS[k.split('@')[0]].grind && !COS[k.split('@')[0]].pres).length;
+const publicCount = () => COSM.filter(c => !c.secret && !c.grind && !c.pres).length;
 
 /* ---------- weapon pictures for the Locker (rendered one per frame, cached per gun + camo + sticker) */
 const THUMB = { cache: {}, q: [], scene: null, cam: null, rt: null, buf: null };
@@ -814,7 +826,7 @@ const cosmSwatch = (id, N = 64) => { try { return cosmCanvas(id, N).cc.toDataURL
 const SWATCH = {};
 function swatchUrl(id) { return SWATCH[id] || (SWATCH[id] = cosmSwatch(id, 72)); }
 function lockerGuns() { return ARMORY.filter(d => CATS[d.cat] && (CATS[d.cat].slot === 'primary' || CATS[d.cat].slot === 'secondary')); }
-function howToGet(c) { return c.lvl ? 'REACH LEVEL ' + c.lvl : 'FOUND IN CHANCE BOXES'; }
+function howToGet(c) { if (c.pres) return 'REACH PRESTIGE ' + c.pres; return c.lvl ? 'REACH LEVEL ' + c.lvl : 'FOUND IN CHANCE BOXES'; }
 const kindName = c => c.secret ? 'CAMO' : ({ camo: 'CAMO', skin: 'SKIN', sticker: 'STICKER', charm: 'CHARM', banner: 'BANNER' })[c.kind] || 'ITEM';
 function openLocker() {
   if (curScreen !== 'locker' && curScreen !== 'rewards') LK.ret = curScreen || 'lobby';

@@ -22,7 +22,7 @@ function statKillAt(x, z, head, boom) {
   const w = WEAPONS[G.cur], d = Math.hypot(x - P.x, z - P.z);
   MS.kills++; if (head) MS.heads++; MS.streak++; MS.bestStreak = Math.max(MS.bestStreak, MS.streak); MS.longest = Math.max(MS.longest, d);
   if (w) { const s = wstat(w.def.id); s.kills++; if (head) s.heads++; }
-  try { grindKill(head, d, boom); } catch (err) { reportError(err); }
+  if (!(M && M.mode === 'range')) try { grindKill(head, d, boom); } catch (err) { reportError(err); }
 }
 function statDeath() { if (!MS.active || G.bench) return; MS.deaths++; MS.streak = 0; }
 // won: 1 win, 0 draw, -1 loss; null for Survival (no winner)
@@ -30,6 +30,8 @@ function statDeath() { if (!MS.active || G.bench) return; MS.deaths++; MS.streak
 function statModeKey() { if (!M) return 'surv'; if (M.online) { const k = Object.keys(MODES).find(k => MODES[k] === M.def); if (k) return k; } return M.mode; }
 function finishMatchStats(won) {
   if (!MS.active || G.bench) return; MS.active = false;
+  if (M && M.mode === 'range') return;   // the firing range counts for nothing
+  try { wkMatch(won, false); } catch (e) { reportError(e); }
   const st = careerOf(M.online), mode = statModeKey();
   st.matches++; if (won === 1) st.wins++; else if (won === -1) st.losses++; else if (won === 0) st.draws++;
   for (const k of ['kills', 'deaths', 'heads', 'shots', 'hits', 'time', 'plants', 'defuses', 'caps', 'returns', 'hpTime']) st[k] += MS[k];
@@ -45,6 +47,8 @@ function finishMatchStats(won) {
 // two minutes or more of play still counts as a match played (no win or loss)
 function commitPartialStats() {
   if (!MS.active || G.bench) return; MS.active = false;
+  if (M && M.mode === 'range') return;
+  try { wkMatch(null, true); } catch (e) { reportError(e); }
   if (!MS.kills && !MS.deaths && !MS.shots && MS.time < 10) return;
   const st = careerOf(M.online), mode = statModeKey(), played = MS.time >= 120;
   if (played) st.matches++;

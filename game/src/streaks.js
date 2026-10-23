@@ -53,7 +53,7 @@ function stkUse() {
   if (!stkOn() || !STK.have.length || !(G.state === 'playing')) return;
   if (STK.useCd > 0) { showBanner('SCORESTREAK COOLING DOWN', `ready in ${Math.ceil(STK.useCd)} s`); return; }
   const id = STK.have.pop(), en = () => enemies.filter(e => !isFriend(e) && (!e.entry || e.entry.alive !== false));
-  sfx.ui(); STK.useCd = STK_USE_CD; STK.cd[id] = STREAKS[id].cd;
+  sfx.ui(); STK.useCd = STK_USE_CD; STK.cd[id] = STREAKS[id].cd; if (MS && MS.active) MS.streaks = (MS.streaks | 0) + 1;
   if (id === 'uav' || id === 'vuav') { STK.uavT = Math.max(STK.uavT, id === 'vuav' ? 35 : 25); STK.vuav = STK.vuav || id === 'vuav'; showBanner(STREAKS[id].name + ' ONLINE', 'enemies revealed'); stkRadio(); }
   else if (id === 'supply') { for (const w of WEAPONS) if (w) { w.ammo = w.magSize; w.reserve = w.reserveMax; } G.grenades = EQUIP[G.equip].count; G.health = G.maxHp; showBanner('SUPPLY DROP', 'ammo, grenades and health refilled'); sfx.pickup(); }
   else if (id === 'armor') { G.maxHp += 40; G.health = Math.min(G.maxHp, G.health + 40); showBanner('BODY ARMOR', '+40 health until you die'); sfx.pickup(); }
