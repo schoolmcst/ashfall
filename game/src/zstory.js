@@ -114,6 +114,8 @@ function zsMake(it) {
   else if (K === 'pallet') { add(new THREE.BoxGeometry(1.2, 0.14, 1.0), new THREE.MeshStandardMaterial({ color: 0x8a6a40, roughness: 1 }), 0, 0.07, 0); for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(1.1, 0.42, 0.92), new THREE.MeshStandardMaterial({ color: 0x4a1a70, roughness: 0.4, emissive: new THREE.Color(0x3a0a6a), emissiveIntensity: 0.7, transparent: true, opacity: 0.92 }), 0, 0.36 + i * 0.44, 0); add(new THREE.BoxGeometry(0.5, 0.2, 0.01), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0.2, 0.5, 0.47); }
   else if (K === 'formula') { col = 0x4adf5a; add(new THREE.BoxGeometry(0.3, 0.02, 0.22), new THREE.MeshStandardMaterial({ color: 0xd8ccaa, roughness: 1 }), 0, 0.01, 0); add(new THREE.CylinderGeometry(0.035, 0.035, 0.2, 12), new THREE.MeshStandardMaterial({ color: 0x8adf8a, transparent: true, opacity: 0.55, roughness: 0.05, emissive: new THREE.Color(0x2adf4a), emissiveIntensity: 0.8 }), 0.06, 0.11, 0.02); add(new THREE.CylinderGeometry(0.03, 0.03, 0.14, 12), zsGlowMat(0x3aff5a, 1.4), 0.06, 0.08, 0.02); add(new THREE.CylinderGeometry(0.038, 0.038, 0.03, 12), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0.06, 0.22, 0.02); }
   else if (K === 'ledger') { col = 0xd8b060; add(new THREE.BoxGeometry(0.26, 0.05, 0.34), new THREE.MeshStandardMaterial({ color: 0x5a1a1a, roughness: 0.8 }), 0, 0.025, 0); add(new THREE.BoxGeometry(0.24, 0.04, 0.32), new THREE.MeshStandardMaterial({ color: 0xe8dcc0 }), 0.006, 0.026, 0); add(new THREE.BoxGeometry(0.1, 0.004, 0.04), zsGlowMat(col, 1.0), 0, 0.053, -0.1); }
+  else if (K === 'patch') { const soil = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 1 }), leaf = new THREE.MeshStandardMaterial({ color: 0x5a2a7a, emissive: new THREE.Color(0x7a2cff), emissiveIntensity: 0.7, roughness: 0.7, side: THREE.DoubleSide }); add(new THREE.CylinderGeometry(0.9, 1.0, 0.18, 14), soil, 0, 0.09, 0);
+    for (let i = 0; i < 5; i++) { const a = i / 5 * TAU, x = Math.cos(a) * 0.5, z = Math.sin(a) * 0.5; add(new THREE.ConeGeometry(0.22, 1.1, 6), leaf, x, 0.7, z); for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(0.4, 0.01, 0.12), leaf, x + Math.cos(k * 1.6) * 0.2, 0.45 + k * 0.12, z + Math.sin(k * 1.6) * 0.2).rotation.y = k * 1.6; } }
   if (K === 'fuse' || K === 'tape' || K === 'valve') for (const m of g.children) { m.scale.multiplyScalar(2); m.position.multiplyScalar(2); }
   const beam = add(new THREE.CylinderGeometry(0.12, 0.25, 2.2, 10, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }), 0, 1.1, 0);
   const lt = new THREE.PointLight(col, 0.7, 3.5, 2); lt.position.y = 0.4; g.add(lt);
@@ -198,7 +200,7 @@ function zsPower() { if (zsFuses() < 3) return; zsFlag('power'); try { tone(60, 
 // the power: the flickering lights steady and the fuse box goes green
 function zsApplyPower() {
   if (ZS.fusebox) for (const m of ZS.fusebox.slots) m.material.emissive.setHex(0x2adf4a);
-  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); zmapPowerPads(); } catch (e) {}
+  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); if (curMap === 'mauiwowie') islePower(); zmapPowerPads(); } catch (e) {}
   if (curMap === 'blackwell' && typeof HOSP !== 'undefined' && HOSP.flick) for (const f of HOSP.flick) { f.l.intensity = f.i * 1.15; f.t = 1e9; f.on = true; }
 }
 const ZS_SAY = {
