@@ -4,11 +4,12 @@ const NEWS = [
 "v": "1.2.40",
 "d": "2026-10-23",
 "n": [
+"ZOMBIES RUNS MUCH SMOOTHER: the zombies maps had 40 to 80 real lights and every one cost every pixel every frame. Now only the 12 that matter most near you are real at any moment and they hand over as you move - it looks the same and runs much lighter, especially on Macs and laptops.",
+"LESS FREEZING: no more hitches when you pick up story items or a boss appears; the zombies' route to you no longer rebuilds every half metre you move (a stutter when sprinting) and reuses its memory (no garbage-collection pauses); zombie and boss shaders are prepared at the start; shadows in zombies are redrawn every other frame; fire and smoke on THE WORKS only run near you.",
+"MACS AND LAPTOPS: base Apple M1/M2/M3 chips and Intel/AMD built-in graphics now get the MEDIUM preset automatically (they were getting HIGH). If you set your graphics yourself, nothing changes.",
 "ZOMBIES VOICE LINES: the survivors talk much less - at least 25 seconds between lines, lines never pile up behind each other (teammates' too), and every kind of line waits longer before it comes again. Going down, perks and the upgrader still always get a line.",
 "VOICE SETTINGS moved to SETTINGS > AUDIO: a ZOMBIES VOICE LINES switch and a VOICE LINES VOLUME slider. Story scenes still show subtitles when voices are off.",
-"PLAY WITH OR WITHOUT THE STORY: a new MODE row in the zombies lobby - STORY or CLASSIC (just the rounds: no quests, boss or scenes, and the launch pads work from the start). In co-op the host picks.",
-"LESS FREEZING: the zombies' route to you was rebuilt for every half metre you moved (up to 25 ms each on the hospital, a stutter when sprinting). Now it updates every metre or so and reuses its memory, so there are no more garbage-collection pauses.",
-"SMOOTHER ON MACS AND LAPTOPS: base Apple M1/M2/M3 chips and Intel/AMD built-in graphics now get the MEDIUM preset automatically (they were getting HIGH). If you set your graphics yourself, nothing changes. Zombie and boss shaders are prepared at the start, so the first zombie and the boss no longer hitch, and fire and smoke on THE WORKS only run near you."
+"PLAY WITH OR WITHOUT THE STORY: a new MODE row in the zombies lobby - STORY or CLASSIC (just the rounds: no quests, boss or scenes, and the launch pads work from the start). In co-op the host picks."
 ]
 },
 {
