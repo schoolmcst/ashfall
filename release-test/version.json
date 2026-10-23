@@ -1,9 +1,8 @@
 {
- "version": "1.2.50",
+ "version": "1.2.51",
  "notes": [
-  "NEW MODE: CONTACT HIGH (infected). Everyone starts as a survivor, then one player turns. The infected glow green, have no guns, run faster and kill with one hit up close - and anyone they get joins them. Survive 5 minutes, or spread it to everyone. Offline with bots, online and in private matches.",
-  "NEW MODE: BACK ALLEY (2v2 gunfight). Two against two, one life a round, 40 seconds. Everyone gets the SAME random loadout (new every two rounds); when time runs out the team with more health left wins. First to 6 rounds. Offline, online and in private matches."
+  "NEW MAP: THE GREENHOUSE. An indoor grow operation: a glass greenhouse full of grow benches under purple lamps (low cover, plants to hide behind, some panes broken out), a drying barn with buds hanging on racks and a mezzanine at each end, and a loading dock with a box truck on the flank. Works in every multiplayer mode, offline and online, and in map voting."
  ],
- "sha256": "d10096d9450fa6dda9e10306ca771bb4cac4c1b8434494292a2184e442dcf49d",
+ "sha256": "8896f23f7914fba61b0ee9fdd0cc3cf5349f3b5882dd567d8593d4a9ba03d107",
  "minApp": "1.0.0"
 }
