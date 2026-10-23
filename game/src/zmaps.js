@@ -207,3 +207,48 @@ function zmapRound() {
   if (curMap !== 'works') return;
   try { for (const [d, f] of [[0, 1], [1.6, 1], [3.2, 1]]) setTimeout(() => { tone(196, 3.2, 0.13, 'sine'); tone(392, 2.2, 0.06, 'sine'); tone(588, 1.4, 0.03, 'triangle'); }, d * 1000); } catch (e) {}
 }
+
+/* ---------- light pool: the zombies maps have 40-80 lamps, candles, fires and glows. Every point light in the scene
+   costs every lit pixel every frame, and adding or removing one recompiles every shader (a hitch). So in zombies only
+   ZL_POOL real lights exist, never added or removed; each fraction of a second they take the place of the lamps that
+   matter most near you (bright and close). The map's own lights stay as "virtual" lights: they keep flickering and the
+   pool copies them. Lights made later (items, the boss) are adopted by a rescan. */
+const ZL_POOL = 8;
+const ZLP = { on: false, pool: [], virt: [], t: 0, scanT: 0 };
+const zlpSkip = l => l === muzzleLight || l === enemyFlashLight || ZLP.pool.includes(l);
+function zlpAdopt() {
+  const found = [];
+  scene.traverse(o => { if (o.isPointLight && !zlpSkip(o) && o.parent) found.push(o); });
+  for (const l of found) { const par = l.parent; par.remove(l); ZLP.virt.push({ l, par, w: new THREE.Vector3() }); }
+}
+function zlpStart() {
+  zlpStop();
+  ZLP.pool = []; for (let i = 0; i < ZL_POOL; i++) { const l = new THREE.PointLight(0xffffff, 0, 10, 2); scene.add(l); ZLP.pool.push(l); }
+  ZLP.on = true; ZLP.map = curMap; ZLP.virt = []; zlpAdopt(); ZLP.t = 0; ZLP.scanT = 1; zlpAssign();
+}
+// give the lights back (the map may be reused by another mode) and remove the pool
+function zlpStop() {
+  if (!ZLP.on) return; ZLP.on = false; try { renderer.shadowMap.autoUpdate = true; } catch (e) {}
+  if (ZLP.map === curMap) for (const v of ZLP.virt) if (v.par && !v.l.parent && (v.par !== scene || worldObjs.includes(v.l))) v.par.add(v.l);
+  ZLP.virt = []; for (const l of ZLP.pool) scene.remove(l); ZLP.pool = [];
+}
+const zlpLive = o => { while (o) { if (o === scene) return true; o = o.parent; } return false; };
+function zlpAssign() {
+  const cx = camera.position.x, cy = camera.position.y, cz = camera.position.z, cand = [];
+  for (let i = ZLP.virt.length - 1; i >= 0; i--) {
+    const v = ZLP.virt[i]; if (!zlpLive(v.par)) { ZLP.virt.splice(i, 1); continue; }   // its object left the scene (an item picked up, a dead boss)
+    v.par.updateWorldMatrix(true, false); v.w.copy(v.l.position).applyMatrix4(v.par.matrixWorld);
+    const d2 = (v.w.x - cx) ** 2 + (v.w.y - cy) ** 2 * 1.5 + (v.w.z - cz) ** 2, R = (v.l.distance || 12) + 6;
+    if (d2 > R * R * 4) continue;
+    v.score = Math.max(0.05, v.l.intensity) * (v.l.distance || 12) / (1 + d2); cand.push(v);
+  }
+  cand.sort((a, b) => b.score - a.score);
+  ZLP.pool.forEach((l, i) => { const v = cand[i]; l.userData.v = v || null; if (!v) { l.intensity = 0; return; } l.position.copy(v.w); l.color.copy(v.l.color); l.distance = v.l.distance; l.decay = v.l.decay; l.intensity = v.l.intensity; });
+}
+function zlpTick(dt) {
+  if (!ZLP.on) return;
+  try { const sm = renderer.shadowMap; sm.autoUpdate = false; ZLP.f = (ZLP.f || 0) + 1; if (ZLP.f % 2 === 0) sm.needsUpdate = true; } catch (e) {}   // shadows redrawn every other frame
+  if ((ZLP.scanT -= dt) <= 0) { ZLP.scanT = 1; zlpAdopt(); }
+  if ((ZLP.t -= dt) <= 0) { ZLP.t = 0.12; zlpAssign(); return; }
+  for (const l of ZLP.pool) { const v = l.userData.v; if (v) { l.intensity = v.l.intensity; if (v.par !== scene) { v.par.updateWorldMatrix(true, false); l.position.copy(v.l.position).applyMatrix4(v.par.matrixWorld); } } }   // flicker, moving lights
+}

@@ -573,7 +573,7 @@ function tick(dt) {
   try { rpTick(dt); } catch (e) {}
   if (G.holdT > 0 && M && !G.bench && G.state !== 'over' && G.state !== 'plobby') updateHold(dt);
   skyMat.uniforms.time.value += dt; sky.position.copy(camera.position);
-  updateGrain(dt); updateAmbience(NOW); updateFires(dt, NOW); if (typeof hospFlicker === 'function') hospFlicker(dt); if (typeof audioTick === 'function') audioTick(dt); if (typeof zpTick === 'function' && M && M.mode === 'zomb') zpTick(dt);
+  updateGrain(dt); updateAmbience(NOW); updateFires(dt, NOW); if (typeof hospFlicker === "function") hospFlicker(dt); if (typeof ZLP !== "undefined" && ZLP.on && G.state !== "playing") renderer.shadowMap.autoUpdate = true; if (typeof audioTick === 'function') audioTick(dt); if (typeof zpTick === 'function' && M && M.mode === 'zomb') zpTick(dt);
   fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5) { if (S.showFps) $('fps').textContent = Math.round(fpsN / fpsAcc) + ' FPS' + (S.dynRes && DR.scale < 0.999 ? `  ·  RES ${Math.round(DR.scale * 100)}%` : ''); fpsAcc = 0; fpsN = 0; }
   if (G.state === 'playing') {
     G.time += dt;

@@ -106,10 +106,11 @@ function zdInit() {
   ZD.list = ZDOORS.map(d => zdAdd(d, false)).concat(ZWALLS.map(d => zdAdd(d, true)));
   ZD.open.clear(); ZD.mine.clear(); ZD.pts = null;
   ZD.up = zuBuild(); ZD.arrows = zdArrows(); try { zpBuild(); } catch (e) { reportError(e); } try { zsBuild(); } catch (e) { reportError(e); } try { zmapBuildPads(); } catch (e) { reportError(e); }
+  try { zlpStart(); } catch (e) { reportError(e); }
   boxGridDirty = true; buildNav(); SPAWNS = null;
 }
 function zdClear(keepNav) {
-  zuRestore(); try { zpClear(); } catch (e) {} try { zsClear(); } catch (e) {} try { zmapClearPads(); } catch (e) {}
+  zuRestore(); try { zpClear(); } catch (e) {} try { zsClear(); } catch (e) {} try { zmapClearPads(); } catch (e) {} try { zlpStop(); } catch (e) {}
   if (ZD.arrows) { scene.remove(ZD.arrows); ZD.arrows = null; }
   if (!ZD.list.length && !ZD.up) return;
   for (const o of ZD.list) zdRemove(o); ZD.list = []; ZD.anim.length = 0;
@@ -213,7 +214,7 @@ function zuApply() {
 }
 function zuNear() { const s = ZU_SPOT; return ZD.up && Math.hypot(P.x - s.x, P.z - s.z) < 2.4 && Math.abs((P.y || 0) - s.y) < 1.5; }
 function zdTick(dt) {
-  zdAnim(dt); try { worksTick(dt); zmapTick(dt); } catch (e) { reportError(e); }
+  zdAnim(dt); try { worksTick(dt); zmapTick(dt); zlpTick(dt); } catch (e) { reportError(e); }
   if (ZD.up) { const u = ZD.up, busy = u.t > 0; u.g.userData.beam.material.opacity = 0.08 + Math.sin(NOW * 3) * 0.04; if (busy) u.t -= dt;
     u.ring.rotation.y += dt * (busy ? 9 : 0.8); u.core.material.emissiveIntensity = 1.3 + Math.sin(NOW * 4) * 0.4 + (busy ? 2 : 0); u.lt.intensity = 1.4 + Math.sin(NOW * 4) * 0.3 + (busy ? 2.5 : 0); }
   if (ZD.arrows) ZD.arrows.userData.mat.opacity = 0.85 + Math.sin(NOW * 3) * 0.15;

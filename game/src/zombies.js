@@ -188,8 +188,13 @@ function zombThink(e, i, dt) {
     if (!e.hitDone && e.atkT < 0.3) { e.hitDone = true; if (dist < 1.75 && up) { if (!T.me) zcSwing(T.peer, 34, e); else if (G.state === 'playing' || G.state === 'paused') { G.killer = null; hurtPlayer(34, g.position.x, g.position.z); try { sfx.melee && sfx.melee(); } catch (err) {} } } }
   } else {
     if (e.avoidT > 0) { e.avoidT -= dt; mx = -nz * e.avoidDir + nx * 0.3; mz = nx * e.avoidDir + nz * 0.3; }
-    else if (gridClear(g.position.x, g.position.z, T.x, T.z, g.position.y, T.y)) { mx = nx + -nz * e.lurch * 0.3; mz = nz + nx * e.lurch * 0.3; }
-    else { const nd = T.me ? navDir(g.position.x, g.position.z, g.position.y) : flowDir(flowField(T.x, T.z, T.y), g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
+    else if ((e.navT = (e.navT || 0) - dt) > 0 && e.mvx !== undefined) { mx = e.mvx; mz = e.mvz; }   // re-plan a few times a second (every frame when close)
+    else {
+      e.navT = dist < 6 ? 0 : 0.14 + Math.random() * 0.08;
+      if (gridClear(g.position.x, g.position.z, T.x, T.z, g.position.y, T.y)) { mx = nx + -nz * e.lurch * 0.3; mz = nz + nx * e.lurch * 0.3; }
+      else { const nd = T.me ? navDir(g.position.x, g.position.z, g.position.y) : flowDir(flowField(T.x, T.z, T.y), g.position.x, g.position.z, g.position.y); if (nd) { mx = nd[0]; mz = nd[1]; } else { mx = nx; mz = nz; } }
+      e.mvx = mx; e.mvz = mz;
+    }
     if (dist < 1.3 && up) { mx = mz = 0; if (!(e.stunT > 0)) e.atkCd -= dt; if (e.atkCd <= 0 && !(e.stunT > 0)) { if (Math.random() < 0.6) try { sfx.zscreech(at(g.position.x, g.position.z, 14, g.position.y)); } catch (err) {} e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.7, 1.1); } }
   }
   const ml = Math.hypot(mx, mz), slow = (e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.45 : 1;
