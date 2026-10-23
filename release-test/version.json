@@ -1,11 +1,10 @@
 {
- "version": "1.2.43",
+ "version": "1.2.44",
  "notes": [
-  "STRAY ROUNDS: every 5th round in zombies, only STRAYS come - junkie dogs that got into the Nightshade stash. Fast, low to the ground, purple eyes, they bite. The fog thickens while they hunt, and the last stray drops a RE-UP.",
-  "NEW ZOMBIES: FIENDS (from round 4) crawl along the floor - low and easy to miss. BLOATERS (from round 6) are swollen with Nightshade and burst into a cloud of smoke when they die - don't stand in it.",
-  "BARRICADED WINDOWS: both zombies maps now have boarded windows in the outer walls (4 in the hospital, 6 at THE WORKS). Some zombies come in through them - they tear the boards off one by one, then climb in. Hold USE at a window to nail boards back on for 10 points a board. THE FIXER power-up boards up every window.",
-  "Co-op: strays, fiends, bloaters and the window boards are shared with everyone."
+  "WONDER WEAPONS: each zombies map has one. THE BONG CANNON (hospital) lobs a glowing ball of green smoke that bursts - zombies near it drop, the ones around it are stunned. THE PRESSURE GUN (THE WORKS) blasts a cone of steam that throws back and wrecks everything in front of you. Both are rare from the mystery crate (from round 3), and finishing a map's story gives you its wonder weapon. They work with the gun upgrader too.",
+  "ZOMBIES STATS: your best round, best score, zombie kills, games and finished stories are now kept for each zombies map and shown in the lobby.",
+  "FRIENDS LEADERBOARD: a new ZOMBIES tab shows the best round on each zombies map, zombie kills and stories finished for you and your friends."
  ],
- "sha256": "e312698fcca572344271847258ccb0a61047797c8641ce0225cc3ce9fd100faa",
+ "sha256": "c9be467e4fdafd363e683868c26737562c669b0b2a08cf817ef0748cd97ee4d5",
  "minApp": "1.0.0"
 }

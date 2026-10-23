@@ -199,6 +199,7 @@ function shoot(moving) {
   if (w.stealth) sfx.suppressed(w.pellets > 1); else sfx.gun(w.sfxP);
   const rm = w.rum || [0.1, 0.4, 60]; rumble(rm[0], rm[1], rm[2]);
   if (u.cylSpin) u.cylBase = (u.cylBase || 0) + TAU / 6;
+  if (w.ww && typeof zwwFire === 'function') { zwwFire(w); return; }   // zombies wonder weapons fire their own way
   if (w.proj) { launchProjectile(w, u); return; }
   if (typeof botsHear === 'function') botsHear(P.x, P.z, M.myTeam, w.stealth ? 14 : 55, 'P');
   const fresh = G.time - (G.lastShotTime || -9) > Math.max(0.22, w.interval * 2.4); G.lastShotTime = G.time;

@@ -176,6 +176,7 @@ function zcStartLocal() {
   zcTeamHud(true);
 }
 function zcGameOver() {
+  try { zstGameOver(); } catch (e) {}
   ZC.inGame = false; ZC.down = false;
   if (zcHost()) ZC.st = 'over';
   if (G.state !== 'playing') G.state = 'playing';

@@ -10,7 +10,7 @@ const pendingSave = () => { try { localStorage.setItem(PENDING_KEY, JSON.stringi
 // what friends see about you
 function socMyCard() {
   const st = careerOf(true), doing = M && M.online && NET.on ? (NET.priv && !NET.priv.started ? 'IN A LOBBY' : 'IN A MATCH · ' + (M.def ? M.def.short.replace(/^ONLINE /, '') : '')) : curScreen === 'lobby' ? 'IN THE LOBBY' : 'IN THE MENUS';
-  return { n: NET.nick, c: MYCODE, d: doing, p: partyMembers().length, s: [st.kills, st.deaths, st.wins, st.matches, Math.round(st.time), st.score] };
+  return { n: NET.nick, c: MYCODE, d: doing, p: partyMembers().length, s: [st.kills, st.deaths, st.wins, st.matches, Math.round(st.time), st.score], z: typeof zstCard === 'function' ? zstCard() : [0, 0, 0, 0] };
 }
 async function socHostInbox() {
   if (!NET.app || SOC.inbox || SOC.busy || performance.now() < SOC.retryT) return;
@@ -32,7 +32,7 @@ async function socPeekAll() {
   if (SOC.peeking || !NET.app) return; SOC.peeking = true;
   for (const f of FRIENDS.slice()) {
     const r = await socPeek(f.c);
-    if (r && r.card) { const cd = r.card.card; f.on = true; f.seen = Date.now(); f.n = cleanNick(cd.n) || f.n; f.d = String(cd.d || '').slice(0, 40); f.s = Array.isArray(cd.s) ? cd.s.map(v => +v || 0).slice(0, 6) : f.s; }
+    if (r && r.card) { const cd = r.card.card; f.on = true; f.seen = Date.now(); f.n = cleanNick(cd.n) || f.n; f.d = String(cd.d || '').slice(0, 40); f.s = Array.isArray(cd.s) ? cd.s.map(v => +v || 0).slice(0, 6) : f.s; f.z = Array.isArray(cd.z) ? cd.z.map(v => +v || 0).slice(0, 4) : f.z; }
     else f.on = false;
     if (r) r.room.leave();
     socRender();
@@ -103,11 +103,18 @@ function socWire() {
 }
 
 /* ---------- friends leaderboard */
-const LB_COLS = { kd: ['K/D', s => s[1] ? s[0] / s[1] : s[0]], kills: ['KILLS', s => s[0]], wins: ['WINS', s => s[2]], wr: ['WIN %', s => s[3] ? s[2] / s[3] * 100 : 0], spm: ['SCORE / MIN', s => s[4] > 30 ? s[5] / (s[4] / 60) : 0] };
+const LB_COLS = { kd: ['K/D', s => s[1] ? s[0] / s[1] : s[0]], kills: ['KILLS', s => s[0]], wins: ['WINS', s => s[2]], wr: ['WIN %', s => s[3] ? s[2] / s[3] * 100 : 0], spm: ['SCORE / MIN', s => s[4] > 30 ? s[5] / (s[4] / 60) : 0], zomb: ['ZOMBIES', (s, z) => (z ? Math.max(z[0], z[1]) * 1e6 + z[2] : 0)] };
 function openLeaderboard() { renderLeaderboard(); showScreen('leaderboard'); SOC.peekT = 0; }
+// the ZOMBIES tab: best round on each zombies map, zombie kills, stories finished
+function renderZombBoard(rows) {
+  $('lbTabs').innerHTML = Object.entries(LB_COLS).map(([k, [l]]) => `<button class="tab${k === SOC.lbSort ? ' on' : ''}" data-lb="${k}">${l}</button>`).join('');
+  $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>BEST · HOSPITAL</th><th>BEST · THE WORKS</th><th>ZOMBIE KILLS</th><th>STORIES DONE</th></tr>` + rows.map((r, i) => { const z = r.z || [0, 0, 0, 0]; return `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>${r.n}${r.on ? '' : ' <small>(offline)</small>'}</td><td>ROUND ${z[0]}</td><td>ROUND ${z[1]}</td><td>${(+z[2] || 0).toLocaleString()}</td><td>${z[3]}</td></tr>`; }).join('') + `</table><div class="net-hint" style="padding:10px 2px">Zombies records of you and your friends, best round first. Friends' numbers update while they are online.</div>`;
+  for (const b of $('lbTabs').children) b.onclick = () => { SOC.lbSort = b.dataset.lb; sfx.ui(); renderLeaderboard(); };
+}
 function renderLeaderboard() {
-  const me = socMyCard(), rows = [{ n: me.n + ' (YOU)', s: me.s, me: true, on: true }, ...FRIENDS.filter(f => Array.isArray(f.s)).map(f => ({ n: f.n, s: f.s, on: f.on }))];
-  const [label, f] = LB_COLS[SOC.lbSort]; rows.sort((a, b) => f(b.s) - f(a.s));
+  const me = socMyCard(), rows = [{ n: me.n + ' (YOU)', s: me.s, z: me.z, me: true, on: true }, ...FRIENDS.filter(f => Array.isArray(f.s)).map(f => ({ n: f.n, s: f.s, z: f.z, on: f.on }))];
+  const [label, f] = LB_COLS[SOC.lbSort]; rows.sort((a, b) => f(b.s, b.z) - f(a.s, a.z));
+  if (SOC.lbSort === 'zomb') return renderZombBoard(rows);
   $('lbTabs').innerHTML = Object.entries(LB_COLS).map(([k, [l]]) => `<button class="tab${k === SOC.lbSort ? ' on' : ''}" data-lb="${k}">${l}</button>`).join('');
   $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>K/D</th><th>KILLS</th><th>WINS</th><th>MATCHES</th><th>WIN %</th><th>SCORE / MIN</th></tr>` + rows.map((r, i) => {
     const s = r.s; return `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td><span class="dot ${r.on ? 'on' : ''}"></span> ${r.n}</td><td>${kdS(s[0], s[1])}</td><td>${s[0]}</td><td>${s[2]}</td><td>${s[3]}</td><td>${pctS(s[2], s[3])}</td><td>${Math.round(LB_COLS.spm[1](s))}</td></tr>`;

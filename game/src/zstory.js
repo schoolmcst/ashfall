@@ -314,7 +314,7 @@ function zsComplete() {
   try { sfx.streak(); } catch (e) {}
   for (const p of ZPERKS) ZP.have.add(p.id); zpApply(); zpHud(true);
   const w = WEAPONS[G.cur]; if (w && Z.up) { Z.up.add(w.def.id); zombEquip(G.cur); }
-  G.points += 5000; zsCheckChapter();
+  G.points += 5000; zsCheckChapter(); try { zstStory(); setTimeout(() => zwwGive(curMap), 4000); } catch (e) {}   // the map's wonder weapon is the reward
   setTimeout(() => zsDialog(ZS_END, () => showBanner(ZS_TEXT.cont, ZS_TEXT.contSub)), 1500);
 }
 // co-op: the host merges what everyone picked up; clients follow the host's flags, boss blood and cooking

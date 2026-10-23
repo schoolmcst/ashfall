@@ -31,7 +31,7 @@ function renderZLobby(focusSel) {
     
     `<div class="cod-row"><small>STARTING GEAR</small><b>SERVICE 9 · 2 FRAGS</b><span>everyone starts the same · 500 points to spend</span></div>` +
     `<div class="cod-row"><small>MYSTERY CRATE · ${Z_BOX} POINTS</small><b>A RANDOM GUN</b><span>AMMO CRATE · ${Z_AMMO} POINTS · full ammo for your guns</span></div>` +
-    `<div class="cod-row"><small>YOUR BEST</small><b>ROUND ${Z.best.round || 0}</b><span>${(Z.best.pts || 0).toLocaleString()} POINTS</span></div>`;
+    `<div class="cod-row"><small>YOUR BEST · ${m ? m.name : ''}</small><b>ROUND ${zstOf(mid).best}</b><span>${zstOf(mid).pts.toLocaleString()} POINTS · ${zstOf(mid).kills.toLocaleString()} KILLS · ${zstOf(mid).games} GAMES${zstOf(mid).story ? ' · STORY DONE ' + zstOf(mid).story + '×' : ''}${zwwFor(mid) ? ' · WONDER WEAPON: ' + zwwFor(mid).name : ''}</span></div>`;
   $('lobRoster').innerHTML = zcRightHtml() +
     `<div class="ros-info"><b>ZOMBIES</b>Survive round after round of the dead. They walk at first, then jog, then run. 10 points a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Press USE (E / X) at the crates and doors to buy. ${zc.info} Purple WALL STASHES sell guns (ammo half price), and zombies sometimes drop POWER-UPS: RE-UP, HOTBOX, DOUBLE BAG, KUSH BOMB, THE FIXER and the 420 SALE.${ZL.net === 'coop' ? ' In co-op, a downed teammate is revived by holding USE next to them.' : ''}</div>`;
   ZC.rosterKey = ''; zcWireLobby(); zcLobbyRefresh(false);
@@ -70,7 +70,7 @@ function zombStart(cfg) {
   const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z);
   Object.assign(Z, { zid: 0, round: 0, toSpawn: 0, spawnT: 0, breakT: ZC.on && ZC.inGame ? 6 : 4, active: false, guns: ['sidearm'], boxT: 0 });
   zombEquip(); G.grenades = 2; G.points = 500; G.score = 0;
-  Z.up = new Set(); zdInit(); zombEquip();
+  Z.up = new Set(); Z.wwOn = new Set(); Z.statDone = false; zdInit(); zombEquip();
   zombCrates();
   zombWarm();
   if (ZC.on && ZC.inGame) zcStartLocal();
@@ -91,7 +91,7 @@ function zombEquip(keepCur) {
   const g = Z.guns, gr = G.grenades; zuRestore();
   equipClass(g.length > 1 ? { p: g[0], s: g[1], e: 'frag', k: 'none', factory: true } : { p: null, s: g[0], e: 'frag', k: 'none', only: g[0], factory: true });
   if (gr !== undefined) G.grenades = gr;
-  zuApply(); zpApply();
+  zuApply(); try { zwwApply(); } catch (e) { reportError(e); } zpApply();
   if (keepCur !== undefined) { G.cur = Math.min(keepCur, WEAPONS.length - 1); gunObjs.forEach((o, i) => { o.visible = i === G.cur; }); }
   el.slots._cur = -1;
 }
@@ -320,6 +320,7 @@ function zombCrateTick(dt) {
 function zombBuyBox() {
   if (Z.boxT > 0) return;
   G.points -= zboxCost(); Z.boxT = 1.4;
+  const ww = zwwFor(curMap); if (ww && Z.round >= 3 && !Z.guns.includes(ww.base) && Math.random() < 0.07) { setTimeout(() => zwwGive(curMap), 900); return; }   // rarely: the map's wonder weapon
   const have = new Set(Z.guns), pool = Z_POOL().filter(d => !have.has(d.id)), d = pool[(Math.random() * pool.length) | 0];
   if (Z.guns.length < 2) Z.guns.unshift(d.id); else Z.guns[G.cur] = d.id;
   zombEquip(Z.guns.indexOf(d.id));
@@ -345,6 +346,7 @@ function zombHud(force) {
 }
 function zombClear() { Z.active = false; Z.crate = Z.ammo = null; zombHud(); try { zdClear(); } catch (e) {} if (typeof ZC !== 'undefined' && ZC.on) { ZC.inGame = false; ZC.down = ZC.dead = false; zcClearProxies(); for (const R of ZC.rem.values()) zcDropAvatar(R); zcTeamHud(true); } }
 function zombDeathText() {
+  try { zstGameOver(); } catch (e) {}
   const nb = Z.round > (Z.best.round || 0) || (Z.round === Z.best.round && G.score > (Z.best.pts || 0));
   if (nb) { Z.best = { round: Z.round, pts: G.score }; try { localStorage.setItem('ashfall.zbest', JSON.stringify(Z.best)); } catch (e) {} }
   $('overStats').textContent = `YOU SURVIVED ${Z.round} ROUND${Z.round === 1 ? '' : 'S'}  ·  KILLS ${G.kills}  ·  SCORE ${G.score}`;
