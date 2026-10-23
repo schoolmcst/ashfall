@@ -61,6 +61,7 @@ const fs = require('fs');
   const s2 = [await st(A), await st(B), await st(C)];
   // shared drop: the host drops ammo at C, C picks it up, everyone gets ammo; and C's shots reach the others
   const before = []; for (const p of pages) before.push(await ev(p, () => { const w = window.__A.W[0]; w.reserve = 0; return 0; }));
+  for (let i = 0; i < 10 && !(await ev(A, () => [...window.__A.ZC.rem.values()].some(r => r.n === 'CHARLIE'))); i++) await A.waitForTimeout(500);
   await ev(A, () => { const A_ = window.__A, R = [...A_.ZC.rem.values()].find(r => r.n === 'CHARLIE'); A_.zcDrop(R.x + 3, R.z, R.y); });
   await A.waitForTimeout(2500);
   const seen = await ev(C, () => window.__A.pickups ? window.__A.pickups.filter(k => k.sid).length : -1);
