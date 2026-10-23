@@ -276,12 +276,13 @@ function checkScoreLimit() {
 }
 
 /* ---------- bots */
-const _bt = new THREE.Vector3(), _bd = new THREE.Vector3();
+const _bt = new THREE.Vector3(), _bd = new THREE.Vector3(), _bv2 = new THREE.Vector3();
 function botEye(e, out) { const s = e.group.userData.scale || e.rig.root.userData.scale || 1; return out.set(e.group.position.x, e.group.position.y + (1.45 - 0.4 * (e.crouchK || 0)) * s, e.group.position.z); }
 function targetPoint(t, out) { if (t === 'P') return out.set(P.x, P.y + P.eye * 0.8, P.z); return botEye(t, out).setY(out.y - 0.25); }
 function losTo(e, t) {
   botEye(e, _bt); targetPoint(t, _bd); _bd.sub(_bt); const d = _bd.length(); _bd.normalize();
-  raycaster.set(_bt, _bd); raycaster.far = d - 0.3; return raycaster.intersectObjects(wallMeshes, false).length === 0;
+  raycaster.set(_bt, _bd); raycaster.far = d - 0.3; if (raycaster.intersectObjects(wallMeshes, false).length) return false;
+  return !(SMK.clouds.length && smokeBlocks(_bt, targetPoint(t, _bv2)));
 }
 function tpos(t) { return t === 'P' ? { x: P.x, y: P.y, z: P.z } : t.group.position; }
 function botValidTarget(e, t) { if (t === 'P') return playerAlive() && e.team !== M.myTeam && !(G.spawnProt > 0); return enemies.includes(t) && t.team !== e.team; }

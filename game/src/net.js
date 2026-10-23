@@ -132,7 +132,7 @@ const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, cm: typeof CHAT !== 'undefined' && CHAT.mine.all.length ? CHAT.mine.all.slice() : undefined, bn: typeof bannerFor === 'function' ? bannerFor() : '', lv: typeof lvlInfo === 'function' ? lvlInfo(PROG.xp).l : 1, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
-    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
+    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { if (NET.on) NET.sh++; if (typeof ZC !== 'undefined' && ZC.on) ZC.sh++; }
@@ -228,7 +228,7 @@ function netTick(dt) {
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
     if (!pr.bot) chatIngest('all', p.peer, R.entry.name, pr.cm);
     R.bn = typeof pr.bn === 'string' && COS[pr.bn] && COS[pr.bn].kind === 'banner' ? pr.bn : ''; R.lv = netNum(pr.lv, 1, 100, 1);
-    R.cj = pr.cj ? 1 : 0; R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
+    R.cj = pr.cj ? 1 : 0; R.mv = typeof pr.mv === 'string' ? pr.mv : ''; if (pr.ho && !pr.bot && !isHost) NET.voHost = Array.isArray(pr.vo) && pr.vo.every(id => MAPS[id]) ? pr.vo.slice(0, 3) : null; try { smkFromNet(R, pr.sk); } catch (e) {} R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
     R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
     R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;
     // a death since last time: drop them, credit the killer
@@ -297,7 +297,7 @@ function netTick(dt) {
   { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
   if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
-  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor(NET.priv && NET.priv.cfg ? NET.priv.cfg.mp : 'random')); netNewRound(); } }
+  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) { let w = null; try { w = mvWinner(); } catch (e) {} netSwitchMap(w || pickMapFor(NET.priv && NET.priv.cfg ? NET.priv.cfg.mp : 'random')); } try { mvEnd(); } catch (e) {} netNewRound(); } else try { mvRender(); } catch (e) {} }
   else {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
@@ -319,6 +319,7 @@ function netTick(dt) {
 
 // round won online: everyone sees the scoreboard for the intermission, nobody can be hurt, then a fresh round
 function netIntermission(won, txt) {
+  try { mvStart(); } catch (e) {}
   try { rpFinish(won); } catch (e) {}
   if (G.state === 'paused') showScreen(null);
   G.netPrevState = G.state; G.state = 'over'; mouseDown = false; mouseAds = false;
@@ -327,6 +328,7 @@ function netIntermission(won, txt) {
   showResults(won > 0 ? (M.def.teams ? M.myTeam : M.me) : null, won); $('resSub').textContent += '  ·  ' + txt;
 }
 function netNewRound() {
+  try { mvEnd(); } catch (e) {}
   showBanner('NEW ROUND', mapName(curMap) + ' · scores reset');
   for (const en of M.entries) { en.kills = en.deaths = en.score = 0; en.level = 0; }
   M.t = 0; M.teamScore = [0, 0]; NET.ob = null; objSetup(); if (M.mode === 'gun') equipGunGame(0);

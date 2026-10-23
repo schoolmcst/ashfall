@@ -26,7 +26,7 @@ const SHADOWQ = {
 const FXQ = { low: 0.35, medium: 0.65, high: 1, ultra: 1.5 };
 const DEFAULTS = {
   quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
-  master: 80, sfx: 100, ambience: 60, music: 50, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
+  master: 80, sfx: 100, ambience: 60, music: 50, perfMode: false, perfGraph: false, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,

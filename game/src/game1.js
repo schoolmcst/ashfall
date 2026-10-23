@@ -420,6 +420,7 @@ function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
 }
 function updateGrenades(dt) {
   try { nadeAimTick(); } catch (e) {}
+  try { smkTick(dt); } catch (e) {}
   for (let i = grenadesInFlight.length - 1; i >= 0; i--) {
     const g = grenadesInFlight[i], m = g.m;
     if (g.proj) { if (updateProjectile(g, dt)) { scene.remove(m); grenadesInFlight.splice(i, 1); } continue; }
@@ -437,7 +438,7 @@ function updateGrenades(dt) {
   }
 }
 
-function detonate(g) { if (g.kind === 'stun') stunBlast(g.m.position.clone()); else explode(g.m.position.clone(), 'grenade', g.kind === 'semtex' ? 6.5 : 8, g.kind === 'semtex' ? 0.9 : 1, g.by || 'player'); }
+function detonate(g) { if (g.kind === 'hotbox' || g.kind === 'skunk') { smkDetonate(g); return; } if (g.kind === 'stun') stunBlast(g.m.position.clone()); else explode(g.m.position.clone(), 'grenade', g.kind === 'semtex' ? 6.5 : 8, g.kind === 'semtex' ? 0.9 : 1, g.by || 'player'); }
 const _pr = new THREE.Raycaster();
 function updateProjectile(g, dt) {
   const m = g.m; g.life -= dt; g.armed += dt;

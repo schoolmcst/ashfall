@@ -3,6 +3,8 @@ const EQUIP = {
   frag: { name: 'FRAG', desc: 'Bounces, then bursts after 2.2 s. Large blast.', count: 3, max: 5, fuse: 2.2, color: 0x3a4630 },
   semtex: { name: 'SEMTEX', desc: 'Sticks to walls, floors and enemies. Short 1.6 s fuse, smaller blast.', count: 2, max: 4, fuse: 1.6, sticky: true, color: 0x6b6a3a, glow: 0x30ff40 },
   stun: { name: 'STUN', desc: 'No damage. Enemies in the burst cannot aim or fire for a few seconds. Don’t look at it.', count: 3, max: 5, fuse: 1.4, color: 0x8a8f96 },
+  hotbox: { name: 'HOTBOX GRENADE', desc: 'A thick cloud of smoke for 14 s. Nobody sees through it, bots included. Cover a push or a plant.', count: 2, max: 3, fuse: 1.6, color: 0x4f5a46, glow: 0x9ad08a },
+  skunk: { name: 'SKUNK BOMB', desc: 'A green flash that blinds anyone looking at it, then a stink cloud for 6 s where enemies cannot aim.', count: 2, max: 3, fuse: 1.3, color: 0x3f6a2a, glow: 0x6aff3a },
 };
 // three perk slots per class, one from each tier (blue / red / yellow, like CoD)
 // three perk slots per class, one from each tier (CoD-style perks, some renamed). Every one is wired into the game.

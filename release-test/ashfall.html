@@ -735,7 +735,7 @@ const SHADOWQ = {
 const FXQ = { low: 0.35, medium: 0.65, high: 1, ultra: 1.5 };
 const DEFAULTS = {
   quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
-  master: 80, sfx: 100, ambience: 60, music: 50, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
+  master: 80, sfx: 100, ambience: 60, music: 50, perfMode: false, perfGraph: false, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,
@@ -6119,6 +6119,8 @@ const EQUIP = {
   frag: { name: 'FRAG', desc: 'Bounces, then bursts after 2.2 s. Large blast.', count: 3, max: 5, fuse: 2.2, color: 0x3a4630 },
   semtex: { name: 'SEMTEX', desc: 'Sticks to walls, floors and enemies. Short 1.6 s fuse, smaller blast.', count: 2, max: 4, fuse: 1.6, sticky: true, color: 0x6b6a3a, glow: 0x30ff40 },
   stun: { name: 'STUN', desc: 'No damage. Enemies in the burst cannot aim or fire for a few seconds. Don’t look at it.', count: 3, max: 5, fuse: 1.4, color: 0x8a8f96 },
+  hotbox: { name: 'HOTBOX GRENADE', desc: 'A thick cloud of smoke for 14 s. Nobody sees through it, bots included. Cover a push or a plant.', count: 2, max: 3, fuse: 1.6, color: 0x4f5a46, glow: 0x9ad08a },
+  skunk: { name: 'SKUNK BOMB', desc: 'A green flash that blinds anyone looking at it, then a stink cloud for 6 s where enemies cannot aim.', count: 2, max: 3, fuse: 1.3, color: 0x3f6a2a, glow: 0x6aff3a },
 };
 // three perk slots per class, one from each tier (blue / red / yellow, like CoD)
 // three perk slots per class, one from each tier (CoD-style perks, some renamed). Every one is wired into the game.
@@ -6176,6 +6178,65 @@ function loadClasses() {
 function saveClasses() { try { localStorage.setItem(CLASS_KEY, JSON.stringify({ classes: CLASSES, active: ACTIVE_CLASS, atts: ATTS })); } catch (e) {} }
 const activeClass = () => CLASSES[ACTIVE_CLASS] || CLASSES[0];
 loadClasses();
+/* ================================================================== HOTBOX GRENADE and SKUNK BOMB
+   HOTBOX: a smoke grenade. A thick cloud (5 m across, 14 s) that bots cannot see through and you cannot either.
+   SKUNK BOMB: a flashbang with a green flash: anyone looking at it is blinded (like a stun), and a stink cloud stays
+   for 6 s where enemies inside keep coughing (they cannot aim). Online, the clouds are sent with your state ('sk')
+   so everyone sees them; the flash reaches real players as a stun. */
+const SMK = { clouds: [], out: [], seq: 0, R: { hotbox: 3.2, skunk: 2.6 }, life: { hotbox: 14, skunk: 6 } };
+function smkTex() {
+  if (smkTex.t) return smkTex.t;
+  const c = document.createElement('canvas'); c.width = c.height = 128; const g = c.getContext('2d');
+  for (let i = 0; i < 12; i++) { const x = 64 + rnd(-22, 22), y = 64 + rnd(-22, 22), r = rnd(28, 46), gr = g.createRadialGradient(x, y, 2, x, y, r); gr.addColorStop(0, 'rgba(255,255,255,.75)'); gr.addColorStop(1, 'rgba(255,255,255,0)'); g.fillStyle = gr; g.fillRect(0, 0, 128, 128); }
+  return (smkTex.t = new THREE.CanvasTexture(c));
+}
+// a cloud at p (kind hotbox / skunk); mine = I threw it (tell the others)
+function smkCloud(p, kind, mine) {
+  const R = SMK.R[kind], n = kind === 'hotbox' ? 14 : 9, sprites = [];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * R * 0.85, col = kind === 'hotbox' ? (i % 3 ? 0xc8ccc4 : 0xb4c4a8) : (i % 2 ? 0x8ad04a : 0x5a8a2a);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: smkTex(), color: col, transparent: true, depthWrite: false, opacity: 0 }));
+    const sz = kind === 'hotbox' ? rnd(3.2, 4.4) : rnd(2, 2.8); s.scale.set(sz, sz, 1);
+    s.position.set(p.x + Math.cos(a) * r, (p.y || 0) + rnd(0.5, kind === 'hotbox' ? 2.6 : 1.6), p.z + Math.sin(a) * r); scene.add(s);
+    sprites.push({ s, vx: rnd(-0.15, 0.15), vz: rnd(-0.15, 0.15), sz });
+  }
+  SMK.clouds.push({ x: p.x, y: p.y || 0, z: p.z, kind, R, t: 0, life: SMK.life[kind], sprites, mine: !!mine });
+  if (mine) { SMK.out.push([++SMK.seq, r2(p.x), r2(p.y || 0), r2(p.z), kind === 'hotbox' ? 0 : 1]); while (SMK.out.length > 3) SMK.out.shift(); }
+  try { burst(1.4, 700, 0.35, 'lowpass', at(p.x, p.z, 20)); tone(220, 0.6, 0.05, 'sine', 120, at(p.x, p.z, 20)); } catch (e) {}
+}
+function smkDetonate(g) {
+  const p = g.m.position.clone();
+  if (g.kind === 'hotbox') { smkCloud(p, 'hotbox', true); return; }
+  // skunk: the stun's flash in green, then the stink
+  stunBlast(p); const fl = $('flashW'); if (fl) { fl.style.background = '#c8ffb0'; clearTimeout(smkDetonate.t); smkDetonate.t = setTimeout(() => { fl.style.background = ''; }, 4000); }
+  smkCloud(p, 'skunk', true);
+}
+function smkTick(dt) {
+  for (let i = SMK.clouds.length - 1; i >= 0; i--) {
+    const c = SMK.clouds[i]; c.t += dt;
+    const k = Math.min(1, c.t / 0.8) * (c.t > c.life - 2.5 ? Math.max(0, (c.life - c.t) / 2.5) : 1);
+    for (const q of c.sprites) { q.s.position.x += q.vx * dt; q.s.position.z += q.vz * dt; q.s.material.opacity = k * (c.kind === 'hotbox' ? 0.92 : 0.6); const g = 1 + Math.min(1, c.t / 3) * 0.35; q.s.scale.set(q.sz * g, q.sz * g, 1); }
+    if (c.kind === 'skunk' && c.t < c.life - 1) for (const e of enemies) if (!isFriend(e) && Math.hypot(e.group.position.x - c.x, e.group.position.z - c.z) < c.R && !e.net) e.stunT = Math.max(e.stunT || 0, 0.6);
+    if (c.t >= c.life) { for (const q of c.sprites) scene.remove(q.s); SMK.clouds.splice(i, 1); }
+  }
+}
+// does the line a -> b run through a smoke cloud (bots: no line of sight)
+function smokeBlocks(a, b) {
+  for (const c of SMK.clouds) {
+    if (c.kind !== 'hotbox' || c.t < 0.5 || c.t > c.life - 1.5) continue;
+    const dx = b.x - a.x, dz = b.z - a.z, L2 = dx * dx + dz * dz || 1e-6, u = clamp(((c.x - a.x) * dx + (c.z - a.z) * dz) / L2, 0, 1);
+    const px = a.x + dx * u, pz = a.z + dz * u, py = a.y + (b.y - a.y) * u;
+    if (Math.hypot(px - c.x, pz - c.z) < c.R * 0.9 && py > c.y - 0.3 && py < c.y + 3.2) return true;
+  }
+  return false;
+}
+function smkClear() { for (const c of SMK.clouds) for (const q of c.sprites) scene.remove(q.s); SMK.clouds.length = 0; SMK.out.length = 0; }
+// online: clouds from someone else's presence
+function smkFromNet(R, list) {
+  if (!Array.isArray(list)) return;
+  for (const s of list) { if (!Array.isArray(s) || (+s[0] | 0) <= (R.skSeen | 0)) continue; R.skSeen = +s[0] | 0; if (R.skFirst) smkCloud({ x: netNum(s[1], -ARENA, ARENA), y: netNum(s[2], -5, 30), z: netNum(s[3], -ARENA, ARENA) }, s[4] ? 'skunk' : 'hotbox', false); }
+  R.skFirst = true;   // the clouds already in their state when we first saw them are old: skip those
+}
 /* ================================================================== effects: sprites, sparks, decals, casings, lights */
 const spritePool = [], chunkPools = {}, decals = [], casings = [], tracers = [];
 let decalIdx = 0;
@@ -6726,6 +6787,7 @@ function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
 }
 function updateGrenades(dt) {
   try { nadeAimTick(); } catch (e) {}
+  try { smkTick(dt); } catch (e) {}
   for (let i = grenadesInFlight.length - 1; i >= 0; i--) {
     const g = grenadesInFlight[i], m = g.m;
     if (g.proj) { if (updateProjectile(g, dt)) { scene.remove(m); grenadesInFlight.splice(i, 1); } continue; }
@@ -6743,7 +6805,7 @@ function updateGrenades(dt) {
   }
 }
 
-function detonate(g) { if (g.kind === 'stun') stunBlast(g.m.position.clone()); else explode(g.m.position.clone(), 'grenade', g.kind === 'semtex' ? 6.5 : 8, g.kind === 'semtex' ? 0.9 : 1, g.by || 'player'); }
+function detonate(g) { if (g.kind === 'hotbox' || g.kind === 'skunk') { smkDetonate(g); return; } if (g.kind === 'stun') stunBlast(g.m.position.clone()); else explode(g.m.position.clone(), 'grenade', g.kind === 'semtex' ? 6.5 : 8, g.kind === 'semtex' ? 0.9 : 1, g.by || 'player'); }
 const _pr = new THREE.Raycaster();
 function updateProjectile(g, dt) {
   const m = g.m; g.life -= dt; g.armed += dt;
@@ -7131,7 +7193,7 @@ function leaveGame() {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   spawnMenuSoldiers();
 }
-function clearMatch() { try { rangeClear(); } catch (e) {} try { netLeave(); } catch (e) {} try { zombClear(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
+function clearMatch() { try { rangeClear(); } catch (e) {} try { smkClear(); } catch (e) {} try { netLeave(); } catch (e) {} try { zombClear(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
 function toMenu() { leaveGame(); showScreen('menu'); }
 function toLobby() { if (G.state !== 'menu') leaveGame(); renderLobby(); showScreen('lobby'); }
 /* ================================================================== career stats (saved in this browser) */
@@ -7231,6 +7293,16 @@ function renderStats() {
 function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(t.indexOf(statTab) + d + 3) % 3]; sfx.ui(); renderStats(); }
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
+{
+"v": "1.2.49",
+"d": "2026-10-23",
+"n": [
+"PERFORMANCE MODE: one switch for slow computers (base MacBooks, laptops with built-in graphics) - lower resolution, no shadows or grass, fewer effects, no ragdolls and fewer lamps in zombies. It's in Settings > VIDEO and one tap away in the pause menu; turning it off puts your settings back. If a match runs under 35 FPS for 20 seconds, the game suggests it.",
+"FRAME GRAPH (Settings > VIDEO): your frame times, FPS, the slowest 1% of frames and the draw calls in the corner, to show where the game slows down.",
+"MAP VOTING: between online rounds, vote for the next map from three on the results screen. The most votes win (private matches with a fixed map skip it).",
+"NEW GRENADES (pick them in your class): the HOTBOX GRENADE throws a thick smoke cloud for 14 s that nobody can see through, bots included; the SKUNK BOMB blinds anyone looking at it with a green flash, then leaves a stink cloud where enemies can't aim. Everyone online sees the clouds."
+]
+},
 {
 "v": "1.2.48",
 "d": "2026-10-23",
@@ -7905,12 +7977,13 @@ function checkScoreLimit() {
 }
 
 /* ---------- bots */
-const _bt = new THREE.Vector3(), _bd = new THREE.Vector3();
+const _bt = new THREE.Vector3(), _bd = new THREE.Vector3(), _bv2 = new THREE.Vector3();
 function botEye(e, out) { const s = e.group.userData.scale || e.rig.root.userData.scale || 1; return out.set(e.group.position.x, e.group.position.y + (1.45 - 0.4 * (e.crouchK || 0)) * s, e.group.position.z); }
 function targetPoint(t, out) { if (t === 'P') return out.set(P.x, P.y + P.eye * 0.8, P.z); return botEye(t, out).setY(out.y - 0.25); }
 function losTo(e, t) {
   botEye(e, _bt); targetPoint(t, _bd); _bd.sub(_bt); const d = _bd.length(); _bd.normalize();
-  raycaster.set(_bt, _bd); raycaster.far = d - 0.3; return raycaster.intersectObjects(wallMeshes, false).length === 0;
+  raycaster.set(_bt, _bd); raycaster.far = d - 0.3; if (raycaster.intersectObjects(wallMeshes, false).length) return false;
+  return !(SMK.clouds.length && smokeBlocks(_bt, targetPoint(t, _bv2)));
 }
 function tpos(t) { return t === 'P' ? { x: P.x, y: P.y, z: P.z } : t.group.position; }
 function botValidTarget(e, t) { if (t === 'P') return playerAlive() && e.team !== M.myTeam && !(G.spawnProt > 0); return enemies.includes(t) && t.team !== e.team; }
@@ -10156,6 +10229,60 @@ function addWind(mat, amp) {
   mat.customProgramCacheKey = () => 'wind' + amp;
   mat.needsUpdate = true;
 }
+/* ================================================================== PERFORMANCE MODE and the frame graph
+   PERFORMANCE MODE is one switch for slow computers (base MacBooks, laptops with built-in graphics): lower render scale,
+   no shadows, few effects, no grass, no ragdolls, a cheaper gun shader and fewer lamps in zombies. Turning it off puts
+   back exactly what you had. FRAME GRAPH shows the last few seconds of frame times with FPS, the slowest frames and
+   the draw calls, so a slow spot can be pointed at. After 20 s under 35 FPS in a match, the game suggests the mode once. */
+const PERF_SET = { quality: 'custom', renderScale: 65, shadows: 'off', fxQ: 'low', grass: 0, anis: 1, grain: false, gunShader: false, ragdoll: false, dynRes: true, shadowDist: 50 };
+function perfModeSet(on) {
+  if (!!S.perfMode === !!on) return;
+  if (on) { S.perfSaved = {}; for (const k in PERF_SET) S.perfSaved[k] = S[k]; Object.assign(S, PERF_SET); S.perfMode = true; }
+  else { if (S.perfSaved) Object.assign(S, S.perfSaved); S.perfSaved = null; S.perfMode = false; }
+  try { applyVideoSettings(); } catch (e) {} saveSettings();
+  try { if (typeof ZLP !== 'undefined' && ZLP.on) { zlpStop(); zlpStart(); } } catch (e) {}
+  try { if (curScreen === 'settings') renderSettings(); } catch (e) {}
+  perfBtn();
+}
+const zlPoolSize = () => S.perfMode ? 4 : ZL_POOL;
+function perfBtn() { const b = $('perfBtn'); if (b) b.textContent = 'PERFORMANCE MODE: ' + (S.perfMode ? 'ON' : 'OFF'); }
+
+/* ---------- the frame graph */
+const PG = { t: new Float32Array(180), i: 0, n: 0, acc: 0, low: { t: 0, n: 0, told: false } };
+function perfFrame(raw) {
+  if (raw <= 0 || raw > 1) return;
+  PG.t[PG.i] = raw * 1000; PG.i = (PG.i + 1) % PG.t.length; PG.n = Math.min(PG.n + 1, PG.t.length);
+  // a gentle hint for slow machines: 20 s of play under 35 FPS
+  if (!S.perfMode && !PG.low.told && G.state === 'playing' && !G.bench && !G.noRender) {
+    PG.low.t += raw; PG.low.n++;
+    if (PG.low.t >= 20) { const fps = PG.low.n / PG.low.t; PG.low.t = 0; PG.low.n = 0; if (fps < 35) { PG.low.told = true; try { toast2('LOW FRAME RATE · TRY PERFORMANCE MODE (PAUSE MENU OR SETTINGS > VIDEO)'); } catch (e) {} } }
+  }
+  if (!S.perfGraph) { const c = $('perfGraph'); if (c && c.style.display !== 'none') c.style.display = 'none'; return; }
+  if ((PG.acc += raw) < 0.1) return; PG.acc = 0;
+  let c = $('perfGraph');
+  if (!c) { c = document.createElement('canvas'); c.id = 'perfGraph'; c.width = 240; c.height = 96; document.body.appendChild(c); }
+  c.style.display = 'block';
+  const g = c.getContext('2d'), W = 240, H = 96, top = 40, gh = H - top - 4, maxMs = 50;
+  g.clearRect(0, 0, W, H); g.fillStyle = 'rgba(0,0,0,.6)'; g.fillRect(0, 0, W, H);
+  const vals = []; for (let k = 0; k < PG.n; k++) vals.push(PG.t[(PG.i - PG.n + k + PG.t.length) % PG.t.length]);
+  const avg = vals.reduce((s, v) => s + v, 0) / (vals.length || 1), sorted = vals.slice().sort((a, b) => b - a), worst = sorted[Math.floor(sorted.length * 0.01)] || 0;
+  const Y = ms => top + gh - Math.min(1, ms / maxMs) * gh;
+  g.strokeStyle = 'rgba(255,255,255,.18)'; g.lineWidth = 1; g.font = '9px monospace'; g.fillStyle = 'rgba(255,255,255,.5)';
+  for (const [ms, lab] of [[16.7, '60'], [33.3, '30']]) { g.beginPath(); g.moveTo(0, Y(ms) + 0.5); g.lineTo(W, Y(ms) + 0.5); g.stroke(); g.fillText(lab, W - 14, Y(ms) - 2); }
+  const bw = W / PG.t.length;
+  vals.forEach((v, k) => { g.fillStyle = v > 33.3 ? '#ff5a4a' : v > 18 ? '#ffd23a' : '#7fd16b'; g.fillRect(k * bw, Y(v), Math.max(1, bw - 0.3), top + gh - Y(v)); });
+  const inf = renderer.info && renderer.info.render ? renderer.info.render : {};
+  g.font = 'bold 13px monospace'; g.fillStyle = '#fff'; g.fillText(`${Math.round(1000 / (avg || 16.7))} FPS`, 6, 15);
+  g.font = '10px monospace'; g.fillStyle = 'rgba(255,255,255,.8)';
+  g.fillText(`avg ${avg.toFixed(1)} ms  1% ${worst.toFixed(1)} ms`, 80, 14);
+  g.fillText(`draws ${inf.calls || 0}  tris ${Math.round((inf.triangles || 0) / 1000)}k  res ${Math.round((S.dynRes ? DR.scale : 1) * S.renderScale)}%${S.perfMode ? '  PERF' : ''}`, 6, 30);
+}
+(() => {
+  const s = document.createElement('style'); s.textContent = '#perfGraph{position:fixed;left:12px;top:56px;z-index:40;pointer-events:none;border:1px solid rgba(255,255,255,.2);display:none}'; document.head.appendChild(s);
+  // the one-tap switch in the pause menu
+  setTimeout(() => { try { const p = $('pause'); if (p && !$('perfBtn')) { const b = document.createElement('button'); b.className = 'btn'; b.id = 'perfBtn'; b.dataset.act = 'perf-toggle'; const set = p.querySelector('[data-act="settings"]'); p.insertBefore(b, set ? set.nextSibling : null); perfBtn(); } } catch (e) {} }, 0);
+})();
+function perfAct(act) { if (act === 'perf-toggle') { perfModeSet(!S.perfMode); toast2('PERFORMANCE MODE ' + (S.perfMode ? 'ON' : 'OFF')); return true; } return false; }
 /* ================================================================== benchmark: a scripted heavy fight that measures this machine */
 // Runs on its own (no input needed): 12+ soldiers, constant fire, ragdolls, explosions, a slow 360° pan.
 // Dynamic resolution is held off during the run so the numbers reflect the chosen settings.
@@ -11230,7 +11357,7 @@ const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000
 function netPublish() {
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, cm: typeof CHAT !== 'undefined' && CHAT.mine.all.length ? CHAT.mine.all.slice() : undefined, bn: typeof bannerFor === 'function' ? bannerFor() : '', lv: typeof lvlInfo === 'function' ? lvlInfo(PROG.xp).l : 1, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
-    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
+    a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { if (NET.on) NET.sh++; if (typeof ZC !== 'undefined' && ZC.on) ZC.sh++; }
@@ -11326,7 +11453,7 @@ function netTick(dt) {
     if (R.entry.team !== team) { R.entry.team = team; if (R.bot) netDropBot(R, false); }
     if (!pr.bot) chatIngest('all', p.peer, R.entry.name, pr.cm);
     R.bn = typeof pr.bn === 'string' && COS[pr.bn] && COS[pr.bn].kind === 'banner' ? pr.bn : ''; R.lv = netNum(pr.lv, 1, 100, 1);
-    R.cj = pr.cj ? 1 : 0; R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
+    R.cj = pr.cj ? 1 : 0; R.mv = typeof pr.mv === 'string' ? pr.mv : ''; if (pr.ho && !pr.bot && !isHost) NET.voHost = Array.isArray(pr.vo) && pr.vo.every(id => MAPS[id]) ? pr.vo.slice(0, 3) : null; try { smkFromNet(R, pr.sk); } catch (e) {} R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
     R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep;
     R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;
     // a death since last time: drop them, credit the killer
@@ -11395,7 +11522,7 @@ function netTick(dt) {
   { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
   if (NET.ep !== NET.lastEp) { NET.lastEp = NET.ep; for (const en of M.entries) if (en.botLabel) { en.kills = en.deaths = en.score = 0; } }
-  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) netSwitchMap(pickMapFor(NET.priv && NET.priv.cfg ? NET.priv.cfg.mp : 'random')); netNewRound(); } }
+  if (NET.endT > 0) { NET.endT -= dt; if (NET.endT <= 0) { NET.ep++; NET.k = NET.d = 0; G.kills = 0; if (isHost) { let w = null; try { w = mvWinner(); } catch (e) {} netSwitchMap(w || pickMapFor(NET.priv && NET.priv.cfg ? NET.priv.cfg.mp : 'random')); } try { mvEnd(); } catch (e) {} netNewRound(); } else try { mvRender(); } catch (e) {} }
   else {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
@@ -11417,6 +11544,7 @@ function netTick(dt) {
 
 // round won online: everyone sees the scoreboard for the intermission, nobody can be hurt, then a fresh round
 function netIntermission(won, txt) {
+  try { mvStart(); } catch (e) {}
   try { rpFinish(won); } catch (e) {}
   if (G.state === 'paused') showScreen(null);
   G.netPrevState = G.state; G.state = 'over'; mouseDown = false; mouseAds = false;
@@ -11425,6 +11553,7 @@ function netIntermission(won, txt) {
   showResults(won > 0 ? (M.def.teams ? M.myTeam : M.me) : null, won); $('resSub').textContent += '  ·  ' + txt;
 }
 function netNewRound() {
+  try { mvEnd(); } catch (e) {}
   showBanner('NEW ROUND', mapName(curMap) + ' · scores reset');
   for (const en of M.entries) { en.kills = en.deaths = en.score = 0; en.level = 0; }
   M.t = 0; M.teamScore = [0, 0]; NET.ob = null; objSetup(); if (M.mode === 'gun') equipGunGame(0);
@@ -11523,6 +11652,53 @@ setTimeout(() => {
 .app-notes b{display:block;font-size:18px;letter-spacing:.14em;color:#ffd24a;margin-bottom:12px}.app-notes ul{margin:0 0 18px;padding-left:20px;line-height:1.55;font-size:14px}`;
   document.head.appendChild(s);
 })();
+/* ================================================================== map voting (online, between rounds)
+   When an online round ends the host offers three maps (not the one just played). Everyone votes on the results screen
+   ('mv' in their state); the host counts the real players' votes when the intermission ends and loads the winner
+   (a tie: one of the tied maps at random; nobody voted: one of the three at random). Private matches with a fixed map
+   skip the vote. The host's three maps travel as 'vo'. */
+const MV = { opts: null, mine: '', shown: '' };
+const mvOn = () => M && M.online && NET.app && !(NET.priv && NET.priv.cfg && NET.priv.cfg.mp && NET.priv.cfg.mp !== 'random');
+function mvStart() {
+  MV.mine = ''; NET.mv = ''; MV.shown = '';
+  if (!mvOn()) { MV.opts = null; return; }
+  if (NET.room && NET.room.host) { const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap).sort(() => Math.random() - 0.5); MV.opts = pool.slice(0, 3); }
+}
+const mvOptions = () => (NET.room && NET.room.host ? MV.opts : NET.voHost) || null;
+function mvCount() {
+  const o = mvOptions(), n = {}; if (!o) return n; for (const id of o) n[id] = 0;
+  if (NET.mv && n[NET.mv] !== undefined) n[NET.mv]++;
+  for (const R of NET.rem.values()) if (!R.isBot && R.mv && n[R.mv] !== undefined) n[R.mv]++;
+  return n;
+}
+// the host, when the intermission ends: the map to load (null = no vote this time)
+function mvWinner() {
+  const o = MV.opts; if (!o || !o.length || !mvOn()) return null;
+  const n = mvCount(), top = Math.max(...o.map(id => n[id])), best = o.filter(id => n[id] === top);
+  return best[(Math.random() * best.length) | 0];
+}
+function mvEnd() { MV.opts = null; MV.mine = ''; NET.mv = ''; NET.voHost = null; MV.shown = ''; const b = $('mapVote'); if (b) b.remove(); }
+function mvVote(id) { const o = mvOptions(); if (!o || !o.includes(id)) return; MV.mine = id; NET.mv = id; try { sfx.ui(); } catch (e) {} mvRender(true); }
+function mvRender(force) {
+  const o = mvOptions(), res = $('results');
+  if (!o || !res || res.classList.contains('hide') || G.state !== 'over') return;
+  let box = $('mapVote');
+  if (!box) { box = document.createElement('div'); box.id = 'mapVote'; const nx = $('resNext'); nx.parentNode.insertBefore(box, nx.nextSibling); }
+  const n = mvCount(), key = o.join() + '|' + JSON.stringify(n) + '|' + MV.mine;
+  if (!force && MV.shown === key) return; MV.shown = key;
+  const total = Object.values(n).reduce((s, v) => s + v, 0);
+  box.innerHTML = `<div class="mv-h">VOTE FOR THE NEXT MAP <small>${total} VOTE${total === 1 ? '' : 'S'}</small></div><div class="mv-row">` + o.map((id, i) => {
+    const m = MAPS[id] || {}, pic = (typeof MAPSHOTS !== 'undefined' && MAPSHOTS[id] && MAPSHOTS[id][0]) || '';
+    return `<button class="mv-c${MV.mine === id ? ' on' : ''}" data-mv="${id}" style="${pic ? `background-image:linear-gradient(180deg,rgba(0,0,0,.05),rgba(0,0,0,.75)),url(${pic})` : ''}"><b>${m.name || id}</b><small>${m.place || ''}</small><em>${n[id] || 0}</em></button>`;
+  }).join('') + '</div>';
+  for (const b of box.querySelectorAll('[data-mv]')) b.onclick = () => mvVote(b.dataset.mv);
+}
+(() => { const s = document.createElement('style'); s.textContent = `#mapVote{margin:10px 0 4px;pointer-events:auto}#mapVote .mv-h{font-size:11px;letter-spacing:.24em;color:var(--accent);margin-bottom:6px}#mapVote .mv-h small{float:right;color:var(--dim)}
+#mapVote .mv-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.mv-c{position:relative;height:96px;cursor:pointer;font-family:inherit;text-align:left;display:flex;flex-direction:column;justify-content:flex-end;padding:8px 10px;border:1px solid var(--line);background:#15181b center/cover;color:#fff}
+.mv-c b{font-size:14px;letter-spacing:.14em;text-shadow:0 1px 3px #000}.mv-c small{font-size:10px;letter-spacing:.06em;color:rgba(255,255,255,.75);text-shadow:0 1px 3px #000}
+.mv-c em{position:absolute;top:6px;right:8px;font-style:normal;font-weight:800;font-size:18px;text-shadow:0 1px 3px #000}
+.mv-c:hover,.mv-c:focus{outline:0;border-color:rgba(224,180,74,.7)}.mv-c.on{border:2px solid var(--accent);box-shadow:0 0 12px rgba(224,180,74,.45)}`; document.head.appendChild(s); })();
 /* ================================================================== private matches (desktop app)
    A private code (or a private game found on your Wi-Fi) opens a pre-match lobby. Whoever hosts picks the mode, map,
    number of bots, time limit and kill limit; everyone who joins sees the settings and the player list, and the match
@@ -16339,7 +16515,7 @@ function zlpAdopt() {
 }
 function zlpStart() {
   zlpStop();
-  ZLP.pool = []; for (let i = 0; i < ZL_POOL; i++) { const l = new THREE.PointLight(0xffffff, 0, 10, 2); scene.add(l); ZLP.pool.push(l); }
+  ZLP.pool = []; for (let i = 0; i < zlPoolSize(); i++) { const l = new THREE.PointLight(0xffffff, 0, 10, 2); scene.add(l); ZLP.pool.push(l); }
   ZLP.on = true; ZLP.map = curMap; ZLP.virt = []; zlpAdopt(); ZLP.t = 0; ZLP.scanT = 1; zlpAssign();
 }
 // give the lights back (the map may be reused by another mode) and remove the pool
@@ -17094,6 +17270,7 @@ const SCHEMA = {
     { t: 'info', small: true, name: 'LIMITS', hint: 'The highest settings this computer supports', val: () => `TEXTURES ${HW.maxTex} · FILTERING ${MAXANIS}× · ${HW.cores ? HW.cores + ' CPU THREADS' : 'CPU ?'}${HW.mem ? ' · ' + HW.mem + ' GB+' : ''}` },
     { t: 'action', name: 'BENCHMARK', hint: 'A 25 second fly-through that measures your frame rate with the current settings', label: 'RUN BENCHMARK', act: 'bench' },
     { t: 'head', name: 'PRESET' },
+    { k: 'perfMode', t: 'toggle', name: 'PERFORMANCE MODE', hint: 'One switch for slow computers: lower resolution, no shadows or grass, fewer effects and lamps. Turning it off puts your settings back', },
     { k: 'quality', t: 'seg', name: 'GRAPHICS PRESET', hint: 'Sets everything below at once. Change any detail setting and this shows CUSTOM', opts: [['auto', 'AUTO'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA'], ['custom', 'CUSTOM']] },
     { t: 'head', name: 'DISPLAY' },
     { k: 'fpsCap', t: 'seg', name: 'FRAME RATE LIMIT', hint: () => 'DISPLAY runs at your monitor\u2019s refresh rate (' + HW.hz + ' Hz). A lower limit saves power and heat', opts: [[0, 'DISPLAY'], [30, '30'], [60, '60'], [90, '90'], [120, '120'], [144, '144'], [165, '165'], [240, '240']] },
@@ -17119,6 +17296,7 @@ const SCHEMA = {
     { k: 'bob', t: 'toggle', name: 'VIEW BOBBING' },
     { k: 'shake', t: 'range', name: 'SCREEN SHAKE', min: 0, max: 150, step: 10, fmt: pct },
     { k: 'showFps', t: 'toggle', name: 'SHOW FPS' },
+    { k: 'perfGraph', t: 'toggle', name: 'FRAME GRAPH', hint: 'Frame times, the slowest frames and draw calls in the corner, to see where it slows down' },
   ],
   AUDIO: [
     { k: 'master', t: 'range', name: 'MASTER VOLUME', min: 0, max: 100, step: 5, fmt: pct },
@@ -17191,6 +17369,7 @@ const gpuShort = () => { let n = String(GPU_NAME || 'UNKNOWN'); const m = /^ANGL
   return n.replace(/^ANGLE Metal Renderer:\s*/i, '').replace(/\s*\(0x[0-9a-f]+\)/ig, '').replace(/\s*Direct3D.*$|\s*vs_\d.*$|\s*OpenGL.*$/i, '').trim().toUpperCase().slice(0, 48); };
 const dispInfo = () => { const d = window.devicePixelRatio || 1; return `${Math.round(screen.width * d)}×${Math.round(screen.height * d)} · ${HW.hz} HZ`; };
 function applySetting(k) {
+  if (k === 'perfMode') { const on = S.perfMode; S.perfMode = !on; perfModeSet(on); sfx.ui(); return; }
   if ((k === 'zvoice' || k === 'zvoiceVol') && !(S.zvoice && S.zvoiceVol > 0)) try { speechSynthesis.cancel(); } catch (e) {}
   if ((k === 'zvoiceRate' || k === 'zvoiceVol') && typeof zvPreview === 'function') setTimeout(zvPreview, 350);
   if (k === 'quality') { if (S.quality !== 'custom') applyPreset(qKey()); renderSettings(); }
@@ -17270,6 +17449,7 @@ function cycleDiff(d) { const ks = Object.keys(DIFFS); S.difficulty = ks[(ks.ind
 function actions(act) {
   if (/^(qc-|lqc-|pz-|vc-|vm-|lob-send$)/.test(act) && typeof commsAct === 'function' && commsAct(act)) return;
   if (/^(bp-|bpass$)/.test(act) && typeof bpAct === 'function' && bpAct(act)) return;
+  if (/^perf-/.test(act) && typeof perfAct === 'function' && perfAct(act)) return;
   if (/^(wk-|pr-|weekly$|range$)/.test(act) && typeof wkAct === 'function' && wkAct(act)) return;
   if (/^(lk-|rw-|locker$|rewards$)/.test(act) && typeof lockerAct === 'function' && lockerAct(act)) return;
   if (typeof zombAct === 'function' && zombAct(act)) return;
@@ -17306,7 +17486,7 @@ function actions(act) {
     case 'pl-leave': QP.busy = false; toLobby(); break;
     case 'res-stats': statsReturn = 'results'; statOnline = !!(M && M.online); renderStats(); showScreen('career'); break;
     case 'replay': sfx.ui(); openReplay(); break;
-    case 'settings': returnScreen = curScreen || 'menu'; showScreen('settings'); break;
+    case 'settings': returnScreen = curScreen || 'menu'; try { renderSettings(); } catch (e) {} showScreen('settings'); break;
     case 'settings-back': showScreen(returnScreen); break;
     case 'bench': startBench(); break;
     case 'loadout': openLoadout(curScreen || 'menu'); break;
@@ -17731,6 +17911,7 @@ function frame(now) {
   }
   const raw = (now - last) / 1000, dt = Math.min(raw, 0.05); last = now; NOW += dt;
   try { updateDynRes(raw); } catch (e) { reportError(e); }
+  try { perfFrame(raw); } catch (e) {}
   if (ready && G.bench) { try { benchPre(raw); } catch (e) { reportError(e); } }
   if (ready && G.look && G.state === 'playing') { Object.assign(P, G.look, { vx: 0, vz: 0 }); mouseDown = false; G.health = 100; if (G.lookAds) mouseAds = true; }
   if (ready) { try { tick(dt); } catch (e) { reportError(e); } try { realTexTick(); } catch (e) { reportError(e); } try { cosmTick(dt); } catch (e) {} }
@@ -17775,7 +17956,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

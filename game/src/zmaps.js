@@ -241,7 +241,7 @@ function zlpAdopt() {
 }
 function zlpStart() {
   zlpStop();
-  ZLP.pool = []; for (let i = 0; i < ZL_POOL; i++) { const l = new THREE.PointLight(0xffffff, 0, 10, 2); scene.add(l); ZLP.pool.push(l); }
+  ZLP.pool = []; for (let i = 0; i < zlPoolSize(); i++) { const l = new THREE.PointLight(0xffffff, 0, 10, 2); scene.add(l); ZLP.pool.push(l); }
   ZLP.on = true; ZLP.map = curMap; ZLP.virt = []; zlpAdopt(); ZLP.t = 0; ZLP.scanT = 1; zlpAssign();
 }
 // give the lights back (the map may be reused by another mode) and remove the pool

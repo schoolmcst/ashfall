@@ -1,19 +1,11 @@
 {
- "version": "1.2.48",
+ "version": "1.2.49",
  "notes": [
-  "NEW ZOMBIES MAP: TERMINAL 9 - story chapter three, FLIGHT 909. An airport cargo terminal with baggage chutes to fast-travel, the plane's cargo hold, 7 new chapters, 12 tapes and a boss in an expensive suit.",
-  "WONDER WEAPONS: one per zombies map - THE BONG CANNON, THE PRESSURE GUN and THE CROP DUSTER. Rare from the mystery crate, and your reward for finishing each story.",
-  "ZOMBIES POWER-UPS (RE-UP, HOTBOX, DOUBLE BAG, KUSH BOMB, THE FIXER, 420 SALE) and WALL STASHES - guns behind purple stencils you can buy off the wall.",
-  "NEW ZOMBIES: STRAY ROUNDS (junkie dogs every 5th round), FIENDS that crawl, BLOATERS that burst into smoke, and BARRICADED WINDOWS to board back up. Zombies stats per map, and a ZOMBIES tab on the friends leaderboard.",
-  "NEW MODE: BAGGED UP (kill confirmed) - everyone drops a stash bag when they die. Bag enemy bags to score, save your team's. Offline, online and private matches.",
-  "NEW MODE: TURF WAR (domination) - take and hold three grow spots, A, B and C. Offline, online and private matches.",
-  "KILLCAM: see your death over your killer's shoulder (turn it off in Settings).",
-  "4 NEW SCORESTREAKS: DEALER DRONE, SMOKE OUT (counter-UAV), TRAP HOUSE TURRET and HIGH FLYER (gunship).",
-  "WEEKLY CHALLENGES: THE PLUG'S LIST - six new jobs every Monday for XP and DZ, and a free PRESTIGE box for doing all six. PRESTIGE: at level 100 go back to level 1 and keep everything - 10 prestiges, each with an emblem, calling card, DZ and a box, plus 3 new finishes.",
-  "THE STASH YARD: a firing range and tutorial on the main menu.",
-  "FASTER FIRST LOAD, COLOUR-BLIND MODES (Settings > GAMEPLAY) and an ADS FIELD OF VIEW option (Settings > VIDEO).",
-  "BETTER ZOMBIES VOICES: the best voices your computer has, gentler pitch, and a VOICE LINES SPEED slider."
+  "PERFORMANCE MODE: one switch for slow computers (base MacBooks, laptops with built-in graphics) - lower resolution, no shadows or grass, fewer effects, no ragdolls and fewer lamps in zombies. It's in Settings > VIDEO and one tap away in the pause menu; turning it off puts your settings back. If a match runs under 35 FPS for 20 seconds, the game suggests it.",
+  "FRAME GRAPH (Settings > VIDEO): your frame times, FPS, the slowest 1% of frames and the draw calls in the corner, to show where the game slows down.",
+  "MAP VOTING: between online rounds, vote for the next map from three on the results screen. The most votes win (private matches with a fixed map skip it).",
+  "NEW GRENADES (pick them in your class): the HOTBOX GRENADE throws a thick smoke cloud for 14 s that nobody can see through, bots included; the SKUNK BOMB blinds anyone looking at it with a green flash, then leaves a stink cloud where enemies can't aim. Everyone online sees the clouds."
  ],
- "sha256": "1c9d483e820bcfbb457dd739489b61d68a4d187fc51e36f7eb9d7b78b4936b9e",
+ "sha256": "899561a413eb047d7fc05fdb185834baeae8c40731d81b526229178a19193cbd",
  "minApp": "1.0.0"
 }
