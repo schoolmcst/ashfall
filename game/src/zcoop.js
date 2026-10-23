@@ -148,6 +148,7 @@ function zcPublish() {
     a: inG && !ZC.dead && G.state !== 'dead' ? 1 : 0, dn: inG && ZC.down ? 1 : 0, sh: ZC.sh, wn: w ? w.name : '', pts: G.points | 0, k: ZC.k, hs: ZC.hs, rv: ZC.rv, od: inG ? [...ZD.mine] : [], ch: ZL.char, vl: ZV.out, pk: inG ? ZC.pk : [], ev: inG ? ZC.ev : [], qi: inG ? [...ZS.mine] : [] };
   if (zcHost()) {
     Object.assign(o, { ho: 1, st: ZC.st, gid: ZC.gid, mp: ZC.mp, ml: ZL.map, so: ZL.story ? 1 : 0, zr: Z.round, qf: inG ? [...ZS.flags] : [], qc: inG ? +ZS.cook.toFixed(3) : -1, qb: inG && ZS.bloodItem && ZS.bloodItem.g ? [r2(ZS.bloodItem.at.x), r2(ZS.bloodItem.at.z), r2(ZS.bloodItem.at.y)] : 0, zd: inG ? [...ZD.open] : [], dp: inG ? [...ZC.drops].filter(([, d]) => performance.now() - d.t < 40000).map(([id, d]) => [id, r2(d.x), r2(d.z), r2(d.y)]) : [], zl: inG ? Z.toSpawn : 0, za: inG && Z.active ? 1 : 0, zk: ZC.zk, zt: ZC.zt });
+    if (inG) try { zpuPresence(o); } catch (e) {}
     o.zs = inG ? enemies.filter(e => e.zombie && !e.proxy).map(e => { const g = e.group.position; return [e.zid, r2(g.x), r2(g.z), r2(g.y), Math.round(e.group.rotation.y * 100), e.boss ? 3 : e.kind === 'run' ? 2 : e.kind === 'jog' ? 1 : 0, e.atkT > 0 ? 1 : 0, Math.round(clamp(e.hp / e.maxHp, 0, 1) * 100)]; }) : [];
   }
   ZC.room.presence(o);
@@ -452,10 +453,12 @@ function zcReadShared(R, host) {
         if (v[0] === 'b') { sfx.explode(at(p.x, p.z, 34)); explosionFx(new THREE.Vector3(p.x, p.y, p.z), 1); }
         else if (v[0] === 'm') sfx.thud(at(p.x, p.z, 14));
         else if (v[0] === 'cook' && zcHost()) zsStartCook();
+        else if (typeof v[0] === 'string' && v[0].startsWith('pu')) zpuFromEvent(v[0], R.n);
         else if (v[0] === 'ammo') { WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = w.reserveMax || w.def.reserve; }); G.grenades = Math.max(G.grenades, 2); showMsg(`${R.n} BOUGHT AMMO FOR THE SQUAD`); sfx.ui(); }
       } catch (e) {}
     }
   }
+  if (host) try { zpuFromHost(pr); } catch (e) {}
   if (host && Array.isArray(pr.dp)) {   // the host's drop list: show new ones, clear the ones that are gone
     const ids = new Set();
     for (const d of pr.dp) { if (!Array.isArray(d)) continue; const id = +d[0]; ids.add(id); zcSpawnDrop(id, netNum(d[1], -ARENA, ARENA), netNum(d[2], -ARENA, ARENA), netNum(d[3], -5, 20)); }

@@ -65,6 +65,13 @@ const fs = require('fs');
   await ev(A, () => { const A_ = window.__A, R = [...A_.ZC.rem.values()].find(r => r.n === 'CHARLIE'); A_.zcDrop(R.x + 3, R.z, R.y); });
   await A.waitForTimeout(2500);
   const seen = await ev(C, () => window.__A.pickups ? window.__A.pickups.filter(k => k.sid).length : -1);
+  // power-ups: the host drops a DOUBLE BAG, CHARLIE walks through it, the whole squad gets the timer
+  await ev(A, () => { const A_ = window.__A; A_.zpuMake(777, 'dbl', A_.P.x + 40, A_.P.z, 0); });
+  for (let i = 0; i < 10 && !(await ev(C, () => window.__A.ZPU.list.has(777))); i++) await A.waitForTimeout(500);
+  await ev(C, () => window.__A.zpuTake(777));
+  await A.waitForTimeout(2500);
+  const pu = []; for (const p of pages) pu.push(await ev(p, () => ({ on: window.__A.zpuOn('dbl'), list: window.__A.ZPU.list.size })));
+  console.log('POWERUP', JSON.stringify(pu));
   await ev(C, () => { const A_ = window.__A, k = A_.pickups.find(k => k.sid); if (k) { A_.G.state = 'playing'; Object.assign(A_.P, { x: k.x, z: k.z, y: k.y || 0 }); } });
   await A.waitForTimeout(3000);
   const after = []; for (const p of pages) after.push(await ev(p, () => ({ reserve: window.__A.W[0].reserve, drops: window.__A.pickups.filter(k => k.sid).length })));

@@ -33,7 +33,7 @@ function renderZLobby(focusSel) {
     `<div class="cod-row"><small>MYSTERY CRATE · ${Z_BOX} POINTS</small><b>A RANDOM GUN</b><span>AMMO CRATE · ${Z_AMMO} POINTS · full ammo for your guns</span></div>` +
     `<div class="cod-row"><small>YOUR BEST</small><b>ROUND ${Z.best.round || 0}</b><span>${(Z.best.pts || 0).toLocaleString()} POINTS</span></div>`;
   $('lobRoster').innerHTML = zcRightHtml() +
-    `<div class="ros-info"><b>ZOMBIES</b>Survive round after round of the dead. They walk at first, then jog, then run. 10 points a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Press USE (E / X) at the crates and doors to buy. ${zc.info}${ZL.net === 'coop' ? ' In co-op, a downed teammate is revived by holding USE next to them.' : ''}</div>`;
+    `<div class="ros-info"><b>ZOMBIES</b>Survive round after round of the dead. They walk at first, then jog, then run. 10 points a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Press USE (E / X) at the crates and doors to buy. ${zc.info} Purple WALL STASHES sell guns (ammo half price), and zombies sometimes drop POWER-UPS: RE-UP, HOTBOX, DOUBLE BAG, KUSH BOMB, THE FIXER and the 420 SALE.${ZL.net === 'coop' ? ' In co-op, a downed teammate is revived by holding USE next to them.' : ''}</div>`;
   ZC.rosterKey = ''; zcWireLobby(); zcLobbyRefresh(false);
   if (ZL.net === 'coop' && NET.app) { try { partyWire(); netCheckService(); netLobbyCount(); netCheckVersion(); zcLanList(); } catch (e) {} }
   if (focusSel) focusFirst(focusSel);
@@ -281,24 +281,25 @@ function animZombie(e, dt, sp) {
   e.flinch = Math.max(0, e.flinch - dt * 4);
 }
 // points (called from the damage and kill hooks)
-function zombHit(e, head) { G.points += zpHas('munch') ? 15 : 10; }
+function zombHit(e, head) { G.points += (zpHas('munch') ? 15 : 10) * zpuPts(); }
 function zombKill(e, head, boom, melee) {
-  const pts = Math.round((melee ? 130 : head ? 100 : 60) * (zpHas('munch') ? 1.5 : 1)); G.points += pts - (zpHas('munch') ? 15 : 10); G.score += pts;
+  const pts = Math.round((melee ? 130 : head ? 100 : 60) * (zpHas('munch') ? 1.5 : 1) * zpuPts()); G.points += pts - (zpHas('munch') ? 15 : 10) * zpuPts(); G.score += pts;
   popScore('+' + pts, head ? 'head' : '', head ? 'HEADSHOT' : melee ? 'MELEE' : '');
 }
 // crates: stand close and press USE
 function zombCrateTick(dt) {
   const pr = $('zPrompt'); if (!pr) return;
   let msgTxt = zcInGame() ? zcReviveTick(dt) : '';
-  for (const [c, cost, fn] of [[Z.crate, Z_BOX, zombBuyBox], [Z.ammo, Z_AMMO, zombBuyAmmo]]) {
+  for (const [c, cost, fn] of [[Z.crate, zboxCost(), zombBuyBox], [Z.ammo, Z_AMMO, zombBuyAmmo]]) {
     if (!c) continue;
     c.children[c.children.length - 1].material.opacity = 0.1 + Math.sin(NOW * 2) * 0.04;
     const d = Math.hypot(P.x - c.position.x, P.z - c.position.z);
     if (!msgTxt && d < 2.3 && Math.abs(P.y - c.position.y) < 1.5 && G.state === 'playing') { msgTxt = `${c.userData.label} · ${cost} POINTS · PRESS ${actName('use')}${G.points < cost ? ' · NOT ENOUGH POINTS' : ''}`; if ((kb('use') || pad.use) && !Z.useHeld && G.points >= cost) fn(); }
   }
   if (!msgTxt && G.state === 'playing') {
-    const use = (kb('use') || pad.use) && !Z.useHeld, dr = zdPrompt(), pm = zpNear(), sp = zsPrompt(use);
+    const use = (kb('use') || pad.use) && !Z.useHeld, dr = zdPrompt(), pm = zpNear(), sp = zsPrompt(use), wb = zwbNear();
     if (sp) msgTxt = sp;
+    else if (wb) msgTxt = zwbPrompt(wb, use);
     else if (pm) msgTxt = zpPrompt(pm, use);
     else if (dr) { msgTxt = `${dr.d.name} · ${dr.d.cost} POINTS · PRESS ${actName('use')}${G.points < dr.d.cost ? ' · NOT ENOUGH POINTS' : ''}`; if (use && G.points >= dr.d.cost) zdBuy(dr); }
     else if (zuNear()) { const w = WEAPONS[G.cur], done = w && Z.up && Z.up.has(w.def.id); msgTxt = done ? 'GUN UPGRADER · THIS GUN IS UPGRADED' : `GUN UPGRADER · UPGRADE ${w ? w.def.name : ''} · ${ZU_COST} POINTS · PRESS ${actName('use')}${G.points < ZU_COST ? ' · NOT ENOUGH POINTS' : ''}`; if (use && !done && G.points >= ZU_COST) zuBuy(); }
@@ -310,7 +311,7 @@ function zombCrateTick(dt) {
 }
 function zombBuyBox() {
   if (Z.boxT > 0) return;
-  G.points -= Z_BOX; Z.boxT = 1.4;
+  G.points -= zboxCost(); Z.boxT = 1.4;
   const have = new Set(Z.guns), pool = Z_POOL().filter(d => !have.has(d.id)), d = pool[(Math.random() * pool.length) | 0];
   if (Z.guns.length < 2) Z.guns.unshift(d.id); else Z.guns[G.cur] = d.id;
   zombEquip(Z.guns.indexOf(d.id));

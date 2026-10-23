@@ -153,6 +153,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (e.entry) { e.entry.lastBy = by; e.entry.lastHead = head ? 1 : 0; }
   if (e.net) { netHit(e, dmg, head, by, boom); return false; }
   if ((e.spawnProt > 0 || G.holdT > 0) && inMatch() && by !== 'world') return false;   // spawn protection / pre-match hold
+  if (e.zombie && typeof zpuOn === 'function' && zpuOn('hotbox')) dmg = e.boss ? dmg * 3 : Math.max(dmg, e.hp + 1);   // HOTBOX: one hit kills (bosses take triple)
   e.hp -= dmg; e.flinch = 1; if (e.zombie && (by === 'player' ? G.meleeT > 0 : by && by.melee)) zombStagger(e, dir); if (e.zombie && by === 'player' && e.hp > 0) zombHit(e, head); if (typeof botWasHit === 'function' && M && M.def && inMatch()) botWasHit(e, by);
   if (e.hp > 0 && dir) { const pk = boom ? 0.5 : 0.07; e.group.position.x += dir.x * pk; e.group.position.z += dir.z * pk; e.slowT = boom ? 0.8 : 0.3; }
   if (e.hp <= 0) {
@@ -170,7 +171,8 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
     if (e.zombie && typeof ZC !== 'undefined' && ZC.on) zcKilled(e, by, head);
     try { matchBotKilled(e, by, head, boom); } catch (err) { reportError(err); }
     { const gx = e.group.position.x, gz = e.group.position.z, gy = groundAt(gx, gz, e.group.position.y + 0.3), coop = e.zombie && typeof zcInGame === 'function' && zcInGame();
-      if (coop) { if (Math.random() < 0.22) zcDrop(gx, gz, gy); } else if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(gx, gz, gy); }   // co-op: the host's drops are shared
+      if (coop) { if (Math.random() < 0.22) zcDrop(gx, gz, gy); } else if (Math.random() < 0.28 || totalAmmo() < 40) dropPickup(gx, gz, gy);
+      if (e.zombie && !e.boss && by !== 'world' && typeof zpuMaybeDrop === 'function' && (!coop || zcHost())) zpuMaybeDrop(gx, gz, gy); }   // co-op: the host's drops are shared
     _n.set(0, 1, 0); _v3.set(e.group.position.x, 0, e.group.position.z - 0.2); addDecal(_v3, _n, 'blood', 1.3);
     chunks('blood', _v.set(e.group.position.x, 1.2, e.group.position.z), 8, 3, 0.6);
     return true;

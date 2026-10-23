@@ -121,6 +121,20 @@ ZMAPCFG.works = {
     },
   },
 };
+// wall stashes (guns behind a spray-paint stencil): q = the way the wall faces (0 +z, 1 +x, 2 -z, 3 -x)
+ZMAPCFG.blackwell.stash = [
+  { gun: 'viper', cost: 1000, x: 7.86, z: 26.9, y: 0, q: 3 },        // the south lobby
+  { gun: 'striker', cost: 1300, x: -22, z: 10.13, y: 0, q: 0 },      // the main corridor
+  { gun: 'breacher', cost: 1500, x: 22, z: -10.13, y: 0, q: 2 },     // the north wing
+  { gun: 'marc', cost: 2000, x: 22, z: 10.13, y: 4.2, q: 0 },        // upstairs
+];
+ZMAPCFG.works.stash = [
+  { gun: 'viper', cost: 1000, x: -11.73, z: 22, y: 0, q: 1 },        // the loading dock
+  { gun: 'striker', cost: 1300, x: 11.73, z: -6, y: 0, q: 3 },       // the bottling hall
+  { gun: 'breacher', cost: 1500, x: -41.73, z: -8, y: 0, q: 1 },     // the cloister
+  { gun: 'marc', cost: 2000, x: 41.73, z: 6, y: 0, q: 3 },           // the foundry yard
+  { gun: 'hailstorm', cost: 2500, x: -11.73, z: -19, y: 0, q: 1 },   // the boiler house
+];
 try { AUD_PROF.works = { len: 2.6, pow: 2.5, wet: 0.42, echo: 0.22, dark: 0.45, amb: 'hall', surf: 'concrete' }; } catch (e) {}
 const zmapCfg = id => ZMAPCFG[id] || ZMAPCFG.blackwell;
 const zmapStoryDone = id => zsDoneEver(zmapCfg(id).story.text.keyDone);
