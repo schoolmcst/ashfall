@@ -1,3 +1,4 @@
+window.SCRIPT_T0 = performance.now();
 /* ================================================================== save backup: your stats and setup can't be lost
    Everything the game saves (career stats, classes, settings, friends, callsign...) lives in localStorage. A second
    copy is kept in IndexedDB (a separate store, with its own space) and refreshed every few seconds of play. When the

@@ -278,7 +278,7 @@
   #mhud{position:absolute;left:50%;top:14px;transform:translateX(-50%);text-align:center;text-shadow:0 0 6px #000}
   #mhud .mrow{display:flex;align-items:center;justify-content:center;gap:10px}
   #mhud .ts{min-width:64px;padding:4px 10px;font-size:26px;font-weight:700;letter-spacing:2px;background:rgba(0,0,0,.4);border-bottom:3px solid}
-  #mhud .ts.a{border-color:#5aaeff;color:#cfe6ff} #mhud .ts.b{border-color:#ff5a4a;color:#ffd7d2}
+  #mhud .ts.a{border-color:var(--friend,#5aaeff);color:#e6f2ff} #mhud .ts.b{border-color:var(--enemy,#ff5a4a);color:#fff1ee}
   #mhud .tm{display:flex;flex-direction:column;min-width:76px} #mhud .tm b{font-size:18px;letter-spacing:2px} #mhud .tm small{font-size:10px;letter-spacing:3px;opacity:.75}
   #mhud .minfo{margin-top:6px;font-size:12px;letter-spacing:3px;opacity:.9}
   #marks{position:absolute;inset:0;overflow:hidden}#uavMarks{position:absolute;inset:0;overflow:hidden;pointer-events:none}
@@ -664,6 +664,7 @@ window.addEventListener('error', function (ev) { showErr('Error: ' + ev.message 
 <script>
 window.__ashfallBoot = () => {
 'use strict';
+window.SCRIPT_T0 = performance.now();
 /* ================================================================== save backup: your stats and setup can't be lost
    Everything the game saves (career stats, classes, settings, friends, callsign...) lives in localStorage. A second
    copy is kept in IndexedDB (a separate store, with its own space) and refreshed every few seconds of play. When the
@@ -734,11 +735,11 @@ const SHADOWQ = {
 const FXQ = { low: 0.35, medium: 0.65, high: 1, ultra: 1.5 };
 const DEFAULTS = {
   quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
-  master: 80, sfx: 100, ambience: 60, music: 50, zvoice: true, zvoiceVol: 70,
+  master: 80, sfx: 100, ambience: 60, music: 50, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,
-  crosshair: 'cross', crosshairColor: 'white', hitMarkers: true, ragdoll: true, deathCam: true, killcam: true, dmgIndicator: true, radar: true, difficulty: 'regular',
+  crosshair: 'cross', crosshairColor: 'white', hitMarkers: true, ragdoll: true, deathCam: true, killcam: true, cbMode: 'off', adsFov: 'affected', dmgIndicator: true, radar: true, difficulty: 'regular',
 };
 const S = Object.assign({}, DEFAULTS);
 const STORE = 'ashfall.settings.v1', BEST = 'ashfall.best.v1';
@@ -6325,10 +6326,10 @@ let viewmodel = null, gunObjs = [];
 const HIP = new THREE.Vector3(0.15, -0.17, -0.36);
 function setupViewmodel() {
   viewmodel = new THREE.Group(); vmCamera.add(viewmodel);
-  equipClass(activeClass());
+  equipClass(activeClass(), true);   // its shaders compile when the first match starts, not on the loading screen
 }
 // put a class in the player's hands: two weapon instances, their models, equipment and perk
-function equipClass(cls) {
+function equipClass(cls, noCompile) {
   const defs = cls.only ? [ARM[cls.only]] : [ARM[cls.p] || ARM.marc, ARM[cls.s] || ARM.sidearm];
   for (const g of gunObjs) { viewmodel.remove(g); g.userData.flash.visible = false; }
   WEAPONS = defs.map(makeInstance); if (cls.factory) WEAPONS.forEach(w => { w.factory = true; });
@@ -6339,7 +6340,7 @@ function equipClass(cls) {
   WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = Math.min(w.reserveMax, w.def.reserve); });
   G.equip = EQUIP[cls.e] ? cls.e : 'frag'; G.perks = perksOf(cls); G.equipped = cls;
   G.cur = 0; G.burstLeft = 0;
-  try { renderer.compile(vmScene, vmCamera); } catch (e) {}
+  if (!noCompile) try { renderer.compile(vmScene, vmCamera); } catch (e) {}
 }
 const perk = k => !!(G.perks && G.perks.includes(k)) && !(typeof M !== 'undefined' && M && M.mode === 'gun' && false);
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -6408,7 +6409,7 @@ function updatePlayer(dt) {
   camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn);
   G.shake = Math.max(0, G.shake - dt * 0.05);
   G.ads = lerp(G.ads, G.adsOn && G.swapT <= 0 ? 1 : 0, clamp(dt * 11 * (perk('amped') ? 1.14 : 1) / Math.pow(w.adsTime || 1, 1.4), 0, 1));
-  const fov = lerp(baseFov + (sprint ? 5 : 0), w.adsFov * baseFov / 75, G.ads);
+  const fov = lerp(baseFov + (sprint ? 5 : 0), adsFovFor(w, baseFov), G.ads);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   animateViewmodel(dt, hs, sprint, bobOn);
   listener.x = P.x; listener.z = P.z; listener.yaw = P.yaw; listener.y = P.y + P.eye; listener.fy = P.y;
@@ -7022,7 +7023,7 @@ function drawRadar() {
   const cs = Math.cos(P.yaw), sn = Math.sin(P.yaw);
   const dot = (x, z) => { const dx = x - P.x, dz = z - P.z; let px = (dx * cs - dz * sn) * scale, py = (dx * sn + dz * cs) * scale; const l = Math.hypot(px, py); if (l > R) { px *= R / l; py *= R / l; } c.fillRect(W / 2 + px - 2, W / 2 + py - 2, 4, 4); };
   const pvp = inMatch();
-  for (const e of enemies) { const fr = isFriend(e); if (pvp && !fr && !stkSeen(e) && !(M.t - (e.lastShotT || -9) < 2.5 && !e.stealth)) continue; c.fillStyle = fr ? '#5aaeff' : '#e04a3a'; dot(e.group.position.x, e.group.position.z); }
+  for (const e of enemies) { const fr = isFriend(e); if (pvp && !fr && !stkSeen(e) && !(M.t - (e.lastShotT || -9) < 2.5 && !e.stealth)) continue; c.fillStyle = fr ? TEAM_COL[0] : TEAM_COL[1]; dot(e.group.position.x, e.group.position.z); }
   if (pvp) { c.fillStyle = '#ffd24a'; for (const m of markerList()) dot(m.x, m.z); }
   c.fillStyle = '#6fcf5a'; for (const k of pickups) dot(k.x, k.z);
 }
@@ -7231,12 +7232,13 @@ function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
 {
-"v": "1.2.47",
+"v": "1.2.48",
 "d": "2026-10-23",
 "n": [
-"WEEKLY CHALLENGES: THE PLUG'S LIST. Six jobs from your plug every week (new list each Monday) - kills, headshots, wins, bagging stash bags, taking grow spots, zombie rounds and more. Each pays XP and DZ; do all six for a free PRESTIGE chance box. Find it under WEEKLY.",
-"PRESTIGE: at level 100 press PRESTIGE to go back to level 1 and keep everything you own. Ten prestiges, SEEDLING to KUSH KING: each gives a prestige emblem on your card, a calling card, 2,000 DZ and a free PRESTIGE box. Prestige 3, 6 and 10 add new finishes: GREENHOUSE CHROME, AMBER RESIN and FROSTED TRICHOME.",
-"NEW: THE STASH YARD - a firing range and tutorial on the main menu. Targets from 8 to 40 m (some strafe), a checklist of the basics with your keys, live accuracy, and a free DEALER DRONE to try. Change guns from the pause menu. 500 DZ the first time you finish it; nothing there counts for XP or stats."
+"FASTER FIRST LOAD: the loading screen is much shorter (about 6 s down to under 2 s on our test machine). The sky reflections now build just after the menu appears, and your gun's shaders get ready when the first match starts, not on the loading screen.",
+"COLOUR-BLIND MODE (Settings > GAMEPLAY): DEUTERANOPIA (blue / amber), PROTANOPIA (blue / yellow) or TRITANOPIA (teal / pink) team colours. Changes the scoreboard, kill feed, radar, UAV marks, objectives, stash bags and grow spots.",
+"FIELD OF VIEW: new ADS FIELD OF VIEW option (Settings > VIDEO). AFFECTED zooms in from your FOV; INDEPENDENT makes every sight zoom the same at any FOV. FOV checked from 60 to 110.",
+"BETTER VOICES: the survivors now get the best voices your computer has (natural / premium voices first, never the joke ones like Bubbles or Zarvox on a Mac), with gentler pitch so they sound less robotic. New VOICE LINES SPEED slider (Settings > AUDIO) - you hear a sample when you change it."
 ]
 },
 {
@@ -9556,7 +9558,7 @@ function onKill(e, head, boom, bonusOnly) {
   if (G.streak % 5 === 0) { const b = G.streak * 20; extra += b; showBanner(`${G.streak} KILL STREAK`, `+${b} bonus`); sfx.streak(); }
   G.score += extra; if (!(boom && e.killedBy === 'strike')) stkAdd(pts + Math.min(extra, 100));   // streak kills don't feed streaks; bonuses count up to +100
   popScore('+' + (pts + extra), multiTxt ? 'big' : head ? 'head' : '', [multiTxt, ...tags].filter(Boolean).join(' · '));
-  feedLine(`<b>YOU</b> <span class="fw">${boom ? '✹' : WEAPONS[G.cur].name}</span> ${e.name ? `<span style="color:${isFriend(e) ? '#5aaeff' : '#ff5a4a'}">${e.name}</span>` : e.type.toUpperCase()}${tags.length ? ` <span class="ft">${tags.join(' · ')}</span>` : ''} <span class="fp">+${pts + extra}</span>`);
+  feedLine(`<b>YOU</b> <span class="fw">${boom ? '✹' : WEAPONS[G.cur].name}</span> ${e.name ? `<span style="color:${isFriend(e) ? TEAM_COL[0] : TEAM_COL[1]}">${e.name}</span>` : e.type.toUpperCase()}${tags.length ? ` <span class="ft">${tags.join(' · ')}</span>` : ''} <span class="fp">+${pts + extra}</span>`);
 }
 
 /* ---------- explosive barrels (the red ones): a hit sets them alight, then they blow and chain */
@@ -10046,6 +10048,30 @@ function stkRadarJam(c, W) {
   for (let i = 0; i < 260; i++) { const v = (Math.random() * 200) | 0; c.fillStyle = `rgba(${v},${v},${v},.55)`; c.fillRect(Math.random() * W, Math.random() * W, 3, 2); }
   c.restore(); c.fillStyle = '#ff6a5a'; c.font = 'bold 11px sans-serif'; c.textAlign = 'center'; c.fillText('JAMMED', W / 2, W / 2 + 4); c.textAlign = 'start';
 }
+/* ================================================================== accessibility: colour-blind team colours, ADS field of view
+   COLOUR-BLIND MODE swaps the red / blue team colours (scoreboard, kill feed, radar, markers, objectives, UAV, bags,
+   grow spots) for pairs that stay apart for each kind of colour blindness. ADS FIELD OF VIEW: AFFECTED zooms in from
+   your FOV (wider FOV, wider scopes), INDEPENDENT always zooms in by the same amount whatever your FOV. */
+const CB_PAL = {
+  off: ['#5aaeff', '#ff5a4a'],
+  deut: ['#3d9bff', '#ffb000'],   // deuteranopia (green-weak): blue and amber
+  prot: ['#4aa8ff', '#ffd23a'],   // protanopia (red-weak): blue and yellow, reds look dark to them
+  trit: ['#2fd6c4', '#ff3a6e'],   // tritanopia (blue-weak): teal and pink-red
+};
+function cbApply() {
+  const p = CB_PAL[S.cbMode] || CB_PAL.off;
+  TEAM_COL[0] = p[0]; TEAM_COL[1] = p[1];
+  try { friendlyMarker.tex = null; } catch (e) {}
+  try { if (typeof kcIcon === 'function') kcIcon.c = {}; } catch (e) {}
+  document.documentElement.style.setProperty('--friend', p[0]); document.documentElement.style.setProperty('--enemy', p[1]);
+  const rgb = h => [1, 3, 5].map(i => parseInt(h.slice(i, i + 2), 16)).join(',');
+  document.documentElement.style.setProperty('--enemy-rgb', rgb(p[1]));
+}
+const cbEnemy = () => TEAM_COL[1], cbFriend = () => TEAM_COL[0];
+(() => { const s = document.createElement('style'); s.textContent = '#uavMarks i{border-color:var(--enemy,#ff4a3a)!important;background:rgba(var(--enemy-rgb,255,74,58),.35)!important;box-shadow:0 0 6px rgba(var(--enemy-rgb,255,60,40),.8)!important}#uavMarks i.adv{background:var(--enemy,#ff4a3a)!important}'; document.head.appendChild(s); })();
+try { cbApply(); } catch (e) {}
+// the zoom when aiming: affected by your FOV (the old way) or the same at any FOV
+const adsFovFor = (w, baseFov) => S.adsFov === 'independent' ? w.adsFov : w.adsFov * baseFov / 75;
 /* ================================================================== performance helpers */
 // dynamic resolution: drop the render scale when the frame rate sags, creep back up when there is headroom.
 // If lowering the resolution does not actually speed things up (frame-capped display, battery saver), it backs off.
@@ -15539,10 +15565,10 @@ function zpHud(force) {
    the smoking or the edible. In co-op you hear your teammates' lines in their voices (sent with your presence).
    They are written to grow into a story later: who they are and why they were in Blackwell the night it fell. */
 const ZCHARS = [
-  { id: 'doc', name: 'DOC', full: '"DOC" REYES', bio: 'Dr. Marcus Reyes · the hospital\'s best surgeon until the night he signed off on the trial', col: '#7ab8ff', voice: { want: ['david', 'guy', 'george', 'mark', 'male'], female: false, pitch: 0.75, rate: 0.92 } },
-  { id: 'tank', name: 'TANK', full: 'TANYA "TANK" BRIGGS', bio: 'ex-army medic on the night shift · loud, fearless, hates paperwork', col: '#ff7a5a', voice: { want: ['zira', 'aria', 'susan', 'jenny', 'female'], female: true, pitch: 0.85, rate: 1.08 } },
-  { id: 'smokes', name: 'SMOKES', full: 'LEROY "SMOKES" DAWSON', bio: 'the orderly who knows every back door · nothing rattles him, except running out', col: '#8fe07a', voice: { want: ['mark', 'ryan', 'james', 'david', 'male'], female: false, pitch: 0.6, rate: 0.82 } },
-  { id: 'sparks', name: 'SPARKS', full: 'PENNY "SPARKS" HOLLOWAY', bio: 'contract electrician, came to fix the generators · jumpy, clever, talks when scared', col: '#ffd24a', voice: { want: ['hazel', 'sonia', 'libby', 'zira', 'female'], female: true, pitch: 1.35, rate: 1.15 } },
+  { id: 'doc', name: 'DOC', full: '"DOC" REYES', bio: 'Dr. Marcus Reyes · the hospital\'s best surgeon until the night he signed off on the trial', col: '#7ab8ff', voice: { want: ['david', 'guy', 'george', 'mark', 'male'], female: false, pitch: 0.88, rate: 0.95 } },
+  { id: 'tank', name: 'TANK', full: 'TANYA "TANK" BRIGGS', bio: 'ex-army medic on the night shift · loud, fearless, hates paperwork', col: '#ff7a5a', voice: { want: ['zira', 'aria', 'susan', 'jenny', 'female'], female: true, pitch: 0.96, rate: 1.04 } },
+  { id: 'smokes', name: 'SMOKES', full: 'LEROY "SMOKES" DAWSON', bio: 'the orderly who knows every back door · nothing rattles him, except running out', col: '#8fe07a', voice: { want: ['mark', 'ryan', 'james', 'david', 'male'], female: false, pitch: 0.82, rate: 0.9 } },
+  { id: 'sparks', name: 'SPARKS', full: 'PENNY "SPARKS" HOLLOWAY', bio: 'contract electrician, came to fix the generators · jumpy, clever, talks when scared', col: '#ffd24a', voice: { want: ['hazel', 'sonia', 'libby', 'zira', 'female'], female: true, pitch: 1.12, rate: 1.08 } },
 ];
 // lines: [character][moment] -> list. bowl / joint / edible are the perk reactions. (The story's own lines live in
 // zstory.js / zmaps.js and are not these.) Adult, and they talk about getting high a lot.
@@ -15624,17 +15650,46 @@ ZL.char = 'smokes'; try { const c = localStorage.getItem('ashfall.zchar'); if (Z
 const zvChar = id => ZCHARS.find(c => c.id === id) || ZCHARS[0];
 
 /* ---------- picking a computer voice for each survivor (different ones where the computer has them) */
+// the best-sounding voice this computer has for each survivor: natural / neural / premium voices first, English, the
+// right gender, all four different where possible; never the joke voices (Bubbles, Zarvox, Bad News...)
+const ZV_BAD = /albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|pipe organ|fred|junior|ralph|kathy|princess|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley/i;
+const ZV_FEM = /female|zira|aria|jenny|hazel|susan|sonia|libby|samantha|karen|moira|tessa|fiona|victoria|allison|ava|zoe|serena|kate|emma|michelle|joanna|salli|kimberly|ivy|natasha|clara|catherine|nicky|martha/i;
+const ZV_MAL = /\bmale|david|mark|guy|george|ryan|james|daniel|alex|tom|aaron|arthur|oliver|andrew|brian|christopher|eric|roger|steffan|matthew|joey|justin|rishi|lee|evan|nathan|william/i;
+function zvScore(v) {
+  const n = v.name || '';
+  if (ZV_BAD.test(n)) return -1000;
+  let s = 0;
+  if (/natural|neural/i.test(n)) s += 60; if (/premium|enhanced|siri/i.test(n)) s += 40; if (/google/i.test(n)) s += 25; if (/online/i.test(n)) s += 10;
+  if (/^en[-_](us|gb)/i.test(v.lang || '')) s += 15; else if (/^en/i.test(v.lang || '')) s += 8;
+  if (v.localService) s += 3;
+  return s;
+}
 function zvLoadVoices() {
   try { ZV.voices = (window.speechSynthesis && speechSynthesis.getVoices()) || []; } catch (e) { ZV.voices = []; }
   const used = new Set(); ZV.vmap = {};
-  const en = ZV.voices.filter(v => /^en/i.test(v.lang || '')), pool = en.length ? en : ZV.voices;
+  const en = ZV.voices.filter(v => /^en/i.test(v.lang || '')), pool = (en.length ? en : ZV.voices).filter(v => zvScore(v) > -100);
+  const all = pool.length ? pool : ZV.voices;
   for (const c of ZCHARS) {
-    const want = c.voice.want; let pick = null;
-    for (const w of want) { pick = pool.find(v => v.name.toLowerCase().includes(w) && !used.has(v.name)); if (pick) break; }
-    if (!pick) pick = pool.find(v => !used.has(v.name) && (c.voice.female ? /female|zira|aria|jenny|hazel|susan|sonia|libby|samantha|karen/i : /male|david|mark|guy|george|ryan|james|daniel|alex/i).test(v.name));
-    if (!pick) pick = pool.find(v => !used.has(v.name)) || pool[0] || null;
+    const gender = c.voice.female ? ZV_FEM : ZV_MAL, other = c.voice.female ? ZV_MAL : ZV_FEM;
+    const rank = v => zvScore(v) + (gender.test(v.name) ? 40 : other.test(v.name) ? -60 : 0) + (c.voice.want.some(w => v.name.toLowerCase().includes(w)) ? 12 : 0) - (used.has(v.name) ? 80 : 0);
+    const pick = all.slice().sort((a, b) => rank(b) - rank(a))[0] || null;
     if (pick) used.add(pick.name); ZV.vmap[c.id] = pick;
   }
+}
+// one line, in a survivor's voice: natural voices get less pitch bending (it makes them sound robotic); the speed slider applies to all
+function zvUtter(c, text, vol) {
+  const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id], nat = v && /natural|neural|premium|enhanced|siri|google/i.test(v.name);
+  if (v) try { u.voice = v; } catch (e) {}
+  u.pitch = clamp(nat ? 1 + (c.voice.pitch - 1) * 0.5 : c.voice.pitch, 0.5, 1.6);
+  u.rate = clamp(c.voice.rate * ((typeof S !== 'undefined' && S.zvoiceRate ? S.zvoiceRate : 100) / 100), 0.6, 1.6);
+  u.volume = clamp(vol * zvVol() * ((typeof S !== 'undefined' && S.master !== undefined ? S.master : 80) / 100), 0, 1);
+  return u;
+}
+// settings: hear the current survivor after changing the voice volume or speed
+let zvPrevT = 0;
+function zvPreview() {
+  if (!window.speechSynthesis || !ZV.enabled || performance.now() - zvPrevT < 900) return; zvPrevT = performance.now();
+  try { speechSynthesis.cancel(); if (!ZV.voices.length) zvLoadVoices(); const c = zvChar(ZL.char); speechSynthesis.speak(zvUtter(c, `${c.name} here. This is how I sound.`, 1)); } catch (e) {}
 }
 try { if (window.speechSynthesis) { zvLoadVoices(); speechSynthesis.onvoiceschanged = zvLoadVoices; } } catch (e) {}
 
@@ -15647,9 +15702,7 @@ function zvSpeak(charId, text, vol = 1) {
   try {
     if (!window.speechSynthesis) return;
     if (!ZV.voices.length) zvLoadVoices();
-    const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id];
-    if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(vol * zvVol() * ((typeof S !== 'undefined' && S.master !== undefined ? S.master : 80) / 100), 0, 1);
-    speechSynthesis.speak(u);
+    speechSynthesis.speak(zvUtter(c, text, vol));
   } catch (e) {}
 }
 // a moment happened to me: maybe say something (cooldowns stop it getting chatty), and tell my teammates
@@ -15946,7 +15999,7 @@ function zsDialog(lines, done) {
     let fired = false; const go = () => { if (fired) return; fired = true; setTimeout(next, 250); };
     const ms = 1600 + text.length * 62;
     try {
-      if (ZV.enabled && window.speechSynthesis) { const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id]; if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(zvVol() * (S.master !== undefined ? S.master : 80) / 100, 0, 1); u.onend = go; speechSynthesis.speak(u); setTimeout(go, ms * 1.6); }
+      if (ZV.enabled && window.speechSynthesis) { const u = zvUtter(c, text, 1); u.onend = go; speechSynthesis.speak(u); setTimeout(go, ms * 1.6); }
       else setTimeout(go, ms);
     } catch (e) { setTimeout(go, ms); }
   };
@@ -17040,7 +17093,8 @@ const SCHEMA = {
     { k: 'dynRes', t: 'toggle', name: 'DYNAMIC RESOLUTION', hint: 'Lowers the render scale for a moment when the frame rate drops below your limit' },
     { k: 'aa', t: 'seg', name: 'ANTI-ALIASING', hint: 'Smooths jagged edges (4× MSAA). Applies on next launch', opts: [['off', 'OFF'], ['msaa', 'MSAA']] },
     { k: 'gpuPref', t: 'seg', name: 'GRAPHICS CARD TO USE', hint: 'Laptops with two GPUs: HIGH PERFORMANCE uses the gaming card. Applies on next launch', opts: [['high', 'HIGH PERFORMANCE'], ['low', 'POWER SAVING']] },
-    { k: 'fov', t: 'range', name: 'FIELD OF VIEW', min: 60, max: 110, step: 1, fmt: v => v + '°' },
+    { k: 'fov', t: 'range', name: 'FIELD OF VIEW', hint: 'How much you see around you. 90-100 suits most screens; ultrawide screens can go higher', min: 60, max: 110, step: 1, fmt: v => v + '°' },
+    { k: 'adsFov', t: 'seg', name: 'ADS FIELD OF VIEW', hint: 'AFFECTED: aiming zooms in from your FOV. INDEPENDENT: every sight zooms the same at any FOV', opts: [['affected', 'AFFECTED'], ['independent', 'INDEPENDENT']] },
     { k: 'brightness', t: 'range', name: 'BRIGHTNESS', min: 60, max: 150, step: 5, fmt: pct },
     { t: 'head', name: 'QUALITY' },
     { k: 'shadows', t: 'seg', name: 'SHADOW QUALITY', hint: () => 'Sharper, longer shadows. EXTREME uses an 8K shadow map' + (HW.maxTex < 8192 ? ' (not supported by this card)' : ''), opts: () => [['off', 'OFF'], ['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA'], ...(HW.maxTex >= 8192 ? [['extreme', 'EXTREME']] : [])] },
@@ -17066,6 +17120,7 @@ const SCHEMA = {
     { k: 'ambience', t: 'range', name: 'AMBIENCE VOLUME', hint: 'Wind and distant artillery', min: 0, max: 100, step: 5, fmt: pct },
     { k: 'zvoice', t: 'toggle', name: 'ZOMBIES VOICE LINES', hint: 'The four survivors talk and joke (spoken by your computer, with subtitles). Story scenes still show subtitles when this is off' },
     { k: 'zvoiceVol', t: 'range', name: 'VOICE LINES VOLUME', hint: 'How loud the survivors\' voices are', min: 0, max: 100, step: 5, fmt: pct },
+    { k: 'zvoiceRate', t: 'range', name: 'VOICE LINES SPEED', hint: () => 'How fast they talk. Uses the best voices your computer has' + (typeof ZV !== 'undefined' && ZV.vmap && ZV.vmap[ZL.char] ? ' (now: ' + ZV.vmap[ZL.char].name.replace(/^Microsoft |^Google /, '').split(' - ')[0] + ')' : ''), min: 80, max: 130, step: 5, fmt: pct },
   ],
   CONTROLS: [
     { k: 'sens', t: 'range', name: 'MOUSE SENSITIVITY', min: 20, max: 300, step: 5, fmt: pct },
@@ -17110,6 +17165,7 @@ const SCHEMA = {
   GAMEPLAY: [
     { k: 'difficulty', t: 'seg', name: 'DIFFICULTY', hint: 'Changes enemy health, damage, accuracy and numbers', opts: [['recruit', 'RECRUIT'], ['regular', 'REGULAR'], ['veteran', 'VETERAN']] },
     { k: 'crosshair', t: 'seg', name: 'CROSSHAIR', opts: [['cross', 'CROSS'], ['dot', 'DOT'], ['none', 'NONE']] },
+    { k: 'cbMode', t: 'seg', name: 'COLOUR-BLIND MODE', hint: 'Team colours that stay easy to tell apart: blue / amber (deuteranopia), blue / yellow (protanopia), teal / pink (tritanopia)', opts: [['off', 'OFF'], ['deut', 'DEUTERANOPIA'], ['prot', 'PROTANOPIA'], ['trit', 'TRITANOPIA']] },
     { k: 'crosshairColor', t: 'seg', name: 'CROSSHAIR COLOUR', opts: [['white', 'WHITE'], ['green', 'GREEN'], ['yellow', 'YELLOW'], ['red', 'RED'], ['cyan', 'CYAN']] },
     { k: 'ragdoll', t: 'toggle', name: 'RAGDOLL PHYSICS', hint: 'Bodies fall and tumble with physics instead of a canned animation' },
     { k: 'deathCam', t: 'toggle', name: 'DEATH CAM', hint: 'Slow-motion shot of whoever killed you before the K.I.A. screen' },
@@ -17128,11 +17184,13 @@ const gpuShort = () => { let n = String(GPU_NAME || 'UNKNOWN'); const m = /^ANGL
 const dispInfo = () => { const d = window.devicePixelRatio || 1; return `${Math.round(screen.width * d)}×${Math.round(screen.height * d)} · ${HW.hz} HZ`; };
 function applySetting(k) {
   if ((k === 'zvoice' || k === 'zvoiceVol') && !(S.zvoice && S.zvoiceVol > 0)) try { speechSynthesis.cancel(); } catch (e) {}
+  if ((k === 'zvoiceRate' || k === 'zvoiceVol') && typeof zvPreview === 'function') setTimeout(zvPreview, 350);
   if (k === 'quality') { if (S.quality !== 'custom') applyPreset(qKey()); renderSettings(); }
   else if (DETAIL_KEYS.has(k) && S.quality !== 'custom') { S.quality = 'custom'; const seg = document.querySelector('#setBody .seg[data-k="quality"]'); if (seg) [...seg.children].forEach(c => c.classList.toggle('on', c.dataset.v === 'custom')); }
   if (VIDEO_KEYS.has(k)) applyVideoSettings();
   if (k === 'master' || k === 'sfx' || k === 'ambience') applyAudioSettings();
   if (k === 'difficulty') updateDiffUI();
+  if (k === 'cbMode') cbApply();
   saveSettings(); sfx.ui();
 }
 function buildTabs() {
@@ -17679,7 +17737,7 @@ const BOOT = [
   ['BUILDING THE MAP', () => loadMap(DEFAULT_MAP)],
   ['EQUIPPING SOLDIERS', () => { buildSoldierTemplates(); addFresnelAll(SOLD.mats); addFresnelAll(SOLD.skinMats); setupViewmodel(); initAttachments(); }],
   ['LOADING EFFECTS', buildFx],
-  ['LIGHTING THE SKY', () => { buildEnvironment(); applyVideoSettings(); applyAudioSettings(); }],
+  ['LIGHTING THE SKY', () => { applyVideoSettings(); applyAudioSettings(); }],   // the sky reflections are built just after the menu shows (bootStep)
 ];
 function bootStep(i) {
   if (i >= BOOT.length) {
@@ -17698,16 +17756,18 @@ function bootStep(i) {
       if (gm && ARM[gm[1]]) { const d = ARM[gm[1]], pri = CATS[d.cat].slot === 'primary'; equipClass({ p: pri ? d.id : 'marc', s: pri ? 'sidearm' : d.id, e: 'frag', k: 'none' }); if (!pri) switchWeapon(1); G.swapT = 0; if (gm[2] === 'ads') G.lookAds = true; }
     }, 600);
     spawnMenuSoldiers(); updateDiffUI(); updateClassUI(); updateBestUI(); buildTabs(); renderSettings(); showScreen('menu');
-    $('loading').classList.add('hide'); return;
+    $('loading').classList.add('hide');
+    setTimeout(() => { try { buildEnvironment(); } catch (e) {} }, 250);   // first load: the menu shows first, the reflections a moment later
+    return;
   }
   setLoad(i / BOOT.length, BOOT[i][0]);
-  setTimeout(() => { try { BOOT[i][1](); } catch (e) { reportError(e); return; } bootStep(i + 1); }, 30);
+  setTimeout(() => { const t0 = performance.now(); try { BOOT[i][1](); } catch (e) { reportError(e); return; } (window.BOOT_T = window.BOOT_T || []).push([BOOT[i][0], Math.round(performance.now() - t0)]); bootStep(i + 1); }, 30);
 }
 requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

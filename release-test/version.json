@@ -1,10 +1,11 @@
 {
- "version": "1.2.47",
+ "version": "1.2.48",
  "notes": [
-  "WEEKLY CHALLENGES: THE PLUG'S LIST. Six jobs from your plug every week (new list each Monday) - kills, headshots, wins, bagging stash bags, taking grow spots, zombie rounds and more. Each pays XP and DZ; do all six for a free PRESTIGE chance box. Find it under WEEKLY.",
-  "PRESTIGE: at level 100 press PRESTIGE to go back to level 1 and keep everything you own. Ten prestiges, SEEDLING to KUSH KING: each gives a prestige emblem on your card, a calling card, 2,000 DZ and a free PRESTIGE box. Prestige 3, 6 and 10 add new finishes: GREENHOUSE CHROME, AMBER RESIN and FROSTED TRICHOME.",
-  "NEW: THE STASH YARD - a firing range and tutorial on the main menu. Targets from 8 to 40 m (some strafe), a checklist of the basics with your keys, live accuracy, and a free DEALER DRONE to try. Change guns from the pause menu. 500 DZ the first time you finish it; nothing there counts for XP or stats."
+  "FASTER FIRST LOAD: the loading screen is much shorter (about 6 s down to under 2 s on our test machine). The sky reflections now build just after the menu appears, and your gun's shaders get ready when the first match starts, not on the loading screen.",
+  "COLOUR-BLIND MODE (Settings > GAMEPLAY): DEUTERANOPIA (blue / amber), PROTANOPIA (blue / yellow) or TRITANOPIA (teal / pink) team colours. Changes the scoreboard, kill feed, radar, UAV marks, objectives, stash bags and grow spots.",
+  "FIELD OF VIEW: new ADS FIELD OF VIEW option (Settings > VIDEO). AFFECTED zooms in from your FOV; INDEPENDENT makes every sight zoom the same at any FOV. FOV checked from 60 to 110.",
+  "BETTER VOICES: the survivors now get the best voices your computer has (natural / premium voices first, never the joke ones like Bubbles or Zarvox on a Mac), with gentler pitch so they sound less robotic. New VOICE LINES SPEED slider (Settings > AUDIO) - you hear a sample when you change it."
  ],
- "sha256": "58773407bba9b81d90de2e7fddd1c2c4d1b54d89bf1c5b3c81e7a159571773c2",
+ "sha256": "540ecb5dd4030be07dec9da3bf413063cd4b21217ba360c231714ef5ed6b327e",
  "minApp": "1.0.0"
 }

@@ -255,7 +255,7 @@ function zsDialog(lines, done) {
     let fired = false; const go = () => { if (fired) return; fired = true; setTimeout(next, 250); };
     const ms = 1600 + text.length * 62;
     try {
-      if (ZV.enabled && window.speechSynthesis) { const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id]; if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(zvVol() * (S.master !== undefined ? S.master : 80) / 100, 0, 1); u.onend = go; speechSynthesis.speak(u); setTimeout(go, ms * 1.6); }
+      if (ZV.enabled && window.speechSynthesis) { const u = zvUtter(c, text, 1); u.onend = go; speechSynthesis.speak(u); setTimeout(go, ms * 1.6); }
       else setTimeout(go, ms);
     } catch (e) { setTimeout(go, ms); }
   };

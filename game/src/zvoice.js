@@ -4,10 +4,10 @@
    the smoking or the edible. In co-op you hear your teammates' lines in their voices (sent with your presence).
    They are written to grow into a story later: who they are and why they were in Blackwell the night it fell. */
 const ZCHARS = [
-  { id: 'doc', name: 'DOC', full: '"DOC" REYES', bio: 'Dr. Marcus Reyes · the hospital\'s best surgeon until the night he signed off on the trial', col: '#7ab8ff', voice: { want: ['david', 'guy', 'george', 'mark', 'male'], female: false, pitch: 0.75, rate: 0.92 } },
-  { id: 'tank', name: 'TANK', full: 'TANYA "TANK" BRIGGS', bio: 'ex-army medic on the night shift · loud, fearless, hates paperwork', col: '#ff7a5a', voice: { want: ['zira', 'aria', 'susan', 'jenny', 'female'], female: true, pitch: 0.85, rate: 1.08 } },
-  { id: 'smokes', name: 'SMOKES', full: 'LEROY "SMOKES" DAWSON', bio: 'the orderly who knows every back door · nothing rattles him, except running out', col: '#8fe07a', voice: { want: ['mark', 'ryan', 'james', 'david', 'male'], female: false, pitch: 0.6, rate: 0.82 } },
-  { id: 'sparks', name: 'SPARKS', full: 'PENNY "SPARKS" HOLLOWAY', bio: 'contract electrician, came to fix the generators · jumpy, clever, talks when scared', col: '#ffd24a', voice: { want: ['hazel', 'sonia', 'libby', 'zira', 'female'], female: true, pitch: 1.35, rate: 1.15 } },
+  { id: 'doc', name: 'DOC', full: '"DOC" REYES', bio: 'Dr. Marcus Reyes · the hospital\'s best surgeon until the night he signed off on the trial', col: '#7ab8ff', voice: { want: ['david', 'guy', 'george', 'mark', 'male'], female: false, pitch: 0.88, rate: 0.95 } },
+  { id: 'tank', name: 'TANK', full: 'TANYA "TANK" BRIGGS', bio: 'ex-army medic on the night shift · loud, fearless, hates paperwork', col: '#ff7a5a', voice: { want: ['zira', 'aria', 'susan', 'jenny', 'female'], female: true, pitch: 0.96, rate: 1.04 } },
+  { id: 'smokes', name: 'SMOKES', full: 'LEROY "SMOKES" DAWSON', bio: 'the orderly who knows every back door · nothing rattles him, except running out', col: '#8fe07a', voice: { want: ['mark', 'ryan', 'james', 'david', 'male'], female: false, pitch: 0.82, rate: 0.9 } },
+  { id: 'sparks', name: 'SPARKS', full: 'PENNY "SPARKS" HOLLOWAY', bio: 'contract electrician, came to fix the generators · jumpy, clever, talks when scared', col: '#ffd24a', voice: { want: ['hazel', 'sonia', 'libby', 'zira', 'female'], female: true, pitch: 1.12, rate: 1.08 } },
 ];
 // lines: [character][moment] -> list. bowl / joint / edible are the perk reactions. (The story's own lines live in
 // zstory.js / zmaps.js and are not these.) Adult, and they talk about getting high a lot.
@@ -89,17 +89,46 @@ ZL.char = 'smokes'; try { const c = localStorage.getItem('ashfall.zchar'); if (Z
 const zvChar = id => ZCHARS.find(c => c.id === id) || ZCHARS[0];
 
 /* ---------- picking a computer voice for each survivor (different ones where the computer has them) */
+// the best-sounding voice this computer has for each survivor: natural / neural / premium voices first, English, the
+// right gender, all four different where possible; never the joke voices (Bubbles, Zarvox, Bad News...)
+const ZV_BAD = /albert|bad news|bahh|bells|boing|bubbles|cellos|good news|jester|organ|superstar|trinoids|whisper|wobble|zarvox|deranged|hysterical|pipe organ|fred|junior|ralph|kathy|princess|grandma|grandpa|eddy|flo|reed|rocko|sandy|shelley/i;
+const ZV_FEM = /female|zira|aria|jenny|hazel|susan|sonia|libby|samantha|karen|moira|tessa|fiona|victoria|allison|ava|zoe|serena|kate|emma|michelle|joanna|salli|kimberly|ivy|natasha|clara|catherine|nicky|martha/i;
+const ZV_MAL = /\bmale|david|mark|guy|george|ryan|james|daniel|alex|tom|aaron|arthur|oliver|andrew|brian|christopher|eric|roger|steffan|matthew|joey|justin|rishi|lee|evan|nathan|william/i;
+function zvScore(v) {
+  const n = v.name || '';
+  if (ZV_BAD.test(n)) return -1000;
+  let s = 0;
+  if (/natural|neural/i.test(n)) s += 60; if (/premium|enhanced|siri/i.test(n)) s += 40; if (/google/i.test(n)) s += 25; if (/online/i.test(n)) s += 10;
+  if (/^en[-_](us|gb)/i.test(v.lang || '')) s += 15; else if (/^en/i.test(v.lang || '')) s += 8;
+  if (v.localService) s += 3;
+  return s;
+}
 function zvLoadVoices() {
   try { ZV.voices = (window.speechSynthesis && speechSynthesis.getVoices()) || []; } catch (e) { ZV.voices = []; }
   const used = new Set(); ZV.vmap = {};
-  const en = ZV.voices.filter(v => /^en/i.test(v.lang || '')), pool = en.length ? en : ZV.voices;
+  const en = ZV.voices.filter(v => /^en/i.test(v.lang || '')), pool = (en.length ? en : ZV.voices).filter(v => zvScore(v) > -100);
+  const all = pool.length ? pool : ZV.voices;
   for (const c of ZCHARS) {
-    const want = c.voice.want; let pick = null;
-    for (const w of want) { pick = pool.find(v => v.name.toLowerCase().includes(w) && !used.has(v.name)); if (pick) break; }
-    if (!pick) pick = pool.find(v => !used.has(v.name) && (c.voice.female ? /female|zira|aria|jenny|hazel|susan|sonia|libby|samantha|karen/i : /male|david|mark|guy|george|ryan|james|daniel|alex/i).test(v.name));
-    if (!pick) pick = pool.find(v => !used.has(v.name)) || pool[0] || null;
+    const gender = c.voice.female ? ZV_FEM : ZV_MAL, other = c.voice.female ? ZV_MAL : ZV_FEM;
+    const rank = v => zvScore(v) + (gender.test(v.name) ? 40 : other.test(v.name) ? -60 : 0) + (c.voice.want.some(w => v.name.toLowerCase().includes(w)) ? 12 : 0) - (used.has(v.name) ? 80 : 0);
+    const pick = all.slice().sort((a, b) => rank(b) - rank(a))[0] || null;
     if (pick) used.add(pick.name); ZV.vmap[c.id] = pick;
   }
+}
+// one line, in a survivor's voice: natural voices get less pitch bending (it makes them sound robotic); the speed slider applies to all
+function zvUtter(c, text, vol) {
+  const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id], nat = v && /natural|neural|premium|enhanced|siri|google/i.test(v.name);
+  if (v) try { u.voice = v; } catch (e) {}
+  u.pitch = clamp(nat ? 1 + (c.voice.pitch - 1) * 0.5 : c.voice.pitch, 0.5, 1.6);
+  u.rate = clamp(c.voice.rate * ((typeof S !== 'undefined' && S.zvoiceRate ? S.zvoiceRate : 100) / 100), 0.6, 1.6);
+  u.volume = clamp(vol * zvVol() * ((typeof S !== 'undefined' && S.master !== undefined ? S.master : 80) / 100), 0, 1);
+  return u;
+}
+// settings: hear the current survivor after changing the voice volume or speed
+let zvPrevT = 0;
+function zvPreview() {
+  if (!window.speechSynthesis || !ZV.enabled || performance.now() - zvPrevT < 900) return; zvPrevT = performance.now();
+  try { speechSynthesis.cancel(); if (!ZV.voices.length) zvLoadVoices(); const c = zvChar(ZL.char); speechSynthesis.speak(zvUtter(c, `${c.name} here. This is how I sound.`, 1)); } catch (e) {}
 }
 try { if (window.speechSynthesis) { zvLoadVoices(); speechSynthesis.onvoiceschanged = zvLoadVoices; } } catch (e) {}
 
@@ -112,9 +141,7 @@ function zvSpeak(charId, text, vol = 1) {
   try {
     if (!window.speechSynthesis) return;
     if (!ZV.voices.length) zvLoadVoices();
-    const u = new SpeechSynthesisUtterance(text), v = ZV.vmap[c.id];
-    if (v) u.voice = v; u.pitch = c.voice.pitch; u.rate = c.voice.rate; u.volume = clamp(vol * zvVol() * ((typeof S !== 'undefined' && S.master !== undefined ? S.master : 80) / 100), 0, 1);
-    speechSynthesis.speak(u);
+    speechSynthesis.speak(zvUtter(c, text, vol));
   } catch (e) {}
 }
 // a moment happened to me: maybe say something (cooldowns stop it getting chatty), and tell my teammates

@@ -20,10 +20,10 @@ let viewmodel = null, gunObjs = [];
 const HIP = new THREE.Vector3(0.15, -0.17, -0.36);
 function setupViewmodel() {
   viewmodel = new THREE.Group(); vmCamera.add(viewmodel);
-  equipClass(activeClass());
+  equipClass(activeClass(), true);   // its shaders compile when the first match starts, not on the loading screen
 }
 // put a class in the player's hands: two weapon instances, their models, equipment and perk
-function equipClass(cls) {
+function equipClass(cls, noCompile) {
   const defs = cls.only ? [ARM[cls.only]] : [ARM[cls.p] || ARM.marc, ARM[cls.s] || ARM.sidearm];
   for (const g of gunObjs) { viewmodel.remove(g); g.userData.flash.visible = false; }
   WEAPONS = defs.map(makeInstance); if (cls.factory) WEAPONS.forEach(w => { w.factory = true; });
@@ -34,7 +34,7 @@ function equipClass(cls) {
   WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = Math.min(w.reserveMax, w.def.reserve); });
   G.equip = EQUIP[cls.e] ? cls.e : 'frag'; G.perks = perksOf(cls); G.equipped = cls;
   G.cur = 0; G.burstLeft = 0;
-  try { renderer.compile(vmScene, vmCamera); } catch (e) {}
+  if (!noCompile) try { renderer.compile(vmScene, vmCamera); } catch (e) {}
 }
 const perk = k => !!(G.perks && G.perks.includes(k)) && !(typeof M !== 'undefined' && M && M.mode === 'gun' && false);
 const smooth = (a, b, x) => { const t = clamp((x - a) / (b - a), 0, 1); return t * t * (3 - 2 * t); };
@@ -103,7 +103,7 @@ function updatePlayer(dt) {
   camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn);
   G.shake = Math.max(0, G.shake - dt * 0.05);
   G.ads = lerp(G.ads, G.adsOn && G.swapT <= 0 ? 1 : 0, clamp(dt * 11 * (perk('amped') ? 1.14 : 1) / Math.pow(w.adsTime || 1, 1.4), 0, 1));
-  const fov = lerp(baseFov + (sprint ? 5 : 0), w.adsFov * baseFov / 75, G.ads);
+  const fov = lerp(baseFov + (sprint ? 5 : 0), adsFovFor(w, baseFov), G.ads);
   if (Math.abs(camera.fov - fov) > 0.05) { camera.fov = fov; camera.updateProjectionMatrix(); }
   animateViewmodel(dt, hs, sprint, bobOn);
   listener.x = P.x; listener.z = P.z; listener.yaw = P.yaw; listener.y = P.y + P.eye; listener.fy = P.y;
