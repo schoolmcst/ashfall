@@ -1,13 +1,13 @@
 {
- "version": "1.2.38",
+ "version": "1.2.40",
  "notes": [
-  "NEW ZOMBIES MAP: THE WORKS (story chapter two). Harold's truck led to the old Lazarus Pharmaceutical Works: a soot-black Victorian factory from 1891 with a gothic chapel, a graveyard, a foundry and the warehouse where the last NIGHTSHADE is made. Pick it with the MAP arrows in the zombies lobby.",
-  "Built to flow: the bottling hall in the middle opens every way and the whole factory is one big ring, so there are no dead ends. Train the horde round the chapel cloister garden or round the foundry furnace - two big loops that meet in the middle.",
-  "LAUNCH PADS: four pneumatic pads (loading dock, chapel garden, boiler house, foundry yard) fire you over the roofs once the pressure is on. They only go to parts of the factory you have opened and need 25 seconds to recharge.",
-  "6 doors to buy, the 6 perks spread round the factory, the gun upgrader in the boiler house. Firelight, candles, embers, smoke from the stack, and the chapel bell tolls at the start of every round.",
-  "7 NEW CHAPTERS: PRESSURE (3 valve wheels), THE FOREMAN'S KEY, BURN THE PALLETS, HAROLD (a huge boss - kill him and take his ledger), THE FORMULA, FLOOD THE LINES (pump the cure through the bottling lines for 60 seconds while the horde attacks) and an EPILOGUE with a new cliffhanger.",
-  "12 new tapes about the factory's dark past, new scenes and conversations for the four survivors. Each map's story and tapes are saved separately. Co-op works on the new map too."
+  "ZOMBIES RUNS MUCH SMOOTHER: the zombies maps had 40 to 80 real lights and every one cost every pixel every frame. Now only the 12 that matter most near you are real at any moment and they hand over as you move - it looks the same and runs much lighter, especially on Macs and laptops.",
+  "LESS FREEZING: no more hitches when you pick up story items or a boss appears; the zombies' route to you no longer rebuilds every half metre you move (a stutter when sprinting) and reuses its memory (no garbage-collection pauses); zombie and boss shaders are prepared at the start; shadows in zombies are redrawn every other frame; fire and smoke on THE WORKS only run near you.",
+  "MACS AND LAPTOPS: base Apple M1/M2/M3 chips and Intel/AMD built-in graphics now get the MEDIUM preset automatically (they were getting HIGH). If you set your graphics yourself, nothing changes.",
+  "ZOMBIES VOICE LINES: the survivors talk much less - at least 25 seconds between lines, lines never pile up behind each other (teammates' too), and every kind of line waits longer before it comes again. Going down, perks and the upgrader still always get a line.",
+  "VOICE SETTINGS moved to SETTINGS > AUDIO: a ZOMBIES VOICE LINES switch and a VOICE LINES VOLUME slider. Story scenes still show subtitles when voices are off.",
+  "PLAY WITH OR WITHOUT THE STORY: a new MODE row in the zombies lobby - STORY or CLASSIC (just the rounds: no quests, boss or scenes, and the launch pads work from the start). In co-op the host picks."
  ],
- "sha256": "0b24e2b62971ddb8c01ff64390e1b1a231053378a51188402df8516001db6db7",
+ "sha256": "cdb93125171849ea704c26365e94659f61b38ec9754d380762047c4f2c583410",
  "minApp": "1.0.0"
 }
