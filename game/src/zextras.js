@@ -186,8 +186,9 @@ function zwbBuy(o, have, cost) {
 const ZWW = {
   blackwell: { id: 'bong', base: 'thumper', name: 'THE BONG CANNON', desc: 'lobs a ball of green smoke · zombies near it drop, the rest are stunned', mag: 4, reserve: 24, interval: 0.9, col: 0x3aff5a },
   works: { id: 'pressure', base: 'hellfire', name: 'THE PRESSURE GUN', desc: 'a blast of steam that throws back everything in front of you', mag: 8, reserve: 48, interval: 0.55, col: 0xffa040 },
+  terminal9: { id: 'duster', base: 'hellfire', name: 'THE CROP DUSTER', desc: 'sprays a lingering cloud of green cure · zombies inside it melt', mag: 10, reserve: 60, interval: 0.45, col: 0x7adf3a },
 };
-const ZWWP = [];   // bong balls in flight
+const ZWWP = [], ZWWC = [];   // bong balls in flight, crop duster clouds
 const zwwFor = map => ZWW[map] || null;
 function zwwGive(map) {
   const ww = zwwFor(map || curMap); if (!ww || !Z.guns || Z.guns.includes(ww.base)) return false;
@@ -201,7 +202,7 @@ function zwwGive(map) {
 function zwwApply() {
   if (!Z.wwOn || !Z.wwOn.size) return;
   WEAPONS.forEach((w, i) => {
-    const ww = Object.values(ZWW).find(q => q.base === w.def.id); if (!ww || !Z.wwOn.has(w.def.id)) return;
+    const ww = zwwFor(curMap); if (!ww || ww.base !== w.def.id || !Z.wwOn.has(w.def.id)) return;
     w.ww = ww.id; w.name = ww.name + (w.upgraded ? ' ✦' : ''); w.magSize = ww.mag * (w.upgraded ? 2 : 1); w.reserveMax = ww.reserve * (w.upgraded ? 2 : 1); w.ammo = w.magSize; w.reserve = w.reserveMax; w.interval = ww.interval;
     const g = gunObjs[i]; if (!g) return; ZD.tinted = ZD.tinted || [];
     const tint = mt => { const c = mt.clone(); if (c.emissive) { c.emissive = new THREE.Color(ww.col); c.emissiveIntensity = 0.5; } if (c.color) c.color.lerp(new THREE.Color(ww.col), 0.3); return c; };
@@ -210,24 +211,24 @@ function zwwApply() {
 }
 const zwwDmg = (w, k) => zombHp(Math.max(1, Z.round)) * k * (w.upgraded ? 2 : 1) / Math.max(1, zombGunMul(true));
 function zwwFire(w) {
-  camera.updateMatrixWorld();
-  const dir = new THREE.Vector3(); camera.getWorldDirection(dir);
-  const org = camera.position.clone().addScaledVector(dir, 0.6);
+  const cp = Math.cos(P.pitch || 0), dir = new THREE.Vector3(-Math.sin(P.yaw) * cp, Math.sin(P.pitch || 0), -Math.cos(P.yaw) * cp);   // from where you stand and look
+  const org = new THREE.Vector3(P.x, (P.y || 0) + (P.eye || 1.6), P.z).addScaledVector(dir, 0.6);
   if (w.ww === 'bong') {
     const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: 0x6aff7a, transparent: true, depthWrite: false })); m.scale.set(0.5, 0.5, 1); m.position.copy(org); scene.add(m);
     const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0x9aff9a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); core.scale.set(0.35, 0.35, 1); m.add(core);
     ZWWP.push({ m, v: dir.multiplyScalar(24).add(new THREE.Vector3(0, 0.9, 0)), t: 0, w });   // a flat lob: indoor ceilings are low
     try { burst(0.5, 600, 0.3, 'lowpass'); tone(80, 0.4, 0.2, 'sine', 50); } catch (e) {}
-  } else {   // the steam cone
-    const range = 11, cosMax = Math.cos(0.5);
+  } else {   // the steam cone (the crop duster: a weaker cone that leaves clouds of cure behind)
+    if (w.ww === 'duster') { for (let i = 1; i <= 3; i++) ZWWC.push({ x: org.x + dir.x * i * 3, y: Math.max(0, org.y - 1.2), z: org.z + dir.z * i * 3, t: 0, hitT: 0, w }); }
+    const range = w.ww === 'duster' ? 9 : 11, cosMax = Math.cos(0.5);
     for (const e of enemies.slice()) {
       if (!e.zombie) continue; const g = e.group.position, dx = g.x - org.x, dz = g.z - org.z, dy = (g.y + 1) - org.y, d = Math.hypot(dx, dy, dz);
       if (d > range || (dx * dir.x + dy * dir.y + dz * dir.z) / (d || 1) < cosMax || !gridClear(P.x, P.z, g.x, g.z, P.y || 0, g.y)) continue;
       const push = new THREE.Vector3(dx, 0, dz).normalize(), k = 1 - d / range * 0.5;
-      damageEnemy(e, e.boss ? e.maxHp * 0.03 / Math.max(1, zombGunMul(true)) : zwwDmg(w, 1.6 * k), false, push, true, 'player');
+      damageEnemy(e, e.boss ? e.maxHp * 0.03 / Math.max(1, zombGunMul(true)) : zwwDmg(w, (w.ww === 'duster' ? 0.7 : 1.6) * k), false, push, true, 'player');
       if (enemies.includes(e)) { g.x += push.x * 2.2; g.z += push.z * 2.2; e.stunT = 0.9; e.atkT = 0; }
     }
-    try { for (let i = 0; i < 18; i++) { const s = 1 + i * 0.55, side = new THREE.Vector3(-dir.z, 0, dir.x); puff(org.x + dir.x * s + side.x * rnd(-0.3, 0.3) * s * 0.3, org.y + dir.y * s + rnd(-0.2, 0.3), org.z + dir.z * s + side.z * rnd(-0.3, 0.3) * s * 0.3, { color: 0xe8e8e8, size: 0.3 + s * 0.12, grow: 1.6, life: 0.9, vx: dir.x * 4, vy: 0.6, vz: dir.z * 4, op: 0.55 }); }
+    try { for (let i = 0; i < 18; i++) { const s = 1 + i * 0.55, side = new THREE.Vector3(-dir.z, 0, dir.x); puff(org.x + dir.x * s + side.x * rnd(-0.3, 0.3) * s * 0.3, org.y + dir.y * s + rnd(-0.2, 0.3), org.z + dir.z * s + side.z * rnd(-0.3, 0.3) * s * 0.3, { color: w.ww === 'duster' ? 0x8adf5a : 0xe8e8e8, size: 0.3 + s * 0.12, grow: 1.6, life: 0.9, vx: dir.x * 4, vy: 0.6, vz: dir.z * 4, op: 0.55 }); }
       burst(0.6, 3500, 0.3, 'highpass'); burst(0.4, 300, 0.25, 'lowpass'); } catch (e) {}
   }
 }
@@ -251,7 +252,15 @@ function zwwBurst(p, w) {
   try { for (let i = 0; i < 26; i++) puff(p.x + rnd(-2.5, 2.5), p.y + rnd(0, 2), p.z + rnd(-2.5, 2.5), { color: i % 3 ? 0x5adf6a : 0xb0ffb0, size: 1, grow: 2.4, life: 2.2, vy: 0.5, op: 0.55 }); sfx.explode(at(p.x, p.z, 30, p.y)); tone(60, 0.8, 0.25, 'sine', 30); } catch (e) {}
   try { if (typeof zcEvent === 'function') zcEvent('b', p); } catch (e) {}
 }
-function zwwClear() { for (const b of ZWWP) scene.remove(b.m); ZWWP.length = 0; }
+function zwwClear() { for (const b of ZWWP) scene.remove(b.m); ZWWP.length = 0; ZWWC.length = 0; }
+// crop duster clouds: 4 seconds of cure that eats any zombie standing in it
+function zwwCloudTick(dt) {
+  for (let i = ZWWC.length - 1; i >= 0; i--) {
+    const c = ZWWC[i]; c.t += dt; if (c.t > 4) { ZWWC.splice(i, 1); continue; }
+    if (Math.random() < dt * 8) try { puff(c.x + rnd(-1.8, 1.8), c.y + rnd(0.2, 1.2), c.z + rnd(-1.8, 1.8), { color: Math.random() < 0.5 ? 0x7adf3a : 0xb0ff8a, size: 0.6, grow: 1.4, life: 1.6, vy: 0.2, op: 0.4 }); } catch (e) {}
+    if ((c.hitT -= dt) <= 0) { c.hitT = 0.5; for (const e of enemies.slice()) if (e.zombie && Math.hypot(e.group.position.x - c.x, e.group.position.z - c.z) < 2.6) { damageEnemy(e, e.boss ? e.maxHp * 0.006 / Math.max(1, zombGunMul(true)) : zwwDmg(c.w, 0.3), false, null, true, 'player'); if (enemies.includes(e)) e.slowT = 0.6; } }
+  }
+}
 
 /* ---------- ZOMBIES STATS (per map, on this computer) and what friends see */
 const ZST = {}; try { Object.assign(ZST, JSON.parse(localStorage.getItem('ashfall.zstats') || '{}')); } catch (e) {}

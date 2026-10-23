@@ -7,7 +7,7 @@
 MODES.zomb = { name: 'ZOMBIES', short: 'ZOMBIES', icon: 'ZMB', desc: 'Survive round after round of the dead. Start with a pistol, earn points, and buy guns from the Mystery Crate.', teams: false, respawn: 0, score: 0, time: 0, unit: 'ROUNDS' };
 const ZL = { on: false, map: 'blackwell', net: 'solo', code: '' };
 ZL.story = true; try { ZL.story = localStorage.getItem('ashfall.zstoryon') !== 'off'; } catch (e) {}
-try { const zm = localStorage.getItem('ashfall.zmap'); if (['blackwell', 'works'].includes(zm)) ZL.map = zm; } catch (e) {}
+try { const zm = localStorage.getItem('ashfall.zmap'); if (['blackwell', 'works', 'terminal9'].includes(zm)) ZL.map = zm; } catch (e) {}
 try { ZL.net = localStorage.getItem('ashfall.znet') === 'coop' ? 'coop' : 'solo'; ZL.code = localStorage.getItem('ashfall.zcode') || ''; } catch (e) {}
 const Z = { zid: 0, targets: [], round: 0, toSpawn: 0, spawnT: 0, breakT: 0, active: false, guns: [], crate: null, ammo: null, boxT: 0, best: { round: 0, pts: 0 } };
 try { Object.assign(Z.best, JSON.parse(localStorage.getItem('ashfall.zbest') || '{}')); } catch (e) {}

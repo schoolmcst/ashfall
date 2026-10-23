@@ -198,7 +198,7 @@ function zsPower() { if (zsFuses() < 3) return; zsFlag('power'); try { tone(60, 
 // the power: the flickering lights steady and the fuse box goes green
 function zsApplyPower() {
   if (ZS.fusebox) for (const m of ZS.fusebox.slots) m.material.emissive.setHex(0x2adf4a);
-  try { if (curMap === 'works') worksPower(); zmapPowerPads(); } catch (e) {}
+  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); zmapPowerPads(); } catch (e) {}
   if (curMap === 'blackwell' && typeof HOSP !== 'undefined' && HOSP.flick) for (const f of HOSP.flick) { f.l.intensity = f.i * 1.15; f.t = 1e9; f.on = true; }
 }
 const ZS_SAY = {

@@ -82,7 +82,7 @@ function zdArrows() {
   const tex = new THREE.CanvasTexture(c); tex.encoding = THREE.sRGBEncoding; const mat = new THREE.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3 }), grp = new THREE.Group();
   for (let i = 0; i < ZU_PATH.length - 1; i++) {
     const [x0, z0] = ZU_PATH[i], [x1, z1] = ZU_PATH[i + 1], m = new THREE.Mesh(new THREE.PlaneGeometry(1.25, 1.25), mat);
-    m.rotation.set(-Math.PI / 2, 0, Math.atan2(-(x1 - x0), -(z1 - z0))); m.position.set(x0, 0.06, z0); grp.add(m);
+    m.rotation.set(-Math.PI / 2, 0, Math.atan2(-(x1 - x0), -(z1 - z0))); m.position.set(x0, (ZU_PATH[i][2] || 0) + 0.06, z0); grp.add(m);
   }
   grp.userData.mat = mat; scene.add(grp); return grp;
 }
@@ -214,7 +214,7 @@ function zuApply() {
 }
 function zuNear() { const s = ZU_SPOT; return ZD.up && Math.hypot(P.x - s.x, P.z - s.z) < 2.4 && Math.abs((P.y || 0) - s.y) < 1.5; }
 function zdTick(dt) {
-  zdAnim(dt); try { worksTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); } catch (e) { reportError(e); }
+  zdAnim(dt); try { worksTick(dt); airpTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); zwwCloudTick(dt); } catch (e) { reportError(e); }
   if (ZD.up) { const u = ZD.up, busy = u.t > 0; u.g.userData.beam.material.opacity = 0.08 + Math.sin(NOW * 3) * 0.04; if (busy) u.t -= dt;
     u.ring.rotation.y += dt * (busy ? 9 : 0.8); u.core.material.emissiveIntensity = 1.3 + Math.sin(NOW * 4) * 0.4 + (busy ? 2 : 0); u.lt.intensity = 1.4 + Math.sin(NOW * 4) * 0.3 + (busy ? 2.5 : 0); }
   if (ZD.arrows) ZD.arrows.userData.mat.opacity = 0.85 + Math.sin(NOW * 3) * 0.15;
