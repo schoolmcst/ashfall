@@ -1,12 +1,19 @@
 {
- "version": "1.2.41",
+ "version": "1.2.48",
  "notes": [
-  "FIXED: after buying SECOND WIND or MUNCHIES (the joint perks) you could not buy any other perk for the rest of the game - the joint's smoke trail never stopped, so the game thought you were still smoking. Every perk can be bought now, with its own animation: the bowl for DOUBLE DAB and QUICK RIP, the edible for ZOOMIES and KUSH TANK, the joint for SECOND WIND and MUNCHIES.",
-  "ZOMBIES SPAWN NEAR YOU: they only come from the parts of the map you have opened, about 12 to 28 m away by the walking route, and out of sight when possible (they used to come from anywhere up to 60 m away).",
-  "FAR ZOMBIES COME BACK: a zombie that ends up far away or cut off for a few seconds disappears and comes in again near you, keeping its health - no more hunting for the last straggler, and less for the game to run. The bosses too.",
-  "FEWER LINES AT THE START: the story's opening scene now plays only the first time you play each map, and the chapter 1 briefing waits until round 1 is over.",
-  "NEW VOICE LINES: all four survivors have a new, more adult set of everyday lines, and they talk about getting high a lot more. The story scenes are unchanged."
+  "NEW ZOMBIES MAP: TERMINAL 9 - story chapter three, FLIGHT 909. An airport cargo terminal with baggage chutes to fast-travel, the plane's cargo hold, 7 new chapters, 12 tapes and a boss in an expensive suit.",
+  "WONDER WEAPONS: one per zombies map - THE BONG CANNON, THE PRESSURE GUN and THE CROP DUSTER. Rare from the mystery crate, and your reward for finishing each story.",
+  "ZOMBIES POWER-UPS (RE-UP, HOTBOX, DOUBLE BAG, KUSH BOMB, THE FIXER, 420 SALE) and WALL STASHES - guns behind purple stencils you can buy off the wall.",
+  "NEW ZOMBIES: STRAY ROUNDS (junkie dogs every 5th round), FIENDS that crawl, BLOATERS that burst into smoke, and BARRICADED WINDOWS to board back up. Zombies stats per map, and a ZOMBIES tab on the friends leaderboard.",
+  "NEW MODE: BAGGED UP (kill confirmed) - everyone drops a stash bag when they die. Bag enemy bags to score, save your team's. Offline, online and private matches.",
+  "NEW MODE: TURF WAR (domination) - take and hold three grow spots, A, B and C. Offline, online and private matches.",
+  "KILLCAM: see your death over your killer's shoulder (turn it off in Settings).",
+  "4 NEW SCORESTREAKS: DEALER DRONE, SMOKE OUT (counter-UAV), TRAP HOUSE TURRET and HIGH FLYER (gunship).",
+  "WEEKLY CHALLENGES: THE PLUG'S LIST - six new jobs every Monday for XP and DZ, and a free PRESTIGE box for doing all six. PRESTIGE: at level 100 go back to level 1 and keep everything - 10 prestiges, each with an emblem, calling card, DZ and a box, plus 3 new finishes.",
+  "THE STASH YARD: a firing range and tutorial on the main menu.",
+  "FASTER FIRST LOAD, COLOUR-BLIND MODES (Settings > GAMEPLAY) and an ADS FIELD OF VIEW option (Settings > VIDEO).",
+  "BETTER ZOMBIES VOICES: the best voices your computer has, gentler pitch, and a VOICE LINES SPEED slider."
  ],
- "sha256": "008d8ce6bab0eaefbe71d2c7bef0ab15e1317c11109d39d26712312cd0bc1258",
+ "sha256": "1c9d483e820bcfbb457dd739489b61d68a4d187fc51e36f7eb9d7b78b4936b9e",
  "minApp": "1.0.0"
 }
