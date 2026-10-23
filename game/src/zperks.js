@@ -218,7 +218,7 @@ function zpTick(dt) {
     const pull = t > 0.65 && t < 1.7 ? Math.min(1, (t - 0.65) * 2.5) : 0;
     a.cherry.material.emissiveIntensity = 1.2 + pull * (2.5 + Math.sin(t * 30) * 0.8); a.cherryLight.intensity = 0.15 + pull * 0.9;
     const w = new THREE.Vector3(); a.cherry.getWorldPosition(w);
-    if (Math.random() < dt * (pull ? 4 : 9)) zpPuff(a, w.x, w.y + 0.004, w.z, (Math.random() - 0.5) * 0.008, 0.03 + Math.random() * 0.015, 0.002, 0.008, 0.3, 1.6);   // the thin trail off the tip
+    if (t < a.dur && Math.random() < dt * (pull ? 4 : 9)) zpPuff(a, w.x, w.y + 0.004, w.z, (Math.random() - 0.5) * 0.008, 0.03 + Math.random() * 0.015, 0.002, 0.008, 0.3, 1.6);   // the thin trail off the tip
     if (pull && Math.random() < dt * 18) { const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0xffa040, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false })); m.position.copy(w); m.scale.set(0.006, 0.006, 1); vmScene.add(m); a.sparks.push({ m, v: [(Math.random() - 0.5) * 0.06, 0.03 + Math.random() * 0.05, (Math.random() - 0.5) * 0.04], life: 0, max: 0.35 }); }
     if (t > 2.84 && !a.flicked) { a.flicked = true; a.ash.visible = false; for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(new THREE.BoxGeometry(0.003, 0.003, 0.003), zpMat(0x8a8680)); m.position.copy(w); vmScene.add(m); a.sparks.push({ m, v: [(Math.random() - 0.5) * 0.04, -0.02, (Math.random() - 0.5) * 0.03], life: 0, max: 0.8, grav: true }); } }
   } else if (a.bites) {
@@ -250,7 +250,7 @@ function zpTick(dt) {
   if (t > hz && !a.hazed) { a.hazed = true; zpHaze(a.p); ZP.wobT = 3.5; }
   const done = t >= a.dur;
   if (done) { a.R.visible = false; if (a.L) a.L.visible = false; const gun = gunObjs[G.cur]; if (gun && !gun.visible) gun.visible = true; }
-  if (done && !a.puffs.length && !a.sparks.length) zpEndAnim();
+  if (done && ((!a.puffs.length && !a.sparks.length) || t > a.dur + 3)) zpEndAnim();   // (the joint's trail used to keep smoking forever, so no other perk could be bought after a joint perk)
 }
 // the wobble outlasts the animation a little (applied to the world camera's roll, fades out)
 function zpWobble() {

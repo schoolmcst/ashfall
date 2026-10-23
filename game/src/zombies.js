@@ -162,15 +162,45 @@ function zombFieldFor(T) {
   if (!c || c.gen !== Z.navGen || Math.hypot(T.x - c.x, T.z - c.z) > 1.25 || Math.abs((T.y || 0) - c.y) > 1) c = F[k] = { x: T.x, z: T.z, y: T.y || 0, gen: Z.navGen, d: flowField(T.x, T.z, T.y || 0) };
   return c.d;
 }
-function zombSpawn() {
+// where a zombie comes in: somewhere a survivor can walk to (so only the parts with their doors bought), about 12 to 28 m
+// away by the walking route (wider if the map leaves no choice), and preferably out of the local player's sight
+const ZSP_BANDS = [[24, 56], [18, 76], [12, 110], [8, 400]];   // in 0.5 m route steps
+const zombFieldOf = T => T.me ? navField : zombFieldFor(T);
+function zombRouteDist(x, z, y) {
+  const n = nodeOf(x, z, y); if (n < 0) return -1; let best = -1;
+  for (const T of Z.targets || []) { const F = zombFieldOf(T); const d = F ? F[n] : -1; if (d >= 0 && (best < 0 || d < best)) best = d; }
+  return best;
+}
+function zombSpawnPoint() {
   const pts = zdSpawnPts(), T = Z.targets || []; if (!pts.length || !T.length) return null;
-  for (let t = 0; t < 80; t++) {
-    const p = pts[(Math.random() * pts.length) | 0], minD = t < 30 ? 16 : t < 60 ? 11 : 7;
-    if (T.some(q => Math.hypot(p.x - q.x, p.z - q.z) < minD) || !T.some(q => Math.hypot(p.x - q.x, p.z - q.z) < 60)) continue;
-    const n = nodeOf(p.x, p.z, p.y); if (n < 0 || !navField || navField[n] < 0) continue;
-    return makeZombie(p.x, p.z, p.y);
+  const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), meUp = T.some(t => t.me);
+  for (const [lo, hi] of ZSP_BANDS) {
+    const cand = [], hidden = [];
+    for (const p of pts) {
+      if (T.some(q => Math.hypot(p.x - q.x, p.z - q.z) < 6)) continue;
+      const d = zombRouteDist(p.x, p.z, p.y); if (d < lo || d > hi) continue;
+      cand.push(p);
+      const dx = p.x - P.x, dz = p.z - P.z, L = Math.hypot(dx, dz) || 1;
+      if (!meUp || (dx * fx + dz * fz) / L < 0.45 || Math.abs(p.y - (P.y || 0)) > 2 || !gridClear(P.x, P.z, p.x, p.z, P.y || 0, p.y)) hidden.push(p);
+    }
+    const pool = hidden.length ? hidden : cand;
+    if (pool.length) return pool[(Math.random() * pool.length) | 0];
   }
   return null;
+}
+function zombSpawn() { const p = zombSpawnPoint(); return p ? makeZombie(p.x, p.z, p.y) : null; }
+// a zombie that ends up far away (over ~40 m by the route) or cut off from everyone for a few seconds is brought back:
+// it disappears and comes in again near the survivors, keeping its health (fewer stragglers, less for the game to run)
+function zombRecall(dt) {
+  if ((Z.recallT = (Z.recallT || 0) - dt) > 0) return; Z.recallT = 1;
+  for (const e of enemies) {
+    if (!e.zombie || e.proxy || e.hp <= 0) continue;
+    const g = e.group.position, d = zombRouteDist(g.x, g.z, g.y);
+    if (d >= 0 && d <= 80) { e.farT = 0; continue; }
+    if ((e.farT = (e.farT || 0) + 1) < 3) continue;
+    const p = zombSpawnPoint(); if (!p) continue;
+    g.set(p.x, p.y, p.z); e.lastX = p.x; e.lastZ = p.z; e.farT = 0; e.navT = 0; e.mvx = undefined; e.atkT = 0; Z.recalled = (Z.recalled || 0) + 1;
+  }
 }
 function zombRound() {
   Z.round++; Z.toSpawn = Math.min(80, 6 + (Z.round - 1) * 3); Z.spawnT = 1; Z.active = true;
@@ -191,6 +221,7 @@ function updateZombies(dt) {
     if (Z.toSpawn > 0) { Z.spawnT -= dt; if (Z.spawnT <= 0 && enemies.length < cap) { if (zombSpawn()) Z.toSpawn--; Z.spawnT = Math.max(0.35, 1.9 - Z.round * 0.13); } }
     else if (!enemies.length) { Z.active = false; Z.breakT = 8; showBanner(`ROUND ${Z.round} SURVIVED`, 'next round in 8 seconds'); zvSay('roundEnd', 0.3); }
   }
+  zombRecall(dt);
   for (let i = 0; i < enemies.length; i++) zombThink(enemies[i], i, dt);
   zombHud();
   zombCrateTick(dt);

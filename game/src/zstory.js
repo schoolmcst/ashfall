@@ -220,8 +220,7 @@ function zsCheckChapter() {
 // Patient Zero: the first NIGHTSHADE customer, big, purple and very hard to kill (the host spawns him)
 function zsBoss() {
   if (ZS.bossOut || (zcInGame() && !zcHost()) || zsHas('blood')) return; ZS.bossOut = true;
-  const pts = zdSpawnPts().filter(p => { const n = nodeOf(p.x, p.z, p.y); return navField && n >= 0 && navField[n] >= 0 && Math.hypot(p.x - P.x, p.z - P.z) > 12; });
-  const p = pts.length ? pts[(Math.random() * pts.length) | 0] : { x: P.x + 10, z: P.z, y: P.y };
+  const p = (typeof zombSpawnPoint === 'function' && zombSpawnPoint()) || { x: P.x + 10, z: P.z, y: P.y || 0 };
   const e = makeZombie(p.x, p.z, p.y || 0); zsMakeBoss(e);
   e.hp = e.maxHp = ZS_TEXT.bossHp + zombHp(Math.max(1, Z.round)) * 10; e.kind = 'run'; e.speed = 3.6;
   ZS.boss = e; showBanner(ZS_TEXT.boss, ZS_TEXT.bossSub);
@@ -263,7 +262,9 @@ function zsDialog(lines, done) {
   next();
 }
 // group talk every few rounds (called from the round start)
-function zsRoundTalk(r) { try { zmapRound(r); } catch (e) {} if (ZS.off) return; const s = ZS_ROUNDS[r]; if (s && !ZS.said.has(r)) { ZS.said.add(r); setTimeout(() => zsDialog(s), 3500); } }
+function zsRoundTalk(r) { try { zmapRound(r); } catch (e) {} if (ZS.off) return;
+  if (ZS.scene0 && r >= 2) { ZS.scene0 = false; ZS.said.add(r); if (zsChapterNow() === 0) setTimeout(() => zsDialog(ZS_SCENES[0]), 3500); return; }   // the chapter 1 briefing waits for round 2
+  const s = ZS_ROUNDS[r]; if (s && !ZS.said.has(r)) { ZS.said.add(r); setTimeout(() => zsDialog(s), 3500); } }
 function zsStartCookReq() { if (zcInGame() && !zcHost()) zcEvent('cook', P); else zsStartCook(); }
 function zsStartCook() {
   if (ZS.cook >= 0 || ZS.done || zsChapterNow() < 5) return;
@@ -337,6 +338,9 @@ function zsIntro() {
   o.style.opacity = 1; o.style.display = '';
   const hide = () => { o.style.opacity = 0; setTimeout(() => { o.style.display = 'none'; }, 1300); removeEventListener('keydown', hide); };
   addEventListener('keydown', hide); setTimeout(hide, 6000);
-  setTimeout(() => { try { if (M.mode === 'zomb') zsDialog(ZS_INTRO.concat(ZS_SCENES[0]), () => zsCheckChapter()); } catch (e) {} }, 1200);
+  // the opening scene plays the first time you play this map; the chapter 1 briefing comes after round 1, not on top of it
+  let first = false; try { first = !localStorage.getItem(ZS_TEXT.keyDone + '.intro'); localStorage.setItem(ZS_TEXT.keyDone + '.intro', '1'); } catch (e) {}
+  ZS.scene0 = true;
+  if (first) setTimeout(() => { try { if (M.mode === 'zomb') zsDialog(ZS_INTRO, () => zsCheckChapter()); } catch (e) {} }, 1200);
   ZS.chapter = -1; setTimeout(() => { if (ZS.chapter < 0) { ZS.chapter = 0; zsHud(true); } }, 1300);
 }

@@ -1,13 +1,12 @@
 {
- "version": "1.2.40",
+ "version": "1.2.41",
  "notes": [
-  "ZOMBIES RUNS MUCH SMOOTHER: the zombies maps had 40 to 80 real lights and every one cost every pixel every frame. Now only the 12 that matter most near you are real at any moment and they hand over as you move - it looks the same and runs much lighter, especially on Macs and laptops.",
-  "LESS FREEZING: no more hitches when you pick up story items or a boss appears; the zombies' route to you no longer rebuilds every half metre you move (a stutter when sprinting) and reuses its memory (no garbage-collection pauses); zombie and boss shaders are prepared at the start; shadows in zombies are redrawn every other frame; fire and smoke on THE WORKS only run near you.",
-  "MACS AND LAPTOPS: base Apple M1/M2/M3 chips and Intel/AMD built-in graphics now get the MEDIUM preset automatically (they were getting HIGH). If you set your graphics yourself, nothing changes.",
-  "ZOMBIES VOICE LINES: the survivors talk much less - at least 25 seconds between lines, lines never pile up behind each other (teammates' too), and every kind of line waits longer before it comes again. Going down, perks and the upgrader still always get a line.",
-  "VOICE SETTINGS moved to SETTINGS > AUDIO: a ZOMBIES VOICE LINES switch and a VOICE LINES VOLUME slider. Story scenes still show subtitles when voices are off.",
-  "PLAY WITH OR WITHOUT THE STORY: a new MODE row in the zombies lobby - STORY or CLASSIC (just the rounds: no quests, boss or scenes, and the launch pads work from the start). In co-op the host picks."
+  "FIXED: after buying SECOND WIND or MUNCHIES (the joint perks) you could not buy any other perk for the rest of the game - the joint's smoke trail never stopped, so the game thought you were still smoking. Every perk can be bought now, with its own animation: the bowl for DOUBLE DAB and QUICK RIP, the edible for ZOOMIES and KUSH TANK, the joint for SECOND WIND and MUNCHIES.",
+  "ZOMBIES SPAWN NEAR YOU: they only come from the parts of the map you have opened, about 12 to 28 m away by the walking route, and out of sight when possible (they used to come from anywhere up to 60 m away).",
+  "FAR ZOMBIES COME BACK: a zombie that ends up far away or cut off for a few seconds disappears and comes in again near you, keeping its health - no more hunting for the last straggler, and less for the game to run. The bosses too.",
+  "FEWER LINES AT THE START: the story's opening scene now plays only the first time you play each map, and the chapter 1 briefing waits until round 1 is over.",
+  "NEW VOICE LINES: all four survivors have a new, more adult set of everyday lines, and they talk about getting high a lot more. The story scenes are unchanged."
  ],
- "sha256": "cdb93125171849ea704c26365e94659f61b38ec9754d380762047c4f2c583410",
+ "sha256": "008d8ce6bab0eaefbe71d2c7bef0ab15e1317c11109d39d26712312cd0bc1258",
  "minApp": "1.0.0"
 }
