@@ -8,7 +8,7 @@ if (!/^[A-Z2-9]{6}$/.test(MYCODE)) { const A = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789
 let FRIENDS = []; try { const a = JSON.parse(localStorage.getItem(FRIENDS_KEY) || '[]'); if (Array.isArray(a)) FRIENDS = a.filter(f => f && /^[A-Z2-9]{6}$/.test(f.c)).slice(0, 40); } catch (e) {}
 const friendsSave = () => { try { localStorage.setItem(FRIENDS_KEY, JSON.stringify(FRIENDS)); } catch (e) {} };
 const cleanFcode = s => String(s || '').toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6);
-const PARTY = { room: null, busy: false, status: '', lastGo: '', key: '', retryT: 0 };
+const PARTY = { room: null, busy: false, status: '', lastGo: '', key: '', retryT: 0, seq: 0, where: '', seen: '' };
 async function partyHostOwn() {
   if (!NET.app || PARTY.room || PARTY.busy || performance.now() < PARTY.retryT) return;
   PARTY.busy = true;
@@ -24,7 +24,7 @@ async function partyJoin(code) {
   if (r) { if (PARTY.room) PARTY.room.leave(); PARTY.room = r; PARTY.status = ''; sfx.streak(); }
   PARTY.busy = false; partyRender();
 }
-function partyLeave() { if (PARTY.room) PARTY.room.leave(); PARTY.room = null; PARTY.lastGo = ''; PARTY.retryT = 0; partyHostOwn(); partyRender(); }
+function partyLeave() { if (PARTY.room) PARTY.room.leave(); PARTY.room = null; PARTY.lastGo = ''; PARTY.seen = ''; PARTY.retryT = 0; partyHostOwn(); partyRender(); }
 const partyLeader = () => !PARTY.room || PARTY.room.host;
 function partyMembers() {
   if (!PARTY.room) return [{ name: NET.nick, me: true, lead: true }];
@@ -33,6 +33,35 @@ function partyMembers() {
 const partyWaiting = () => !!(PARTY.room && !PARTY.room.host && partyMembers().length > 1);
 // the match the leader is in, for everyone else to follow
 function partyGo() { if (typeof zcPartyGo === 'function' && zcPartyGo()) return zcPartyGo(); return M && M.online && NET.on && NET.room && NET.room.slot ? { s: NET.room.slot, m: NET.mode } : null; }
+/* where the leader is: 'zomb' (a zombies co-op room), 'mp' (an online match), 'solo' (an offline game), 'zlobby' (the
+   zombies lobby) or 'menu' (the multiplayer lobby and the other menus). The number n goes up only when the leader moves
+   somewhere else, so the others follow once per move: someone who leaves a match on purpose is not pulled back in when
+   that match changes host (which gives it a new slot). */
+function partyWhere() {
+  const go = partyGo();
+  if (go) return { w: go.m === 'zomb' ? 'zomb' : 'mp', s: go.s, m: go.m };
+  if (G.state !== 'menu') return { w: 'solo' };
+  return { w: typeof ZL !== 'undefined' && ZL.on ? 'zlobby' : 'menu' };
+}
+function partyLeadGo() {
+  const d = partyWhere();
+  if (d.w !== PARTY.where) { PARTY.where = d.w; PARTY.seq++; }
+  d.n = PARTY.seq; return d;
+}
+// a party member: the leader moved
+function partyMove(d, first) {
+  if (d.w === 'mp' || d.w === 'zomb') { if (typeof d.s === 'string') partyFollow(d); return; }
+  if (first || d.w === 'solo') return;   // joining a party never pulls you out of what you are doing
+  const inLobby = typeof curScreen !== 'undefined' && curScreen === 'lobby';
+  if (d.w === 'zlobby') {
+    if (typeof ZC !== 'undefined' && ZC.on) zcLeave();
+    if (G.state !== 'menu' || inLobby) { showMsg('YOUR PARTY LEADER WENT TO ZOMBIES'); openZLobby(); }
+  } else if (d.w === 'menu') {
+    const wasZ = typeof ZL !== 'undefined' && ZL.on;
+    if (typeof ZC !== 'undefined' && ZC.on) zcLeave();
+    if (G.state !== 'menu' || inLobby || wasZ) { showMsg(wasZ ? 'YOUR PARTY LEADER WENT TO MULTIPLAYER' : 'YOUR PARTY LEADER LEFT THE MATCH'); if (wasZ) zombLobbyOff(); toLobby(); }
+  }
+}
 function partyFollow(go) {
   if (go && go.m === 'zomb' && typeof zcPartyFollow === 'function') { zcPartyFollow(go); return; }
   if (!go || !MODES[go.m] || !MODES[go.m].online) return;
@@ -46,10 +75,14 @@ function partyTick() {
   if (!NET.app) return;
   if (!PARTY.room) { partyHostOwn(); return; }
   if (PARTY.room.closed) { PARTY.room = null; return; }
-  PARTY.room.presence({ n: NET.nick, ld: PARTY.room.host ? 1 : 0, go: PARTY.room.host ? partyGo() : null });
+  PARTY.room.presence({ n: NET.nick, ld: PARTY.room.host ? 1 : 0, go: PARTY.room.host ? partyLeadGo() : null });
   if (!PARTY.room.host) {
+    PARTY.where = '';
     const lead = PARTY.room.peers().find(p => !p.sameTab && p.presence && p.presence.ld), go = lead && lead.presence.go;
-    if (go && typeof go.s === 'string' && go.s !== PARTY.lastGo) { PARTY.lastGo = go.s; partyFollow(go); }
+    if (go && typeof go.w === 'string' && typeof go.n === 'number') {
+      const key = lead.peer + ':' + go.n;
+      if (key !== PARTY.seen) { const first = !PARTY.seen.startsWith(lead.peer + ':'); PARTY.seen = key; partyMove(go, first); }
+    }
   }
   const key = JSON.stringify(partyMembers()) + PARTY.status + JSON.stringify(FRIENDS.map(f => [f.on, f.d])) + [...SOC.incoming.keys()] + FR_PENDING + [...SOC.sending.values()];
   if (key !== PARTY.key) { PARTY.key = key; partyRender(); }
