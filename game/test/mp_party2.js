@@ -22,7 +22,7 @@ const fs = require('fs');
   const st = p => ev(p, () => { const A_ = window.__A, ZC = A_.ZC; return { conn: ZC.conn, host: A_.zcHost(), inGame: ZC.inGame, state: A_.G.state, map: A_.curMap, round: A_.Z.round, pts: A_.G.points, kills: A_.G.kills, zombies: A_.enemies.filter(e => e.zombie).length, proxies: ZC.prox.size, mates: [...ZC.rem.values()].map(R => R.n + (R.inGame ? '+' : '') + (R.dn ? ' DOWN' : '') + (R.av ? ' (seen)' : '')), down: ZC.down, dead: ZC.dead }; });
 
   const unpause = p => ev(p, () => { const G = window.__A.G; if (G.state === 'paused') G.state = G.pausedFrom || 'playing'; });
-  const where = p => ev(p, () => { const A_ = window.__A; return { state: A_.G.state, scr: A_.curScreen, z: !!A_.ZL.on, slot: A_.NET.room && A_.NET.room.slot || '', zc: A_.ZC.on && A_.ZC.room && A_.ZC.room.slot || '', w: A_.partyWhere().w }; });
+  const where = p => ev(p, () => { const A_ = window.__A; return { seen: A_.PARTY.seen, state: A_.G.state, scr: A_.curScreen, z: !!A_.ZL.on, slot: A_.NET.room && A_.NET.room.slot || '', zc: A_.ZC.on && A_.ZC.room && A_.ZC.room.slot || '', w: A_.partyWhere().w }; });
   const all = async () => [await where(A), await where(B), await where(C)];
   for (const [p, n] of [[A, 'ALPHA'], [B, 'BRAVO'], [C, 'CHARLIE']]) await ev(p, n => { window.__A.NET.nick = n; window.__A.G.noRender = true; const s = document.getElementById('hcSplash'); if (s) s.remove(); }, n);
   await A.waitForTimeout(8000);
@@ -57,7 +57,9 @@ const fs = require('fs');
   await shot(C, 'pt_3_lobby');
   // 4. leader -> zombies lobby: everyone goes to zombies
   await ev(A, () => { const A_ = window.__A; A_.ZL.net = 'solo'; A_.openZLobby(); });
-  await A.waitForTimeout(4000);
+  await A.waitForTimeout(2000);
+  r.toZ2s = await all(); r.seen2s = [await ev(B, () => window.__A.PARTY.seen), await ev(C, () => window.__A.PARTY.seen), await ev(A, () => window.__A.PARTY.seq)];
+  await A.waitForTimeout(6000);
   r.toZombies = await all();
   await shot(B, 'pt_4_zombies');
   // 5. leader -> multiplayer: everyone back
