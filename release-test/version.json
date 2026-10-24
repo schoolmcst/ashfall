@@ -1,10 +1,10 @@
 {
- "version": "1.2.56",
+ "version": "1.2.57",
  "notes": [
-  "PARTY FIX: leaving your party leader's match or lobby now sticks - you are no longer pulled straight back in.",
-  "PARTY LEADER BRINGS THE PARTY: when the leader leaves a match, everyone in the party goes back to the lobby with them.",
-  "When the party leader switches between ZOMBIES and MULTIPLAYER, the whole party switches too - and still follows them into matches and co-op games."
+  "CONTACT HIGH: infected bots now kill in one hit up close, like infected players (they needed two).",
+  "ZOMBIES: no more finisher takedowns on zombies - the 1.3 second lock could get you killed in a horde. Finishers stay in multiplayer.",
+  "ZOMBIES LEADERBOARD: shows your best round on any map and games played, so TERMINAL 9 and MAUI WOWIE count."
  ],
- "sha256": "593e1da98a40124b96c7dae451cc57ac3d78021a32c9f455bf7bf971cb45ca33",
+ "sha256": "b75775a49c9d23fff87649ac4c11040972a7939ecc1acf9f4286c2f80630505a",
  "minApp": "1.0.0"
 }
