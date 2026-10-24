@@ -12690,7 +12690,7 @@ function partyTick() {
     const lead = PARTY.room.peers().find(p => !p.sameTab && p.presence && p.presence.ld), go = lead && lead.presence.go;
     if (go && typeof go.w === 'string' && typeof go.n === 'number') {
       const key = lead.peer + ':' + go.n;
-      if (key !== PARTY.seen) { const first = !PARTY.seen.startsWith(lead.peer + ':'); PARTY.seen = key; partyMove(go, first); }
+      if (key !== PARTY.seen) { const first = !PARTY.seen; PARTY.seen = key; partyMove(go, first); }
     }
   }
   const key = JSON.stringify(partyMembers()) + PARTY.status + JSON.stringify(FRIENDS.map(f => [f.on, f.d])) + [...SOC.incoming.keys()] + FR_PENDING + [...SOC.sending.values()];
