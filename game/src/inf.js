@@ -91,8 +91,8 @@ function infBotMelee(e, dt, tp, dist) {
   e.meleeCd = (e.meleeCd || 0) - dt;
   if (!tp || dist > 2.0 || e.meleeCd > 0 || e.stunT > 0) return;
   e.meleeCd = 0.85; try { sfx.thud(at(e.group.position.x, e.group.position.z, 12)); } catch (err) {}
-  if (e.tgt === 'P') { if (!(G.spawnProt > 0)) { G.killer = e; hurtPlayer(65, e.group.position.x, e.group.position.z); } }
-  else if (e.tgt && e.tgt.group) damageEnemy(e.tgt, 65, false, new THREE.Vector3(e.tgt.group.position.x - e.group.position.x, 0, e.tgt.group.position.z - e.group.position.z).normalize(), false, e);
+  if (e.tgt === 'P') { if (!(G.spawnProt > 0)) { G.killer = e; hurtPlayer(150, e.group.position.x, e.group.position.z); } }
+  else if (e.tgt && e.tgt.group) damageEnemy(e.tgt, 150, false, new THREE.Vector3(e.tgt.group.position.x - e.group.position.x, 0, e.tgt.group.position.z - e.group.position.z).normalize(), false, e);
 }
 (() => { const s = document.createElement('style'); s.textContent = '#infVig{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity .6s;box-shadow:inset 0 0 160px 40px rgba(90,255,60,.35)}'; document.head.appendChild(s); })();
 

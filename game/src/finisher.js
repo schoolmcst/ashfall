@@ -17,7 +17,7 @@ function inspectPose(cat, ip, u) {
 const FIN_NAMES = ['ROLLED UP', 'PUFF PUFF PASS OUT', 'SMOKED'];
 // melee hit `e` from where you stand: a finisher when you are behind them (or they are not looking at you)
 function finCheck(e) {
-  if (!e || !e.group || e.dog || e.boss || G.finT > 0) return false;
+  if (!e || !e.group || e.zombie || e.dog || e.boss || G.finT > 0) return false;   // not on zombies: a 1.3 s lock in a horde gets you killed
   const p = e.group.position, fx = Math.sin(e.group.rotation.y), fz = Math.cos(e.group.rotation.y), dx = P.x - p.x, dz = P.z - p.z, d = Math.hypot(dx, dz) || 1;
   const behind = (fx * dx + fz * dz) / d < -0.35, unaware = e.entry && !e.net && !e.tgt;
   return behind || (unaware && Math.random() < 0.5);
