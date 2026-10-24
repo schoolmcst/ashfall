@@ -12849,7 +12849,7 @@ function openLeaderboard() { renderLeaderboard(); showScreen('leaderboard'); SOC
 // the ZOMBIES tab: best round on each zombies map, zombie kills, stories finished
 function renderZombBoard(rows) {
   $('lbTabs').innerHTML = Object.entries(LB_COLS).map(([k, [l]]) => `<button class="tab${k === SOC.lbSort ? ' on' : ''}" data-lb="${k}">${l}</button>`).join('');
-  $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>BEST · HOSPITAL</th><th>BEST · THE WORKS</th><th>ZOMBIE KILLS</th><th>STORIES DONE</th></tr>` + rows.map((r, i) => { const z = r.z || [0, 0, 0, 0]; return `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>${r.n}${r.on ? '' : ' <small>(offline)</small>'}</td><td>ROUND ${z[0]}</td><td>ROUND ${z[1]}</td><td>${(+z[2] || 0).toLocaleString()}</td><td>${z[3]}</td></tr>`; }).join('') + `</table><div class="net-hint" style="padding:10px 2px">Zombies records of you and your friends, best round first. Friends' numbers update while they are online.</div>`;
+  $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>BEST ROUND</th><th>GAMES</th><th>ZOMBIE KILLS</th><th>STORIES DONE</th></tr>` + rows.map((r, i) => { const z = r.z || [0, 0, 0, 0]; return `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>${r.n}${r.on ? '' : ' <small>(offline)</small>'}</td><td>ROUND ${z[0]}</td><td>${(+z[1] || 0).toLocaleString()}</td><td>${(+z[2] || 0).toLocaleString()}</td><td>${z[3]}</td></tr>`; }).join('') + `</table><div class="net-hint" style="padding:10px 2px">Zombies records of you and your friends, best round first. Friends' numbers update while they are online.</div>`;
   for (const b of $('lbTabs').children) b.onclick = () => { SOC.lbSort = b.dataset.lb; sfx.ui(); renderLeaderboard(); };
 }
 function renderLeaderboard() {
@@ -18021,7 +18021,7 @@ function zstGameOver() {
   zstSave();
 }
 function zstStory() { if (!zmapIs(curMap)) return; zstOf(curMap).story++; zstSave(); }
-const zstCard = () => [zstOf('blackwell').best, zstOf('works').best, ZMAP_LIST.reduce((a, m) => a + zstOf(m).kills, 0), ZMAP_LIST.reduce((a, m) => a + zstOf(m).story, 0)];
+const zstCard = () => [Math.max(0, ...ZMAP_LIST.map(m => zstOf(m).best)), ZMAP_LIST.reduce((a, m) => a + zstOf(m).games, 0), ZMAP_LIST.reduce((a, m) => a + zstOf(m).kills, 0), ZMAP_LIST.reduce((a, m) => a + zstOf(m).story, 0)];
 /* ================================================================== MUNCHIE CANDY and the upgrade camos (zombies)
    MUNCHIE CANDY: pick a pack of 4 candies in the zombies lobby (10 to choose from). Each round one of them is in your
    pocket (shown by your perks); press the SCORESTREAK key (X / D-pad up) to eat it. One candy a round, used or not.

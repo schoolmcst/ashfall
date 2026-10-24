@@ -297,4 +297,4 @@ function zstGameOver() {
   zstSave();
 }
 function zstStory() { if (!zmapIs(curMap)) return; zstOf(curMap).story++; zstSave(); }
-const zstCard = () => [zstOf('blackwell').best, zstOf('works').best, ZMAP_LIST.reduce((a, m) => a + zstOf(m).kills, 0), ZMAP_LIST.reduce((a, m) => a + zstOf(m).story, 0)];
+const zstCard = () => [Math.max(0, ...ZMAP_LIST.map(m => zstOf(m).best)), ZMAP_LIST.reduce((a, m) => a + zstOf(m).games, 0), ZMAP_LIST.reduce((a, m) => a + zstOf(m).kills, 0), ZMAP_LIST.reduce((a, m) => a + zstOf(m).story, 0)];
