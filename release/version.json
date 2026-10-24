@@ -1,19 +1,19 @@
 {
- "version": "1.2.48",
+ "version": "1.2.55",
  "notes": [
-  "NEW ZOMBIES MAP: TERMINAL 9 - story chapter three, FLIGHT 909. An airport cargo terminal with baggage chutes to fast-travel, the plane's cargo hold, 7 new chapters, 12 tapes and a boss in an expensive suit.",
-  "WONDER WEAPONS: one per zombies map - THE BONG CANNON, THE PRESSURE GUN and THE CROP DUSTER. Rare from the mystery crate, and your reward for finishing each story.",
-  "ZOMBIES POWER-UPS (RE-UP, HOTBOX, DOUBLE BAG, KUSH BOMB, THE FIXER, 420 SALE) and WALL STASHES - guns behind purple stencils you can buy off the wall.",
-  "NEW ZOMBIES: STRAY ROUNDS (junkie dogs every 5th round), FIENDS that crawl, BLOATERS that burst into smoke, and BARRICADED WINDOWS to board back up. Zombies stats per map, and a ZOMBIES tab on the friends leaderboard.",
-  "NEW MODE: BAGGED UP (kill confirmed) - everyone drops a stash bag when they die. Bag enemy bags to score, save your team's. Offline, online and private matches.",
-  "NEW MODE: TURF WAR (domination) - take and hold three grow spots, A, B and C. Offline, online and private matches.",
-  "KILLCAM: see your death over your killer's shoulder (turn it off in Settings).",
-  "4 NEW SCORESTREAKS: DEALER DRONE, SMOKE OUT (counter-UAV), TRAP HOUSE TURRET and HIGH FLYER (gunship).",
-  "WEEKLY CHALLENGES: THE PLUG'S LIST - six new jobs every Monday for XP and DZ, and a free PRESTIGE box for doing all six. PRESTIGE: at level 100 go back to level 1 and keep everything - 10 prestiges, each with an emblem, calling card, DZ and a box, plus 3 new finishes.",
-  "THE STASH YARD: a firing range and tutorial on the main menu.",
-  "FASTER FIRST LOAD, COLOUR-BLIND MODES (Settings > GAMEPLAY) and an ADS FIELD OF VIEW option (Settings > VIDEO).",
-  "BETTER ZOMBIES VOICES: the best voices your computer has, gentler pitch, and a VOICE LINES SPEED slider."
+  "NEW ZOMBIES MAP: MAUI WOWIE - story chapter four, LAST HARVEST. Flight 909 crash-lands on a grow island at sunset: a plantation house, weed fields, curing sheds, the dock and a lighthouse with the gun upgrader inside. 7 chapters, 12 tapes, the boss THE GROWER and COCONUT CANNON launch pads.",
+  "NEW WONDER WEAPON: THE DRAGON VAPE blows a huge smoke ring that rolls through every zombie in its way. Rare from the crate on MAUI WOWIE, and the reward for finishing LAST HARVEST.",
+  "MUNCHIE CANDY (zombies): pick a pack of 4 from 10 candies in the zombies lobby. Each round one is in your pocket - press the SCORESTREAK key (X / D-pad up) to eat it, from SOUR BLAST to GUMMY ANGEL (a free get-up) and COTTON CLOUD (zombies lose you).",
+  "UPGRADE CAMOS: guns from the upgrader wear an animated camo for the map - NIGHTSHADE, HELLFIRE, JET STREAM and TROPIC THUNDER.",
+  "NEW MODES: CONTACT HIGH (infected) - one player turns, and everyone they catch joins them; survive 5 minutes. BACK ALLEY (2v2 gunfight) - one life a round, everyone gets the same random loadout, first to 6. Offline, online and private.",
+  "NEW MAP: THE GREENHOUSE - a glass grow house full of benches under purple lamps, a drying barn with mezzanines and a loading dock. Every multiplayer mode, offline and online.",
+  "RANKED PLAY: RANKED HARDPOINT and RANKED SEARCH & DESTROY (4 v 4). Every match moves your SR; 5 placement matches, then climb SEED, SPROUT, BUD, FLOWER, TOP SHELF to KUSH KING. The leaderboard has a RANKED tab.",
+  "CREWS and DAILY JOBS: make or join a crew with a 2-4 letter tag (it shows by your name online; CREW tab on the leaderboard). Three daily jobs at the top of THE PLUG'S LIST, 1,200 XP and 100 DZ each.",
+  "EVENTS: HAUNTED HARVEST is ON NOW until Nov 2 - double XP, and play 3 matches for its calling card. Also a DOUBLE XP WEEKEND every first weekend, the SEASON FINALE (Dec 26-31) and the 4/20 FESTIVAL.",
+  "PLAY OF THE GAME: your best multi-kill plays before the scoreboard. FINISHERS: melee someone from behind for a takedown (+100). WEAPON INSPECT (F) now moves differently for every kind of gun.",
+  "MAP VOTING between online rounds, and NEW GRENADES: the HOTBOX GRENADE (a thick smoke cloud nobody can see through) and the SKUNK BOMB (a blinding green flash, then a stink cloud).",
+  "PERFORMANCE MODE for slow computers (Settings > VIDEO, or one tap in the pause menu) - the game suggests it if you drop under 35 FPS. Plus a FRAME GRAPH to see where the game slows down."
  ],
- "sha256": "1c9d483e820bcfbb457dd739489b61d68a4d187fc51e36f7eb9d7b78b4936b9e",
+ "sha256": "4d321bd6393216c32e43d4f7571a77dc88c5fc75ff82a17b66a4aa0151eafdcd",
  "minApp": "1.0.0"
 }

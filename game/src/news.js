@@ -2,13 +2,20 @@
 const NEWS = [
 {
 "v": "1.2.55",
-"d": "2026-10-23",
+"d": "2026-10-24",
 "n": [
-"NEW ZOMBIES MAP: MAUI WOWIE - chapter four, LAST HARVEST. Flight 909 crash-lands on a grow island at sunset",
-"Plantation house, weed fields, curing sheds, the dock and a lighthouse with the gun upgrader inside",
-"7 story chapters, 12 tapes, a new boss THE GROWER, and COCONUT CANNON launch pads",
-"New wonder weapon THE DRAGON VAPE: a huge smoke ring that rolls through every zombie in its way",
-"New upgrade camo on this map: TROPIC THUNDER"
+"NEW ZOMBIES MAP: MAUI WOWIE - story chapter four, LAST HARVEST. Flight 909 crash-lands on a grow island at sunset: a plantation house, weed fields, curing sheds, the dock and a lighthouse with the gun upgrader inside. 7 chapters, 12 tapes, the boss THE GROWER and COCONUT CANNON launch pads.",
+"NEW WONDER WEAPON: THE DRAGON VAPE blows a huge smoke ring that rolls through every zombie in its way. Rare from the crate on MAUI WOWIE, and the reward for finishing LAST HARVEST.",
+"MUNCHIE CANDY (zombies): pick a pack of 4 from 10 candies in the zombies lobby. Each round one is in your pocket - press the SCORESTREAK key (X / D-pad up) to eat it, from SOUR BLAST to GUMMY ANGEL (a free get-up) and COTTON CLOUD (zombies lose you).",
+"UPGRADE CAMOS: guns from the upgrader wear an animated camo for the map - NIGHTSHADE, HELLFIRE, JET STREAM and TROPIC THUNDER.",
+"NEW MODES: CONTACT HIGH (infected) - one player turns, and everyone they catch joins them; survive 5 minutes. BACK ALLEY (2v2 gunfight) - one life a round, everyone gets the same random loadout, first to 6. Offline, online and private.",
+"NEW MAP: THE GREENHOUSE - a glass grow house full of benches under purple lamps, a drying barn with mezzanines and a loading dock. Every multiplayer mode, offline and online.",
+"RANKED PLAY: RANKED HARDPOINT and RANKED SEARCH & DESTROY (4 v 4). Every match moves your SR; 5 placement matches, then climb SEED, SPROUT, BUD, FLOWER, TOP SHELF to KUSH KING. The leaderboard has a RANKED tab.",
+"CREWS and DAILY JOBS: make or join a crew with a 2-4 letter tag (it shows by your name online; CREW tab on the leaderboard). Three daily jobs at the top of THE PLUG'S LIST, 1,200 XP and 100 DZ each.",
+"EVENTS: HAUNTED HARVEST is ON NOW until Nov 2 - double XP, and play 3 matches for its calling card. Also a DOUBLE XP WEEKEND every first weekend, the SEASON FINALE (Dec 26-31) and the 4/20 FESTIVAL.",
+"PLAY OF THE GAME: your best multi-kill plays before the scoreboard. FINISHERS: melee someone from behind for a takedown (+100). WEAPON INSPECT (F) now moves differently for every kind of gun.",
+"MAP VOTING between online rounds, and NEW GRENADES: the HOTBOX GRENADE (a thick smoke cloud nobody can see through) and the SKUNK BOMB (a blinding green flash, then a stink cloud).",
+"PERFORMANCE MODE for slow computers (Settings > VIDEO, or one tap in the pause menu) - the game suggests it if you drop under 35 FPS. Plus a FRAME GRAPH to see where the game slows down."
 ]
 },
 {
