@@ -24,6 +24,7 @@ const MODES = {
   rhp: { name: 'RANKED HARDPOINT', short: 'RANKED HP', icon: 'RNK', desc: 'Ranked play, 4 v 4 Hardpoint. Wins raise your SR, losses lower it; climb from SEED to KUSH KING.', teams: true, respawn: 4, score: 200, time: 0, perTeam: 4, unit: 'POINTS', online: true, base: 'hp', ranked: true },
   rsnd: { name: 'RANKED SEARCH & DESTROY', short: 'RANKED S&D', icon: 'RNK', desc: 'Ranked play, 4 v 4 Search & Destroy, first to 6 rounds. Wins raise your SR, losses lower it.', teams: true, respawn: 0, score: 6, time: 0, perTeam: 4, unit: 'ROUNDS', online: true, base: 'snd', ranked: true },
   osnd: { name: 'ONLINE SEARCH & DESTROY', short: 'ONLINE S&D', icon: 'S&D', desc: 'Real people, one life per round. Attackers plant the bomb at A or B, defenders stop them. First to 4 rounds.', teams: true, respawn: 0, score: 4, time: 0, perTeam: 5, unit: 'ROUNDS', online: true, base: 'snd' },
+  camp: { name: 'CAMPAIGN', short: 'STORY', icon: 'CMP', desc: 'FIRST HARVEST: the story missions.', teams: true, respawn: 0, score: 0, time: 0, perTeam: 1, unit: 'STEPS' },
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
@@ -154,6 +155,7 @@ function startMatch(mode, custom) {
   resetGame();
   if (mode === 'zomb') { zombStart(cfg); return; }
   if (mode === 'range') { rangeStart(cfg); return; }
+  if (mode === 'camp') { campStart(cfg); return; }
   if (mode === 'surv') { if (curMap !== 'ruins') { buildSpawns(); const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z); } G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); matchHold(false); return; }
   buildSpawns();
   G.breakT = 1e9; G.waveActive = false; G.maxHp = M.maxHp; G.health = M.maxHp;
@@ -304,6 +306,8 @@ function botThink(e) {
   cands.sort((a, b) => a[1] - b[1]);
   let tgt = null;
   for (let i = 0; i < Math.min(4, cands.length); i++) { if (cands[i][1] > 60) break; if (losTo(e, cands[i][0])) { tgt = cands[i][0]; break; } }
+  if (tgt && e.camp && !e.camp.alert && !campNotice(e, tgt)) tgt = null;
+  if (tgt && e.camp) campAlert(e);
   if (tgt && tgt !== e.tgt) { try { brainEngage(e, tgt); } catch (err) {} e.reactT = rnd(0.16, 0.42) * (1.25 - 0.5 * (e.hum || 0.4)); e.engageT = M.t + e.reactT; }   // human reaction time before they start aiming
   if (tgt !== e.tgt) { const pre = !!(e.lkp && M.t - e.lkpT < 3 && tgt); e.tgt = tgt; if (tgt) e.aim = Math.min(e.aim, pre ? 0.45 + e.iq * 0.25 : 0.2); }   // pre-aimed where they expected you
   if (tgt) { e.seenT = M.t; botRemember(e, tgt); if (Math.random() < e.iq) botCallout(e, tgt); }
@@ -324,13 +328,13 @@ function botsHear(x, z, team, r, who) {
   for (const o of enemies) {
     if (!o.entry || o.net || o.team === team || o.tgt) continue;
     const d = Math.hypot(o.group.position.x - x, o.group.position.z - z);
-    if (d < r && Math.random() < 0.4 + o.iq * 0.6) { o.lkp = { x: x + rnd(-2, 2), z: z + rnd(-2, 2), y: 0 }; o.lkpT = M.t; o.lkpWho = who || null; }
+    if (d < r && Math.random() < 0.4 + o.iq * 0.6) { o.lkp = { x: x + rnd(-2, 2), z: z + rnd(-2, 2), y: 0 }; o.lkpT = M.t; o.lkpWho = who || null; if (o.camp) campAlert(o); }
   }
 }
 // shot by someone: turn to them straight away
 function botWasHit(e, by) {
   if (!e.entry || e.net) return;
-  e.hitT = M.t;
+  e.hitT = M.t; if (e.camp) campAlert(e);
   const t = by === 'player' ? 'P' : by && by.group ? by : null; if (!t) return;
   const p = tpos(t); e.lkp = { x: p.x, z: p.z, y: p.y || 0 }; e.lkpT = M.t; e.lkpWho = t;
   if (!e.tgt && losTo(e, t)) { e.tgt = t; e.aim = Math.max(e.aim, 0.35 * e.iq); }
@@ -365,6 +369,7 @@ function botGoal(e, cands) {
   const near = (p, r) => ({ x: p.x + rnd(-r, r), z: p.z + rnd(-r, r), y: p.y || 0 });
   const set = (p, hold) => { e.goalT = M.t + (hold || rnd(3, 6)); return p; };
   if (e.inf) { const g = infGoal(e, set); if (g) return g; }
+  if (e.camp) { const g = campGoal(e, keep, near, set); if (g) return g; }
   if (M.kc || M.dom) { const g = m2Goal(e, keep, near, set); if (g) return g; }
   if (e.job) { const g = botRoleGoal(e, cands, keep, near, set); if (g) return g; }
   if (M.mode === 'hp' && M.hp && !M.hp.wait) {
@@ -723,6 +728,7 @@ function playerInteract(dt, held) {
     if (att && !sn.bomb && sn.state === 'live') { const s = LAYOUT.sites.find(s => Math.hypot(s.x - P.x, s.z - P.z) < 3); if (s) { txt = `HOLD ${usingPad() ? '(' + actName('reload') + ')' : '[E]'} TO PLANT AT ${s.n}`; if (held) { sn.plant += dt; prog = sn.plant / 4; if (sn.plant >= 4) { sn.plant = 0; if (netHostNow()) plantBomb(s, M.me); else { NET.sa = ['p', LAYOUT.sites.indexOf(s), (NET.saN = (NET.saN || 0) + 1)]; MS.plants++; popScore('+200', 'big', 'BOMB PLANTED'); } } } else sn.plant = 0; } }
     if (!att && sn.bomb && sn.state === 'planted' && Math.hypot(sn.bomb.x - P.x, sn.bomb.z - P.z) < 2) { txt = `HOLD ${usingPad() ? '(' + actName('reload') + ')' : '[E]'} TO DEFUSE`; if (held) { sn.defuse += dt; prog = sn.defuse / 6; if (sn.defuse >= 6) { sn.defuse = 0; if (netHostNow()) defuseBomb(M.me); else { NET.sa = ['d', 0, (NET.saN = (NET.saN || 0) + 1)]; MS.defuses++; popScore('+200', 'big', 'BOMB DEFUSED'); } } } else sn.defuse = 0; }
   }
+  if (M.mode === 'camp') { const r = campInteract(dt, held); if (r) { txt = r[0]; prog = r[1]; } }
   G.interactTxt = txt;
   if (bar) { const on = !!txt; if (bar._on !== on) { bar._on = on; bar.classList.toggle('hide', !on); } if (on) { bar.firstChild.textContent = txt; bar.lastChild.firstChild.style.width = Math.max(0, prog) * 100 + '%'; } }
   return !!txt;
@@ -743,6 +749,7 @@ function updateMatch(dt) {
   if (M.mode === 'range') rangeTick(dt);
   if (M.mode === 'inf') infUpdate(dt);
   if (M.mode === 'gf') gfUpdate(dt);
+  if (M.mode === 'camp') { campUpdate(dt); campTick(dt); }
   if (M.cfg.time && M.mode !== 'snd' && !M.online && M.t >= M.cfg.time * 60) { timeUp(); return; }
   if (G.state === 'respawning') { G.respT -= dt; showCenter(M.online && !NET.teamSet ? (NET.app ? 'FINDING A MATCH' : 'JOINING ROOM') : 'RESPAWNING', M.online && !NET.teamSet && NET.app && P2P.current ? String(P2P.current.status || '').toUpperCase() : Math.max(0, G.respT).toFixed(1)); if (G.respT <= 0 && !(M.online && !NET.teamSet)) respawnPlayer(); }
   if (G.state === 'spectate') updateSpectate(dt);
@@ -827,7 +834,7 @@ function scoreboardHtml() {
 /* ---------- HUD: score bar, centre message, objective markers */
 const fmtT = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 function updateModeHud(force) {
-  if (M.mode === 'zomb' || M.mode === 'range') { const el = $('mhud'), sv = $('stats'); el.classList.add('hide'); el._on = false; if (sv) { sv.style.display = 'none'; sv._surv = undefined; } return; }
+  if (M.mode === 'zomb' || M.mode === 'range' || M.mode === 'camp') { const el = $('mhud'), sv = $('stats'); el.classList.add('hide'); el._on = false; if (sv) { sv.style.display = 'none'; sv._surv = undefined; } return; }
   const el = $('mhud'), surv = M.mode === 'surv' || !!G.bench;
   const sv = $('stats'); if (sv && sv._surv !== surv) { sv._surv = surv; sv.style.display = surv ? '' : 'none'; }
   if (surv) { if (el._on !== false) { el._on = false; el.classList.add('hide'); } return; }

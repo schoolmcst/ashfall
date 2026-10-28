@@ -30,7 +30,7 @@ function statDeath() { if (!MS.active || G.bench) return; MS.deaths++; MS.streak
 function statModeKey() { if (!M) return 'surv'; if (M.online) { const k = Object.keys(MODES).find(k => MODES[k] === M.def); if (k) return k; } return M.mode; }
 function finishMatchStats(won) {
   if (!MS.active || G.bench) return; MS.active = false;
-  if (M && M.mode === 'range') return;   // the firing range counts for nothing
+  if (M && (M.mode === 'range' || M.mode === 'camp')) return;   // the firing range counts for nothing (the campaign pays its own XP)
   try { wkMatch(won, false); } catch (e) { reportError(e); }
   try { rankMatch(won, false); evMatch(false); } catch (e) { reportError(e); }
   const st = careerOf(M.online), mode = statModeKey();
@@ -48,7 +48,7 @@ function finishMatchStats(won) {
 // two minutes or more of play still counts as a match played (no win or loss)
 function commitPartialStats() {
   if (!MS.active || G.bench) return; MS.active = false;
-  if (M && M.mode === 'range') return;
+  if (M && (M.mode === 'range' || M.mode === 'camp')) return;
   try { wkMatch(null, true); } catch (e) { reportError(e); }
   try { rankMatch(null, true); } catch (e) { reportError(e); }
   if (!MS.kills && !MS.deaths && !MS.shots && MS.time < 10) return;

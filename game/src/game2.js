@@ -327,6 +327,7 @@ function die() {
   mouseDown = false; mouseAds = false; G.streak = 0; statDeath(); stkDeath();
   try { matchPlayerKilled(G.killer); } catch (err) { reportError(err); }
   if (M.over) return;
+  if (M.mode === 'camp') { campDied(); return; }
   if (M.mode === 'zomb' && typeof mcRevive === 'function' && mcRevive()) { G.state = 'playing'; return; }
   if (M.mode === 'zomb' && zpSelfRevive()) { G.state = 'playing'; return; }
   if (M.mode === 'zomb' && zcInGame()) { zcDown(); return; }
@@ -358,7 +359,7 @@ function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom
 // Scavenger: every kill tops up one magazine of reserve ammo
 function perkOnKill() { if (!perk('scavenger')) return; for (const w of WEAPONS) w.reserve = Math.min(w.reserveMax, w.reserve + w.magSize); }
 function startGame() { startMatch('surv'); }
-function restartMatch() { if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'zomb' && ZC.on) { zcRedeploy(); return; } if (M.mode === 'zomb') startMatch('zomb', { map: ZL.map === 'random' ? 'random' : curMap }); else if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
+function restartMatch() { if (M.mode === 'camp' && typeof CAMP !== 'undefined' && CAMP.m) { const id = CAMP.m.id; campClear(); leaveGame(); campPlay(id, CAMP.diff); return; } if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'zomb' && ZC.on) { zcRedeploy(); return; } if (M.mode === 'zomb') startMatch('zomb', { map: ZL.map === 'random' ? 'random' : curMap }); else if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
 // leave whatever is running and go back to the menu scene (soldiers posing behind the menus)
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();
@@ -368,6 +369,6 @@ function leaveGame() {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   spawnMenuSoldiers();
 }
-function clearMatch() { try { rangeClear(); } catch (e) {} try { if (M.infMe || $('infVig')) infMe(false); } catch (e) {} try { smkClear(); } catch (e) {} try { netLeave(); } catch (e) {} try { zombClear(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
+function clearMatch() { try { rangeClear(); } catch (e) {} try { campClear(); } catch (e) {} try { if (M.infMe || $('infVig')) infMe(false); } catch (e) {} try { smkClear(); } catch (e) {} try { netLeave(); } catch (e) {} try { zombClear(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
 function toMenu() { leaveGame(); showScreen('menu'); }
 function toLobby() { if (G.state !== 'menu') leaveGame(); renderLobby(); showScreen('lobby'); }
