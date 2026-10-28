@@ -1,12 +1,14 @@
 {
- "version": "1.2.58",
+ "version": "1.2.59",
  "notes": [
-  "NEW: CAMPAIGN - FIRST HARVEST. A 12-mission story, three weeks before the night Blackwell fell. On the main menu: CAMPAIGN. Missions 1 and 2 are here; more come in the next updates.",
-  "MISSION 1 \u00b7 LAST DELIVERY (the Greenhouse): VANTAGE raids the Green Coast Collective. Pack the order, hold the greenhouse, wipe the member list, get Mara out, carry the harvest, protect the van and take down CAPTAIN KESS.",
-  "MISSION 2 \u00b7 THE PLUG (Blackwater Pier): meet Smokes, photograph the grey boats without being seen, sneak into the cannery, find the manifest, catch the fake buyer and cover Smokes with a sniper rifle.",
-  "Every mission: checkpoints, the crew fights beside you and talks, 3 hidden STASH TINS, RECRUIT / REGULAR / VETERAN, and XP when you finish. Pause menu: RESTART FROM CHECKPOINT.",
-  "Also in this update: the 1.2.57 fixes (Contact High one-hit infected bots, no finishers on zombies, zombies leaderboard)."
+  "CAMPAIGN COMPLETE: all 12 missions of FIRST HARVEST are here, from the raid on the Green Coast Collective to the night Blackwell fell. It leads straight into ZOMBIES chapter one.",
+  "3 PAPER TRAIL: tail a courier through Vernon Square, crack the lockers, decrypt the drive, run the metro tunnel. 4 HIGH RISE: silent takedowns on the Lazarus tower roof, find Doc, hold the helipad, THE WARDEN.",
+  "5 PURPLE DUST: crop samples, burn the Nightshade fields, a sniper duel with HAWK, blow the pump, beat the dust storm. 6 COLD STORAGE: cut the power, sneak through the dark, break Tank out, steal the seed case.",
+  "7 THE PASS: mine the river crossings, overwatch, hit the convoy, protect Tank, THE HOUND. 8 WHEELS UP: meet Sparks, restore the airport power, scan the cargo, catch the loader, blow the plane's cargo.",
+  "9 THE WORKS: the graveyard, the bottling lines, Harold's safe, THE FOREMAN, out through the fire. 10 SOURCE: the Grower's journal, walk him to his lighthouse, burn the first field.",
+  "11 LAST STAND: fortify the hideout, guard the grow tent, stop the saboteurs, COMMANDER RHYS. 12 LIGHTS OUT: Blackwell Hospital, the vents, HAROLD VOSS and the first infected.",
+  "FIX: the traffic lights at VERNON SQUARE were broken (invisible)."
  ],
- "sha256": "27a51f5ecf39f24cd8df6229728ba00f2f4ae31fdfd6bc5fefa410c4014f487d",
+ "sha256": "cf3950cb816be2c1a4e74b8fb9fb0894369e7b0d7d44b4bc0071884a240f4c27",
  "minApp": "1.0.0"
 }

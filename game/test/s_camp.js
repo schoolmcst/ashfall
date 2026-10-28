@@ -55,8 +55,8 @@ module.exports = async p => {
       if (st.type === 'upload') { A.CAMP.upOn = true; A.CAMP.upP = 1; tp(st.at); }
       if (st.type === 'route') { A.CAMP.rtI = st.spots.length - 1; tp(st.spots[st.spots.length - 1]); }
       if (st.type === 'tail') { const rr = A.campAlive(st.squads[0])[0]; if (rr) { const end = rr.camp.path[rr.camp.path.length - 1]; rr.group.position.set(end[0], end[2] || 0, end[1]); rr.camp.pi = rr.camp.path.length - 1; tp({ x: end[0] + 10, z: end[1] }); } }
-      for (let k = 0; k < 40 && A.CAMP.i === i0 && !A.CAMP.done; k++) { if (A.G.state === 'paused') A.G.state = 'playing'; A.CAMP.talking = false; A.CAMP.q.length = 0; await w(250); if (k === 20) kill(); }
-      return { moved: A.CAMP.i !== i0 || A.CAMP.done, dead: A.CAMP.dead, state: A.G.state, enemies: A.enemies.filter(e => e.camp && !e.camp.ally).length, err: (document.getElementById('err') || {}).textContent || '' };
+      for (let k = 0; k < 120 && A.CAMP.i === i0 && !A.CAMP.done; k++) { if (A.G.state === 'paused') A.G.state = 'playing'; A.CAMP.talking = false; A.CAMP.q.length = 0; await w(250); if (k === 20) kill(); }
+      return { dbg: [A.CAMP.i, A.CAMP.stepDone, +A.CAMP.stT.toFixed(1), A.G.state, A.M.over, A.CAMP.st && A.CAMP.st.type, (A.CAMP.st.squads || A.CAMP.st.spawn || []).map(n => A.campAlive(n).length).join(',')], moved: A.CAMP.i !== i0 || A.CAMP.done, dead: A.CAMP.dead, state: A.G.state, enemies: A.enemies.filter(e => e.camp && !e.camp.ally).length, err: (document.getElementById('err') || {}).textContent || '' };
     });
     r.steps.push(Object.assign(info, res));
     if (!res.moved) break;
