@@ -73,7 +73,7 @@ function mcPicker() {
 }
 
 /* ---------- upgrade camos */
-const ZU_CAMO = { blackwell: ['NIGHTSHADE', 0x9a4aff, 'veins'], works: ['HELLFIRE', 0xff6a14, 'cracks'], terminal9: ['JET STREAM', 0x3ab8ff, 'streaks'], mauiwowie: ['TROPIC THUNDER', 0xff3ab0, 'veins'] };
+const ZU_CAMO = { blackwell: ['NIGHTSHADE', 0x9a4aff, 'veins'], works: ['HELLFIRE', 0xff6a14, 'cracks'], terminal9: ['JET STREAM', 0x3ab8ff, 'streaks'], mauiwowie: ['TROPIC THUNDER', 0xff3ab0, 'veins'], maryjane: ['RIPTIDE', 0x2ad8c8, 'cracks'] };
 const ZUC = { tex: {} };
 function zuCamoTex(map) {
   if (ZUC.tex[map]) return ZUC.tex[map];

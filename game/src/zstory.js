@@ -200,7 +200,7 @@ function zsPower() { if (zsFuses() < 3) return; zsFlag('power'); try { tone(60, 
 // the power: the flickering lights steady and the fuse box goes green
 function zsApplyPower() {
   if (ZS.fusebox) for (const m of ZS.fusebox.slots) m.material.emissive.setHex(0x2adf4a);
-  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); if (curMap === 'mauiwowie') islePower(); zmapPowerPads(); } catch (e) {}
+  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); if (curMap === 'mauiwowie') islePower(); if (curMap === 'maryjane') mjPower(); zmapPowerPads(); } catch (e) {}
   if (curMap === 'blackwell' && typeof HOSP !== 'undefined' && HOSP.flick) for (const f of HOSP.flick) { f.l.intensity = f.i * 1.15; f.t = 1e9; f.on = true; }
 }
 const ZS_SAY = {
@@ -232,6 +232,17 @@ function zsMakeBoss(e) {
   e.boss = true; e.group.scale.setScalar(ZS_TEXT.bossScale); e.group.userData.scale = ZS_TEXT.bossScale;
   const purple = new Map(); e.group.traverse(o => { if (o.isMesh && !o.userData.hitbox) { const m = o.material; if (!purple.has(m)) { const c = (Array.isArray(m) ? m[0] : m).clone(); if (c.emissive) { c.emissive.setHex(0x5a10a0); c.emissiveIntensity = 0.7; } if (c.color) c.color.lerp(new THREE.Color(0x6a3a8a), 0.5); purple.set(m, c); } o.material = purple.get(m); } });
   const lt = new THREE.PointLight(0x9a3cff, 1.2, 6, 2); lt.position.y = 1.6; e.group.add(lt);
+  if (curMap === 'maryjane') try { zsCaptainHat(e); } catch (err) {}
+}
+// the Mary Jane's captain wears his cap: a white crown, a black peak, a gold band and a little green leaf badge
+function zsCaptainHat(e) {
+  const g = new THREE.Group(), std = c => new THREE.MeshStandardMaterial({ color: c, roughness: 0.6 });
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.13, 0.1, 16), std(0xf0f0ea)); crown.position.y = 0.06; g.add(crown);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.135, 0.135, 0.035, 16), std(0x1a1a1a)); band.position.y = 0.02; g.add(band);
+  const gold = new THREE.Mesh(new THREE.TorusGeometry(0.136, 0.008, 6, 20), new THREE.MeshStandardMaterial({ color: 0xe0b040, metalness: 0.8, roughness: 0.3 })); gold.rotation.x = Math.PI / 2; gold.position.y = 0.04; g.add(gold);
+  const peak = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.012, 0.09), std(0x111111)); peak.position.set(0, 0.0, -0.15); peak.rotation.x = 0.25; g.add(peak);
+  const badge = new THREE.Mesh(new THREE.CircleGeometry(0.03, 10), new THREE.MeshStandardMaterial({ color: 0x3adf5a, emissive: new THREE.Color(0x2a9a3a), emissiveIntensity: 0.6 })); badge.position.set(0, 0.07, -0.152); badge.rotation.y = Math.PI; g.add(badge);
+  const head = e.rig && e.rig.head; if (head) { g.position.set(0, 0.13, 0); head.add(g); } else { g.position.y = 1.85; e.group.add(g); }
 }
 // the boss died (host): his blood drops where he fell
 function zsBossDied(e) {

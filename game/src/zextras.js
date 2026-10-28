@@ -188,8 +188,10 @@ const ZWW = {
   works: { id: 'pressure', base: 'hellfire', name: 'THE PRESSURE GUN', desc: 'a blast of steam that throws back everything in front of you', mag: 8, reserve: 48, interval: 0.55, col: 0xffa040 },
   terminal9: { id: 'duster', base: 'hellfire', name: 'THE CROP DUSTER', desc: 'sprays a lingering cloud of green cure · zombies inside it melt', mag: 10, reserve: 60, interval: 0.45, col: 0x7adf3a },
   mauiwowie: { id: 'vape', base: 'thumper', name: 'THE DRAGON VAPE', desc: 'blows a huge smoke ring that rolls through every zombie in its way', mag: 6, reserve: 36, interval: 0.7, col: 0xff4ab8 },
+  maryjane: { id: 'harpoon', base: 'hellfire', name: 'THE HASH HARPOON', desc: 'fires a resin harpoon straight through every zombie in a line · it bursts into sticky smoke where it lands', mag: 5, reserve: 30, interval: 0.85, col: 0x2ad8c8 },
 };
-const ZWWP = [], ZWWC = [], ZWWR = [];   // ... and dragon vape smoke rings   // bong balls in flight, crop duster clouds
+const ZWWP = [], ZWWC = [], ZWWR = [], ZWWH = [];   // ... and hash harpoons in flight / stuck in walls
+   // ... and dragon vape smoke rings   // bong balls in flight, crop duster clouds
 const zwwFor = map => ZWW[map] || null;
 function zwwGive(map) {
   const ww = zwwFor(map || curMap); if (!ww || !Z.guns || Z.guns.includes(ww.base)) return false;
@@ -221,6 +223,16 @@ function zwwFire(w) {
     try { burst(0.7, 400, 0.25, 'lowpass'); tone(110, 0.5, 0.18, 'sine', 70); } catch (e) {}
     return;
   }
+  if (w.ww === 'harpoon') {   // a fast straight spear that goes through everything, then bursts where it stops
+    const m = new THREE.Group(), shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 1.6, 8), new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.6 }));
+    shaft.rotation.x = Math.PI / 2; m.add(shaft);
+    const tip = new THREE.Mesh(new THREE.ConeGeometry(0.09, 0.4, 10), new THREE.MeshStandardMaterial({ color: 0x0a2a28, emissive: new THREE.Color(0x2ad8c8), emissiveIntensity: 1.6 })); tip.rotation.x = -Math.PI / 2; tip.position.z = -0.95; m.add(tip);
+    const glow = new THREE.PointLight(0x2ad8c8, 1.2, 5, 2); glow.position.z = -0.9; m.add(glow);
+    m.position.copy(org); m.lookAt(org.clone().sub(dir)); scene.add(m);
+    ZWWH.push({ m, v: dir.clone().multiplyScalar(46), t: 0, w, hit: new Set(), stuck: -1 });
+    try { burst(0.25, 900, 0.35, 'bandpass'); tone(220, 0.25, 0.15, 'sawtooth', 90); } catch (e) {}
+    return;
+  }
   if (w.ww === 'bong') {
     const m = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: 0x6aff7a, transparent: true, depthWrite: false })); m.scale.set(0.5, 0.5, 1); m.position.copy(org); scene.add(m);
     const core = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0x9aff9a, transparent: true, blending: THREE.AdditiveBlending, depthWrite: false })); core.scale.set(0.35, 0.35, 1); m.add(core);
@@ -241,7 +253,36 @@ function zwwFire(w) {
   }
 }
 const _wwRay = new THREE.Raycaster();
+function zwwHarpoonTick(dt) {
+  for (let i = ZWWH.length - 1; i >= 0; i--) {
+    const h = ZWWH[i]; h.t += dt;
+    if (h.stuck >= 0) { h.stuck += dt; if (h.stuck > 2.5) { scene.remove(h.m); ZWWH.splice(i, 1); } continue; }
+    const p0 = h.m.position.clone(); h.m.position.addScaledVector(h.v, dt);
+    const seg = h.m.position.clone().sub(p0), L = seg.length(); let wall = null;
+    if (L > 0) { _wwRay.set(p0, seg.clone().normalize()); _wwRay.far = L + 0.9; const hit = _wwRay.intersectObjects(wallMeshes, false)[0]; if (hit) wall = hit.point; }
+    // everything the spear passed through this frame (a short capsule along its path)
+    for (const e of enemies.slice()) {
+      if (!e.zombie || h.hit.has(e)) continue; const g = e.group.position, c = new THREE.Vector3(g.x, g.y + 1.1, g.z);
+      const tt = L > 0 ? clamp(c.clone().sub(p0).dot(seg) / (L * L), 0, 1) : 0, q = p0.clone().addScaledVector(seg, tt);
+      if (Math.hypot(q.x - c.x, q.z - c.z) > 0.75 || Math.abs(q.y - c.y) > 1.1) continue;
+      h.hit.add(e); const push = h.v.clone().setY(0).normalize();
+      damageEnemy(e, e.boss ? e.maxHp * 0.035 / Math.max(1, zombGunMul(true)) : zwwDmg(h.w, 3.0), Math.abs(q.y - (g.y + 1.6)) < 0.3, push, true, 'player');
+      if (enemies.includes(e)) { g.x += push.x * 1.2; g.z += push.z * 1.2; e.stunT = 0.8; e.atkT = 0; }
+    }
+    if (Math.random() < dt * 40) try { puff(h.m.position.x, h.m.position.y, h.m.position.z, { color: 0x6ae8d8, size: 0.15, grow: 0.6, life: 0.4, vy: 0.1, op: 0.35 }); } catch (e) {}
+    if (wall || h.t > 1.1) { if (wall) h.m.position.copy(wall).addScaledVector(h.v.clone().normalize(), -0.4); h.stuck = 0; zwwResin(h.m.position, h.w); }
+  }
+}
+// where the harpoon lands: a burst of sticky resin smoke (zombies near it are hurt, held and slowed)
+function zwwResin(p, w) {
+  for (const e of enemies.slice()) {
+    if (!e.zombie) continue; const d = Math.hypot(e.group.position.x - p.x, e.group.position.z - p.z);
+    if (d < 3.2) { damageEnemy(e, e.boss ? e.maxHp * 0.01 / Math.max(1, zombGunMul(true)) : zwwDmg(w, 0.8), false, null, true, 'player'); if (enemies.includes(e)) { e.stunT = 1.6; e.slowT = 3; e.atkT = 0; } }
+  }
+  try { for (let i = 0; i < 16; i++) puff(p.x + rnd(-1.6, 1.6), p.y + rnd(-0.6, 0.8), p.z + rnd(-1.6, 1.6), { color: i % 2 ? 0x2ad8c8 : 0x9a7a3a, size: 0.7, grow: 1.8, life: 1.6, vy: 0.3, op: 0.45 }); tone(90, 0.5, 0.18, 'sine', 50); burst(0.35, 600, 0.25, 'lowpass'); } catch (e) {}
+}
 function zwwTick(dt) {
+  zwwHarpoonTick(dt);
   for (let i = ZWWR.length - 1; i >= 0; i--) {
     const r = ZWWR[i], p0 = r.m.position.clone(); r.t += dt; r.m.position.addScaledVector(r.v, dt);
     const k = 1 + r.t * 1.4; r.m.scale.set(k, k, k); r.m.material.opacity = Math.max(0, 0.6 * (1 - r.t / 2)); r.m.rotateZ(dt * 3);
@@ -276,7 +317,7 @@ function zwwBurst(p, w) {
   try { for (let i = 0; i < 26; i++) puff(p.x + rnd(-2.5, 2.5), p.y + rnd(0, 2), p.z + rnd(-2.5, 2.5), { color: i % 3 ? 0x5adf6a : 0xb0ffb0, size: 1, grow: 2.4, life: 2.2, vy: 0.5, op: 0.55 }); sfx.explode(at(p.x, p.z, 30, p.y)); tone(60, 0.8, 0.25, 'sine', 30); } catch (e) {}
   try { if (typeof zcEvent === 'function') zcEvent('b', p); } catch (e) {}
 }
-function zwwClear() { for (const b of ZWWP.concat(ZWWR)) scene.remove(b.m); ZWWP.length = 0; ZWWR.length = 0; ZWWC.length = 0; }
+function zwwClear() { for (const b of ZWWP.concat(ZWWR, ZWWH)) scene.remove(b.m); ZWWP.length = 0; ZWWR.length = 0; ZWWC.length = 0; ZWWH.length = 0; }
 // crop duster clouds: 4 seconds of cure that eats any zombie standing in it
 function zwwCloudTick(dt) {
   for (let i = ZWWC.length - 1; i >= 0; i--) {
