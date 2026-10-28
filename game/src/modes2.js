@@ -14,6 +14,7 @@ function m2Setup() {
   if ((M.mode === 'kc' || M.mode === 'dom') && !OBJ.group) { OBJ.group = new THREE.Group(); scene.add(OBJ.group); }
   if (M.mode === 'kc') M.kc = { tags: [], seq: 0, ev: [], evSeq: 0, seen: -1 };
   if (M.mode === 'dom') domSetup();
+  m3Setup();
 }
 // who an actor is in the online state ('' offline)
 function m2Id(who) { if (!M.online) return ''; return who === 'player' ? NET.me : who && who.net ? who.net : who && who.entry && who.entry.botLabel ? who.entry.botLabel : ''; }
@@ -24,6 +25,7 @@ function m2Actors() {
 }
 // bots: about half go for the objective (more for the 'obj' role), the rest keep hunting
 function m2Goal(e, keep, near, set) {
+  if (M.ru) return ruGoal(e, keep, near, set);
   const ex = e.group.position.x, ez = e.group.position.z;
   if (M.mode === 'kc' && M.kc && M.kc.tags.length) {
     let best = null, bd = 1e9; for (const t of M.kc.tags) { const d = Math.hypot(t.x - ex, t.z - ez); if (d < bd) { bd = d; best = t; } }
@@ -39,22 +41,29 @@ function m2Goal(e, keep, near, set) {
   }
   return null;
 }
-function m2Update(dt) { if (M.mode === 'kc' && M.kc) kcUpdate(dt); if (M.mode === 'dom' && M.dom) domUpdate(dt); }
+function m2Update(dt) { if (M.mode === 'kc' && M.kc) kcUpdate(dt); if (M.mode === 'dom' && M.dom) domUpdate(dt); if (M.mode === 'ru' && M.ru) ruUpdate(dt); if (M.mode === 'pp' && M.pp) ppUpdate(dt); }
 function m2Pack() {
   const ts = M.teamScore || [0, 0];
+  if (M.mode === 'ru' && M.ru) return ruPack();
+  if (M.mode === 'pp' && M.pp) return ppPack();
   if (M.mode === 'kc' && M.kc) { const k = M.kc; return ['k', ts[0], ts[1], k.tags.length, ...k.tags.flatMap(t => [t.id, t.team, r2(t.x), r2(t.z), r2(t.y)]), ...k.ev.flatMap(v => v)]; }
   if (M.mode === 'dom' && M.dom) return ['d', ts[0], ts[1], ...M.dom.pts.flatMap(p => [p.own, p.capT, Math.round(p.prog * 100), p.status])];
 }
 function m2Apply(o) {
   if (o[0] === 'k' && M.kc) kcApply(o);
   if (o[0] === 'd' && M.dom) domApply(o);
+  if (o[0] === 'r' && M.ru) ruApply(o);
+  if (o[0] === 'p' && M.pp) ppApply(o);
 }
 function m2HudInfo() {
+  if (M.mode === 'ru' && M.ru) return ruHud();
+  if (M.mode === 'pp' && M.pp) return ppHud();
   if (M.mode === 'kc' && M.kc) { const near = M.kc.tags.filter(t => Math.hypot(t.x - P.x, t.z - P.z) < 25), e = near.filter(t => t.team !== M.myTeam).length, f = near.length - e; return `${e} ENEMY BAG${e === 1 ? '' : 'S'} NEARBY${f ? ` · ${f} OF YOUR TEAM'S TO SAVE` : ''}`; }
   if (M.mode === 'dom' && M.dom) return M.dom.pts.map(p => { const c = p.own === -1 ? '#ddd' : TEAM_COL[p.own === M.myTeam ? 0 : 1]; return `<span class="dom-l" style="--c:${c}${p.status ? ';--b:#ffd24a' : ''}">${p.n}</span>`; }).join('') + ` ${domHeld(M.myTeam)} HELD`;
   return '';
 }
 function m2Markers(out) {
+  if (M.mode === 'ru' && M.ru) ruMarkers(out);
   if (M.mode === 'kc' && M.kc) for (const t of M.kc.tags) { if (Math.hypot(t.x - P.x, t.z - P.z) > 30) continue; out.push({ x: t.x, y: t.y + 1.1, z: t.z, t: t.team === M.myTeam ? 'SAVE' : 'BAG', c: TEAM_COL[t.team === M.myTeam ? 0 : 1] }); }
   if (M.mode === 'dom' && M.dom) for (const p of M.dom.pts) out.push({ x: p.x, y: p.y + 2.6, z: p.z, t: p.n, c: p.status ? '#ffd24a' : p.own === -1 ? '#ffffff' : TEAM_COL[p.own === M.myTeam ? 0 : 1] });
 }

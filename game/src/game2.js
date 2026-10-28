@@ -279,7 +279,7 @@ function updateHud() {
   hudSet(el.mag, 't', `${w.ammo}<small> / ${w.reserve}</small>`, true);
   hudSet(el.name, 't', w.name + (G.reloading ? '  ·  RELOADING' : ''));
   hudSet(el.gren, 't', EQUIP[G.equip].name + ' ' + '● '.repeat(G.grenades).trim());
-  if (el.slots._cur !== G.cur || el.slots._pad !== pad.on) { el.slots._cur = G.cur; el.slots._pad = pad.on; el.slots.innerHTML = WEAPONS.map((x, i) => (i === G.cur ? `<b>[${pad.on ? 'Y' : i + 1}] ${x.name}</b>` : `[${pad.on ? 'Y' : i + 1}] ${x.name}`)).join('  '); }
+  const wk = WEAPONS.map(x => x.name).join('|'); if (el.slots._cur !== G.cur || el.slots._pad !== pad.on || el.slots._wk !== wk) { el.slots._cur = G.cur; el.slots._pad = pad.on; el.slots._wk = wk; el.slots.innerHTML = WEAPONS.map((x, i) => (i === G.cur ? `<b>[${pad.on ? 'Y' : i + 1}] ${x.name}</b>` : `[${pad.on ? 'Y' : i + 1}] ${x.name}`)).join('  '); }
   hudSet(el.wave, 't', G.wave); hudSet(el.kills, 't', G.kills); hudSet(el.score, 't', G.score); hudSet(el.left, 't', enemies.length + G.toSpawn);
   if (G.dmgDirT > 0) { G.dmgDirT -= 1 / 60; dmgdir.style.opacity = clamp(G.dmgDirT, 0, 1); }
   if (!G.waveActive && G.state === 'playing' && G.wave > 0) showMsgOnce(`NEXT WAVE IN ${Math.ceil(G.breakT)}`);

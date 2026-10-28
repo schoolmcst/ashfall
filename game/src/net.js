@@ -237,6 +237,7 @@ function netTick(dt) {
       R.ds = ds; R.kb = typeof pr.kb === 'string' ? pr.kb : ''; const head = !!pr.kh;
       const bot = R.bot;
       if (isHost && M.kc && R.ep === NET.ep) kcDrop(R.x, R.y, R.z, R.entry.team);
+      if (isHost && M.ru && R.ep === NET.ep) ruDrop(R.x, R.y, R.z, R.entry.team, R.peer);
       if (R.kb && R.kb === NET.me) {
         NET.k++; G.kills++; G.score += 100 + (head ? 50 : 0); sfx.kill(head); if (!bot) stkAdd(100 + (head ? 50 : 0));
         if (bot) { statKill(bot, head); try { onKill(bot, head, false); } catch (err) {} }
@@ -292,7 +293,7 @@ function netTick(dt) {
   if (M.mode === 'gun') {   // gun game: your level is your kill count this round
     for (const en of M.entries) { const lv = Math.min(en.kills | 0, GUN_LADDER.length); if (en.level !== lv) { en.level = lv; if (en.isPlayer && lv < GUN_LADDER.length) { equipGunGame(lv); if (lv) { popScore(`LEVEL ${lv + 1}`, 'big', ARM[GUN_LADDER[lv]].name); sfx.streak(); } } else if (en.botLabel && en.bot && lv < GUN_LADDER.length) botGunProfile(en.bot, GUN_LADDER[lv]); } }
   }
-  if (M.def.teams && !M.hp && !M.ctf && !M.snd && !M.kc && !M.dom && !M.inf && !M.gf) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
+  if (M.def.teams && !M.hp && !M.ctf && !M.snd && !M.kc && !M.dom && !M.ru && !M.inf && !M.gf) { M.teamScore = [0, 0]; for (const en of M.entries) M.teamScore[en.team] += en.kills; }
   // remember who was about to win, in case another game ends the round a moment before ours does
   { const lim = M.cfg.score || 1; if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; NET.lastNear = Math.max(a, b) >= lim * 0.9 ? (a > b ? 1 : a < b ? -1 : 0) : NET.lastNear && Math.max(a, b) ? NET.lastNear : 0; } else { const top = M.entries.reduce((m, e) => Math.max(m, e.kills), 0); NET.lastNear = top >= lim * 0.9 ? (M.me.kills >= top ? 1 : -1) : 0; } }
   // score limit: show the winner, then everyone starts a fresh round
