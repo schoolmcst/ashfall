@@ -3186,7 +3186,7 @@ function manhole(x, z, y) { batchAdd('dark', new THREE.CircleGeometry(0.4, 16), 
 function stripes(x, z, y, alongX, n, len = 2.6, key = 'paintWhite') { for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 0.9; floorQuad(x + (alongX ? 0 : o), z + (alongX ? o : 0), alongX ? len : 0.45, alongX ? 0.45 : len, y + 0.004, key, 1); } }
 function rubbleScatter(x, z, y, r = 2, n = 8) { for (let i = 0; i < n; i++) { const s = 0.08 + Math.random() * 0.22, px = x + (Math.random() - 0.5) * 2 * r, pz = z + (Math.random() - 0.5) * 2 * r; if (!placeProp('rock' + (i % 3), mat4(px, y + s * 0.2, pz, Math.random() * 3, Math.random() * 3, Math.random() * 3, s * 2, s * 1.3, s * 2), { rock: 'concrete' })) batchAdd('concrete', new THREE.DodecahedronGeometry(s, 0), mat4(px, y + s * 0.4, pz)); } }
 function paperScatter(x, z, y, r = 2, n = 6) { for (let i = 0; i < n; i++) batchAdd('cloth1', new THREE.PlaneGeometry(0.21, 0.3), mat4(x + (Math.random() - 0.5) * 2 * r, y + 0.01 + i * 0.001, z + (Math.random() - 0.5) * 2 * r, -Math.PI / 2, 0, Math.random() * 6), false); }
-function trafficLight(x, z, y, face) {
+function trafficLightOld(x, z, y, face) {   // the street kind (face n/s/e/w); props2 has the newer one called trafficLight
   const [fx, fz] = DIRV[face]; CYL('dark', 0.07, 0.08, 3.6, 8, x, y + 1.8, z);
   B('dark', 0.32, 0.9, 0.28, x, y + 3.9, z); for (const [k, h] of [['redLight', 4.2], ['dark', 3.9], ['greenLight', 3.6]]) B(k, 0.18, 0.18, 0.04, x + fx * 0.15, y + h, z + fz * 0.15, 0, 0, 0, false);
   PZ(x, y, z, 0.25, 3.6, 0.25, { noRay: true });
@@ -3864,7 +3864,7 @@ function dressMetro(s) {
   hydrant(-21.6, Z(27.6), sw); hydrant(-33.9, Z(37.8), sw);
   trashBin(-34.4, Z(11.4), sw, 'paintGreen'); trashBin(-20.8, Z(29.5), sw, 'paintGreen');
   dumpster(-41.4, Z(39), sw, false, 'paintGreen'); blk(-21.6, Z(14.6), 0.5, 0.5, 1.05, 'paintBlue', { y: sw, walk: false });
-  trafficLight(-21.4, Z(25.4), sw, s > 0 ? 's' : 'n'); trafficLight(-34.6, Z(25.4), sw, s > 0 ? 's' : 'n');
+  trafficLightOld(-21.4, Z(25.4), sw, s > 0 ? 's' : 'n'); trafficLightOld(-34.6, Z(25.4), sw, s > 0 ? 's' : 'n');
   for (const [x, z] of [[-29.4, 3.6], [-29.8, 5.2], [-24.6, 14.2], [-25.2, 15.4]]) cone(x, Z(z), y);
   for (const [x, z] of [[-28, 16], [-25, 33], [10, 31]]) manhole(x, Z(z), y);
   for (const [x, z, r] of [[-30.5, 12, 1.8], [-24, 30.5, 1.4], [14, 29.5, 1.6], [-8, 34, 1.2]]) puddle(x, Z(z), y, r);
@@ -6772,9 +6772,9 @@ function updatePlayer(dt) {
   const fwd = hold ? 0 : clamp((kb('fwd') ? 1 : 0) - (kb('back') ? 1 : 0) - pad.my, -1, 1);
   const str = hold ? 0 : clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
   const moving = fwd !== 0 || str !== 0;
-  const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading);
+  const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading) && !(typeof CAMP !== 'undefined' && CAMP.carry && M.mode === 'camp');
   if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
-  let speed = (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof mcFizz === 'function' && M && M.mode === 'zomb' && mcFizz() ? 1.25 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
+  let speed = (typeof campCarrySlow === 'function' ? campCarrySlow() : 1) * (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof mcFizz === 'function' && M && M.mode === 'zomb' && mcFizz() ? 1.25 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
   if (G.reloading) speed *= 0.85;
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
@@ -7176,7 +7176,7 @@ function inspectPose(cat, ip, u) {
 const FIN_NAMES = ['ROLLED UP', 'PUFF PUFF PASS OUT', 'SMOKED'];
 // melee hit `e` from where you stand: a finisher when you are behind them (or they are not looking at you)
 function finCheck(e) {
-  if (!e || !e.group || e.dog || e.boss || G.finT > 0) return false;
+  if (!e || !e.group || e.zombie || e.dog || e.boss || G.finT > 0) return false;   // not on zombies: a 1.3 s lock in a horde gets you killed
   const p = e.group.position, fx = Math.sin(e.group.rotation.y), fz = Math.cos(e.group.rotation.y), dx = P.x - p.x, dz = P.z - p.z, d = Math.hypot(dx, dz) || 1;
   const behind = (fx * dx + fz * dz) / d < -0.35, unaware = e.entry && !e.net && !e.tgt;
   return behind || (unaware && Math.random() < 0.5);
@@ -7534,6 +7534,7 @@ function die() {
   mouseDown = false; mouseAds = false; G.streak = 0; statDeath(); stkDeath();
   try { matchPlayerKilled(G.killer); } catch (err) { reportError(err); }
   if (M.over) return;
+  if (M.mode === 'camp') { campDied(); return; }
   if (M.mode === 'zomb' && typeof mcRevive === 'function' && mcRevive()) { G.state = 'playing'; return; }
   if (M.mode === 'zomb' && zpSelfRevive()) { G.state = 'playing'; return; }
   if (M.mode === 'zomb' && zcInGame()) { zcDown(); return; }
@@ -7565,7 +7566,7 @@ function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom
 // Scavenger: every kill tops up one magazine of reserve ammo
 function perkOnKill() { if (!perk('scavenger')) return; for (const w of WEAPONS) w.reserve = Math.min(w.reserveMax, w.reserve + w.magSize); }
 function startGame() { startMatch('surv'); }
-function restartMatch() { if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'zomb' && ZC.on) { zcRedeploy(); return; } if (M.mode === 'zomb') startMatch('zomb', { map: ZL.map === 'random' ? 'random' : curMap }); else if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
+function restartMatch() { if (M.mode === 'camp' && typeof CAMP !== 'undefined' && CAMP.m) { const id = CAMP.m.id; campClear(); leaveGame(); campPlay(id, CAMP.diff); return; } if (M.over && typeof nextMatch === 'function') { nextMatch(); return; } if (M.mode === 'zomb' && ZC.on) { zcRedeploy(); return; } if (M.mode === 'zomb') startMatch('zomb', { map: ZL.map === 'random' ? 'random' : curMap }); else if (M.mode === 'surv') startMatch('surv', { map: curMap }); else startMatch(M.mode, Object.assign({}, M.cfg.custom ? M.cfg : {}, { map: curMap })); }
 // leave whatever is running and go back to the menu scene (soldiers posing behind the menus)
 function leaveGame() {
   if (G.state === 'playing' || G.state === 'paused' || G.state === 'dead') recordBest();
@@ -7575,7 +7576,7 @@ function leaveGame() {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   spawnMenuSoldiers();
 }
-function clearMatch() { try { rangeClear(); } catch (e) {} try { if (M.infMe || $('infVig')) infMe(false); } catch (e) {} try { smkClear(); } catch (e) {} try { netLeave(); } catch (e) {} try { zombClear(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
+function clearMatch() { try { rangeClear(); } catch (e) {} try { campClear(); } catch (e) {} try { if (M.infMe || $('infVig')) infMe(false); } catch (e) {} try { smkClear(); } catch (e) {} try { netLeave(); } catch (e) {} try { zombClear(); } catch (e) {} if (OBJ.group) { scene.remove(OBJ.group); OBJ.group = null; } M = { mode: 'surv', def: MODES.surv, entries: [] }; const mh = $('mhud'); if (mh) { mh.classList.add('hide'); mh._on = false; } const st = $('stats'); if (st) { st.style.display = ''; st._surv = true; } const ih = $('ihold'); if (ih) ih.classList.add('hide'); setScoreboard(false); }
 function toMenu() { leaveGame(); showScreen('menu'); }
 function toLobby() { if (G.state !== 'menu') leaveGame(); renderLobby(); showScreen('lobby'); }
 /* ================================================================== career stats (saved in this browser) */
@@ -7610,7 +7611,7 @@ function statDeath() { if (!MS.active || G.bench) return; MS.deaths++; MS.streak
 function statModeKey() { if (!M) return 'surv'; if (M.online) { const k = Object.keys(MODES).find(k => MODES[k] === M.def); if (k) return k; } return M.mode; }
 function finishMatchStats(won) {
   if (!MS.active || G.bench) return; MS.active = false;
-  if (M && M.mode === 'range') return;   // the firing range counts for nothing
+  if (M && (M.mode === 'range' || M.mode === 'camp')) return;   // the firing range counts for nothing (the campaign pays its own XP)
   try { wkMatch(won, false); } catch (e) { reportError(e); }
   try { rankMatch(won, false); evMatch(false); } catch (e) { reportError(e); }
   const st = careerOf(M.online), mode = statModeKey();
@@ -7628,7 +7629,7 @@ function finishMatchStats(won) {
 // two minutes or more of play still counts as a match played (no win or loss)
 function commitPartialStats() {
   if (!MS.active || G.bench) return; MS.active = false;
-  if (M && M.mode === 'range') return;
+  if (M && (M.mode === 'range' || M.mode === 'camp')) return;
   try { wkMatch(null, true); } catch (e) { reportError(e); }
   try { rankMatch(null, true); } catch (e) { reportError(e); }
   if (!MS.kills && !MS.deaths && !MS.shots && MS.time < 10) return;
@@ -7677,6 +7678,22 @@ function renderStats() {
 function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(t.indexOf(statTab) + d + 3) % 3]; sfx.ui(); renderStats(); }
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
+{
+"v": "1.2.59",
+"d": "2026-10-28",
+"n": [
+"NEW: CAMPAIGN - FIRST HARVEST. A 12-mission story on the main menu (CAMPAIGN), three weeks before the night Blackwell fell. Checkpoints, the crew fights and talks beside you, 3 hidden STASH TINS per mission, RECRUIT / REGULAR / VETERAN, XP for every mission.",
+"1 LAST DELIVERY: VANTAGE raids the Green Coast Collective - hold the greenhouse, get Mara out, protect the van, CAPTAIN KESS. 2 THE PLUG: photograph the grey boats unseen, find the manifest, catch the fake buyer, snipe from the catwalk.",
+"3 PAPER TRAIL: tail a courier, decrypt the drive, run the metro tunnel. 4 HIGH RISE: silent takedowns on the Lazarus tower, rescue Doc, hold the helipad, THE WARDEN.",
+"5 PURPLE DUST: burn the Nightshade fields, sniper duel with HAWK, beat the dust storm. 6 COLD STORAGE: cut the power, sneak through the dark, break Tank out, steal the seed case.",
+"7 THE PASS: mine the crossings, hit the convoy, protect Tank, THE HOUND. 8 WHEELS UP: meet Sparks, scan the cargo, catch the loader, blow the plane's cargo.",
+"9 THE WORKS: the graveyard, Harold's safe, THE FOREMAN, out through the fire. 10 SOURCE: the Grower's journal, walk him to his lighthouse, burn the first field.",
+"11 LAST STAND: defend the hideout, COMMANDER RHYS. 12 LIGHTS OUT: Blackwell Hospital, HAROLD VOSS and the first infected - leading straight into ZOMBIES chapter one.",
+"CONTACT HIGH: infected bots now kill in one hit up close, like infected players.",
+"ZOMBIES: no more finisher takedowns on zombies (the lock could get you killed in a horde). ZOMBIES LEADERBOARD: best round on any map and games played.",
+"FIX: the traffic lights at VERNON SQUARE were invisible."
+]
+},
 {
 "v": "1.2.56",
 "d": "2026-10-24",
@@ -8126,6 +8143,7 @@ const MODES = {
   rhp: { name: 'RANKED HARDPOINT', short: 'RANKED HP', icon: 'RNK', desc: 'Ranked play, 4 v 4 Hardpoint. Wins raise your SR, losses lower it; climb from SEED to KUSH KING.', teams: true, respawn: 4, score: 200, time: 0, perTeam: 4, unit: 'POINTS', online: true, base: 'hp', ranked: true },
   rsnd: { name: 'RANKED SEARCH & DESTROY', short: 'RANKED S&D', icon: 'RNK', desc: 'Ranked play, 4 v 4 Search & Destroy, first to 6 rounds. Wins raise your SR, losses lower it.', teams: true, respawn: 0, score: 6, time: 0, perTeam: 4, unit: 'ROUNDS', online: true, base: 'snd', ranked: true },
   osnd: { name: 'ONLINE SEARCH & DESTROY', short: 'ONLINE S&D', icon: 'S&D', desc: 'Real people, one life per round. Attackers plant the bomb at A or B, defenders stop them. First to 4 rounds.', teams: true, respawn: 0, score: 4, time: 0, perTeam: 5, unit: 'ROUNDS', online: true, base: 'snd' },
+  camp: { name: 'CAMPAIGN', short: 'STORY', icon: 'CMP', desc: 'FIRST HARVEST: the story missions.', teams: true, respawn: 0, score: 0, time: 0, perTeam: 1, unit: 'STEPS' },
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
@@ -8213,7 +8231,7 @@ const sideOf = team => !M.def.teams ? -1 : M.mode === 'snd' ? (team === M.snd.at
 const MATCH_CFG_KEY = 'ashfall.match.v1';
 let LOBBY = { mode: 'tdm', map: 'random' };
 // 'random' picks any map except the one you just played
-function pickMapFor(sel, mode) { if (sel && MAPS[sel] && (!MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
+function pickMapFor(sel, mode) { if (sel && MAPS[sel] && (mode === "camp" || !MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
 try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || (MAPS[o.map] && !MAPS[o.map].hidden))) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; if (o && Array.isArray(o.playlist)) LOBBY.playlist = o.playlist.filter(k => MODES[k] && MODES[k].online); } catch (e) {}
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
@@ -8256,6 +8274,7 @@ function startMatch(mode, custom) {
   resetGame();
   if (mode === 'zomb') { zombStart(cfg); return; }
   if (mode === 'range') { rangeStart(cfg); return; }
+  if (mode === 'camp') { campStart(cfg); return; }
   if (mode === 'surv') { if (curMap !== 'ruins') { buildSpawns(); const sp = LAYOUT.spawn[0]; Object.assign(P, { x: sp.x, z: sp.z, y: sp.y || 0 }); P.yaw = Math.atan2(sp.x, sp.z); } G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true); matchHold(false); return; }
   buildSpawns();
   G.breakT = 1e9; G.waveActive = false; G.maxHp = M.maxHp; G.health = M.maxHp;
@@ -8406,6 +8425,8 @@ function botThink(e) {
   cands.sort((a, b) => a[1] - b[1]);
   let tgt = null;
   for (let i = 0; i < Math.min(4, cands.length); i++) { if (cands[i][1] > 60) break; if (losTo(e, cands[i][0])) { tgt = cands[i][0]; break; } }
+  if (tgt && e.camp && !e.camp.alert && !campNotice(e, tgt)) tgt = null;
+  if (tgt && e.camp) campAlert(e);
   if (tgt && tgt !== e.tgt) { try { brainEngage(e, tgt); } catch (err) {} e.reactT = rnd(0.16, 0.42) * (1.25 - 0.5 * (e.hum || 0.4)); e.engageT = M.t + e.reactT; }   // human reaction time before they start aiming
   if (tgt !== e.tgt) { const pre = !!(e.lkp && M.t - e.lkpT < 3 && tgt); e.tgt = tgt; if (tgt) e.aim = Math.min(e.aim, pre ? 0.45 + e.iq * 0.25 : 0.2); }   // pre-aimed where they expected you
   if (tgt) { e.seenT = M.t; botRemember(e, tgt); if (Math.random() < e.iq) botCallout(e, tgt); }
@@ -8426,13 +8447,13 @@ function botsHear(x, z, team, r, who) {
   for (const o of enemies) {
     if (!o.entry || o.net || o.team === team || o.tgt) continue;
     const d = Math.hypot(o.group.position.x - x, o.group.position.z - z);
-    if (d < r && Math.random() < 0.4 + o.iq * 0.6) { o.lkp = { x: x + rnd(-2, 2), z: z + rnd(-2, 2), y: 0 }; o.lkpT = M.t; o.lkpWho = who || null; }
+    if (d < r && Math.random() < 0.4 + o.iq * 0.6) { o.lkp = { x: x + rnd(-2, 2), z: z + rnd(-2, 2), y: 0 }; o.lkpT = M.t; o.lkpWho = who || null; if (o.camp) campAlert(o); }
   }
 }
 // shot by someone: turn to them straight away
 function botWasHit(e, by) {
   if (!e.entry || e.net) return;
-  e.hitT = M.t;
+  e.hitT = M.t; if (e.camp && e.hp > 0) campAlert(e);   // a silent one-shot kill does not raise the alarm
   const t = by === 'player' ? 'P' : by && by.group ? by : null; if (!t) return;
   const p = tpos(t); e.lkp = { x: p.x, z: p.z, y: p.y || 0 }; e.lkpT = M.t; e.lkpWho = t;
   if (!e.tgt && losTo(e, t)) { e.tgt = t; e.aim = Math.max(e.aim, 0.35 * e.iq); }
@@ -8467,6 +8488,7 @@ function botGoal(e, cands) {
   const near = (p, r) => ({ x: p.x + rnd(-r, r), z: p.z + rnd(-r, r), y: p.y || 0 });
   const set = (p, hold) => { e.goalT = M.t + (hold || rnd(3, 6)); return p; };
   if (e.inf) { const g = infGoal(e, set); if (g) return g; }
+  if (e.camp) { const g = campGoal(e, keep, near, set); if (g) return g; }
   if (M.kc || M.dom) { const g = m2Goal(e, keep, near, set); if (g) return g; }
   if (e.job) { const g = botRoleGoal(e, cands, keep, near, set); if (g) return g; }
   if (M.mode === 'hp' && M.hp && !M.hp.wait) {
@@ -8825,6 +8847,7 @@ function playerInteract(dt, held) {
     if (att && !sn.bomb && sn.state === 'live') { const s = LAYOUT.sites.find(s => Math.hypot(s.x - P.x, s.z - P.z) < 3); if (s) { txt = `HOLD ${usingPad() ? '(' + actName('reload') + ')' : '[E]'} TO PLANT AT ${s.n}`; if (held) { sn.plant += dt; prog = sn.plant / 4; if (sn.plant >= 4) { sn.plant = 0; if (netHostNow()) plantBomb(s, M.me); else { NET.sa = ['p', LAYOUT.sites.indexOf(s), (NET.saN = (NET.saN || 0) + 1)]; MS.plants++; popScore('+200', 'big', 'BOMB PLANTED'); } } } else sn.plant = 0; } }
     if (!att && sn.bomb && sn.state === 'planted' && Math.hypot(sn.bomb.x - P.x, sn.bomb.z - P.z) < 2) { txt = `HOLD ${usingPad() ? '(' + actName('reload') + ')' : '[E]'} TO DEFUSE`; if (held) { sn.defuse += dt; prog = sn.defuse / 6; if (sn.defuse >= 6) { sn.defuse = 0; if (netHostNow()) defuseBomb(M.me); else { NET.sa = ['d', 0, (NET.saN = (NET.saN || 0) + 1)]; MS.defuses++; popScore('+200', 'big', 'BOMB DEFUSED'); } } } else sn.defuse = 0; }
   }
+  if (M.mode === 'camp') { const r = campInteract(dt, held); if (r) { txt = r[0]; prog = r[1]; } }
   G.interactTxt = txt;
   if (bar) { const on = !!txt; if (bar._on !== on) { bar._on = on; bar.classList.toggle('hide', !on); } if (on) { bar.firstChild.textContent = txt; bar.lastChild.firstChild.style.width = Math.max(0, prog) * 100 + '%'; } }
   return !!txt;
@@ -8845,6 +8868,7 @@ function updateMatch(dt) {
   if (M.mode === 'range') rangeTick(dt);
   if (M.mode === 'inf') infUpdate(dt);
   if (M.mode === 'gf') gfUpdate(dt);
+  if (M.mode === 'camp') { campUpdate(dt); campTick(dt); }
   if (M.cfg.time && M.mode !== 'snd' && !M.online && M.t >= M.cfg.time * 60) { timeUp(); return; }
   if (G.state === 'respawning') { G.respT -= dt; showCenter(M.online && !NET.teamSet ? (NET.app ? 'FINDING A MATCH' : 'JOINING ROOM') : 'RESPAWNING', M.online && !NET.teamSet && NET.app && P2P.current ? String(P2P.current.status || '').toUpperCase() : Math.max(0, G.respT).toFixed(1)); if (G.respT <= 0 && !(M.online && !NET.teamSet)) respawnPlayer(); }
   if (G.state === 'spectate') updateSpectate(dt);
@@ -8929,7 +8953,7 @@ function scoreboardHtml() {
 /* ---------- HUD: score bar, centre message, objective markers */
 const fmtT = s => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 function updateModeHud(force) {
-  if (M.mode === 'zomb' || M.mode === 'range') { const el = $('mhud'), sv = $('stats'); el.classList.add('hide'); el._on = false; if (sv) { sv.style.display = 'none'; sv._surv = undefined; } return; }
+  if (M.mode === 'zomb' || M.mode === 'range' || M.mode === 'camp') { const el = $('mhud'), sv = $('stats'); el.classList.add('hide'); el._on = false; if (sv) { sv.style.display = 'none'; sv._surv = undefined; } return; }
   const el = $('mhud'), surv = M.mode === 'surv' || !!G.bench;
   const sv = $('stats'); if (sv && sv._surv !== surv) { sv._surv = surv; sv.style.display = surv ? '' : 'none'; }
   if (surv) { if (el._on !== false) { el._on = false; el.classList.add('hide'); } return; }
@@ -9335,8 +9359,8 @@ function infBotMelee(e, dt, tp, dist) {
   e.meleeCd = (e.meleeCd || 0) - dt;
   if (!tp || dist > 2.0 || e.meleeCd > 0 || e.stunT > 0) return;
   e.meleeCd = 0.85; try { sfx.thud(at(e.group.position.x, e.group.position.z, 12)); } catch (err) {}
-  if (e.tgt === 'P') { if (!(G.spawnProt > 0)) { G.killer = e; hurtPlayer(65, e.group.position.x, e.group.position.z); } }
-  else if (e.tgt && e.tgt.group) damageEnemy(e.tgt, 65, false, new THREE.Vector3(e.tgt.group.position.x - e.group.position.x, 0, e.tgt.group.position.z - e.group.position.z).normalize(), false, e);
+  if (e.tgt === 'P') { if (!(G.spawnProt > 0)) { G.killer = e; hurtPlayer(e.meleeDmg || 150, e.group.position.x, e.group.position.z); } }
+  else if (e.tgt && e.tgt.group) damageEnemy(e.tgt, e.meleeDmg || 150, false, new THREE.Vector3(e.tgt.group.position.x - e.group.position.x, 0, e.tgt.group.position.z - e.group.position.z).normalize(), false, e);
 }
 (() => { const s = document.createElement('style'); s.textContent = '#infVig{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;transition:opacity .6s;box-shadow:inset 0 0 160px 40px rgba(90,255,60,.35)}'; document.head.appendChild(s); })();
 
@@ -12849,7 +12873,7 @@ function openLeaderboard() { renderLeaderboard(); showScreen('leaderboard'); SOC
 // the ZOMBIES tab: best round on each zombies map, zombie kills, stories finished
 function renderZombBoard(rows) {
   $('lbTabs').innerHTML = Object.entries(LB_COLS).map(([k, [l]]) => `<button class="tab${k === SOC.lbSort ? ' on' : ''}" data-lb="${k}">${l}</button>`).join('');
-  $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>BEST · HOSPITAL</th><th>BEST · THE WORKS</th><th>ZOMBIE KILLS</th><th>STORIES DONE</th></tr>` + rows.map((r, i) => { const z = r.z || [0, 0, 0, 0]; return `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>${r.n}${r.on ? '' : ' <small>(offline)</small>'}</td><td>ROUND ${z[0]}</td><td>ROUND ${z[1]}</td><td>${(+z[2] || 0).toLocaleString()}</td><td>${z[3]}</td></tr>`; }).join('') + `</table><div class="net-hint" style="padding:10px 2px">Zombies records of you and your friends, best round first. Friends' numbers update while they are online.</div>`;
+  $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>BEST ROUND</th><th>GAMES</th><th>ZOMBIE KILLS</th><th>STORIES DONE</th></tr>` + rows.map((r, i) => { const z = r.z || [0, 0, 0, 0]; return `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td>${r.n}${r.on ? '' : ' <small>(offline)</small>'}</td><td>ROUND ${z[0]}</td><td>${(+z[1] || 0).toLocaleString()}</td><td>${(+z[2] || 0).toLocaleString()}</td><td>${z[3]}</td></tr>`; }).join('') + `</table><div class="net-hint" style="padding:10px 2px">Zombies records of you and your friends, best round first. Friends' numbers update while they are online.</div>`;
   for (const b of $('lbTabs').children) b.onclick = () => { SOC.lbSort = b.dataset.lb; sfx.ui(); renderLeaderboard(); };
 }
 function renderLeaderboard() {
@@ -18021,7 +18045,7 @@ function zstGameOver() {
   zstSave();
 }
 function zstStory() { if (!zmapIs(curMap)) return; zstOf(curMap).story++; zstSave(); }
-const zstCard = () => [zstOf('blackwell').best, zstOf('works').best, ZMAP_LIST.reduce((a, m) => a + zstOf(m).kills, 0), ZMAP_LIST.reduce((a, m) => a + zstOf(m).story, 0)];
+const zstCard = () => [Math.max(0, ...ZMAP_LIST.map(m => zstOf(m).best)), ZMAP_LIST.reduce((a, m) => a + zstOf(m).games, 0), ZMAP_LIST.reduce((a, m) => a + zstOf(m).kills, 0), ZMAP_LIST.reduce((a, m) => a + zstOf(m).story, 0)];
 /* ================================================================== MUNCHIE CANDY and the upgrade camos (zombies)
    MUNCHIE CANDY: pick a pack of 4 candies in the zombies lobby (10 to choose from). Each round one of them is in your
    pocket (shown by your perks); press the SCORESTREAK key (X / D-pad up) to eat it. One candy a round, used or not.
@@ -18126,6 +18150,1158 @@ function zuCamoTick(dt) { for (const k in ZUC.tex) { const t = ZUC.tex[k]; t.off
 .mc-c b{font-size:12px;letter-spacing:.16em;color:#fff}.mc-c small{font-size:9px;letter-spacing:.2em;color:var(--cc)}.mc-c.none{opacity:.5;padding-left:10px}.mc-c.none small{color:#aaa}.mc-t{font-size:10px;letter-spacing:.16em;color:#fff;text-shadow:0 0 4px #000}
 .mc-box{width:min(760px,94vw)}.mc-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0 16px;text-align:left}
 .mc-o{position:relative;pointer-events:auto;cursor:pointer;font-family:inherit;color:#fff;background:rgba(255,255,255,.03);border:1px solid var(--line);padding:10px 10px 10px 40px;text-align:left}.mc-o i{position:absolute;left:12px;top:14px;width:18px;height:12px;background:var(--cc);border-radius:3px}.mc-o b{display:block;letter-spacing:.16em;font-size:13px}.mc-o span{font-size:11px;color:var(--dim)}.mc-o.on{border-color:var(--cc);background:color-mix(in srgb,var(--cc) 14%,transparent)}.mc-o:hover,.mc-o:focus{outline:0;border-color:var(--accent)}`; document.head.appendChild(s); })();
+/* ================================================================== CAMPAIGN: FIRST HARVEST (engine)
+   Twelve story missions against VANTAGE (Lazarus Pharma's private army), three weeks before the night Blackwell fell.
+   A mission is data (camp_story.js): a map, where you start, the crew that comes with you, squads of enemies, three
+   hidden stash tins and a list of STEPS. Each step is one task with its own rules:
+     go       reach a place                      clear    take out the squads
+     hold     stay in a zone while waves come     use      hold USE at something (hack, plant, burn, open...)
+     multi    several USE spots in any order      pick     take something
+     carry    take it somewhere (you are slowed)  escort   keep a crew member alive while they walk
+     defend   keep a thing in one piece           chase    catch a runner before they get away
+     snipe    take out marked targets from a spot photo    aim at things and hold ADS to photograph them
+     search   find the real one among many        boss     a big one with a health bar
+     talk     a scene (lines, then go on)
+   Any step can have a time limit (t), be stealthy (stealth: being seen fails it; quiet: being seen calls help),
+   spawn squads, move the crew, say lines before and after, and be a CHECKPOINT (cp): die and you start again there.
+   Enemies stand at their post or walk a patrol until they see, hear or get shot at; then the squad hunts you. */
+const CCHARS = [
+  { id: 'june', name: 'JUNE', col: '#ff9ad0', voice: { want: ['jenny', 'aria', 'samantha', 'ava', 'female'], female: true, pitch: 1.02, rate: 1.0 } },
+  { id: 'mara', name: 'MARA', col: '#9adf6a', voice: { want: ['susan', 'karen', 'moira', 'female'], female: true, pitch: 0.9, rate: 0.96 } },
+  { id: 'harold', name: 'HAROLD VOSS', col: '#c8a0ff', voice: { want: ['george', 'daniel', 'arthur', 'male'], female: false, pitch: 0.76, rate: 0.9 } },
+  { id: 'radio', name: 'VANTAGE RADIO', col: '#ff5a4a', voice: { want: ['guy', 'eric', 'male'], female: false, pitch: 0.7, rate: 1.12 } },
+  { id: 'grower', name: 'THE GROWER', col: '#e8b04a', voice: { want: ['fred', 'ralph', 'male'], female: false, pitch: 0.6, rate: 0.82 } },
+];
+const campChar = id => CCHARS.find(c => c.id === id) || (typeof ZCHARS !== 'undefined' && ZCHARS.find(c => c.id === id)) || CCHARS[0];
+function campVoice(c) {
+  if (typeof ZV === 'undefined') return null;
+  if (ZV.vmap && ZV.vmap[c.id]) return ZV.vmap[c.id];
+  CAMP.vmap = CAMP.vmap || {}; if (CAMP.vmap[c.id] !== undefined) return CAMP.vmap[c.id];
+  const all = (ZV.voices || []).filter(v => /^en/i.test(v.lang || '') && zvScore(v) > -100), g = c.voice.female ? ZV_FEM : ZV_MAL, o = c.voice.female ? ZV_MAL : ZV_FEM;
+  const used = new Set(Object.values(ZV.vmap || {}).filter(Boolean).map(v => v.name).concat(Object.values(CAMP.vmap).filter(Boolean).map(v => v.name)));
+  const rank = v => zvScore(v) + (g.test(v.name) ? 40 : o.test(v.name) ? -60 : 0) + (c.voice.want.some(w => v.name.toLowerCase().includes(w)) ? 12 : 0) - (used.has(v.name) ? 30 : 0);
+  return (CAMP.vmap[c.id] = all.slice().sort((a, b) => rank(b) - rank(a))[0] || null);
+}
+const CAMP_DIFF = {
+  recruit: { name: 'RECRUIT', skill: 'recruit', hp: 0.75, xp: 0.8, d: 'enemies miss more and go down faster' },
+  regular: { name: 'REGULAR', skill: 'regular', hp: 1, xp: 1, d: 'the way it is meant to be played' },
+  veteran: { name: 'VETERAN', skill: 'veteran', hp: 1.25, xp: 1.4, d: 'sharp, smart and tough · for the brave' },
+};
+const CAMP_GUN = { rifleman: 'marc', scout: 'viper', heavy: 'hailstorm', sniper: 'hawkeye', shotgun: 'breacher', smg: 'kestrel', officer: 'deadeye' };
+const CAMP_MISSIONS = [];   // filled by camp_story.js
+// all twelve, so the list shows what is still to come
+const CAMP_PLAN = ['LAST DELIVERY', 'THE PLUG', 'PAPER TRAIL', 'HIGH RISE', 'PURPLE DUST', 'COLD STORAGE', 'THE PASS', 'WHEELS UP', 'THE WORKS', 'SOURCE', 'LAST STAND', 'LIGHTS OUT'];
+const CAMP = { m: null, i: -1, st: null, cp: null, t0: 0, said: new Set(), sq: new Map(), allies: [], tins: [], tinObjs: [], props: [], q: [], talking: false, dead: false, restartT: 0, failT: 0, failWhy: '', done: false, carry: null, kills: 0, deaths: 0, diff: 'regular', vmap: null };
+const campOn = () => typeof M !== 'undefined' && M && M.mode === 'camp' && !!CAMP.m;
+const campMission = id => CAMP_MISSIONS.find(m => m.id === id);
+const campProg = () => PROG.camp || (PROG.camp = { done: {}, tins: {}, last: '' });
+function campUnlocked(i) { if (i === 0) return true; const prev = CAMP_MISSIONS[i - 1]; return !!(prev && campProg().done[prev.id]); }
+
+/* ---------- talking: lines play one after another, in the crew's voices, with subtitles */
+function campSay(lines, done) {
+  if (!lines || !lines.length) { if (done) done(); return; }
+  CAMP.q.push({ lines: lines.slice(), done }); if (!CAMP.talking) campSayNext();
+}
+function campSayNext() {
+  const job = CAMP.q[0]; if (!job) { CAMP.talking = false; return; }
+  CAMP.talking = true;
+  if (!job.lines.length) { CAMP.q.shift(); try { if (job.done) job.done(); } catch (e) { reportError(e); } campSayNext(); return; }
+  const [ch, text] = job.lines.shift(), c = campChar(ch), gen = CAMP.gen;
+  try { zvSubtitle(c, text); } catch (e) {}
+  let fired = false; const go = () => { if (fired || gen !== CAMP.gen) return; fired = true; setTimeout(campSayNext, 280); };
+  const ms = 1500 + text.length * 60;
+  try {
+    if (typeof ZV !== 'undefined' && ZV.enabled && window.speechSynthesis) {
+      const u = zvUtter(c, text, 1), v = campVoice(c); if (v) try { u.voice = v; } catch (e) {}
+      u.onend = go; speechSynthesis.speak(u); setTimeout(go, ms * 1.6);
+    } else setTimeout(go, ms);
+  } catch (e) { setTimeout(go, ms); }
+}
+function campHush() { CAMP.q.length = 0; CAMP.talking = false; CAMP.gen = (CAMP.gen || 0) + 1; try { speechSynthesis.cancel(); } catch (e) {} }
+
+/* ---------- starting a mission */
+function campPlay(id, diff) {
+  const m = campMission(id); if (!m) return;
+  CAMP.diff = CAMP_DIFF[diff] ? diff : 'regular';
+  startMatch('camp', { map: m.map, camp: id, skill: CAMP_DIFF[CAMP.diff].skill });
+}
+function campStart(cfg) {
+  const m = campMission(cfg.camp); if (!m) { toMenu(); return; }
+  campClear();
+  CAMP.m = m; CAMP.t0 = M.t; CAMP.kills = 0; CAMP.deaths = 0; CAMP.done = false; CAMP.said.clear(); CAMP.tins = []; CAMP.carry = null; CAMP.dead = false; CAMP.stealthFails = 0;
+  M.cfg.skill = CAMP_DIFF[CAMP.diff].skill; M.cfg.score = 0;
+  buildSpawns(); G.breakT = 1e9; G.waveActive = false; G.maxHp = G.health = 100; M.maxHp = 100;
+  try { if (m.env) applyEnv(Object.assign({}, MAPS[curMap].env, m.env)); } catch (e) {}
+  const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: true }; M.entries.push(me); M.me = me;
+  placePlayer(m.start); P.yaw = m.start.yaw || 0; P.pitch = 0;
+  campLoadout(m.loadout);
+  for (const id of m.allies || []) campAlly(id);
+  campBuildTins();
+  CAMP.mprops = []; for (const x of m.props || []) { const before = CAMP.props.length; campPropsFor({ props: [x] }); CAMP.mprops.push(...CAMP.props.splice(before)); }
+  campHud(true);
+  G.state = 'playing'; showScreen(null); lockPointer(); startMatchStats(); updateModeHud(true);
+  campCard(m);
+  CAMP.cp = { i: 0, x: P.x, z: P.z, y: P.y, yaw: P.yaw };
+  campBegin(0);
+}
+function campLoadout(lo) {
+  const L = Object.assign({ p: 'marc', s: 'sidearm', e: 'frag', k: 'none' }, lo || {});
+  try { equipClass({ p: L.p, s: L.s, e: L.e, k: L.k, factory: true }); G.grenades = L.n !== undefined ? L.n : 2; } catch (e) { reportError(e); }
+}
+function campRefill() { for (const w of WEAPONS) if (w) { w.ammo = w.magSize; w.reserve = w.reserveMax; } G.grenades = Math.max(G.grenades, 2); }
+// the intro card at the start of a mission
+function campCard(m) {
+  let c = $('campCardEl'); if (c) c.remove();
+  c = document.createElement('div'); c.id = 'campCardEl';
+  c.innerHTML = `<small>FIRST HARVEST · MISSION ${CAMP_MISSIONS.indexOf(m) + 1} OF ${CAMP_MISSIONS.length}</small><b>${m.title}</b><span>${m.place}</span><em>${m.when || ''}</em>`;
+  document.body.appendChild(c); setTimeout(() => c.classList.add('out'), 4200); setTimeout(() => c.remove(), 5400);
+}
+
+/* ---------- the crew: they follow you, fight, and can't be killed (they go down and get back up) */
+function campAlly(id) {
+  const c = campChar(id), en = { name: c.name, team: 0, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: 'hunt', ally: id };
+  M.entries.push(en);
+  const a = Math.random() * TAU, p = { x: P.x + Math.cos(a) * 2, z: P.z + Math.sin(a) * 2, y: P.y };
+  const e = spawnBot(en, p); campAllyPrep(e, id); return e;
+}
+function campAllyPrep(e, id) {
+  e.camp = { ally: id, alert: true }; e.job = null; e.hp = e.maxHp = 900; e.dmg *= 0.55; e.speed = 4.4; e.ally = id;
+  const gun = { tank: 'anvil', doc: 'sentinel', smokes: 'kv47', sparks: 'kestrel', mara: 'marc' }[id]; if (gun) try { botGunProfile(e, gun); } catch (err) {}
+  CAMP.allies.push(e);
+}
+const campAllyOf = id => CAMP.allies.find(e => e.ally === id && enemies.includes(e));
+
+/* ---------- squads */
+function campSpawnSquad(name, opt = {}) {
+  const def = CAMP.m.squads[name]; if (!def) { reportError(new Error('camp: no squad ' + name)); return []; }
+  const D = CAMP_DIFF[CAMP.diff], list = [];
+  for (const pt of def.pts || def) {
+    const kind = pt.kind || def.kind || 'rifleman', type = kind === 'heavy' ? 'heavy' : kind === 'scout' || kind === 'smg' ? 'scout' : 'rifleman';
+    const en = { name: pt.name || def.name || 'VANTAGE', team: 1, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: 'hunt' };
+    M.entries.push(en);
+    const y = pt.y !== undefined ? pt.y : groundAt(pt.x, pt.z, 30);
+    const e = spawnBot(en, { x: pt.x, z: pt.z, y });
+    e.job = null; e.spawnProt = 0;
+    const hp = (pt.hp || (kind === 'heavy' ? 160 : 100)) * D.hp * (pt.boss ? 1 : 1);
+    e.hp = e.maxHp = hp;
+    try { botGunProfile(e, pt.gun || CAMP_GUN[kind] || 'marc'); } catch (err) {}
+    if (kind === 'sniper') { e.hold = 60; e.rangeK = 0.4; }
+    e.camp = { sq: name, post: { x: pt.x, z: pt.z, y }, path: pt.path || null, pi: 0, look: pt.look, mode: pt.mode || def.mode || 'post', alert: !!(opt.alert || def.alert || pt.alert), r: pt.r || def.r || 7, runner: pt.runner, boss: pt.boss, tag: pt.tag };
+    if (pt.look !== undefined) { e.group.rotation.y = pt.look; e.lookYaw = pt.look; }
+    if (pt.boss) { e.boss = true; e.name = pt.name || 'BOSS'; e.group.scale.setScalar(pt.scale || 1.15); e.group.userData.scale = pt.scale || 1.15; }
+    if (kind === 'infected') { e.team = 1; infDress(e); e.speed = pt.speed || 5.4; e.meleeDmg = 34 * (CAMP.diff === 'veteran' ? 1.4 : CAMP.diff === 'recruit' ? 0.7 : 1); e.hp = e.maxHp = (pt.hp || 140) * D.hp; e.camp.alert = true; }
+    if (pt.runner) { e.camp.mode = 'run'; e.speed = pt.speed || 5; e.dmg = 0; e.hold = 0; }
+    if (pt.target) e.camp.target = true;
+    if (e.camp.target) campTag(e, pt.mark || 'TARGET');
+    list.push(e);
+  }
+  let s = CAMP.sq.get(name); if (!s) { s = { name, list: [] }; CAMP.sq.set(name, s); }
+  s.list.push(...list);
+  return list;
+}
+const campAlive = name => { const s = CAMP.sq.get(name); return s ? s.list.filter(e => enemies.includes(e)) : []; };
+function campTag(e, txt) {
+  const c = document.createElement('canvas'); c.width = 256; c.height = 64; const g = c.getContext('2d'); g.font = 'bold 30px sans-serif'; g.textAlign = 'center'; g.lineWidth = 6; g.strokeStyle = '#000'; g.strokeText('▼ ' + txt, 128, 40); g.fillStyle = '#ff4a3a'; g.fillText('▼ ' + txt, 128, 40);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: new THREE.CanvasTexture(c), transparent: true, depthTest: false })); s.scale.set(1.6, 0.4, 1); s.position.y = 2.6; s.renderOrder = 6; s.name = 'campTag'; e.group.add(s);
+}
+// a bot noticed someone: unaware guards only see what is in front of them, not far, and not in the dark corners
+function campNotice(e, t) {
+  if (e.camp && e.camp.ally) return !(CAMP.st && (CAMP.st.stealth || CAMP.st.quiet) && !CAMP.alarmed);   // the crew holds fire while you sneak
+  if (!e.camp || e.camp.alert) return true;
+  const p = tpos(t), g = e.group.position, dx = p.x - g.x, dz = p.z - g.z, d = Math.hypot(dx, dz);
+  if (d < 3.2) return true;
+  const range = (CAMP.st && CAMP.st.see) || 26, crouch = t === 'P' && G.crouchK > 0.5 ? 0.65 : 1;
+  if (d > range * crouch) return false;
+  const fx = Math.sin(e.group.rotation.y), fz = Math.cos(e.group.rotation.y);
+  if ((fx * dx + fz * dz) / (d || 1) < 0.42) return false;   // about 130 degrees in front
+  e.camp.sus = (e.camp.sus || 0) + 0.35 * (1 + (range - d) / range); if (e.camp.sus < 1) { e.camp.lookAt = { x: p.x, z: p.z }; return false; }   // a moment to be sure
+  return true;
+}
+function campAlert(e, why) {
+  if (!e || !e.camp || e.camp.ally || e.camp.alert || e.camp.mode === 'run') return;
+  e.camp.alert = true;
+  const s = CAMP.sq.get(e.camp.sq);
+  if (s) for (const o of s.list) if (o.camp && !o.camp.alert && enemies.includes(o)) { o.camp.alert = true; o.lkp = e.lkp ? Object.assign({}, e.lkp) : { x: P.x, z: P.z, y: P.y }; o.lkpT = M.t; }
+  campSpotted(e);
+}
+function campSpotted(e) {
+  const st = CAMP.st; if (!st || CAMP.alarmed) return;
+  if (st.stealth) { CAMP.alarmed = true; showBanner('YOU WERE SPOTTED', 'stay out of sight'); setTimeout(() => { if (campOn() && CAMP.st === st && !CAMP.dead) campFail(st.failSpot || 'you were spotted'); }, 1800); return; }
+  if (st.quiet) {
+    CAMP.alarmed = true; showBanner('ALARM', st.alarmTxt || 'they know you are here · more are coming');
+    try { tone(880, 0.25, 0.12, 'square'); tone(660, 0.25, 0.12, 'square', undefined, { delay: 0.3 }); } catch (err) {}
+    for (const n of st.onAlarm || []) setTimeout(() => { if (campOn() && CAMP.st === st) campSpawnSquad(n, { alert: true }); }, 4000);
+    if (st.sayAlarm) campSay(st.sayAlarm);
+  }
+}
+// where a campaign bot wants to be
+function campGoal(e, keep, near, set) {
+  const c = e.camp; if (!c) return null;
+  if (c.ally) {
+    const st = CAMP.st, esc = st && st.type === 'escort' && st.who === c.ally;
+    if (esc) return set(CAMP.escPt || { x: P.x, z: P.z, y: P.y }, 0.6);
+    const hold = st && st.allyAt && st.allyAt[c.ally]; if (hold) return set(hold, 1);
+    const d = Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z);
+    if (d > 6 || !keep) { const a = TAU * (CAMP.allies.indexOf(e) / Math.max(1, CAMP.allies.length)) + P.yaw + Math.PI; return set({ x: P.x + Math.sin(a) * 2.6, z: P.z + Math.cos(a) * 2.6, y: P.y }, 1.2); }
+    return e.goal;
+  }
+  if (c.mode === 'run' && c.backT > 0) { const p = c.path[Math.max(0, c.pi - 1)]; e.lookYaw = Math.atan2(P.x - e.group.position.x, P.z - e.group.position.z); return set({ x: e.group.position.x, z: e.group.position.z, y: e.group.position.y }, 0.3); }
+  if (c.mode === 'run') { const p = c.path && c.path[c.pi]; if (p) { if (Math.hypot(p[0] - e.group.position.x, p[1] - e.group.position.z) < 1.5) c.pi++; const q = c.path[Math.min(c.pi, c.path.length - 1)]; e.tgt = null; return set({ x: q[0], z: q[1], y: q[2] || 0 }, 0.3); } return null; }
+  if (!c.alert) {
+    if (c.path) { const p = c.path[c.pi % c.path.length]; if (Math.hypot(p[0] - e.group.position.x, p[1] - e.group.position.z) < 1.2) c.pi++; const q = c.path[c.pi % c.path.length]; return set({ x: q[0], z: q[1], y: q[2] !== undefined ? q[2] : c.post.y }, 1.5); }
+    if (c.lookAt) { e.lookYaw = Math.atan2(c.lookAt.x - e.group.position.x, c.lookAt.z - e.group.position.z); }
+    return set(c.post, 3);
+  }
+  if (c.mode === 'hold') { if (e.lkp && M.t - e.lkpT < 6 && Math.hypot(e.lkp.x - c.post.x, e.lkp.z - c.post.z) < c.r + 6) return set(near(e.lkp, 2), 2); return keep && Math.hypot(e.goal.x - c.post.x, e.goal.z - c.post.z) < c.r ? e.goal : set(near(c.post, c.r * 0.6), rnd(3, 6)); }
+  // hunting: towards the last place they knew, else at the player
+  if (e.lkp && M.t - e.lkpT < 8) return keep ? e.goal : set(near(e.lkp, 2.5), rnd(2, 4));
+  const tgtP = CAMP.st && CAMP.st.type === 'defend' && CAMP.defObj && Math.random() < 0.5 ? CAMP.defObj : { x: P.x, z: P.z, y: P.y };
+  return keep ? e.goal : set(near(tgtP, 6), rnd(3, 6));
+}
+
+/* ---------- steps */
+function campBegin(i) {
+  const m = CAMP.m, st = m.steps[i];
+  if (!st) { campComplete(); return; }
+  CAMP.i = i; CAMP.st = st; CAMP.stT = 0; CAMP.alarmed = false; CAMP.useP = 0; CAMP.useK = null; CAMP.phP = 0; CAMP.phK = null; CAMP.multi = new Set(); CAMP.photos = new Set(); CAMP.searched = new Set(); CAMP.escI = 0; CAMP.escPt = null; CAMP.stepDone = false; CAMP.waveI = 0; CAMP.outT = 0;
+  CAMP.defObj = null; CAMP.spawned = []; campIn(); CAMP.outing = false; hideCenter();
+  campPropsClear();
+  for (const id of st.join || []) if (!campAllyOf(id)) campAlly(id);
+  for (const id of st.leave || []) { const a = campAllyOf(id); if (a) { scene.remove(a.group); enemies.splice(enemies.indexOf(a), 1); CAMP.allies.splice(CAMP.allies.indexOf(a), 1); } }
+  if (st.realSearch === undefined && st.type === 'search') st._real = (Math.random() * st.spots.length) | 0; else st._real = st.realSearch;
+  for (const n of st.spawn || []) CAMP.spawned.push(...campSpawnSquad(n));
+  if (st.type === 'defend') CAMP.defObj = { x: st.obj.x, z: st.obj.z, y: st.obj.y || 0, hp: st.obj.hp || 100, max: st.obj.hp || 100, name: st.obj.name };
+  if (st.type === 'escort') { const a = campAllyOf(st.who) || campAlly(st.who); a.camp.esc = true; a.hp = a.maxHp = st.hp || 600; CAMP.escPt = { x: st.path[0][0], z: st.path[0][1], y: st.path[0][2] || 0 }; }
+  if (st.type === 'snipe' && st.gun) { try { const w = WEAPONS.findIndex(x => x && x.def.id === st.gun); if (w < 0) campLoadout({ p: st.gun, s: (WEAPONS[1] && WEAPONS[1].def.id) || 'sidearm' }); } catch (e) {} }
+  if (st.loadout) campLoadout(st.loadout);
+  if (st.env) try { applyEnv(Object.assign({}, MAPS[curMap].env, CAMP.m.env || {}, st.env)); } catch (e) {}
+  CAMP.upP = 0; CAMP.upOn = false; CAMP.rtI = 0; CAMP.addI = 0; CAMP.tailT = 0; CAMP.tailClose = 0; CAMP.seenBack = 0; CAMP.lookT = 6;
+  campPropsFor(st);
+  if (st.say) campSay(st.say);
+  if (st.banner) showBanner(st.banner[0], st.banner[1] || '');
+  campHud(true);
+}
+function campStepDone() {
+  if (CAMP.stepDone) return; CAMP.stepDone = true;
+  const st = CAMP.st, i = CAMP.i;
+  try { sfx.ui(); tone(660, 0.12, 0.06, 'triangle'); tone(990, 0.16, 0.06, 'triangle', undefined, { delay: 0.1 }); } catch (e) {}
+  if (st.after) campSay(st.after);
+  const next = () => {
+    if (!campOn() || CAMP.i !== i) return;
+    if (st.cp !== false && (st.cp || (CAMP.m.steps[i + 1] && CAMP.m.steps[i + 1].cp0))) { CAMP.cp = { i: i + 1, x: P.x, z: P.z, y: P.y, yaw: P.yaw }; campRefill(); showMsg('CHECKPOINT'); }
+    campBegin(i + 1);
+  };
+  if (st.waitSay && st.after) campSay([], next); else setTimeout(next, (st.pause || 0.8) * 1000);
+}
+function campUpdate(dt) {
+  if (!campOn() || CAMP.done) return;
+  const st = CAMP.st; if (!st) return;
+  CAMP.stT += dt;
+  campTins();
+  campProps(dt);
+  if (CAMP.dead) { if ((CAMP.restartT -= dt) <= 0) campRestart(); return; }
+  // the crew: never left behind
+  for (const a of CAMP.allies) { if (!enemies.includes(a)) continue; if (a.hp < a.maxHp * 0.3 && !a.camp.esc) a.hp = a.maxHp; const d = Math.hypot(a.group.position.x - P.x, a.group.position.z - P.z); if (d > 30 && !a.camp.esc && !(st.allyAt && st.allyAt[a.ally])) { const p = campBehind(3); a.group.position.set(p.x, p.y, p.z); a.goal = null; } }
+  if (st.t && CAMP.stT > st.t && !CAMP.stepDone) { campFail(st.failTime || 'out of time'); return; }
+  const near = (p, r) => Math.hypot(P.x - p.x, P.z - p.z) < (r || p.r || 3) && Math.abs((P.y || 0) - (p.y || 0)) < 2.2;
+  const left = names => (names || st.spawn || []).reduce((n, s) => n + campAlive(s).length, 0);
+  switch (st.type) {
+    case 'go': if (near(st.at)) campStepDone(); break;
+    case 'talk': if (!CAMP.talking && CAMP.stT > (st.secs || 0.5)) campStepDone(); break;
+    case 'clear': case 'boss':
+      if (st.adds) { const b = (st.squads || st.spawn || []).flatMap(n => campAlive(n)).find(e => e.boss); for (; b && CAMP.addI < st.adds.length && b.hp / b.maxHp <= st.adds[CAMP.addI].at; CAMP.addI++) { campSpawnSquad(st.adds[CAMP.addI].sq, { alert: true }); if (st.adds[CAMP.addI].say) campSay(st.adds[CAMP.addI].say); } }
+      if (left(st.squads) <= (st.min || 0) && CAMP.stT > 1) campStepDone(); break;
+    case 'snipe': if (left(st.squads) <= 0 && CAMP.stT > 1) campStepDone(); else if (st.at && !near(st.at, (st.at.r || 3) + 4) && CAMP.stT > 2) campOut(dt, 'GET BACK TO THE OVERWATCH SPOT'); else campIn(); break;
+    case 'hold': case 'defend': {
+      for (; CAMP.waveI < (st.waves || []).length && CAMP.stT >= st.waves[CAMP.waveI].t; CAMP.waveI++) campSpawnSquad(st.waves[CAMP.waveI].sq, { alert: true });
+      if (st.type === 'hold' && st.at && !near(st.at, st.at.r || 8)) campOut(dt, 'GET BACK TO THE ZONE'); else campIn();
+      if (st.type === 'defend') campDefendTick(dt);
+      if (CAMP.stT >= st.secs && (!st.clearToo || left(st.waves.map(w => w.sq)) === 0)) campStepDone();
+      break;
+    }
+    case 'escort': campEscortTick(dt); break;
+    case 'chase': {
+      const r = campAlive(st.squads[0]);
+      if (!r.length && CAMP.stT > 1) { campStepDone(); break; }
+      for (const e of r) { const c = e.camp, end = c.path[c.path.length - 1]; if (c.pi >= c.path.length - 1 && Math.hypot(end[0] - e.group.position.x, end[1] - e.group.position.z) < 2) { campFail(st.failRun || 'they got away'); break; } }
+      break;
+    }
+    case 'carry': if (CAMP.carry && near(st.to, st.to.r || 3)) { CAMP.carry = null; campStepDone(); } break;
+    case 'photo': campPhotoTick(dt); break;
+    case 'upload': {   // started with USE, then it runs while you stay close (waves come at you)
+      if (!CAMP.upOn) break;
+      for (; CAMP.waveI < (st.waves || []).length && CAMP.upT >= st.waves[CAMP.waveI].t; CAMP.waveI++) campSpawnSquad(st.waves[CAMP.waveI].sq, { alert: true });
+      const inR = near(st.at, st.at.r || 7); CAMP.upT += dt;
+      if (inR) { CAMP.upP = Math.min(1, CAMP.upP + dt / st.secs); campIn(); } else campOut(dt, 'GET BACK TO THE ' + (st.thing || 'UPLOAD') + ' · IT STOPS WHEN YOU LEAVE');
+      if (CAMP.upP >= 1) campStepDone();
+      break;
+    }
+    case 'tail': {   // follow without being seen: not too close, not too far
+      const r = campAlive(st.squads[0])[0];
+      if (!r) { if (CAMP.stT > 1) campFail(st.failKill || 'you were supposed to follow him, not shoot him'); break; }
+      const c = r.camp, g = r.group.position, d = Math.hypot(g.x - P.x, g.z - P.z), end = c.path[c.path.length - 1];
+      if (c.pi >= c.path.length - 1 && Math.hypot(end[0] - g.x, end[1] - g.z) < 2) { scene.remove(r.group); enemies.splice(enemies.indexOf(r), 1); campStepDone(); break; }
+      if (d > (st.far || 32)) { CAMP.tailT = (CAMP.tailT || 0) + dt; showCenter('YOU ARE LOSING HIM', Math.max(0, Math.ceil(8 - CAMP.tailT)) + ' s'); CAMP.outing = true; if (CAMP.tailT > 8) campFail('you lost him'); }
+      else { if (CAMP.tailT) { CAMP.tailT = 0; campIn(); } }
+      if (d < (st.near || 6) && CAMP.stT > 2) { const fx = Math.sin(r.group.rotation.y), fz = Math.cos(r.group.rotation.y); CAMP.tailClose = (CAMP.tailClose || 0) + dt; if (CAMP.tailClose > 1.4 || (fx * (P.x - g.x) + fz * (P.z - g.z)) / (d || 1) > 0.3) campFail(st.failSpot || 'he saw you'); } else CAMP.tailClose = 0;
+      // he looks back now and then
+      if ((CAMP.lookT = (CAMP.lookT || 0) - dt) <= 0) { CAMP.lookT = rnd(7, 12); r.camp.backT = 1.6; }
+      if (r.camp.backT > 0) { r.camp.backT -= dt; const d2 = d; if (d2 < 18 && G.crouchK < 0.5 && gridClear(g.x, g.z, P.x, P.z, g.y, P.y)) { CAMP.seenBack = (CAMP.seenBack || 0) + dt; if (CAMP.seenBack > 0.7) campFail('he looked back and saw you · crouch or hide when he turns'); } }
+      else CAMP.seenBack = 0;
+      break;
+    }
+    case 'route': {   // checkpoints one after another
+      const q = st.spots[CAMP.rtI]; if (q && near(q, q.r || 3)) { CAMP.rtI++; try { tone(880, 0.08, 0.05, 'triangle'); } catch (e) {} if (CAMP.rtI >= st.spots.length) campStepDone(); else showMsg(`${CAMP.rtI} OF ${st.spots.length}`); }
+      break;
+    }
+  }
+}
+function campOut(dt, txt) { CAMP.outing = true; CAMP.outT += dt; showCenter(txt, Math.max(0, Math.ceil(10 - CAMP.outT)) + ' s'); if (CAMP.outT > 10) { hideCenter(); campFail('you left the area'); } else if (CAMP.outT < dt * 1.5) {} }
+function campIn() { CAMP.outT = 0; if (CAMP.outing) { CAMP.outing = false; hideCenter(); } }
+function campBehind(r) {
+  const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
+  for (const k of [1, 0.6, 0.3]) { const x = P.x - fx * r * k, z = P.z - fz * r * k, n = nodeOf(x, z, P.y); if (n >= 0) return { x, z, y: groundAt(x, z, P.y + 1) }; }
+  return { x: P.x, z: P.z, y: P.y };
+}
+// escort: they walk the path while you are close; they stop and wait when you fall behind
+function campEscortTick(dt) {
+  const st = CAMP.st, a = campAllyOf(st.who);
+  if (!a) { campFail(st.failDie || campChar(st.who).name + ' went down'); return; }
+  const p = st.path[CAMP.escI], ap = a.group.position, dP = Math.hypot(ap.x - P.x, ap.z - P.z);
+  if (dP > (st.lead || 14)) { CAMP.escPt = { x: ap.x, z: ap.z, y: ap.y }; if (!CAMP.escWait) { CAMP.escWait = true; showMsg(campChar(st.who).name + ' IS WAITING FOR YOU'); } return; }
+  CAMP.escWait = false;
+  if (Math.hypot(ap.x - p[0], ap.z - p[1]) < 1.6) { CAMP.escI++; if (CAMP.escI >= st.path.length) { a.camp.esc = false; campStepDone(); return; } }
+  const q = st.path[CAMP.escI]; CAMP.escPt = { x: q[0], z: q[1], y: q[2] || 0 };
+  a.goal = CAMP.escPt; a.goalT = M.t + 0.5;
+}
+// defend: enemies close to it wreck it, faster with more of them
+function campDefendTick(dt) {
+  const o = CAMP.defObj; if (!o) return;
+  let n = 0; for (const e of enemies) if (e.team === 1 && Math.hypot(e.group.position.x - o.x, e.group.position.z - o.z) < (CAMP.st.obj.r || 9)) n++;
+  if (n) { o.hp -= dt * n * (CAMP.st.obj.dps || 2.2) * CAMP_DIFF[CAMP.diff].hp; if ((CAMP.defWarn = (CAMP.defWarn || 0) - dt) <= 0) { CAMP.defWarn = 6; showMsg(`${o.name} IS UNDER ATTACK`); } }
+  if (o.hp <= 0) campFail(CAMP.st.failObj || o.name.toLowerCase() + ' was destroyed');
+}
+// photo: aim down sights at it, close enough and in sight, for a second
+const _cmR = new THREE.Raycaster();
+function campPhotoTick(dt) {
+  const st = CAMP.st; let best = -1;
+  if (G.ads > 0.8) {
+    const fx = -Math.sin(P.yaw) * Math.cos(P.pitch), fy = Math.sin(P.pitch), fz = -Math.cos(P.yaw) * Math.cos(P.pitch);
+    st.spots.forEach((s, k) => {
+      if (CAMP.photos.has(k)) return; const dx = s.x - P.x, dy = (s.y || 0) + (s.h || 1) - (P.y + P.eye), dz = s.z - P.z, d = Math.hypot(dx, dy, dz);
+      if (d > (s.r || 30) || (dx * fx + dy * fy + dz * fz) / d < 0.985) return;
+      _cmR.set(new THREE.Vector3(P.x, P.y + P.eye, P.z), new THREE.Vector3(dx / d, dy / d, dz / d)); _cmR.far = Math.max(0.1, d - 0.8); if (_cmR.intersectObjects(wallMeshes, false).length) return; best = k;
+    });
+  }
+  if (best >= 0) { CAMP.phP += dt; CAMP.phK = best; showCenter((st.verbP || 'PHOTOGRAPHING') + ' · ' + st.spots[best].label, Math.round(Math.min(1, CAMP.phP / 1.1) * 100) + '%'); if (CAMP.phP >= 1.1) { CAMP.photos.add(best); CAMP.phP = 0; hideCenter(); if (!st.noFlash) campFlash(); showMsg(`${st.photoWord || 'PHOTO'} ${CAMP.photos.size} OF ${st.spots.length} · ${st.spots[best].label}`); if (st.spots[best].say) campSay(st.spots[best].say); if (CAMP.photos.size >= st.spots.length) campStepDone(); } }
+  else if (CAMP.phK !== null) { CAMP.phP = 0; CAMP.phK = null; hideCenter(); }
+}
+function campFlash() { const f = document.createElement('div'); f.className = 'camp-flash'; document.body.appendChild(f); setTimeout(() => f.remove(), 400); try { burst(0.15, 4000, 0.2, 'highpass'); tone(2400, 0.05, 0.05, 'square'); } catch (e) {} }
+// USE: the interaction bar (match.js playerInteract shows it)
+function campInteract(dt, held) {
+  if (!campOn() || CAMP.dead || !playerAlive()) return null;
+  const st = CAMP.st; if (!st) return null;
+  const k = usingPad() ? '(' + actName('reload') + ')' : '[' + actName('use') + ']';
+  const close = (p, r) => Math.hypot(P.x - p.x, P.z - p.z) < (r || 1.9) && Math.abs((P.y || 0) - (p.y || 0)) < 2;
+  let spot = null, key = null, secs = st.secs || 2, verb = st.verb || 'USE';
+  if (st.type === 'use' || st.type === 'pick') { if (!CAMP.stepDone && close(st.at, st.at.r)) { spot = st.at; key = 'u'; if (st.type === 'pick') { secs = st.secs || 0.6; verb = st.verb || 'TAKE ' + (st.item || 'IT'); } } }
+  if (st.type === 'upload' && !CAMP.upOn && close(st.at, 1.9)) { spot = st.at; key = 'up'; secs = 1.2; verb = st.verb || 'START THE UPLOAD'; }
+  if (st.type === 'carry' && !CAMP.carry && close(st.at, st.at.r)) { spot = st.at; key = 'c'; secs = 0.8; verb = 'PICK UP ' + (st.item || 'IT'); }
+  if (st.type === 'multi') st.spots.forEach((s, j) => { if (!spot && !CAMP.multi.has(j) && close(s, s.r)) { spot = s; key = 'm' + j; verb = s.verb || st.verb || 'USE'; } });
+  if (st.type === 'search') st.spots.forEach((s, j) => { if (!spot && !CAMP.searched.has(j) && close(s, s.r)) { spot = s; key = 's' + j; secs = st.secs || 1.4; verb = s.verb || st.verb || 'SEARCH'; } });
+  if (!spot) { if (CAMP.useK) { CAMP.useK = null; CAMP.useP = 0; } return null; }
+  if (CAMP.useK !== key) { CAMP.useK = key; CAMP.useP = 0; }
+  if (held) CAMP.useP += dt; else CAMP.useP = Math.max(0, CAMP.useP - dt * 2);
+  if (CAMP.useP >= secs) {
+    CAMP.useP = 0; CAMP.useK = null;
+    if (key === 'u') { campPropUsed(st.at); if (st.type === 'pick') showMsg((st.item || 'GOT IT') + ''); campStepDone(); }
+    else if (key === 'up') { CAMP.upOn = true; CAMP.upT = 0; campPropUsed(st.at); showBanner(st.thing ? st.thing + ' STARTED' : 'UPLOAD STARTED', 'stay close until it finishes'); if (st.sayStart) campSay(st.sayStart); }
+    else if (key === 'c') { CAMP.carry = { item: st.item || 'THE BAG' }; campPropUsed(st.at); showBanner('CARRYING ' + (st.item || 'THE BAG'), 'you are slower · no sprinting'); campHud(true); }
+    else if (key[0] === 'm') { const j = +key.slice(1); CAMP.multi.add(j); campPropUsed(st.spots[j]); try { if (st.boom) { sfx.explode(at(spot.x, spot.z, 30, spot.y)); explosionFx(new THREE.Vector3(spot.x, (spot.y || 0) + 0.4, spot.z), 0.5); } } catch (e) {}
+      if (st.spots[j].say) campSay(st.spots[j].say); showMsg(`${CAMP.multi.size} OF ${st.spots.length}`); if (CAMP.multi.size >= st.spots.length) campStepDone(); }
+    else if (key[0] === 's') { const j = +key.slice(1); CAMP.searched.add(j); campPropUsed(st.spots[j]); if (j === st._real || CAMP.searched.size >= st.spots.length) { showBanner(st.found || 'FOUND IT', ''); campStepDone(); } else { showMsg(st.spots[j].nope || 'NOTHING HERE'); if (st.spawnOnSearch && CAMP.searched.size === 2) for (const n of st.spawnOnSearch) campSpawnSquad(n, { alert: true }); } }
+    return null;
+  }
+  return [`HOLD ${k} TO ${verb}`, CAMP.useP / secs];
+}
+// carrying: slower, no sprint (game1 reads this)
+const campCarrySlow = () => campOn() && CAMP.carry ? 0.72 : 1;
+
+/* ---------- dying, failing and the checkpoint */
+function campDied() {
+  if (CAMP.dead) return; CAMP.deaths++; campFail('you were killed', true);
+}
+function campFail(why, died) {
+  if (CAMP.dead || CAMP.done) return;
+  CAMP.dead = true; CAMP.restartT = 3.2; campHush(); hideCenter();
+  G.state = 'campdead';
+  mouseDown = false; mouseAds = false;
+  let o = $('campFailEl'); if (o) o.remove(); o = document.createElement('div'); o.id = 'campFailEl';
+  o.innerHTML = `<b>MISSION FAILED</b><span>${why.toUpperCase()}</span><small>BACK TO THE LAST CHECKPOINT…</small>`; document.body.appendChild(o);
+}
+function campRestart() {
+  const o = $('campFailEl'); if (o) o.remove();
+  CAMP.dead = false; CAMP.carry = null;
+  for (const e of enemies.slice()) if (e.camp && !e.camp.ally) { scene.remove(e.group); enemies.splice(enemies.indexOf(e), 1); }
+  CAMP.sq.clear();
+  for (const g of grenadesInFlight) scene.remove(g.m); grenadesInFlight.length = 0;
+  const c = CAMP.cp; placePlayer({ x: c.x, z: c.z, y: c.y }); P.yaw = c.yaw; P.pitch = 0;
+  G.state = 'playing'; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide'); vig.style.opacity = 0; camera.fov = baseFov; camera.updateProjectionMatrix(); hideCenter(); lockPointer();
+  campRefill(); G.health = G.maxHp;
+  for (const a of CAMP.allies) if (enemies.includes(a)) { const p = campBehind(2.5); a.group.position.set(p.x, p.y, p.z); a.hp = a.maxHp; a.goal = null; a.tgt = null; }
+  campBegin(c.i);
+}
+
+/* ---------- the end of a mission */
+function campComplete() {
+  if (CAMP.done) return; CAMP.done = true; campHush();
+  const m = CAMP.m, secs = Math.round(M.t - CAMP.t0), P0 = campProg(), prev = P0.done[m.id], first = !prev, D = CAMP_DIFF[CAMP.diff];
+  const rank = ['recruit', 'regular', 'veteran'];
+  P0.done[m.id] = { best: prev ? Math.min(prev.best, secs) : secs, diff: prev && rank.indexOf(prev.diff) > rank.indexOf(CAMP.diff) ? prev.diff : CAMP.diff };
+  const tins = new Set([...(P0.tins[m.id] || []), ...CAMP.tins]); P0.tins[m.id] = [...tins]; P0.last = m.id;
+  const xp = Math.round((2500 + MS.kills * 20 + CAMP.tins.length * 250) * D.xp), dz = first ? 400 : 0;
+  try { wkPay(xp, dz); } catch (e) {} saveProg();
+  MS.active = false;
+  M.over = true; G.state = 'over'; mouseDown = false; mouseAds = false; hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
+  const acc = MS.shots ? Math.round(MS.hits / MS.shots * 100) : 0, idx = CAMP_MISSIONS.indexOf(m), next = CAMP_MISSIONS[idx + 1];
+  let o = $('campEndEl'); if (o) o.remove(); o = document.createElement('div'); o.id = 'campEndEl'; o.className = 'camp-end';
+  o.innerHTML = `<div class="ce-box"><small>MISSION ${idx + 1} COMPLETE · ${D.name}</small><b>${m.title}</b>
+    <div class="ce-grid">${[['TIME', fmtT(secs)], ['KILLS', MS.kills], ['HEADSHOTS', MS.heads], ['ACCURACY', acc + '%'], ['DEATHS', CAMP.deaths], ['STASH TINS', `${tins.size} / 3`]].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('')}</div>
+    <div class="ce-xp">+${xp.toLocaleString()} XP${dz ? ` · +${dz} DZ` : ''}</div>${!next && CAMP_MISSIONS.length >= CAMP_PLAN.length ? '<div class="ce-next">FIRST HARVEST · THE END<br><small>THE STORY CONTINUES IN ZOMBIES · CHAPTER ONE: THE GREEN CURE</small></div>' : ''}
+    <div class="ce-btns">${next ? `<button class="btn primary" data-act="cp-next">NEXT MISSION · ${next.title}</button>` : `<button class="btn primary" data-act="cp-menu">${CAMP_MISSIONS.length < CAMP_PLAN.length ? 'MORE MISSIONS COMING SOON' : 'THE END · BACK TO THE CAMPAIGN'}</button>`}<button class="btn" data-act="cp-menu">MISSION SELECT</button>${!next && CAMP_MISSIONS.length >= CAMP_PLAN.length ? '<button class="btn" data-act="go-zombies">PLAY ZOMBIES · CHAPTER ONE</button>' : ''}</div></div>`;
+  document.body.appendChild(o);
+  try { sfx.streak(); } catch (e) {}
+  if (m.end) campSay(m.end);
+}
+function campClear() {
+  campHush(); campPropsClear(); for (const o of CAMP.mprops || []) { scene.remove(o.g); if (o.g.userData.box) { const i = boxes.indexOf(o.g.userData.box); if (i >= 0) boxes.splice(i, 1); boxGridDirty = true; } if (o.g.userData.proxy) { scene.remove(o.g.userData.proxy); const j = wallMeshes.indexOf(o.g.userData.proxy); if (j >= 0) wallMeshes.splice(j, 1); } } CAMP.mprops = [];
+  for (const t of CAMP.tinObjs) scene.remove(t.g); CAMP.tinObjs = [];
+  CAMP.sq.clear(); CAMP.allies = []; CAMP.st = null; CAMP.m = null; CAMP.dead = false; CAMP.carry = null; CAMP.done = false;
+  for (const id of ['campHudEl', 'campMarkEl', 'campFailEl', 'campEndEl', 'campCardEl', 'campBarEl']) { const el = $(id); if (el) el.remove(); }
+  try { campPauseBtns(); } catch (e) {}
+}
+
+/* ---------- stash tins: three hidden in every mission */
+function campBuildTins() {
+  const m = CAMP.m, have = new Set(campProg().tins[m.id] || []);
+  (m.tins || []).forEach((p, k) => {
+    const g = new THREE.Group(), mat = new THREE.MeshStandardMaterial({ color: 0x2a7a3a, metalness: 0.6, roughness: 0.35, emissive: new THREE.Color(0x1a5a1a), emissiveIntensity: 0.5 });
+    const can = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.11, 0.05, 16), mat); can.position.y = 0.05; g.add(can);
+    const leaf = new THREE.Mesh(new THREE.CircleGeometry(0.06, 5), new THREE.MeshBasicMaterial({ color: 0xb0ff7a })); leaf.rotation.x = -Math.PI / 2; leaf.position.y = 0.076; g.add(leaf);
+    const lt = new THREE.PointLight(0x7aff5a, 0.5, 2.5, 2); lt.position.y = 0.3; g.add(lt);
+    g.position.set(p.x, p.y !== undefined ? p.y : groundAt(p.x, p.z, 30), p.z); scene.add(g);
+    if (have.has(k)) g.children[0].material.opacity = 0.35, g.children[0].material.transparent = true;
+    CAMP.tinObjs.push({ g, k, had: have.has(k) });
+  });
+}
+function campTins() {
+  for (const t of CAMP.tinObjs) {
+    if (t.got) continue; t.g.rotation.y += 0.03;
+    const p = t.g.position; if (Math.hypot(P.x - p.x, P.z - p.z) < 1.3 && Math.abs(P.y - p.y) < 1.6) {
+      t.got = true; scene.remove(t.g); if (!CAMP.tins.includes(t.k)) CAMP.tins.push(t.k);
+      const total = new Set([...(campProg().tins[CAMP.m.id] || []), ...CAMP.tins]).size;
+      showBanner('STASH TIN', `${total} of 3 in this mission`); try { sfx.pickup(); tone(1320, 0.1, 0.06, 'triangle'); } catch (e) {}
+    }
+  }
+}
+
+/* ---------- props: the things you use, burn, carry, photograph or defend */
+const CAMP_PROPS = {
+  laptop: g => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.03, 0.3), new THREE.MeshStandardMaterial({ color: 0x22262a, metalness: 0.5, roughness: 0.4 })); b.position.y = 0.92; g.add(b); const s = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.26), new THREE.MeshBasicMaterial({ color: 0x3aff8a })); s.position.set(0, 1.06, -0.14); s.rotation.x = -0.25; g.add(s); const t = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.9, 0.6), new THREE.MeshStandardMaterial({ color: 0x4a3a2a, roughness: 0.9 })); t.position.y = 0.45; g.add(t); },
+  charge: g => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.2, 0.12), new THREE.MeshStandardMaterial({ color: 0x5a5a3a, roughness: 0.8 })); b.position.y = 1.0; g.add(b); const l = new THREE.Mesh(new THREE.SphereGeometry(0.03, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff2a1a })); l.position.set(0.1, 1.12, 0.06); g.add(l); g.userData.blink = l; },
+  crop: g => { const m = new THREE.MeshStandardMaterial({ color: 0x5a2a7a, emissive: new THREE.Color(0x6a1aff), emissiveIntensity: 0.7, roughness: 0.7, side: THREE.DoubleSide }); for (let i = 0; i < 7; i++) { const a = i / 7 * TAU, c = new THREE.Mesh(new THREE.ConeGeometry(0.22, 1.3, 6), m); c.position.set(Math.cos(a) * 0.7, 0.65, Math.sin(a) * 0.7); g.add(c); } },
+  bag: g => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.35, 0.35), new THREE.MeshStandardMaterial({ color: 0x1c2a1a, roughness: 0.8 })); b.position.y = 0.18; g.add(b); const s = new THREE.Mesh(new THREE.BoxGeometry(0.72, 0.04, 0.05), new THREE.MeshStandardMaterial({ color: 0x8adf5a })); s.position.y = 0.3; g.add(s); },
+  box: g => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.4, 0.4), new THREE.MeshStandardMaterial({ color: 0x8a6a40, roughness: 0.95 })); b.position.y = 0.2; g.add(b); },
+  panel: g => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.7, 0.14), new THREE.MeshStandardMaterial({ color: 0x5a6068, metalness: 0.6, roughness: 0.45 })); b.position.y = 1.35; g.add(b); const l = new THREE.Mesh(new THREE.PlaneGeometry(0.3, 0.12), new THREE.MeshBasicMaterial({ color: 0xff3a2a })); l.position.set(0, 1.5, 0.075); g.add(l); g.userData.blink = l; },
+  drive: g => { const b = new THREE.Mesh(new THREE.BoxGeometry(0.14, 0.03, 0.09), new THREE.MeshStandardMaterial({ color: 0x1a1a1a, metalness: 0.7 })); b.position.y = 0.95; g.add(b); const t = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.9, 0.6), new THREE.MeshStandardMaterial({ color: 0x3a3e44, roughness: 0.6 })); t.position.y = 0.45; g.add(t); },
+  van: g => {
+    const body = new THREE.MeshStandardMaterial({ color: 0xe8e6dc, roughness: 0.45, metalness: 0.25 }), glass = new THREE.MeshStandardMaterial({ color: 0x1a2630, roughness: 0.1, metalness: 0.6 }), dark = new THREE.MeshStandardMaterial({ color: 0x111111, roughness: 0.8 });
+    const box = (m, w, h, d, x, y, z) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.castShadow = true; g.add(o); return o; };
+    box(body, 2.1, 1.9, 3.4, 0, 1.35, -0.6); box(body, 2.1, 1.25, 1.3, 0, 1.0, 1.75); box(glass, 1.9, 0.6, 0.05, 0, 1.55, 2.38).rotation.x = -0.35;
+    for (const s of [-1, 1]) box(glass, 0.05, 0.5, 0.8, s * 1.06, 1.55, 1.6);
+    const c = document.createElement('canvas'); c.width = 512; c.height = 128; const x = c.getContext('2d'); x.fillStyle = '#3a9a4a'; x.fillRect(0, 0, 512, 128); x.fillStyle = '#fff'; x.font = 'bold 54px sans-serif'; x.textAlign = 'center'; x.fillText('GREEN COAST', 256, 66); x.font = '26px sans-serif'; x.fillText('collective · est. 1981', 256, 104);
+    const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; const lm = new THREE.MeshStandardMaterial({ map: t, roughness: 0.6 });
+    for (const s of [-1, 1]) { const p = new THREE.Mesh(new THREE.PlaneGeometry(3.0, 0.75), lm); p.position.set(s * 1.056, 1.45, -0.6); p.rotation.y = s * Math.PI / 2; g.add(p); }
+    for (const [x2, z] of [[-1, 1.5], [1, 1.5], [-1, -1.6], [1, -1.6]]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.28, 16), dark); w.rotation.z = Math.PI / 2; w.position.set(x2, 0.38, z); g.add(w); }
+    box(dark, 2.14, 0.2, 4.9, 0, 0.5, 0.1); g.userData.solid = [2.1, 2.3, 4.7];
+  },
+  server: g => { const m = new THREE.MeshStandardMaterial({ color: 0x1a1d22, metalness: 0.5, roughness: 0.4 }); for (const x of [-0.35, 0.35]) { const b = new THREE.Mesh(new THREE.BoxGeometry(0.6, 2.0, 0.8), m); b.position.set(x, 1.0, 0); g.add(b); } const l = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 1.6), new THREE.MeshBasicMaterial({ color: 0x2aff6a, transparent: true, opacity: 0.25 })); l.position.set(0, 1.0, 0.41); g.add(l); g.userData.solid = [1.3, 2.0, 0.8]; },
+  door: g => { const b = new THREE.Mesh(new THREE.BoxGeometry(1.2, 2.2, 0.15), new THREE.MeshStandardMaterial({ color: 0x6a6e74, metalness: 0.6 })); b.position.y = 1.1; g.add(b); },
+  sign: () => {},
+};
+function campPropsFor(st) {
+  const mk = (p, kind) => {
+    if (!kind || !CAMP_PROPS[kind]) return; const g = new THREE.Group(); CAMP_PROPS[kind](g); g.position.set(p.x, p.y !== undefined ? p.y : groundAt(p.x, p.z, 30), p.z); g.rotation.y = p.q || 0; scene.add(g);
+    if (g.userData.solid) { const s = g.userData.solid, b = mkBox(p.x, p.z, s[0], s[2], s[1], { y: g.position.y, walk: false }); boxes.push(b); boxGridDirty = true; g.userData.box = b;
+      const px = new THREE.Mesh(new THREE.BoxGeometry(s[0], s[1], s[2]), new THREE.MeshBasicMaterial({ visible: false })); px.position.set(p.x, g.position.y + s[1] / 2, p.z); scene.add(px); px.updateMatrixWorld(); wallMeshes.push(px); g.userData.proxy = px; }
+    CAMP.props.push({ g, p, kind }); return g;
+  };
+  if ((st.type === 'use' || st.type === 'pick' || st.type === 'carry') && st.at) mk(st.at, st.prop || (st.type === 'carry' ? 'bag' : null));
+  if (st.type === 'multi' || st.type === 'search') for (const s of st.spots) mk(s, s.prop || st.prop);
+  if (st.type === 'defend' && st.obj) mk(st.obj, st.obj.prop);
+  for (const x of st.props || []) mk(x, x.prop);
+}
+function campPropUsed(p) {
+  const o = CAMP.props.find(q => q.p === p); if (!o) return;
+  if (o.kind === 'crop') { try { explosionFx(new THREE.Vector3(p.x, (p.y || 0) + 0.5, p.z), 0.6); } catch (e) {} o.burn = 6; }
+  else if (o.kind === 'bag' || o.kind === 'drive' && CAMP.st.type !== 'use') { scene.remove(o.g); o.gone = true; }
+  else if (o.kind === 'panel' || o.kind === 'laptop') o.g.traverse(m => { if (m.material && m.material.color && m.material.isMeshBasicMaterial) m.material.color.setHex(0x3aff6a); });
+  o.used = true;
+}
+function campProps(dt) {
+  for (const o of CAMP.props) {
+    if (o.g.userData.blink) o.g.userData.blink.visible = (NOW * 2 % 1) < 0.5 || o.used;
+    if (o.burn > 0) { o.burn -= dt; if (Math.random() < dt * 12) try { puff(o.p.x + rnd(-0.8, 0.8), (o.p.y || 0) + rnd(0.3, 1.6), o.p.z + rnd(-0.8, 0.8), { color: Math.random() < 0.5 ? 0x7a3aff : 0x3a3a3a, size: 0.6, grow: 1.8, life: 1.6, vy: 0.8, op: 0.5 }); } catch (e) {} if (o.burn <= 0) o.g.visible = false; }
+  }
+}
+function campPropsClear() { for (const o of CAMP.props) { scene.remove(o.g); if (o.g.userData.box) { const i = boxes.indexOf(o.g.userData.box); if (i >= 0) boxes.splice(i, 1); boxGridDirty = true; } if (o.g.userData.proxy) { scene.remove(o.g.userData.proxy); const j = wallMeshes.indexOf(o.g.userData.proxy); if (j >= 0) wallMeshes.splice(j, 1); } } CAMP.props = []; }
+
+/* ---------- the HUD: objective, the marker in the world, bars */
+function campTargets() {
+  const st = CAMP.st; if (!st || CAMP.stepDone) return [];
+  if (st.type === 'go' || st.type === 'use' || st.type === 'pick') return st.at ? [st.at] : [];
+  if (st.type === 'carry') return CAMP.carry ? [st.to] : [st.at];
+  if (st.type === 'multi') return st.spots.filter((s, j) => !CAMP.multi.has(j));
+  if (st.type === 'search') return st.spots.filter((s, j) => !CAMP.searched.has(j));
+  if (st.type === 'photo') return st.spots.filter((s, j) => !CAMP.photos.has(j)).map(s => Object.assign({ y: (s.y || 0) + (s.h || 1) }, s, { y: (s.y || 0) + (s.h || 1) - 1 }));
+  if (st.type === 'hold' || st.type === 'snipe' || st.type === 'upload') return st.at ? [st.at] : [];
+  if (st.type === 'route') return st.spots[CAMP.rtI] ? [st.spots[CAMP.rtI]] : [];
+  if (st.type === 'defend') return CAMP.defObj ? [CAMP.defObj] : [];
+  if (st.type === 'escort') { const a = campAllyOf(st.who); return a ? [{ x: a.group.position.x, z: a.group.position.z, y: a.group.position.y + 1.2, label: campChar(st.who).name }] : []; }
+  if (st.type === 'tail') return (st.squads || []).flatMap(n => campAlive(n)).map(e => ({ x: e.group.position.x, z: e.group.position.z, y: e.group.position.y + 1.0, enemy: true, label: 'TARGET' }));
+  if (st.type === 'chase' || st.type === 'boss' || (st.type === 'clear' && st.mark)) return (st.squads || st.spawn || []).flatMap(n => campAlive(n)).map(e => ({ x: e.group.position.x, z: e.group.position.z, y: e.group.position.y + 1.0, enemy: true }));
+  return [];
+}
+function campHud(force) {
+  let h = $('campHudEl'); if (!campOn()) { if (h) h.remove(); return; }
+  if (!h) { h = document.createElement('div'); h.id = 'campHudEl'; ($('hud') || document.body).appendChild(h); }
+  const st = CAMP.st, m = CAMP.m; if (!st) return;
+  const extra = st.type === 'upload' && CAMP.upOn ? ` · ${Math.floor(CAMP.upP * 100)}%` : st.type === 'route' ? ` (${CAMP.rtI}/${st.spots.length})` : st.type === 'multi' ? ` (${CAMP.multi.size}/${st.spots.length})` : st.type === 'photo' ? ` (${CAMP.photos.size}/${st.spots.length})` : st.type === 'clear' || st.type === 'snipe' ? (() => { const n = (st.squads || st.spawn || []).reduce((a, s) => a + campAlive(s).length, 0); return n ? ` (${n} left)` : ''; })() : '';
+  const timer = st.t ? ` · ${fmtT(Math.max(0, st.t - CAMP.stT))}` : (st.type === 'hold' || st.type === 'defend') ? ` · ${fmtT(Math.max(0, st.secs - CAMP.stT))}` : '';
+  const key = st.goal + extra + timer + (st.type === 'upload' ? Math.floor(CAMP.upP * 100) : '') + (CAMP.carry ? '|c' : '') + (CAMP.defObj ? Math.ceil(CAMP.defObj.hp) : '') + (st.stealth || st.quiet ? (CAMP.alarmed ? 'A' : 'q') : '');
+  if (!force && h._k === key) return; h._k = key;
+  const bar = CAMP.defObj ? `<div class="ch-bar"><span>${CAMP.defObj.name}</span><s style="width:${Math.max(0, CAMP.defObj.hp / CAMP.defObj.max * 100)}%"></s></div>` : '';
+  const boss = (st.type === 'boss' ? (st.squads || st.spawn || []).flatMap(n => campAlive(n)).filter(e => e.boss) : []).map(e => `<div class="ch-bar boss"><span>${e.name}</span><s style="width:${Math.max(0, e.hp / e.maxHp * 100)}%"></s></div>`).join('');
+  const esc = st.type === 'escort' ? (() => { const a = campAllyOf(st.who); return a ? `<div class="ch-bar ally"><span>${campChar(st.who).name}</span><s style="width:${Math.max(0, a.hp / a.maxHp * 100)}%"></s></div>` : ''; })() : '';
+  h.innerHTML = `<small>${m.title}</small><b>${st.goal}${extra}${timer}</b>${st.stealth ? `<em class="${CAMP.alarmed ? 'bad' : ''}">${CAMP.alarmed ? 'SPOTTED' : 'STAY HIDDEN · CROUCH TO STAY UNSEEN'}</em>` : st.quiet ? `<em class="${CAMP.alarmed ? 'bad' : ''}">${CAMP.alarmed ? 'ALARM RAISED' : 'QUIET · DON\'T GET SEEN'}</em>` : ''}${CAMP.carry ? `<em>CARRYING ${CAMP.carry.item}</em>` : ''}${bar}${boss}${esc}`;
+}
+const _cmV = new THREE.Vector3();
+function campMarkers() {
+  let box = $('campMarkEl'); if (!campOn() || CAMP.dead || CAMP.done || G.state !== 'playing') { if (box) box.style.display = 'none'; return; }
+  if (!box) { box = document.createElement('div'); box.id = 'campMarkEl'; document.body.appendChild(box); }
+  box.style.display = '';
+  const T = campTargets().slice(0, 6), W = innerWidth, H = innerHeight;
+  while (box.children.length < T.length) { const d = document.createElement('div'); d.className = 'cm'; d.innerHTML = '<i></i><span></span>'; box.appendChild(d); }
+  [...box.children].forEach((d, k) => {
+    const t = T[k]; if (!t) { d.style.display = 'none'; return; } d.style.display = '';
+    _cmV.set(t.x, (t.y || 0) + (t.enemy ? 0.9 : 1.4), t.z).project(camera);
+    let x = (_cmV.x + 1) / 2 * W, y = (1 - _cmV.y) / 2 * H; const behind = _cmV.z > 1;
+    if (behind) { x = W - x; y = H - 30; }
+    x = clamp(x, 30, W - 30); y = clamp(y, 40, H - 40);
+    d.style.transform = `translate(${x}px,${y}px)`; d.classList.toggle('en', !!t.enemy);
+    const dist = Math.round(Math.hypot(t.x - P.x, t.z - P.z)); d.lastChild.textContent = (t.label ? t.label + ' · ' : '') + dist + ' M';
+  });
+}
+function campPauseBtns() {
+  const p = $('pause'); if (!p) return; let b = $('cpRestartBtn');
+  if (!b) { b = document.createElement('button'); b.className = 'btn'; b.id = 'cpRestartBtn'; b.dataset.act = 'cp-restart'; b.textContent = 'RESTART FROM CHECKPOINT'; const r = p.querySelector('[data-act="restart"]'); p.insertBefore(b, r); }
+  const on = campOn(); b.style.display = on ? '' : 'none';
+  const lo = p.querySelector('[data-act="loadout"]'); if (lo) lo.style.display = on ? 'none' : '';
+  const rs = p.querySelector('[data-act="restart"]'); if (rs) rs.textContent = on ? 'RESTART MISSION' : 'RESTART';
+}
+function campTick(dt) {
+  if ((CAMP.pbT = (CAMP.pbT || 0) - dt) <= 0) { CAMP.pbT = 0.5; campPauseBtns(); }
+  if (!campOn()) return;
+  campHud(false); campMarkers();
+}
+
+/* ---------- the CAMPAIGN screen */
+function campMenu() {
+  let s = $('campaign');
+  if (!s) { s = document.createElement('div'); s.id = 'campaign'; s.className = 'screen cod pg-scr hide'; document.body.appendChild(s); }
+  if (!SCREENS.includes('campaign')) SCREENS.push('campaign');
+  campRender(); showScreen('campaign');
+}
+function campRender() {
+  const s = $('campaign'); if (!s) return;
+  const P0 = campProg(), sel = CAMP.sel || P0.last && CAMP_MISSIONS.findIndex(m => m.id === P0.last) + 1 < CAMP_MISSIONS.length && campUnlocked(CAMP_MISSIONS.findIndex(m => m.id === P0.last) + 1) ? CAMP.sel || CAMP_MISSIONS[CAMP_MISSIONS.findIndex(m => m.id === P0.last) + 1].id : CAMP.sel || CAMP_MISSIONS[0].id;
+  CAMP.sel = sel; const m = campMission(sel), idx = CAMP_MISSIONS.indexOf(m), done = P0.done[m.id], tinsAll = Object.values(P0.tins).reduce((a, t) => a + t.length, 0);
+  const pic = id => (typeof MAPSHOTS !== 'undefined' && MAPSHOTS[id] && MAPSHOTS[id][0]) || '';
+  s.innerHTML = `<div class="cod-top"><div class="logo cod-logo">FIRST <em>HARVEST</em><span class="beta-tag">CAMPAIGN</span></div><nav class="cod-nav"><button class="cod-tab" data-act="cp-back">‹ BACK</button></nav><div class="cp-sum">${Object.keys(P0.done).length} / ${CAMP_PLAN.length} MISSIONS · ${tinsAll} / ${CAMP_PLAN.length * 3} STASH TINS</div></div>
+  <div class="cp-main"><div class="cp-list">${CAMP_MISSIONS.map((q, i) => { const un = campUnlocked(i), d = P0.done[q.id]; return `<button class="cp-m${q.id === sel ? ' on' : ''}${un ? '' : ' lock'}" data-act="cp-sel-${q.id}"${un ? '' : ' disabled'}><em>${String(i + 1).padStart(2, '0')}</em><b>${un ? q.title : 'LOCKED'}</b><small>${un ? q.place : 'finish the mission before it'}</small>${d ? `<i>✓ ${CAMP_DIFF[d.diff].name} · ${(P0.tins[q.id] || []).length}/3</i>` : ''}</button>`; }).join('')}${CAMP_PLAN.slice(CAMP_MISSIONS.length).map((t, k) => `<button class="cp-m lock" disabled><em>${String(CAMP_MISSIONS.length + k + 1).padStart(2, '0')}</em><b>${t}</b><small>coming soon</small></button>`).join('')}</div>
+  <div class="cp-detail" style="${pic(m.map) ? `background-image:linear-gradient(180deg,rgba(8,10,12,.2),rgba(8,10,12,.95) 60%),url(${pic(m.map)})` : ''}">
+    <small>MISSION ${idx + 1} · ${m.place}${m.when ? ' · ' + m.when : ''}</small><b>${m.title}</b><p>${m.brief}</p>
+    <div class="cp-tasks">${(m.tasks || []).map(t => `<span>${t}</span>`).join('')}</div>
+    <div class="cp-crew">${(m.allies || []).length ? 'WITH YOU: ' + m.allies.map(a => `<span style="color:${campChar(a).col}">${campChar(a).name}</span>`).join(' · ') : 'ON YOUR OWN'}</div>
+    ${done ? `<div class="cp-best">BEST TIME ${fmtT(done.best)} · ${CAMP_DIFF[done.diff].name} · STASH TINS ${(P0.tins[m.id] || []).length}/3</div>` : ''}
+    <div class="cp-diff">${Object.entries(CAMP_DIFF).map(([k, d]) => `<button class="cp-d${k === CAMP.diff ? ' on' : ''}" data-act="cp-diff-${k}"><b>${d.name}</b><small>${d.d}</small></button>`).join('')}</div>
+    <button class="btn primary cp-go" data-act="cp-play">PLAY MISSION ${idx + 1}</button>
+  </div></div>`;
+  try { focusFirst('#campaign .cp-go'); } catch (e) {}
+}
+function campAct(act) {
+  if (act === 'campaign') { sfx.ui(); campMenu(); return true; }
+  if (act === 'cp-back') { sfx.ui(); showScreen('menu'); return true; }
+  if (act.startsWith('cp-sel-')) { const id = act.slice(7), i = CAMP_MISSIONS.findIndex(m => m.id === id); if (i >= 0 && campUnlocked(i)) { CAMP.sel = id; sfx.ui(); campRender(); } return true; }
+  if (act.startsWith('cp-diff-')) { CAMP.diff = act.slice(8); try { localStorage.setItem('ashfall.campdiff', CAMP.diff); } catch (e) {} sfx.ui(); campRender(); return true; }
+  if (act === 'cp-play') { sfx.ui(); campPlay(CAMP.sel, CAMP.diff); return true; }
+  if (act === 'cp-next') { const i = CAMP_MISSIONS.findIndex(m => m.id === CAMP.m.id), n = CAMP_MISSIONS[i + 1], d = CAMP.diff; campClear(); leaveGame(); if (n) { CAMP.sel = n.id; campPlay(n.id, d); } else campMenu(); return true; }
+  if (act === 'cp-menu') { const id = CAMP.m && CAMP.m.id; campClear(); leaveGame(); CAMP.sel = id || CAMP.sel; campMenu(); return true; }
+  if (act === 'cp-restart') { if (campOn()) { showScreen(null); G.state = 'playing'; campFail('restarting from the checkpoint'); CAMP.restartT = 0.6; } return true; }
+  return false;
+}
+try { const d = localStorage.getItem('ashfall.campdiff'); if (CAMP_DIFF[d]) CAMP.diff = d; } catch (e) {}
+// the main menu tile
+setTimeout(() => {
+  try {
+    const tiles = document.querySelector('#menu .cod-tiles'); if (!tiles || document.querySelector('.cp-tile')) return;
+    const b = document.createElement('button'); b.className = 'cod-tile cp-tile'; b.dataset.act = 'campaign';
+    b.innerHTML = '<small>STORY &middot; 12 MISSIONS</small><b>CAMPAIGN</b><span>FIRST HARVEST &middot; HOW IT ALL STARTED</span>';
+    tiles.insertBefore(b, tiles.children[1] || null);
+  } catch (e) {}
+}, 0);
+(() => { const s = document.createElement('style'); s.textContent = `
+#campHudEl{position:absolute;left:24px;top:120px;max-width:380px;pointer-events:none;font-family:inherit}
+#campHudEl small{display:block;font-size:10px;letter-spacing:.3em;color:#e0b44a}#campHudEl b{display:block;font-size:15px;letter-spacing:.06em;color:#fff;text-shadow:0 1px 3px #000;margin:3px 0}
+#campHudEl em{display:block;font-style:normal;font-size:11px;letter-spacing:.18em;color:#8adf6a;text-shadow:0 1px 2px #000}#campHudEl em.bad{color:#ff5a4a}
+.ch-bar{position:relative;width:280px;height:16px;background:rgba(0,0,0,.55);border:1px solid rgba(255,255,255,.25);margin-top:6px}.ch-bar s{position:absolute;left:0;top:0;bottom:0;background:#e0b44a}.ch-bar.boss s{background:#ff4a3a}.ch-bar.ally s{background:#5aaeff}.ch-bar span{position:relative;z-index:1;font-size:10px;letter-spacing:.18em;padding-left:6px;line-height:16px;color:#fff;text-shadow:0 1px 2px #000}
+#campMarkEl{position:fixed;left:0;top:0;pointer-events:none;z-index:6}#campMarkEl .cm{position:absolute;left:0;top:0;margin:-14px 0 0 -40px;width:80px;text-align:center}
+#campMarkEl .cm i{display:block;width:14px;height:14px;margin:0 auto;border:2px solid #e0b44a;transform:rotate(45deg);background:rgba(224,180,74,.25)}#campMarkEl .cm.en i{border-color:#ff4a3a;background:rgba(255,74,58,.3)}
+#campMarkEl .cm span{display:block;font-size:10px;letter-spacing:.12em;color:#fff;text-shadow:0 1px 2px #000;margin-top:4px}
+#campCardEl{position:fixed;left:50%;top:26%;transform:translateX(-50%);text-align:center;pointer-events:none;z-index:7;transition:opacity 1s}#campCardEl.out{opacity:0}
+#campCardEl small{display:block;font-size:12px;letter-spacing:.4em;color:#e0b44a}#campCardEl b{display:block;font-size:46px;letter-spacing:.14em;color:#fff;text-shadow:0 2px 12px #000;margin:6px 0}
+#campCardEl span{display:block;font-size:14px;letter-spacing:.2em;color:#ddd;text-shadow:0 1px 4px #000}#campCardEl em{display:block;font-style:normal;font-size:12px;letter-spacing:.3em;color:#9a9;margin-top:4px}
+#campFailEl{position:fixed;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(40,0,0,.55);z-index:8;pointer-events:none}
+#campFailEl b{font-size:44px;letter-spacing:.2em;color:#ff5a4a;text-shadow:0 2px 12px #000}#campFailEl span{font-size:16px;letter-spacing:.2em;color:#fff;margin-top:8px}#campFailEl small{font-size:11px;letter-spacing:.3em;color:#ccc;margin-top:18px}
+.camp-flash{position:fixed;inset:0;background:#fff;opacity:.85;z-index:9;pointer-events:none;animation:cflash .4s forwards}@keyframes cflash{to{opacity:0}}
+.camp-end{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,8,10,.86);z-index:20;pointer-events:auto}
+.ce-box{width:min(720px,92vw);text-align:center}.ce-box>small{font-size:12px;letter-spacing:.35em;color:#e0b44a}.ce-box>b{display:block;font-size:42px;letter-spacing:.14em;color:#fff;margin:8px 0 18px}
+.ce-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.ce-grid div{border:1px solid rgba(255,255,255,.15);padding:10px;background:rgba(255,255,255,.04)}.ce-grid small{display:block;font-size:10px;letter-spacing:.24em;color:#aaa}.ce-grid b{font-size:22px;color:#fff}
+.ce-xp{font-size:16px;letter-spacing:.2em;color:#8adf6a;margin-bottom:16px}.ce-next{font-size:22px;letter-spacing:.3em;color:#e0b44a;margin:-4px 0 18px}.ce-next small{font-size:11px;letter-spacing:.24em;color:#ccc}.ce-btns{display:flex;gap:10px;justify-content:center}
+#campaign .cp-sum{margin-left:auto;font-size:12px;letter-spacing:.2em;color:#e0b44a;align-self:center}
+#campaign .cp-main{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:16px;padding:12px 28px 24px;height:calc(100% - 90px);box-sizing:border-box}
+#campaign .cp-list{overflow:auto;display:flex;flex-direction:column;gap:6px;pointer-events:auto}
+#campaign .cp-m{position:relative;text-align:left;font-family:inherit;padding:8px 10px 8px 52px;border:1px solid var(--line,rgba(255,255,255,.15));background:rgba(12,14,16,.75);color:#fff;cursor:pointer;min-height:50px}
+#campaign .cp-m em{position:absolute;left:10px;top:8px;font-style:normal;font-size:22px;font-weight:800;color:#e0b44a}#campaign .cp-m b{display:block;font-size:13px;letter-spacing:.12em}#campaign .cp-m small{display:block;font-size:10px;letter-spacing:.06em;color:#aaa}
+#campaign .cp-m i{position:absolute;right:8px;top:8px;font-style:normal;font-size:10px;letter-spacing:.1em;color:#8adf6a}#campaign .cp-m.on{border-color:#e0b44a;box-shadow:0 0 10px rgba(224,180,74,.35)}#campaign .cp-m.lock{opacity:.45;cursor:default}
+#campaign .cp-detail{pointer-events:auto;border:1px solid rgba(255,255,255,.15);padding:22px 26px;background:#0c0e10 center/cover;display:flex;flex-direction:column;justify-content:flex-end;overflow:auto}
+#campaign .cp-detail>small{font-size:11px;letter-spacing:.3em;color:#e0b44a}#campaign .cp-detail>b{font-size:40px;letter-spacing:.12em;color:#fff;margin:4px 0 8px}#campaign .cp-detail p{font-size:14px;line-height:1.55;color:#ddd;max-width:640px;margin:0 0 10px}
+#campaign .cp-tasks{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}#campaign .cp-tasks span{font-size:10px;letter-spacing:.16em;padding:4px 8px;border:1px solid rgba(138,223,106,.5);color:#bfe8a8}
+#campaign .cp-crew,#campaign .cp-best{font-size:11px;letter-spacing:.18em;color:#bbb;margin-bottom:10px}
+#campaign .cp-diff{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:12px}#campaign .cp-d{font-family:inherit;text-align:left;padding:8px 10px;border:1px solid rgba(255,255,255,.18);background:rgba(0,0,0,.45);color:#fff;cursor:pointer}
+#campaign .cp-d b{display:block;font-size:13px;letter-spacing:.16em}#campaign .cp-d small{font-size:10px;color:#aaa}#campaign .cp-d.on{border-color:#e0b44a;background:rgba(224,180,74,.15)}
+#campaign .cp-go{align-self:flex-start;min-width:260px}
+.cp-tile b{color:#e0b44a}
+`; document.head.appendChild(s); })();
+/* ================================================================== CAMPAIGN: FIRST HARVEST (the missions)
+   Three weeks before Blackwell. JUNE ALVAREZ drives for the Green Coast Collective, a legal weed co-op run by MARA.
+   Lazarus Pharma wants the co-op's land and its strains; its private army VANTAGE comes to take them. June runs, gets
+   framed, and finds the four people who will be in Blackwell the night it falls: Smokes, Doc, Tank and Sparks.
+   Every mission has its own tasks (see camp.js for what each step type does). Coordinates are the map's own. */
+
+/* ---------- 1 · LAST DELIVERY (THE GREENHOUSE) */
+CAMP_MISSIONS.push({
+  id: 'm1', title: 'LAST DELIVERY', map: 'greenhouse', place: 'GREEN COAST COLLECTIVE', when: 'DAY 1 · 18:40',
+  brief: 'Delivery day at the Green Coast Collective. Pack the order, load the van, and get it to the city before dark. Mara says the men in grey suits who came by last week were "just inspectors". Mara is wrong.',
+  tasks: ['PACK THE ORDER', 'HOLD THE GREENHOUSE', 'WIPE THE MEMBER LIST', 'GET MARA OUT', 'CARRY THE STASH', 'PROTECT THE VAN', 'CAPTAIN KESS'],
+  env: { top: 0x26324a, horizon: 0xe8925a, sun: [-40, 12, 20], sunCol: 0xffa060, sunI: 1.0, skySun: 0xffb070, exposure: 1.2 },
+  start: { x: 2, z: 28.5, y: 0, yaw: 0 }, allies: ['mara'], loadout: { p: 'striker', s: 'sidearm', e: 'frag', n: 2 },
+  props: [{ x: 24.5, z: 22, prop: 'van' }],
+  tins: [{ x: -30.5, z: -30.5 }, { x: 31, z: 30.5 }, { x: 9.5, z: -7.5 }],
+  squads: {
+    gh1: { alert: true, pts: [{ x: -4, z: -30 }, { x: 0, z: -30 }, { x: 4, z: -30 }] },
+    gh2: { alert: true, pts: [{ x: -14, z: -26 }, { x: -10, z: -28 }, { x: 14, z: -26, kind: 'smg' }, { x: 10, z: -28, kind: 'smg' }] },
+    gh3: { alert: true, pts: [{ x: -28, z: -14 }, { x: -26, z: -16, kind: 'shotgun' }, { x: 28, z: -26 }, { x: 26, z: -28 }] },
+    gh4: { alert: true, pts: [{ x: -3, z: -31, kind: 'heavy' }, { x: 3, z: -31 }, { x: -20, z: -30, kind: 'smg' }, { x: 20, z: -30, kind: 'smg' }] },
+    gh5: { alert: true, pts: [{ x: 0, z: -31, kind: 'heavy' }, { x: -8, z: -31 }, { x: 8, z: -31 }] },
+    hut: { pts: [{ x: -16, z: -21, look: 0, path: [[-16, -21], [-6, -21], [-6, -16], [-16, -16]] }, { x: -22, z: -21.5, look: Math.PI }, { x: -10, z: -30, look: 0 }] },
+    yardA: { alert: true, pts: [{ x: 4, z: -18 }, { x: 8, z: -20 }, { x: 0, z: -24, kind: 'smg' }, { x: 12, z: -14 }] },
+    yardB: { alert: true, pts: [{ x: 20, z: -24 }, { x: 26, z: -18, kind: 'sniper' }, { x: 16, z: -12, kind: 'shotgun' }] },
+    flank1: { alert: true, pts: [{ x: -30, z: -2 }, { x: -30, z: 2 }, { x: -30, z: 8, kind: 'smg' }] },
+    flank2: { alert: true, pts: [{ x: 0, z: -9.5 }, { x: 4, z: -12 }, { x: -4, z: -12 }] },
+    barn1: { alert: true, pts: [{ x: -2, z: 4 }, { x: 4, z: -3 }, { x: -6, z: -4, kind: 'shotgun' }, { x: 8, z: 4 }] },
+    barn2: { alert: true, pts: [{ x: -30, z: 18 }, { x: -26, z: 20 }, { x: -30, z: -18, kind: 'heavy' }] },
+    van1: { alert: true, pts: [{ x: 10, z: -2 }, { x: 14, z: 0 }, { x: 12, z: 6, kind: 'smg' }] },
+    van2: { alert: true, pts: [{ x: 31, z: -8 }, { x: 31, z: -12 }, { x: 28, z: -20, kind: 'shotgun' }, { x: 22, z: -24 }] },
+    van3: { alert: true, pts: [{ x: 0, z: 30 }, { x: -8, z: 28 }, { x: -12, z: 30, kind: 'heavy' }] },
+    van4: { alert: true, pts: [{ x: 6, z: 12 }, { x: 0, z: 14 }, { x: 12, z: 12, kind: 'smg' }, { x: -4, z: 10 }] },
+    kess: { alert: true, pts: [{ x: 0, z: -28, kind: 'heavy', boss: true, name: 'CAPTAIN KESS', hp: 1400, gun: 'titan', scale: 1.18 }, { x: -6, z: -27, kind: 'shotgun' }, { x: 6, z: -27, kind: 'shotgun' }] },
+    kessAdds: { alert: true, pts: [{ x: -14, z: -22 }, { x: 14, z: -22, kind: 'smg' }, { x: 0, z: -14 }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'TALK TO MARA', secs: 1, say: [['mara', 'There she is. My favourite driver. You ready for the big run?'], ['june', 'Forty jars to the city, back before the lamps come on. Same as every Friday.'], ['mara', 'Not the same. The Northern Lights order is in the barn. Pack it up, I will meet you at the van.']] },
+    { type: 'go', goal: 'GO TO THE DRYING BARN', at: { x: -22, z: 0, r: 4 }, say: [['june', 'The barn, the barn. Smells like a good week in there.']] },
+    { type: 'multi', goal: 'PACK THE ORDER', verb: 'PACK THE JARS', secs: 1.6, prop: 'box', spots: [{ x: -26, z: -6 }, { x: -20, z: 5 }, { x: -24, z: 6.5 }],
+      after: [['june', 'Northern Lights, packed and labelled. Forty jars of happy.']] },
+    { type: 'use', goal: 'LOAD THE VAN ON THE DOCK', verb: 'LOAD THE ORDER', secs: 2.2, at: { x: 22, z: 20, r: 2.2 }, cp: true,
+      say: [['mara', 'Out back on the dock. Easy on the jars, those are worth more than the van.']], after: [['mara', 'Okay. Wait. Do you hear that? Trucks. A lot of trucks.']] },
+    { type: 'talk', goal: 'LISTEN', secs: 1, say: [['radio', 'This is VANTAGE. This property is seized by order of Lazarus Pharmaceutical. Lie face down.'], ['mara', 'Seized? We have every licence on the wall! Those are not inspectors. June, get in the greenhouse!'], ['june', 'Mara, they have rifles!'], ['mara', 'So do we. Under the benches. My father did not grow weed for forty years to hand it to a pill company.']] },
+    { type: 'hold', goal: 'HOLD THE GREENHOUSE', at: { x: 0, z: 0, r: 12 }, secs: 120, cp: true, loadout: { p: 'marc', s: 'sidearm', e: 'frag', n: 3 },
+      waves: [{ t: 2, sq: 'gh1' }, { t: 22, sq: 'gh2' }, { t: 48, sq: 'gh3' }, { t: 75, sq: 'gh4' }, { t: 98, sq: 'gh5' }],
+      say: [['mara', 'Grab a rifle from the rack. Keep them out of the glass house!']],
+      after: [['mara', 'They are pulling back. They will be back with more. June, the member list. Six hundred names, addresses, everything.'], ['june', 'In the office hut. If VANTAGE gets that, every member gets a knock on the door.']] },
+    { type: 'use', goal: 'WIPE THE MEMBER LIST IN THE OFFICE', verb: 'WIPE THE LAPTOP', secs: 4, prop: 'laptop', at: { x: -18.6, z: -25, r: 1.8 }, spawn: ['hut'], quiet: true, onAlarm: ['yardA'],
+      say: [['mara', 'The north office. They left a few men up there. Quiet if you can.']], after: [['june', 'Wiped. Nobody is getting those names.']] },
+    { type: 'clear', goal: 'FIGHT YOUR WAY OUT OF THE YARD', spawn: ['yardA', 'yardB'], squads: ['yardA', 'yardB', 'hut'], cp: true,
+      say: [['radio', 'Movement in the north yard. All units, converge.']], after: [['mara', 'June! I am hit. It is my leg. I can walk, slowly.']] },
+    { type: 'escort', goal: 'GET MARA TO THE VAN', who: 'mara', hp: 700, lead: 12, spawn: ['flank1', 'flank2'], cp: true,
+      path: [[-14, -18], [-14, -6], [-14, 6], [-13, 13], [-5, 16.5], [5, 17], [14, 17.5], [21, 18.5]],
+      say: [['mara', 'Stay close. I am not as fast as I used to be. Or as fast as I was ten minutes ago.']], after: [['mara', 'I am in. The stash, June. The whole harvest is in the barn. Without it there is no co-op.']] },
+    { type: 'carry', goal: 'CARRY THE STASH FROM THE BARN TO THE VAN', item: 'THE HARVEST', at: { x: -22, z: -1, r: 1.8 }, to: { x: 21.5, z: 20.5, r: 3 }, spawn: ['barn1', 'barn2'], cp: true,
+      say: [['june', 'Thirty kilos of harvest. I am going to feel this tomorrow.']], after: [['mara', 'Got it. Now I just need to get this old thing started. Cover me!']] },
+    { type: 'defend', goal: 'PROTECT THE VAN WHILE MARA STARTS IT', obj: { x: 24.5, z: 22, hp: 100, name: 'THE VAN', r: 9, dps: 1.6 }, secs: 90, cp: true,
+      waves: [{ t: 2, sq: 'van1' }, { t: 22, sq: 'van2' }, { t: 45, sq: 'van3' }, { t: 65, sq: 'van4' }],
+      say: [['mara', 'It does this. It always does this. Come on, come on…']], after: [['mara', 'She is running! June… there. The big one. That is their captain.']] },
+    { type: 'boss', goal: 'TAKE DOWN CAPTAIN KESS', spawn: ['kess'], squads: ['kess'], cp: true,
+      say: [['radio', 'This is Captain Kess. Miss Alvarez, you are making this very hard on your friends.'], ['june', 'You came to my friends\' farm with machine guns!'], ['radio', 'And I will leave with it. Take her alive if you can. Or not.']] },
+    { type: 'go', goal: 'GET TO THE VAN', at: { x: 21.5, z: 20.5, r: 2.5 }, spawn: ['kessAdds'],
+      say: [['mara', 'Kess is down, but there are more trucks on the road. June, drive. Take the harvest and go.'], ['june', 'I am not leaving you here!'], ['mara', 'I am sixty three with a bullet in my leg. You are fast. Find somebody who can help. Find Leroy. He knows everybody.']] },
+  ],
+  end: [['june', 'Mara stayed behind. The radio says the Green Coast Collective was raided for selling poison pills.'], ['june', 'Poison pills. We never sold a pill in our lives. Somebody is lying, and they have my face on the news.'], ['june', 'Okay, Leroy. Let us find out who you know.']],
+});
+
+/* ---------- 2 · THE PLUG (BLACKWATER PIER) */
+CAMP_MISSIONS.push({
+  id: 'm2', title: 'THE PLUG', map: 'blackwater', place: 'BLACKWATER PIER', when: 'DAY 2 · 05:50',
+  brief: 'June\'s face is on the morning news. Mara\'s old friend Leroy "Smokes" Dawson, a hospital orderly who moves a little product on the side, says he has a buyer for the harvest at the fish market. Smokes also says the docks have been full of grey boats all week.',
+  tasks: ['MEET SMOKES', 'PHOTOGRAPH THE BOATS', 'SNEAK INTO THE CANNERY', 'FIND THE MANIFEST', 'CATCH THE BUYER', 'SNIPE FROM THE CATWALK', 'MAKE THE BOAT'],
+  start: { x: 0, z: 29.5, y: 0, yaw: 0 }, allies: [], loadout: { p: 'whisper', s: 'sidearm', e: 'stun', n: 2 },
+  tins: [{ x: -31, z: -33 }, { x: 33, z: 33 }, { x: 11.4, z: -5.2, y: 4 }],
+  squads: {
+    dock: { pts: [
+      { x: -6, z: -28, look: Math.PI, path: [[-6, -28], [6, -28], [6, -31], [-6, -31]] }, { x: 2, z: -25.5, look: 0 }, { x: 10, z: -27, look: -1.2 },
+      { x: 16, z: -24, look: Math.PI, path: [[16, -24], [26, -24], [26, -29], [16, -29]] }, { x: -14, z: -27, look: 1.4 }, { x: 24, z: -18.5, look: 0, kind: 'heavy' } ] },
+    yard: { pts: [{ x: 7.5, z: -12, look: 0, path: [[7.5, -12], [7.5, 2], [7.5, -12]] }, { x: 13, z: -16, look: Math.PI / 2 }, { x: 32, z: -6, look: -Math.PI / 2, path: [[32, -6], [32, -16], [32, -6]] }] },
+    cannery: { pts: [{ x: 20, z: 6, look: Math.PI, path: [[20, 6], [20, -6], [26, -6], [26, 6]] }, { x: 14, z: -3, look: 1.6 }] },
+    amb1: { alert: true, pts: [{ x: 16, z: -16 }, { x: 25, z: -16 }, { x: 20, z: -18, kind: 'shotgun' }] },
+    amb2: { alert: true, pts: [{ x: 16, z: 16 }, { x: 25, z: 15.5, kind: 'smg' }, { x: 13, z: 18 }] },
+    amb3: { alert: true, pts: [{ x: 6, z: 0 }, { x: 6, z: -4, kind: 'heavy' }, { x: 33, z: 0 }, { x: 33, z: 4 }] },
+    amb4: { alert: true, pts: [{ x: -2, z: -14 }, { x: 2, z: -16, kind: 'smg' }, { x: 0, z: 14 }, { x: -6, z: 16 }] },
+    buyer: { pts: [{ x: 8, z: -8, runner: true, speed: 4.4, target: true, mark: 'THE BUYER', name: 'THE BUYER', path: [[8, -14], [12, -20], [4, -27], [-8, -30], [-18, -31], [-26, -31]] }] },
+    buyerGuard: { alert: true, pts: [{ x: 0, z: -24, kind: 'smg' }, { x: -10, z: -26 }, { x: -20, z: -27, kind: 'shotgun' }] },
+    snipeA: { alert: true, mode: 'push', pts: [{ x: -14, z: 4, kind: 'rifleman' }, { x: -12, z: -4 }, { x: -2, z: 14 }, { x: -10, z: 12 }] },
+    snipeB: { alert: true, pts: [{ x: -15, z: 20 }, { x: -2, z: 20, kind: 'heavy' }, { x: 8, z: 18 }, { x: -8, z: 24, kind: 'smg' }] },
+    snipeC: { alert: true, pts: [{ x: 2, z: -6 }, { x: -9, z: -8, kind: 'sniper' }, { x: 6, z: 8 }] },
+    run1: { alert: true, pts: [{ x: 8, z: 14 }, { x: 14, z: 22 }, { x: 4, z: 24, kind: 'shotgun' }] },
+    run2: { alert: true, pts: [{ x: -14, z: 14 }, { x: -12, z: 22 }, { x: -6, z: 30, kind: 'heavy' }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'ANSWER YOUR PHONE', secs: 1, say: [['smokes', 'June. It is Leroy. Smokes. Mara called me before they took her. Said you might need a friend.'], ['june', 'I need a buyer, a lawyer and a time machine. In that order.'], ['smokes', 'I can do one of three. Fish market, middle of the pier. Bring the harvest. Come alone.']] },
+    { type: 'go', goal: 'MEET SMOKES AT THE FISH MARKET', at: { x: -4, z: 3, r: 3 }, say: [['june', 'Fog, fish and a man named Smokes. Living the dream.']] },
+    { type: 'talk', goal: 'TALK TO SMOKES', secs: 1, join: ['smokes'], say: [['smokes', 'Look at you. Mara\'s best driver, wanted for selling poison pills. You?'], ['june', 'I have never sold a pill in my life.'], ['smokes', 'I know. Here is the thing. Those grey boats on the north quay come in every night. VANTAGE. Lazarus. Same thing. Get me pictures and I can show people what they are moving.'], ['smokes', 'I will stay here and look like a man buying fish. Keep your head down. They see you, it is over.']] },
+    { type: 'photo', goal: 'PHOTOGRAPH THE VANTAGE UNLOADING ON THE NORTH QUAY · AIM DOWN SIGHTS', spawn: ['dock'], stealth: true, see: 22, allyAt: { smokes: { x: -4, z: 6 } }, cp: true,
+      props: [{ x: -3.5, z: -26, prop: 'box' }, { x: -2.6, z: -26.4, prop: 'box' }, { x: -3, z: -25.4, prop: 'box' }],
+      spots: [{ x: -3, z: -26, h: 0.5, label: 'LAZARUS CRATES', say: [['june', 'Lazarus Pharmaceutical, on crates of fish. Sure.']] }, { x: 2, z: -25.5, h: 1.5, label: 'THE OFFICER', say: [['june', 'Officer with a clipboard. Smile.']] }, { x: 21, z: -17.5, h: 2.6, label: 'THE GREY BOAT', say: [['june', 'And the boat. No name, no number. Very legal.']] }],
+      say: [['smokes', 'North quay. Use the stalls for cover. Crouch, go slow, aim down your sights to take the picture.']], after: [['smokes', 'Good pictures. Now we need what is IN the crates. Their paperwork is in the cannery office. Same rules. Quiet.']] },
+    { type: 'go', goal: 'SNEAK INTO THE CANNERY', at: { x: 20, z: -3, r: 3 }, spawn: ['yard'], stealth: true, see: 20, allyAt: { smokes: { x: -4, z: 6 } }, cp: true,
+      say: [['june', 'Through the street, in the side door. Do not be seen, do not be seen.']] },
+    { type: 'search', goal: 'FIND THE SHIPPING MANIFEST', verb: 'SEARCH', secs: 1.6, prop: 'box', spawn: ['cannery'], quiet: true, onAlarm: ['amb3'], allyAt: { smokes: { x: -4, z: 6 } },
+      spots: [{ x: 14, z: -10 }, { x: 27, z: -10 }, { x: 27, z: 9.5 }, { x: 14, z: 9.5 }, { x: 22.5, z: -2, nope: 'JUST FISH TINS' }],
+      found: 'THE MANIFEST', say: [['smokes', 'Office drawers, crates, anything with paper on it.']], after: [['june', 'Shipping manifest. Lazarus to Lazarus. Two hundred crates of something called NIGHTSHADE. Destination: Blackwell Hospital.'], ['smokes', 'Blackwell? I work at Blackwell. June. Your buyer is here. And he brought friends. That was never a buyer.']] },
+    { type: 'clear', goal: 'SURVIVE THE AMBUSH', spawn: ['amb1', 'amb2', 'amb3', 'amb4'], cp: true, join: ['smokes'],
+      say: [['radio', 'Target is in the cannery. Nobody leaves.'], ['smokes', 'I am coming to you! Do not die before I get there!']], after: [['smokes', 'There! The guy in the nice coat, running for the north boats. That is your buyer.']] },
+    { type: 'chase', goal: 'CATCH THE BUYER BEFORE HE REACHES HIS BOAT', spawn: ['buyer', 'buyerGuard'], squads: ['buyer'], cp: true,
+      say: [['june', 'Not today, nice coat.']], failRun: 'the buyer got away on his boat', after: [['smokes', 'Got him. Phone, wallet, VANTAGE badge. Agent Pell. Pleased to meet you, Agent Pell.'], ['smokes', 'My boat is on the south quay. I will go start her. You get up on the cannery catwalk and keep them off me.']] },
+    { type: 'snipe', goal: 'COVER SMOKES FROM THE CANNERY CATWALK', at: { x: 11.4, z: 0, y: 4, r: 2.2 }, gun: 'hawkeye', spawn: ['snipeA', 'snipeB', 'snipeC'], squads: ['snipeA', 'snipeB', 'snipeC'], allyAt: { smokes: { x: -6, z: 27 } }, cp: true,
+      say: [['smokes', 'The catwalk has windows over the whole market. I am heading south. Watch my back, sharpshooter.'], ['june', 'I have never fired a sniper rifle.'], ['smokes', 'Point the skinny end at the bad guys.']], after: [['smokes', 'Clear! Boat is running. Get down here, they are torching the pier!']] },
+    { type: 'go', goal: 'GET TO SMOKES\' BOAT', at: { x: -6, z: 28, r: 3 }, t: 55, failTime: 'the boat had to leave without you', spawn: ['run1', 'run2'], allyAt: { smokes: { x: -6, z: 28 } } },
+  ],
+  end: [['smokes', 'Welcome aboard the Lucky Leaf. Do not touch the green bag. That is my personal medicine.'], ['june', 'Nightshade. Two hundred crates going to your hospital. What is it?'], ['smokes', 'I do not know. But I know a surgeon at Blackwell who signs everything Lazarus sends. Doc Reyes. And he owes me a favour.']],
+});
+
+/* ---------- 3 · PAPER TRAIL (VERNON SQUARE: the street, the metro station under it and the car park) */
+CAMP_MISSIONS.push({
+  id: 'm3', title: 'PAPER TRAIL', map: 'metro', place: 'VERNON SQUARE', when: 'DAY 4 · 19:20',
+  brief: 'Agent Pell\'s phone had one new message: "Drive is in locker 9. Same as always." A VANTAGE courier picks it up tonight at Vernon Square station. Smokes wants to see where the courier goes. June wants to see what is on the drive.',
+  tasks: ['TAIL THE COURIER', 'CRACK THE LOCKERS', 'DECRYPT THE DRIVE', 'RUN THE TUNNEL', 'CAR PARK SHOOTOUT', 'ROOFTOP PICKUP'],
+  env: { top: 0x101626, horizon: 0x3a4250, fog: 0.012, sunI: 0.5, exposure: 1.25 },
+  start: { x: -26, z: 38, y: 4.4, yaw: 0 }, allies: ['smokes'], loadout: { p: 'whisper', s: 'sidearm', e: 'stun', n: 2 },
+  tins: [{ x: -34, z: -41, y: 4.4 }, { x: -1.5, z: 18, y: 0 }, { x: 38, z: -16, y: 7.6 }],
+  squads: {
+    courier: { pts: [{ x: -26, z: 30, y: 4.4, runner: true, speed: 2.7, name: 'THE COURIER', path: [[-26, 30, 4.4], [-26, 20, 4.4], [-14, 14, 4.4], [-10, 6, 4.4], [-14, 0, 4.4], [-12, -10, 4.4], [-6, -20, 4.4], [6, -20, 4.4], [14, -28, 4.4], [24, -34, 4.4]] }] },
+    lockerG: { pts: [{ x: 8.5, z: -6, y: 1, look: 0 }, { x: 8.5, z: 8, y: 1, look: Math.PI, path: [[8.5, 8, 1], [8.5, -4, 1]] }] },
+    up1: { alert: true, pts: [{ x: -8.5, z: -14, y: 1 }, { x: -8.5, z: 14, y: 1, kind: 'smg' }, { x: 8.5, z: -14, y: 1 }] },
+    up2: { alert: true, pts: [{ x: -8.5, z: -10, y: 1, kind: 'shotgun' }, { x: 8.5, z: 14, y: 1 }, { x: 8.5, z: 10, y: 1, kind: 'smg' }, { x: -8.5, z: 10, y: 1 }] },
+    up3: { alert: true, pts: [{ x: -8.5, z: -15, y: 1, kind: 'heavy' }, { x: 8.5, z: -15, y: 1 }, { x: -8.5, z: 15, y: 1, kind: 'shotgun' }, { x: 8.5, z: 15, y: 1, kind: 'heavy' }] },
+    tunnel: { alert: true, pts: [{ x: -1.5, z: -12, y: 0 }, { x: -1.5, z: 6, y: 0, kind: 'shotgun' }, { x: 8.5, z: 0, y: 1, kind: 'smg' }] },
+    park1: { alert: true, mode: 'hold', pts: [{ x: 30, z: 0, y: 7.6 }, { x: 34, z: 6, y: 7.6, kind: 'smg' }, { x: 26, z: -6, y: 7.6 }, { x: 36, z: -4, y: 7.6, kind: 'shotgun' }] },
+    park2: { alert: true, pts: [{ x: 30, z: -16, y: 7.6, kind: 'heavy' }, { x: 26, z: 14, y: 7.6 }, { x: 36, z: 12, y: 7.6, kind: 'sniper' }] },
+    roof: { alert: true, pts: [{ x: 30, z: 6, y: 10.8 }, { x: 34, z: -6, y: 10.8, kind: 'smg' }, { x: 26, z: 0, y: 10.8, kind: 'heavy' }, { x: 36, z: 4, y: 10.8 }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'WAIT FOR THE COURIER', secs: 1, say: [['smokes', 'Rain, a bus stop and a man with a briefcase. Classic.'], ['june', 'That is him. Grey coat, VANTAGE boots.'], ['smokes', 'Follow him. Not too close, not too far. When he looks back, crouch or get behind something.']] },
+    { type: 'tail', goal: 'TAIL THE COURIER · DON\'T GET CLOSE, DON\'T LOSE HIM', spawn: ['courier'], squads: ['courier'], near: 7, far: 30, allyAt: { smokes: { x: -26, z: 38, y: 4.4 } }, cp: true,
+      after: [['june', 'He went down the east stairs. Into the station.'], ['smokes', 'Lockers are on the east platform. He will be back up in a minute. Get there first.']] },
+    { type: 'search', goal: 'FIND LOCKER 9 BEFORE HE COMES BACK', verb: 'FORCE THE LOCKER', secs: 1.3, prop: 'box', t: 100, failTime: 'the courier came back for the drive', spawn: ['lockerG'], quiet: true, onAlarm: ['up1'],
+      spots: [{ x: 9.5, z: -12, y: 1 }, { x: 9.5, z: -6, y: 1 }, { x: 9.5, z: 0, y: 1 }, { x: 9.5, z: 6, y: 1 }, { x: 9.5, z: 12, y: 1 }], found: 'LOCKER 9 · THE DRIVE', join: ['smokes'],
+      say: [['smokes', 'Five lockers on the east platform. Nobody labels anything any more.']], after: [['june', 'Got it. Encrypted. Smokes, does your phone do magic?'], ['smokes', 'My phone does weather and pizza. But Pell\'s phone has the VANTAGE app. Plug it into the station terminal and let it chew.']] },
+    { type: 'upload', goal: 'DECRYPT THE DRIVE AT THE STATION TERMINAL', thing: 'DECRYPTION', verb: 'PLUG IN THE DRIVE', secs: 75, at: { x: -8.5, z: 1, y: 1, r: 8 }, prop: 'laptop', cp: true,
+      waves: [{ t: 6, sq: 'up1' }, { t: 28, sq: 'up2' }, { t: 52, sq: 'up3' }],
+      sayStart: [['radio', 'The locker is open. Station units, the drive is being accessed. Go.'], ['smokes', 'And here comes the whole army. Stay by the terminal!']],
+      after: [['june', 'Decrypted. Shipping lists. Blackwell Hospital, every Friday for six months. And a name. HAROLD VOSS, board of Lazarus Pharmaceutical.'], ['smokes', 'They are sealing the stairs. Down on the tracks, through the tunnel, up the far side. Move!']] },
+    { type: 'route', goal: 'RUN THE TUNNEL BEFORE THEY SEAL THE STATION', t: 75, failTime: 'they sealed the station', spawn: ['tunnel'],
+      spots: [{ x: -1.5, z: 10, y: 0 }, { x: -1.5, z: -6, y: 0 }, { x: -1.5, z: -17, y: 0 }, { x: 0, z: -24, y: 4.4 }, { x: 18, z: -26, y: 4.4 }],
+      say: [['june', 'Down on the rails. Please do not let a train come. Please do not let a train come.']], after: [['smokes', 'Out! Car park, east side. My cousin has a helicopter. Well. A friend of my cousin. On the roof.']] },
+    { type: 'clear', goal: 'FIGHT UP THROUGH THE CAR PARK', spawn: ['park1', 'park2'], squads: ['park1', 'park2'], cp: true,
+      say: [['radio', 'Targets in the multi storey. Level two. Sniper, eyes up.']], after: [['smokes', 'Ramp to the roof. Go go go.']] },
+    { type: 'hold', goal: 'HOLD THE ROOF UNTIL THE PICKUP LANDS', at: { x: 30, z: 0, y: 10.8, r: 10 }, secs: 50, waves: [{ t: 2, sq: 'roof' }], cp: true,
+      say: [['smokes', 'Sixty seconds out. He says. He also said he was a dentist.']], after: [['smokes', 'There he is! Jump in!']] },
+  ],
+  end: [['june', 'Harold Voss. Board member, Lazarus Pharmaceutical. Signs the Blackwell shipments himself.'], ['smokes', 'And at Blackwell, every shipment gets signed by one man on our side. Doc Reyes.'], ['june', 'Then we need to talk to Doc.'], ['smokes', 'Problem. Doc did not come to work today. Lazarus took him to their tower downtown. For a "meeting".']],
+});
+
+/* ---------- 4 · HIGH RISE (SPIRE: the Lazarus tower roof, at night, in the rain) */
+CAMP_MISSIONS.push({
+  id: 'm4', title: 'HIGH RISE', map: 'spire', place: 'LAZARUS TOWER · ROOF', when: 'DAY 5 · 01:10',
+  brief: 'Lazarus is holding Doc Reyes in the penthouse on top of their tower, 300 metres up. June comes in under the rain on a window cleaner\'s cradle. Take out the guards one at a time, find Doc, and get him to the helipad before the morning shift.',
+  tasks: ['SILENT TAKEDOWNS', 'KILL THE CAMERAS', 'FIND DOC', 'ESCORT DOC', 'HOLD THE HELIPAD', 'THE WARDEN'],
+  env: { top: 0x070a14, horizon: 0x1a2236, fog: 0.01, sun: [30, 40, -20], sunCol: 0x8aa0d0, sunI: 0.35, exposure: 1.35 },
+  start: { x: -30, z: 30, y: 0, yaw: Math.PI * 0.75 }, allies: [], loadout: { p: 'spectre', s: 'sidearm', e: 'stun', n: 2 },
+  tins: [{ x: -30, z: -30 }, { x: 22, z: -8 }, { x: 30, z: 30 }],
+  squads: {
+    deck1: { pts: [{ x: -24, z: 18, look: 0 }, { x: -16, z: 8, look: Math.PI / 2, path: [[-16, 8], [-16, -2], [-26, -2], [-26, 8]] }] },
+    deck2: { pts: [{ x: -8, z: 20, look: Math.PI }, { x: -28, z: 2, look: -Math.PI / 2 }] },
+    deck3: { pts: [{ x: -20, z: -14, look: Math.PI, path: [[-20, -14], [-8, -14], [-8, -20], [-20, -20]] }, { x: -26, z: -24, look: 0 }] },
+    cams: { pts: [{ x: 10, z: 22, look: Math.PI }, { x: 12, z: -22, look: 0 }] },
+    pent: { pts: [{ x: 20, z: 4, look: Math.PI / 2, path: [[20, 4], [28, 4], [28, -4], [20, -4]] }, { x: 26, z: 8, look: Math.PI }] },
+    esc1: { alert: true, pts: [{ x: 10, z: -20 }, { x: 4, z: -26, kind: 'smg' }, { x: -4, z: -26 }] },
+    esc2: { alert: true, pts: [{ x: 14, z: 14, kind: 'shotgun' }, { x: 4, z: 26 }, { x: -4, z: 26, kind: 'smg' }] },
+    pad1: { alert: true, pts: [{ x: -14, z: -24 }, { x: -6, z: -28, kind: 'smg' }, { x: 6, z: -28 }, { x: 14, z: -24, kind: 'shotgun' }] },
+    pad2: { alert: true, pts: [{ x: -14, z: 24, kind: 'heavy' }, { x: -6, z: 28 }, { x: 6, z: 28, kind: 'smg' }, { x: 14, z: 24 }] },
+    pad3: { alert: true, pts: [{ x: -24, z: 0 }, { x: 24, z: -14, kind: 'sniper' }, { x: 24, z: 14 }, { x: -24, z: -10, kind: 'shotgun' }] },
+    warden: { alert: true, pts: [{ x: 0, z: -24, kind: 'heavy', boss: true, name: 'THE WARDEN', hp: 1700, gun: 'mauler', scale: 1.2 }] },
+    wardAdds: { alert: true, pts: [{ x: -20, z: -20, kind: 'smg' }, { x: 20, z: -20, kind: 'smg' }] },
+    wardAdds2: { alert: true, pts: [{ x: -20, z: 20 }, { x: 20, z: 20, kind: 'shotgun' }, { x: 0, z: 26 }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'LISTEN TO SMOKES ON THE RADIO', secs: 1, say: [['smokes', 'You are on the roof. I am in a van eating noodles. We both have important jobs.'], ['june', 'Guards on the plant deck. Two by the solar panels, more by the water tower.'], ['smokes', 'One alarm and they lock the building. Take them out quiet. One at a time, from behind, nobody sees.']] },
+    { type: 'clear', goal: 'TAKE OUT THE PLANT DECK GUARDS WITHOUT BEING SEEN', spawn: ['deck1', 'deck2', 'deck3'], squads: ['deck1', 'deck2', 'deck3'], stealth: true, see: 18, failSpot: 'a guard saw you and raised the alarm', mark: true, cp: true,
+      say: [['smokes', 'Suppressed rifle, knife, whatever. Just do not let anyone watch his buddy fall over.']], after: [['june', 'Deck is clear.'], ['smokes', 'Nice. Cameras on the machine rooms watch the penthouse doors. Pull their fuse boxes.']] },
+    { type: 'multi', goal: 'PULL THE FUSES ON THE TWO CAMERA POSTS', verb: 'PULL THE FUSE', secs: 2, prop: 'panel', spawn: ['cams'], stealth: true, see: 16,
+      spots: [{ x: -3, z: 13.8 }, { x: -3, z: -13.8 }], say: [['june', 'Machine rooms. North and south.']], after: [['smokes', 'Cameras are blind. The penthouse is yours. Doc is in there somewhere.']] },
+    { type: 'search', goal: 'FIND DOC IN THE PENTHOUSE', verb: 'CHECK THE ROOM', secs: 1.2, spawn: ['pent'], quiet: true, onAlarm: ['esc2'], cp: true,
+      spots: [{ x: 20, z: -6, nope: 'EMPTY OFFICE' }, { x: 27, z: -6, nope: 'A BAR. VERY NICE WHISKEY' }, { x: 27, z: 6, nope: 'SERVER CLOSET' }, { x: 20, z: 6, nope: 'BATHROOM. GOLD TAPS' }], realSearch: 2, found: 'DOC REYES',
+      say: [['smokes', 'Doors, doors and more doors. Rich people love doors.']], after: [['doc', 'You are not Lazarus. Who are you?'], ['june', 'A friend of Smokes. We are leaving. Now.'], ['doc', 'They made me sign things. Shipments of a drug called Nightshade, for a trial at my hospital. I did not know what it was. I know now.']] },
+    { type: 'escort', goal: 'GET DOC TO THE HELIPAD', who: 'doc', hp: 650, lead: 12, spawn: ['esc1', 'esc2'], cp: true,
+      path: [[22, 0], [16, 0], [10, 0], [6, 0], [3, 0], [0, 0, 1.2]],
+      say: [['radio', 'Reyes is out of his room. Lock the roof. Lethal force authorised.'], ['doc', 'Lethal force. On a doctor. I knew the dental plan was bad.']], after: [['smokes', 'Chopper is five minutes out. Hold that pad.']] },
+    { type: 'hold', goal: 'HOLD THE HELIPAD UNTIL THE CHOPPER ARRIVES', at: { x: 0, z: 0, y: 1.2, r: 9 }, secs: 100, cp: true, allyAt: { doc: { x: 0, z: 2, y: 1.2 } },
+      waves: [{ t: 2, sq: 'pad1' }, { t: 30, sq: 'pad2' }, { t: 62, sq: 'pad3' }],
+      say: [['doc', 'I will stay on the pad. I am a surgeon, not a soldier. I will shout encouragement.']], after: [['smokes', 'One minute! Wait. Something big just came out of the stair core.']] },
+    { type: 'boss', goal: 'STOP THE WARDEN', spawn: ['warden'], squads: ['warden'], adds: [{ at: 0.66, sq: 'wardAdds' }, { at: 0.33, sq: 'wardAdds2', say: [['radio', 'Warden is hurt. All units to the pad.']] }], allyAt: { doc: { x: 0, z: 2, y: 1.2 } }, cp: true,
+      say: [['radio', 'This is the Warden. Reyes, sit down. Girl, put the gun down. Nobody else has to fall off this building.'], ['june', 'Great. A drum shotgun. In the rain.']] },
+    { type: 'go', goal: 'GET ON THE HELIPAD', at: { x: 0, z: 0, y: 1.2, r: 3 }, say: [['smokes', 'Chopper is here! Both of you, in!']] },
+  ],
+  end: [['doc', 'Nightshade is not a painkiller. It shuts off the part of the brain that feels anything. Pain. Fear. Then everything else.'], ['june', 'And Lazarus wants to put it in a hospital trial?'], ['doc', 'Not a trial. A field test. They grow it somewhere hot. Harold called it the purple farm. Dustwater, I think.']],
+});
+
+/* ---------- 5 · PURPLE DUST (DUSTWATER: the desert village, midday) */
+CAMP_MISSIONS.push({
+  id: 'm5', title: 'PURPLE DUST', map: 'dustwater', place: 'DUSTWATER', when: 'DAY 7 · 12:30',
+  brief: 'In a dry village in the desert, VANTAGE guards rows of purple plants watered from the village\'s only pump. Doc needs samples to understand what Nightshade does. Then burn every plant and blow the pump before a VANTAGE sniper on the minaret pins you down.',
+  tasks: ['TAKE SAMPLES', 'BURN THE CROPS', 'SNIPER DUEL', 'BLOW THE PUMP', 'BEAT THE DUST STORM'],
+  env: { top: 0x5a7ab0, horizon: 0xe8c890, fog: 0.006, sunI: 1.3, exposure: 1.1 },
+  start: { x: 0, z: 31, y: 0, yaw: 0 }, allies: ['doc', 'smokes'], loadout: { p: 'kv47', s: 'magnum', e: 'skunk', n: 2 },
+  tins: [{ x: -32, z: -31 }, { x: 31, z: 30 }, { x: -28, z: 2 }],
+  squads: {
+    samp: { pts: [{ x: -26, z: 14, look: 0 }, { x: -22, z: 22, look: Math.PI, path: [[-22, 22], [-30, 22], [-30, 10]] }, { x: -4, z: 18, look: 0 }, { x: 6, z: 14, look: -1 }] },
+    crop1: { alert: true, pts: [{ x: -6, z: 4 }, { x: 6, z: 6, kind: 'smg' }, { x: -10, z: -8 }] },
+    crop2: { alert: true, pts: [{ x: -28, z: -14, kind: 'shotgun' }, { x: -24, z: -22 }, { x: 14, z: -10 }, { x: 18, z: -18, kind: 'smg' }] },
+    crop3: { alert: true, pts: [{ x: 0, z: -26, kind: 'heavy' }, { x: -10, z: -28 }, { x: 10, z: -28, kind: 'shotgun' }] },
+    sniper: { alert: true, mode: 'hold', pts: [{ x: 26, z: -20, y: 4, kind: 'sniper', boss: true, name: 'HAWK', hp: 500, gun: 'warden', scale: 1.05, r: 3 }] },
+    snipeGuard: { alert: true, pts: [{ x: 18, z: -14 }, { x: 22, z: -4, kind: 'smg' }, { x: 14, z: -22 }] },
+    pump1: { alert: true, pts: [{ x: -26, z: 0 }, { x: -20, z: -6, kind: 'shotgun' }, { x: -30, z: 8, kind: 'smg' }] },
+    pump2: { alert: true, pts: [{ x: -12, z: 12 }, { x: -12, z: -12, kind: 'heavy' }, { x: -30, z: -10 }] },
+    storm: { alert: true, pts: [{ x: 4, z: 18 }, { x: -6, z: 22, kind: 'smg' }, { x: 12, z: 24, kind: 'shotgun' }, { x: -14, z: 26 }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'LOOK AT THE FIELDS', secs: 1, say: [['doc', 'There. Between the houses, in the market, by the wadi. Purple. That is Nightshade, growing in the open.'], ['smokes', 'I have seen a lot of weed in my life. I have never seen weed that looks at me.'], ['doc', 'I need samples from three different plots first, before we burn anything. Leaves, roots, flowers.']] },
+    { type: 'multi', goal: 'TAKE SAMPLES FROM THREE PLOTS', verb: 'TAKE A SAMPLE', secs: 2.4, prop: 'crop', spawn: ['samp'], quiet: true, onAlarm: ['crop1'],
+      spots: [{ x: -27, z: 18, say: [['doc', 'Leaves. Good.']] }, { x: -8, z: 22, say: [['doc', 'Roots. Careful, the sap stings.']] }, { x: 10, z: 20, say: [['doc', 'Flowers. That is all three.']] }],
+      say: [['doc', 'Quiet if you can. The farmers are not the enemy. The men with rifles are.']], after: [['doc', 'Samples are safe. Now burn it. All of it.']] },
+    { type: 'multi', goal: 'BURN THE NIGHTSHADE CROPS', verb: 'SET IT ON FIRE', secs: 1.6, prop: 'crop', boom: true, t: 240, failTime: 'they harvested the crop and drove it away', spawn: ['crop1', 'crop2', 'crop3'], cp: true,
+      spots: [{ x: -6, z: 8 }, { x: 8, z: -2 }, { x: -24, z: -18 }, { x: 16, z: -14 }, { x: 0, z: -22 }],
+      say: [['smokes', 'I never thought I would say this. Burn the plants.'], ['radio', 'Fire in the fields! Protect the crop, it is worth more than you are.']], after: [['smokes', 'June, get down! Something flashed on the rooftops.']] },
+    { type: 'boss', goal: 'WIN THE SNIPER DUEL WITH HAWK ON THE EAST ROOFS', spawn: ['sniper', 'snipeGuard'], squads: ['sniper'], loadout: { p: 'hawkeye', s: 'magnum', e: 'skunk', n: 1 }, cp: true, allyAt: { doc: { x: -6, z: 30 }, smokes: { x: 4, z: 30 } },
+      say: [['radio', 'This is Hawk. I have been watching you since the gate, Alvarez. Stay behind cover. It is more fun.'], ['doc', 'He is on the east rooftops. Keep moving, never peek from the same place twice.']], after: [['smokes', 'Hawk is down. Now the pump. No water, no Nightshade.']] },
+    { type: 'multi', goal: 'PLANT CHARGES ON THE WADI PUMP HOUSE', verb: 'PLANT THE CHARGE', secs: 2.2, prop: 'charge', spawn: ['pump1', 'pump2'], cp: true,
+      spots: [{ x: -26, z: -4 }, { x: -22, z: 4 }, { x: -29, z: 4 }],
+      say: [['smokes', 'Three charges, three sides of the pump house.']], after: [['doc', 'Charges set. Now get away from it!']] },
+    { type: 'go', goal: 'GET CLEAR BEFORE THE PUMP BLOWS', at: { x: 0, z: 18, r: 6 }, t: 22, failTime: 'you were too close when the pump blew', after: [['smokes', 'BOOM. Okay. That was satisfying.'], ['doc', 'The sky. Look at the sky. That is a dust storm, and it is coming fast.']] },
+    { type: 'route', goal: 'BEAT THE DUST STORM TO THE SOUTH GATE', t: 70, failTime: 'the storm caught you', spawn: ['storm'], env: { top: 0x9a7a50, horizon: 0xc8a070, fog: 0.04, sunI: 0.6 },
+      spots: [{ x: 0, z: 10 }, { x: -6, z: 22 }, { x: 0, z: 31 }], after: [['smokes', 'In the truck! Everybody in the truck!']] },
+  ],
+  end: [['doc', 'Under the microscope, it is beautiful. And horrible. It does not kill people. It empties them.'], ['june', 'And Lazarus has more seed?'], ['doc', 'Not here. There was a crate label in the pump house. Cold storage. A seed vault in the north. Run by VANTAGE.'], ['smokes', 'I know someone who used to work for VANTAGE. Tank Briggs. Army medic. She quit, they did not like it. They locked her up in that same place.']],
+});
+
+/* ---------- 6 · COLD STORAGE (WHITEOUT: the arctic research base, in a blizzard, the power cut) */
+CAMP_MISSIONS.push({
+  id: 'm6', title: 'COLD STORAGE', map: 'whiteout', place: 'NORTHPOINT SEED VAULT', when: 'DAY 9 · 03:00',
+  brief: 'The Northpoint research base keeps two things VANTAGE does not want found: the Nightshade seed vault, and Tanya "Tank" Briggs, the army medic who quit when she saw what they were doing. Cut the power, slip through the dark, get Tank out, and take the seeds.',
+  tasks: ['CUT THE POWER', 'SNEAK IN THE DARK', 'BREAK TANK OUT', 'STEAL THE SEED CASE', 'WRECK THE SNOWCATS', 'CROSS THE SNOWFIELD'],
+  env: { top: 0x2a3038, horizon: 0x8a96a2, fog: 0.022, sunI: 0.45, exposure: 1.2 },
+  start: { x: -30, z: 30, y: 0, yaw: Math.PI * 0.75 }, allies: ['smokes'], loadout: { p: 'whisper', s: 'sidearm', e: 'hotbox', n: 2 },
+  tins: [{ x: -32, z: -32 }, { x: 30, z: 31 }, { x: 0, z: 0 }],
+  squads: {
+    gen: { pts: [{ x: -24, z: 18, look: 0, path: [[-24, 18], [-14, 18], [-14, 10], [-24, 10]] }, { x: -10, z: 24, look: Math.PI }] },
+    dark1: { pts: [{ x: -4, z: 12, look: Math.PI, path: [[-4, 12], [4, 12], [4, 4], [-4, 4]] }, { x: -6, z: -2, look: Math.PI / 2 }, { x: 6, z: 2, look: -Math.PI / 2 }] },
+    dark2: { pts: [{ x: 0, z: -12, look: 0, path: [[0, -12], [-6, -8], [6, -8]] }, { x: 8, z: -16, look: 0 }] },
+    cells: { alert: true, pts: [{ x: -8, z: -20 }, { x: 8, z: -20, kind: 'smg' }, { x: 0, z: -26 }] },
+    vault: { alert: true, pts: [{ x: 20, z: -14 }, { x: 28, z: -6, kind: 'shotgun' }, { x: 22, z: 6, kind: 'heavy' }, { x: 28, z: 14 }] },
+    cats1: { alert: true, pts: [{ x: -26, z: -6 }, { x: -20, z: 2, kind: 'smg' }, { x: -28, z: 10 }] },
+    cats2: { alert: true, pts: [{ x: -18, z: -18, kind: 'heavy' }, { x: -10, z: -14 }, { x: -30, z: -20, kind: 'sniper' }] },
+    field: { alert: true, pts: [{ x: -20, z: 20 }, { x: -12, z: 26, kind: 'smg' }, { x: -28, z: 24, kind: 'shotgun' }, { x: -4, z: 20 }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'SCOUT THE BASE', secs: 1, say: [['smokes', 'I cannot feel my face. Is that the cold or the edible?'], ['june', 'Floodlights everywhere. We will never get in like this.'], ['smokes', 'The generator hut by the snowfield. Cut it, and the whole base goes dark for a few minutes.']] },
+    { type: 'use', goal: 'CUT THE POWER AT THE GENERATOR HUT', verb: 'PULL THE MAIN BREAKER', secs: 3, prop: 'panel', at: { x: -18, z: 14, r: 1.8 }, spawn: ['gen'], quiet: true, onAlarm: ['field'],
+      after: [['smokes', 'Lights out. Their eyes need time. Ours do not. Go.']] },
+    { type: 'go', goal: 'SNEAK THROUGH THE DARK LAB TO THE HOLDING CELLS', at: { x: 0, z: -18, r: 3 }, spawn: ['dark1', 'dark2'], stealth: true, see: 12, env: { top: 0x05070a, horizon: 0x14181e, fog: 0.035, sunI: 0.08, hemiSky: 0x202838, exposure: 1.0 }, cp: true,
+      say: [['smokes', 'They cannot see far in the dark, but do not walk into a flashlight. Crouch near them.']] },
+    { type: 'use', goal: 'BREAK TANK OUT OF HER CELL', verb: 'CUT THE LOCK', secs: 4, prop: 'door', at: { x: 0, z: -22, r: 1.8 }, spawn: ['cells'], join: ['smokes'], cp: true,
+      say: [['tank', 'Whoever you are, hurry up. I can hear their boots.']], after: [['tank', 'Tanya Briggs. Tank. You are Mara\'s driver. I saw you on the news. Poison pills, they said.'], ['june', 'Never sold a pill in my life.'], ['tank', 'I know. I was there when they made the story up. Give me a gun.']] },
+    { type: 'carry', goal: 'STEAL THE NIGHTSHADE SEED CASE FROM THE HANGAR VAULT', item: 'THE SEED CASE', join: ['tank'], at: { x: 26, z: -4, r: 1.8 }, to: { x: -10, z: 20, r: 3 }, spawn: ['vault'], loadout: { p: 'marc', s: 'sidearm', e: 'frag', n: 2 }, cp: true,
+      env: { top: 0x2a3038, horizon: 0x8a96a2, fog: 0.022, sunI: 0.45 },
+      say: [['tank', 'The power is back. So are they. The seed case is in the hangar, behind the plane.'], ['smokes', 'You carry, we shoot. Tank, you remember how to shoot?'], ['tank', 'I remember how to do everything.']], after: [['tank', 'Case is out. They will chase us in the snowcats. Not if the snowcats are on fire.']] },
+    { type: 'multi', goal: 'WRECK THE THREE SNOWCATS', verb: 'RIG IT TO BLOW', secs: 1.8, prop: 'charge', boom: true, spawn: ['cats1', 'cats2'], cp: true,
+      spots: [{ x: -24, z: -2 }, { x: -16, z: -10 }, { x: -28, z: 14 }], after: [['smokes', 'Three snowcats, three bonfires. Very cosy.']] },
+    { type: 'route', goal: 'CROSS THE SNOWFIELD TO THE PICKUP BEFORE THE STORM CLOSES IN', t: 80, failTime: 'the blizzard swallowed you', spawn: ['field'], env: { top: 0x6a7480, horizon: 0xc8d0d8, fog: 0.05, sunI: 0.5 },
+      spots: [{ x: -20, z: 0 }, { x: -26, z: 16 }, { x: -30, z: 30 }], after: [['tank', 'Pickup is here. Everybody aboard!']] },
+  ],
+  end: [['tank', 'I was VANTAGE for six years. Medic. They said it was a security company. Then I saw the trucks going to Blackwell.'], ['june', 'Why Blackwell?'], ['tank', 'Because it is quiet, it is poor, and nobody checks. They want to test Nightshade on real people. And the shipment that starts it all flies out of Skyport on Friday.'], ['smokes', 'Friday. That is three days. And there is a girl at the airport who owes Doc a favour. An electrician. Penny something.']],
+});
+
+/* ---------- 7 · THE PASS (RIDGELINE: the farm valley and the river, late afternoon) */
+CAMP_MISSIONS.push({
+  id: 'm7', title: 'THE PASS', map: 'ridgeline', place: 'MILLER\'S VALLEY', when: 'DAY 10 · 17:00',
+  brief: 'Before the airport shipment, VANTAGE moves the Nightshade stock down the valley road in a convoy. Tank knows the route. Mine the river crossings, thin out the scouts from the ridge, hit the convoy at the mill, and find out exactly which flight it is booked on.',
+  tasks: ['MINE THE CROSSINGS', 'OVERWATCH', 'HIT THE CONVOY', 'SEARCH THE TRUCKS', 'PROTECT TANK', 'THE HOUND'],
+  env: { top: 0x3a5a8a, horizon: 0xf0b070, sun: [-40, 16, 30], sunCol: 0xffb070, sunI: 1.1, exposure: 1.15 },
+  start: { x: 30, z: 30, y: 2.6, yaw: Math.PI }, allies: ['tank', 'smokes'], loadout: { p: 'arbiter', s: 'sidearm', e: 'semtex', n: 3 },
+  tins: [{ x: -40, z: -40 }, { x: 40, z: -40, y: 2.6 }, { x: -36, z: 34 }],
+  squads: {
+    scouts: { alert: true, mode: 'hold', pts: [{ x: -30, z: -22, r: 4 }, { x: -22, z: -30 }, { x: -6, z: -26 }, { x: 4, z: -20, kind: 'smg' }, { x: -14, z: -14, kind: 'sniper' }] },
+    convoy1: { alert: true, pts: [{ x: -10, z: -8 }, { x: -4, z: -10, kind: 'heavy' }, { x: 2, z: -8 }, { x: -16, z: -12, kind: 'shotgun' }, { x: 6, z: -14, kind: 'smg' }] },
+    convoy2: { alert: true, pts: [{ x: -26, z: -10 }, { x: -30, z: -16, kind: 'smg' }, { x: -20, z: -18 }, { x: -36, z: -8, kind: 'heavy' }] },
+    convoy3: { alert: true, pts: [{ x: 6, z: 10 }, { x: 0, z: 14, kind: 'shotgun' }, { x: -8, z: 12 }] },
+    rig1: { alert: true, pts: [{ x: -30, z: 18 }, { x: -24, z: 24, kind: 'smg' }, { x: -34, z: 10, kind: 'shotgun' }] },
+    rig2: { alert: true, pts: [{ x: 8, z: 20, kind: 'heavy' }, { x: 14, z: 14 }, { x: -2, z: 26 }, { x: 4, z: 30, kind: 'smg' }] },
+    rig3: { alert: true, pts: [{ x: -20, z: 30, kind: 'heavy' }, { x: -14, z: 34 }, { x: 0, z: 34, kind: 'sniper' }] },
+    hound: { alert: true, pts: [{ x: 0, z: -30, kind: 'shotgun', boss: true, name: 'THE HOUND', hp: 1300, gun: 'rampart', speed: 5.4, scale: 1.1 }] },
+    houndPack: { alert: true, pts: [{ x: -10, z: -30, kind: 'smg' }, { x: 10, z: -30, kind: 'smg' }, { x: 0, z: -36, kind: 'smg' }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'GO OVER THE PLAN WITH TANK', secs: 1, say: [['tank', 'Convoy comes down the north road, crosses the river at the mill. Three crossings: the footbridge, the mill bridge and the trestle.'], ['tank', 'Mine all three. Whichever way they run, they hit one.'], ['smokes', 'And then?'], ['tank', 'And then we shoot whatever is left. I did not say it was a clever plan.']] },
+    { type: 'multi', goal: 'MINE THE THREE RIVER CROSSINGS', verb: 'PLANT A MINE', secs: 2, prop: 'charge', t: 180, failTime: 'the convoy arrived before the mines were set',
+      spots: [{ x: -32, z: 0 }, { x: 2, z: 0 }, { x: 26, z: 0, y: 2.6 }], say: [['tank', 'The clock is on. Convoy is ten minutes out. Probably less.']], after: [['tank', 'Mines set. Up on the ridge. Their scouts come first.']] },
+    { type: 'snipe', goal: 'TAKE OUT THE CONVOY SCOUTS FROM THE RIDGE', at: { x: 22, z: -14, y: 2.6, r: 4 }, gun: 'hawkeye', spawn: ['scouts'], squads: ['scouts'], allyAt: { tank: { x: 24, z: -10, y: 2.6 }, smokes: { x: 22, z: -18, y: 2.6 } }, cp: true,
+      say: [['tank', 'Scouts in the farmhouse field and by the barn. Drop them before they radio ahead.']], after: [['tank', 'Here comes the convoy. Down to the mill. Hit them hard.']] },
+    { type: 'clear', goal: 'HIT THE CONVOY AT THE MILL', spawn: ['convoy1', 'convoy2', 'convoy3'], squads: ['convoy1', 'convoy2', 'convoy3'], loadout: { p: 'vanguard', s: 'sidearm', e: 'semtex', n: 3 }, cp: true,
+      say: [['radio', 'Contact at the mill! Convoy, dismount!'], ['smokes', 'Let\'s see how they like the mines!']], after: [['tank', 'Trucks are stopped. Search them. The flight number has to be on a manifest somewhere.']] },
+    { type: 'search', goal: 'SEARCH THE STOPPED TRUCKS FOR THE FLIGHT PAPERS', verb: 'SEARCH THE TRUCK', secs: 1.6, prop: 'box',
+      spots: [{ x: -12, z: -6, nope: 'MEDICAL CRATES · NOTHING' }, { x: -2, z: -12, nope: 'AMMUNITION' }, { x: -24, z: -14, nope: 'RATIONS AND A PORN MAGAZINE' }, { x: 4, z: 8, nope: 'EMPTY' }], spawnOnSearch: ['convoy3'], found: 'FLIGHT 909 · SKYPORT · FRIDAY 05:00',
+      say: [['tank', 'Check the cabs and the cargo beds. Quick, before backup arrives.']], after: [['tank', 'Flight 909. And the backup crates are in the barn. I am going to wire it to blow. Keep them off me.']] },
+    { type: 'defend', goal: 'PROTECT TANK WHILE SHE WIRES THE BARN', obj: { x: -11, z: 0, hp: 100, name: 'TANK', r: 7, dps: 1.4 }, secs: 85, allyAt: { tank: { x: -11, z: 0 } }, cp: true,
+      waves: [{ t: 2, sq: 'rig1' }, { t: 28, sq: 'rig2' }, { t: 55, sq: 'rig3' }],
+      say: [['tank', 'Ninety seconds. Do not let anybody near the barn.']], after: [['tank', 'Wired! Clear the barn!'], ['radio', 'This is the Hound. Leave her to me.']] },
+    { type: 'boss', goal: 'TAKE DOWN THE HOUND', spawn: ['hound'], squads: ['hound'], adds: [{ at: 0.5, sq: 'houndPack', say: [['radio', 'Pack, on me!']] }], cp: true,
+      say: [['tank', 'The Hound. He trained me. He is fast, he is mean, and he never misses up close. Keep your distance!']], after: [['tank', 'Hit it, Smokes.'], ['smokes', 'With pleasure.']] },
+  ],
+  end: [['tank', 'That is the backup stock gone. The rest is already at the airport, waiting for flight 909.'], ['smokes', 'Skyport. Doc called his electrician friend. Penny Holloway. She does the airport generators.'], ['june', 'Then Penny is about to have a very strange shift.']],
+});
+
+/* ---------- 8 · WHEELS UP (SKYPORT: the airport terminal, before dawn) */
+CAMP_MISSIONS.push({
+  id: 'm8', title: 'WHEELS UP', map: 'skyport', place: 'SKYPORT', when: 'DAY 13 · 04:10',
+  brief: 'Flight 909 leaves at five with the whole Nightshade stock. The airport electrician, Penny "Sparks" Holloway, says VANTAGE has cut the terminal off so nobody sees the loading. Get the power back, find the crates, catch the loader with the keys, and make sure that plane flies empty.',
+  tasks: ['FIND SPARKS', 'RESTORE THE POWER', 'SCAN THE CRATES', 'CATCH THE LOADER', 'OVERRIDE THE DEPARTURE BOARD', 'BLOW THE CARGO'],
+  env: { top: 0x101a30, horizon: 0x8a6a6a, fog: 0.008, sun: [40, 6, -30], sunCol: 0xff9a6a, sunI: 0.55, exposure: 1.25 },
+  start: { x: 0, z: 29, y: 0, yaw: 0 }, allies: ['tank', 'smokes'], loadout: { p: 'talon', s: 'stinger', e: 'frag', n: 2 },
+  tins: [{ x: -32, z: -32 }, { x: 31, z: 18 }, { x: -25, z: 4 }],
+  squads: {
+    hall: { alert: true, pts: [{ x: -6, z: 16 }, { x: 4, z: 12, kind: 'smg' }, { x: 10, z: 18 }] },
+    fuse1: { alert: true, pts: [{ x: 24, z: 8 }, { x: 28, z: -4, kind: 'shotgun' }, { x: 20, z: -16 }, { x: 14, z: 6, kind: 'smg' }] },
+    fuse2: { alert: true, pts: [{ x: -10, z: -16 }, { x: 0, z: -18, kind: 'heavy' }, { x: 10, z: -12 }] },
+    tarmac: { pts: [{ x: -28, z: -18, look: 0, path: [[-28, -18], [-28, -26], [-20, -26]] }, { x: -22, z: 16, look: Math.PI }, { x: -30, z: 6, look: Math.PI / 2 }] },
+    loader: { pts: [{ x: -25, z: -6, runner: true, speed: 4.6, target: true, mark: 'THE LOADER', name: 'THE LOADER', path: [[-25, -12], [-30, -20], [-24, -30], [-10, -31], [8, -31], [24, -30], [31, -28]] }] },
+    loaderG: { alert: true, pts: [{ x: -14, z: -28, kind: 'smg' }, { x: 6, z: -28 }, { x: 18, z: -26, kind: 'shotgun' }] },
+    board1: { alert: true, pts: [{ x: 0, z: -18 }, { x: -10, z: -12, kind: 'smg' }, { x: 10, z: -14 }] },
+    board2: { alert: true, pts: [{ x: -12, z: 16, kind: 'shotgun' }, { x: 12, z: 16 }, { x: 20, z: 0, kind: 'heavy' }, { x: -4, z: 18, kind: 'smg' }] },
+    board3: { alert: true, pts: [{ x: 26, z: -10 }, { x: 26, z: 10, kind: 'smg' }, { x: -10, z: 0, kind: 'heavy' }, { x: 6, z: -16, kind: 'shotgun' }] },
+    plane1: { alert: true, pts: [{ x: -30, z: -10 }, { x: -20, z: -24, kind: 'smg' }, { x: -30, z: 14, kind: 'shotgun' }] },
+    plane2: { alert: true, pts: [{ x: -22, z: 26, kind: 'heavy' }, { x: -30, z: -28 }, { x: -18, z: -30, kind: 'sniper' }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'GET INTO THE TERMINAL', secs: 1, say: [['tank', 'South apron. The whole terminal is dark. They cut it on purpose.'], ['smokes', 'Doc says the electrician is called Penny. Hiding in baggage claim. Do not shoot the electrician.']] },
+    { type: 'go', goal: 'FIND SPARKS IN BAGGAGE CLAIM', at: { x: 25, z: 0, r: 4 }, spawn: ['hall'], say: [['sparks', 'Hello? Hello! If you are VANTAGE, I am a cleaner. If you are not VANTAGE, hi, I am Penny, please help.']] },
+    { type: 'multi', goal: 'RESTORE THE POWER AT THREE FUSE PANELS', verb: 'SWAP THE FUSE', secs: 2.6, prop: 'panel', join: ['sparks'], spawn: ['fuse1', 'fuse2'], cp: true,
+      spots: [{ x: 30, z: -16 }, { x: 15, z: -15 }, { x: -10, z: -18 }],
+      say: [['sparks', 'Penny Holloway. Sparks. Everybody calls me Sparks because one time, a small fire. Not important. Three panels. I tell you which fuse, you put it in.']], after: [['sparks', 'Power! Lights! Scanners! I love it when the lights come on. Now the cargo scanners work too.']] },
+    { type: 'photo', goal: 'SCAN THE CARGO TAGS ON THE TARMAC · AIM DOWN SIGHTS', verbP: 'SCANNING', photoWord: 'SCAN', noFlash: true, spawn: ['tarmac'], quiet: true, onAlarm: ['plane1'], cp: true,
+      props: [{ x: -30, z: -14, prop: 'box' }, { x: -20, z: 20, prop: 'box' }, { x: -30, z: 4, prop: 'box' }],
+      spots: [{ x: -30, z: -14, h: 0.3, label: 'CRATE 909-A' }, { x: -20, z: 20, h: 0.3, label: 'CRATE 909-B' }, { x: -30, z: 4, h: 0.3, label: 'CRATE 909-C' }],
+      say: [['sparks', 'The scanner in your scope reads the tags. Out on the tarmac. Try not to get scanned back by bullets.']], after: [['sparks', 'All three say 909. And the loader has the hold keys. Him! In the orange vest! He saw you!']] },
+    { type: 'chase', goal: 'CATCH THE LOADER BEFORE HE REACHES THE NORTH APRON', spawn: ['loader', 'loaderG'], squads: ['loader'], failRun: 'the loader got away with the keys', cp: true,
+      after: [['tank', 'Keys. Got them. Now the plane cannot leave without the tower clearing it.'], ['sparks', 'The departure board talks to the tower! If I override the board, flight 909 gets held at the gate. It takes a minute. Two. Maybe three.']] },
+    { type: 'upload', goal: 'PROTECT SPARKS WHILE SHE OVERRIDES THE DEPARTURE BOARD', thing: 'OVERRIDE', verb: 'GIVE SPARKS THE GO', secs: 90, at: { x: -1.5, z: 0, r: 8 }, prop: 'server', allyAt: { sparks: { x: -1.5, z: 2 } }, cp: true,
+      waves: [{ t: 4, sq: 'board1' }, { t: 30, sq: 'board2' }, { t: 58, sq: 'board3' }],
+      sayStart: [['sparks', 'Okay. Typing. Do not talk to me. Do not let anyone shoot me. Those are my two rules.']], after: [['sparks', 'FLIGHT 909 · DELAYED. Oh, that feels good. They are going to try and load it by hand anyway.']] },
+    { type: 'multi', goal: 'BLOW THE NIGHTSHADE CARGO ON THE TARMAC', verb: 'RIG THE CRATES', secs: 2, prop: 'charge', boom: true, t: 150, failTime: 'they loaded the cargo', spawn: ['plane1', 'plane2'],
+      spots: [{ x: -30, z: -14 }, { x: -20, z: 20 }, { x: -30, z: 4 }], say: [['tank', 'Every crate. Leave nothing to load.']] },
+  ],
+  end: [['sparks', 'Burning crates, a delayed plane and a hundred angry soldiers. Best shift ever.'], ['june', 'There was a name on the loading order. Harold Voss, again. And an address. The Lazarus Works.'], ['doc', 'The old factory outside town. If the stock is burned, Harold will make more. The Works is where he makes it.']],
+});
+
+/* ---------- 9 · THE WORKS (THE LAZARUS WORKS, the old factory, at night) */
+CAMP_MISSIONS.push({
+  id: 'm9', title: 'THE WORKS', map: 'works', place: 'THE LAZARUS WORKS', when: 'DAY 15 · 23:40',
+  brief: 'The Lazarus Works, a soot-black factory from 1891, is where Nightshade becomes pills. Sneak in through the graveyard, wreck the bottling lines, find Harold\'s office, and take the formula before the foreman burns the place down around you.',
+  tasks: ['THROUGH THE GRAVEYARD', 'WRECK THE BOTTLING LINES', 'HAROLD\'S OFFICE', 'TAKE THE FORMULA', 'THE FOREMAN', 'OUT THROUGH THE FIRE'],
+  env: { top: 0x0a0a12, horizon: 0x2a1e1e, fog: 0.016, sunI: 0.3, exposure: 1.3 },
+  start: { x: -30, z: 34, y: 0, yaw: 0 }, allies: ['tank', 'doc'], loadout: { p: 'whisper', s: 'sidearm', e: 'hotbox', n: 2 },
+  tins: [{ x: -42, z: -36 }, { x: 40, z: 36 }, { x: -11.5, z: 26 }],
+  squads: {
+    grave: { pts: [{ x: -24, z: 24, look: Math.PI, path: [[-24, 24], [-32, 24], [-32, 30], [-24, 30]] }, { x: -36, z: 18, look: 0 }, { x: -18, z: 18, look: -Math.PI / 2 }, { x: -28, z: 12, look: Math.PI, path: [[-28, 12], [-20, 12]] }] },
+    hall1: { alert: true, pts: [{ x: 4, z: 4 }, { x: -4, z: -4, kind: 'smg' }, { x: 8, z: -8 }, { x: -8, z: 8, kind: 'shotgun' }] },
+    hall2: { alert: true, pts: [{ x: 0, z: 14, kind: 'heavy' }, { x: 10, z: 10 }, { x: -10, z: -10, kind: 'smg' }] },
+    chapel: { pts: [{ x: -30, z: -24, look: 0 }, { x: -24, z: -30, look: Math.PI / 2 }] },
+    chapel2: { alert: true, pts: [{ x: -36, z: -20 }, { x: -20, z: -24, kind: 'shotgun' }, { x: -28, z: -14, kind: 'smg' }] },
+    foreman: { alert: true, pts: [{ x: 28, z: 0, kind: 'heavy', boss: true, name: 'THE FOREMAN', hp: 1900, gun: 'titan', scale: 1.25 }] },
+    foreAdds: { alert: true, pts: [{ x: 20, z: 10, kind: 'smg' }, { x: 34, z: -10, kind: 'shotgun' }, { x: 20, z: -10 }] },
+    foreAdds2: { alert: true, pts: [{ x: 36, z: 10, kind: 'heavy' }, { x: 24, z: 16 }, { x: 30, z: -16, kind: 'smg' }] },
+    fire: { alert: true, pts: [{ x: 4, z: 20 }, { x: -6, z: 26, kind: 'smg' }, { x: 6, z: 30, kind: 'shotgun' }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'LISTEN TO TANK', secs: 1, say: [['tank', 'Graveyard on the south west side. Guards walk it, but the fog is on our side.'], ['doc', 'I would like it on the record that sneaking through a graveyard at midnight was not my idea.']] },
+    { type: 'go', goal: 'SNEAK THROUGH THE GRAVEYARD INTO THE CLOISTER', at: { x: -25, z: 2, r: 4 }, spawn: ['grave'], stealth: true, see: 16, cp: true,
+      say: [['tank', 'Crouch. Stay off their lights. The graves are good cover.']], after: [['tank', 'In. Bottling hall is east. That is where the pills come off the line.']] },
+    { type: 'multi', goal: 'WRECK THE FOUR BOTTLING LINES', verb: 'JAM THE MACHINE', secs: 2.4, prop: 'panel', boom: true, spawn: ['hall1', 'hall2'], cp: true,
+      spots: [{ x: -6, z: 6 }, { x: 6, z: 6 }, { x: -6, z: -6 }, { x: 6, z: -6 }],
+      say: [['radio', 'Intruders in the bottling hall! Shut the lines down! No. Wait. Keep them running!']], after: [['doc', 'Pills everywhere. Purple pills, ankle deep. Harold\'s office must be in the chapel. Men like him love a chapel.']] },
+    { type: 'search', goal: 'FIND HAROLD\'S OFFICE IN THE CHAPEL', verb: 'SEARCH', secs: 1.4, prop: 'box', spawn: ['chapel'], quiet: true, onAlarm: ['chapel2'],
+      spots: [{ x: -34, z: -28, nope: 'HYMN BOOKS' }, { x: -24, z: -28, nope: 'CANDLES AND A BOTTLE OF GIN' }, { x: -30, z: -34, nope: 'THE ALTAR. EMPTY' }, { x: -36, z: -20, nope: 'ROBES' }], found: 'HAROLD\'S DESK',
+      say: [['doc', 'Behind the altar, in the vestry, under the pews. Somewhere.']], after: [['june', 'Harold\'s desk. Photos of Blackwell. And a safe.']] },
+    { type: 'pick', goal: 'TAKE THE FORMULA FROM HAROLD\'S SAFE', item: 'THE NIGHTSHADE FORMULA', verb: 'CRACK THE SAFE AND TAKE IT', secs: 3, prop: 'drive', at: { x: -30, z: -30, r: 1.8 },
+      after: [['harold', 'Miss Alvarez. You are in my chair.'], ['harold', 'You have been very busy. You burned a farm, a convoy, an airport. And still the trial begins on Friday. At Blackwell. Whether you like it or not.'], ['harold', 'My foreman will see you out.']] },
+    { type: 'boss', goal: 'STOP THE FOREMAN IN THE FOUNDRY YARD', spawn: ['foreman'], squads: ['foreman'], adds: [{ at: 0.66, sq: 'foreAdds' }, { at: 0.33, sq: 'foreAdds2', say: [['radio', 'The furnace is going critical! Get the foreman out!']] }], loadout: { p: 'rampart', s: 'deadeye', e: 'frag', n: 3 }, cp: true,
+      say: [['tank', 'Big man, big gun. Keep moving round the furnace!']], after: [['doc', 'The furnace is going to blow. Harold set the whole place to burn. Out the dock, now!']] },
+    { type: 'route', goal: 'GET OUT THROUGH THE FIRE BEFORE THE FURNACE BLOWS', t: 60, failTime: 'the furnace blew', spawn: ['fire'], env: { top: 0x2a0a04, horizon: 0xff5a1a, fog: 0.025, sunI: 0.6, sunCol: 0xff6a2a },
+      spots: [{ x: 4.5, z: 0 }, { x: 0, z: 17 }, { x: 0, z: 33 }], after: [['tank', 'GO GO GO!']] },
+  ],
+  end: [['june', 'We have the formula. Harold has a hospital.'], ['doc', 'The formula says the first Nightshade seeds came from one man. A grower on an island, in the sixties. He bred it, and then he hid it.'], ['june', 'Then he knows how to undo it.'], ['sparks', 'An island! Can we take a boat? Please say we can take a boat.']],
+});
+
+/* ---------- 10 · SOURCE (MAUI WOWIE: the grow island, years before the crash) */
+CAMP_MISSIONS.push({
+  id: 'm10', title: 'SOURCE', map: 'mauiwowie', place: 'MAUI WOWIE', when: 'DAY 17 · 16:30',
+  brief: 'The man who first bred Nightshade still lives on the island where he grew it: the Grower. VANTAGE got there first. Find the pages of his old journal, find the old man, and get him to the lighthouse before VANTAGE burns his clean green seed along with everything else.',
+  tasks: ['THE JOURNAL PAGES', 'TAKE BACK THE HOUSE', 'THE GROWER', 'ESCORT THE GROWER', 'HOLD THE LIGHTHOUSE', 'BURN THE FIRST FIELD'],
+  env: { top: 0x2a3a7a, horizon: 0xffb07a, sun: [-40, 20, -30], sunCol: 0xffb070, sunI: 1.15, exposure: 1.2 },
+  start: { x: 38, z: 18, y: 0, yaw: Math.PI / 2 }, allies: ['smokes', 'sparks'], loadout: { p: 'kv47', s: 'magnum', e: 'semtex', n: 2 },
+  tins: [{ x: 3, z: 28.5 }, { x: -40.8, z: 20 }, { x: 15, z: -18 }],
+  squads: {
+    pages1: { alert: true, pts: [{ x: 24, z: 9 }, { x: 22, z: -1, kind: 'smg' }, { x: 28, z: 16 }] },
+    pages2: { alert: true, pts: [{ x: -27.5, z: 10 }, { x: -34, z: 3, kind: 'shotgun' }, { x: -20, z: -3 }] },
+    house: { alert: true, mode: 'hold', pts: [{ x: 0, z: 2, r: 5 }, { x: -4, z: 6, kind: 'shotgun' }, { x: 4, z: -2, kind: 'smg' }, { x: 0, z: 14 }, { x: -9, z: -2 }] },
+    north1: { alert: true, pts: [{ x: -10, z: -20 }, { x: 10, z: -24, kind: 'smg' }, { x: 0, z: -14 }] },
+    north2: { alert: true, pts: [{ x: -32, z: -26, kind: 'shotgun' }, { x: 26, z: -26 }, { x: 34, z: -24, kind: 'heavy' }] },
+    light1: { alert: true, pts: [{ x: -10, z: -16 }, { x: 10, z: -16, kind: 'smg' }, { x: -20, z: -24 }, { x: 20, z: -24 }] },
+    light2: { alert: true, pts: [{ x: -26, z: -14, kind: 'heavy' }, { x: 26, z: -14 }, { x: -8, z: -36, kind: 'shotgun' }, { x: 8, z: -36, kind: 'smg' }] },
+    light3: { alert: true, pts: [{ x: -34, z: -34, kind: 'sniper' }, { x: 34, z: -32, kind: 'heavy' }, { x: 0, z: -12, kind: 'smg' }, { x: -16, z: -28 }] },
+    field: { alert: true, pts: [{ x: -27.5, z: 16 }, { x: -34, z: -3, kind: 'smg' }, { x: -20, z: 22 }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'STEP OFF THE BOAT', secs: 1, say: [['sparks', 'An island! A real island! With palm trees and... a lot of soldiers.'], ['smokes', 'This is a grow island. Look at those fields. I am home.'], ['june', 'The formula said the Grower kept a journal. VANTAGE tore it up looking for his seed. The pages are all over the island.']] },
+    { type: 'multi', goal: 'FIND THE FOUR JOURNAL PAGES', verb: 'PICK UP THE PAGE', secs: 0.8, spawn: ['pages1', 'pages2'], cp: true,
+      spots: [{ x: 24, z: 8, say: [['june', '"Strain one. Purple. Beautiful. It takes the pain away. All of it."']] }, { x: 28.5, z: 2.5, say: [['june', '"It takes too much away. My workers stopped feeling anything."']] }, { x: -27.5, z: 3.25, say: [['june', '"Strain two. Green. It brings it back. I made the cure the same week."']] }, { x: -34.5, z: 9.75, say: [['june', '"I sold the purple to a man called Voss. I kept the green. God forgive me."']] }],
+      say: [['smokes', 'The sheds, the dock, the fields. Look for loose paper.']], after: [['sparks', 'He kept a cure! The green one! Where is he?'], ['june', 'The plantation house. VANTAGE has it.']] },
+    { type: 'clear', goal: 'TAKE BACK THE PLANTATION HOUSE', spawn: ['house'], squads: ['house'], cp: true, say: [['radio', 'They are coming for the house. Hold the doors.']] },
+    { type: 'search', goal: 'FIND THE GROWER IN THE HOUSE', verb: 'LOOK', secs: 1, spots: [{ x: -4, z: -3, nope: 'BOOKCASE' }, { x: 5, z: -3, nope: 'A VERY OLD BONG' }, { x: 0, z: 4, nope: 'THE CHAIR. STILL WARM' }, { x: -6.4, z: -1.2 }], realSearch: 3, found: 'THE GROWER',
+      after: [['grower', 'You are not Voss\'s people. Voss\'s people do not knock.'], ['grower', 'Fifty years I hid on this rock. Green seed in a tin under the lighthouse. That is what you want.'], ['june', 'We want to undo what Voss is about to do.'], ['grower', 'Then walk me to my lighthouse. Slowly. My knees are older than your country.']] },
+    { type: 'escort', goal: 'WALK THE GROWER TO THE LIGHTHOUSE', who: 'grower', hp: 500, lead: 11, spawn: ['north1', 'north2'], cp: true,
+      path: [[0, -1], [0, -6], [0, -10], [0, -14], [0, -19], [0, -24], [0, -27], [0, -29.5]],
+      say: [['grower', 'This was all fields once. Before Voss.']], after: [['grower', 'The seed is under the floor. Give me time to dig. And keep them away from my lighthouse.']] },
+    { type: 'hold', goal: 'HOLD THE LIGHTHOUSE WHILE THE GROWER DIGS UP THE SEED', at: { x: 0, z: -24, r: 11 }, secs: 110, allyAt: { grower: { x: 0, z: -31 } }, cp: true,
+      waves: [{ t: 2, sq: 'light1' }, { t: 35, sq: 'light2' }, { t: 72, sq: 'light3' }],
+      say: [['radio', 'The old man is at the lighthouse. Burn it.'], ['smokes', 'Not today, buddy.']], after: [['grower', 'Here. Green seed. Fifty years old and still alive. Like me.'], ['grower', 'One more thing. The first purple field, by the water tower. Burn it, so nobody grows strain one again.']] },
+    { type: 'multi', goal: 'BURN THE FIRST PURPLE FIELD', verb: 'BURN IT', secs: 1.4, prop: 'crop', boom: true, spawn: ['field'],
+      spots: [{ x: -34, z: 19.5 }, { x: -22, z: 19.5 }, { x: -34, z: 13 }], after: [['grower', 'Good. Now it ends where it started.']] },
+  ],
+  end: [['grower', 'Green seed undoes the purple. Smoke it, eat it, burn it in the air. But you need a lot of it, and you need time.'], ['june', 'We do not have time. Harold starts the trial at Blackwell on Friday.'], ['tank', 'And VANTAGE knows we have the seed. They will come for us. At the hideout. Tonight.']],
+});
+
+/* ---------- 11 · LAST STAND (STACKYARD: the crew's hideout in the container yard) */
+CAMP_MISSIONS.push({
+  id: 'm11', title: 'LAST STAND', map: 'stackyard', place: 'THE HIDEOUT · CONTAINER YARD', when: 'DAY 19 · 22:00',
+  brief: 'VANTAGE has found the crew\'s hideout in a container yard by the river, where Doc is growing the green seed under lamps. Everything VANTAGE has left is coming. Fortify, keep the grow lamps running, and hold until Doc\'s first harvest is ready. Then deal with the man in charge.',
+  tasks: ['FORTIFY', 'GUARD THE GROW TENT', 'WAVE AFTER WAVE', 'THE SABOTEUR', 'COMMANDER RHYS'],
+  env: { top: 0x0a0e18, horizon: 0x3a2e2a, fog: 0.014, sunI: 0.3, exposure: 1.3 },
+  start: { x: 0, z: 13, y: 0, yaw: 0 }, allies: ['tank', 'smokes', 'sparks', 'doc'], loadout: { p: 'anvil', s: 'deadeye', e: 'frag', n: 4 },
+  props: [{ x: 0, z: 0.5, y: 2.9, prop: 'server' }],
+  tins: [{ x: -17, z: -16 }, { x: 17, z: 16 }, { x: 16, z: -5 }],
+  squads: {
+    w1: { alert: true, pts: [{ x: -14, z: -15 }, { x: 0, z: -16, kind: 'smg' }, { x: 14, z: -15 }] },
+    w2: { alert: true, pts: [{ x: -16, z: -8, kind: 'shotgun' }, { x: 16, z: -8 }, { x: -6, z: -16, kind: 'smg' }, { x: 6, z: -16 }] },
+    w3: { alert: true, pts: [{ x: -16, z: 8, kind: 'heavy' }, { x: 16, z: 8 }, { x: 0, z: -16, kind: 'sniper' }, { x: 10, z: -15, kind: 'smg' }] },
+    w4: { alert: true, pts: [{ x: -14, z: 15 }, { x: 14, z: 15, kind: 'shotgun' }, { x: -16, z: -12, kind: 'heavy' }, { x: 16, z: -12, kind: 'smg' }, { x: 0, z: -16 }] },
+    sab: { pts: [{ x: 14, z: -15, runner: true, speed: 4.2, target: true, mark: 'SABOTEUR', name: 'SABOTEUR', path: [[14, -15], [16, -6], [12, 0], [6, 2], [0, 4]] }, { x: -14, z: -15, runner: true, speed: 4.0, target: true, mark: 'SABOTEUR', name: 'SABOTEUR', path: [[-14, -15], [-16, -6], [-12, 0], [-6, 2], [0, 4]] }] },
+    rhys: { alert: true, pts: [{ x: 0, z: -15, kind: 'heavy', boss: true, name: 'COMMANDER RHYS', hp: 2400, gun: 'vanguard', scale: 1.2 }] },
+    rhysA: { alert: true, pts: [{ x: -15, z: -14, kind: 'shotgun' }, { x: 15, z: -14, kind: 'smg' }, { x: -15, z: 14 }] },
+    rhysB: { alert: true, pts: [{ x: 15, z: 14, kind: 'heavy' }, { x: -10, z: -16, kind: 'smg' }, { x: 10, z: -16, kind: 'sniper' }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'GET READY', secs: 1, say: [['doc', 'The green seed is growing under the lamps in the middle container. Three hours to the first harvest. Maybe less with the good lamps.'], ['tank', 'Three hours, five of us, one container yard. I have had worse odds. I cannot remember when.'], ['sparks', 'I can wire the floodlights so they cannot sneak up. And the ammo crates are by the gates.']] },
+    { type: 'multi', goal: 'FORTIFY THE YARD', verb: 'SET IT UP', secs: 1.8, prop: 'box',
+      spots: [{ x: -11, z: -8, verb: 'STACK THE SANDBAGS', say: [['tank', 'West gate covered.']] }, { x: 11, z: -8, verb: 'STACK THE SANDBAGS', say: [['tank', 'East gate covered.']] }, { x: -11, z: 9, verb: 'WIRE THE FLOODLIGHT', say: [['sparks', 'Floodlight one. Live.']] }, { x: 11, z: 9, verb: 'WIRE THE FLOODLIGHT', say: [['sparks', 'Floodlight two. Bright!']] }],
+      after: [['sparks', 'Here they come. Lots of headlights. LOTS of headlights.']] },
+    { type: 'defend', goal: 'GUARD DOC\'S GROW TENT', obj: { x: 0, z: 0.5, y: 2.9, hp: 100, name: 'THE GROW TENT', r: 8, dps: 1.3 }, secs: 150, allyAt: { doc: { x: 0, z: 1, y: 2.9 } }, cp: true,
+      waves: [{ t: 2, sq: 'w1' }, { t: 30, sq: 'w2' }, { t: 65, sq: 'w3' }, { t: 100, sq: 'w4' }],
+      say: [['doc', 'I am not leaving my plants. Anyone touches my plants, I will be very upset.']], after: [['sparks', 'Two people running at the tent with fuel cans! Saboteurs!']] },
+    { type: 'chase', goal: 'STOP THE SABOTEURS BEFORE THEY REACH THE GROW TENT', spawn: ['sab'], squads: ['sab'], failRun: 'a saboteur burned the grow tent', cp: true,
+      after: [['radio', 'This is Commander Rhys. Miss Alvarez. I run VANTAGE. Kess, the Warden, the Hound, the Foreman. All mine.'], ['radio', 'I am coming in myself.']] },
+    { type: 'boss', goal: 'DEFEAT COMMANDER RHYS', spawn: ['rhys'], squads: ['rhys'], adds: [{ at: 0.7, sq: 'rhysA' }, { at: 0.4, sq: 'rhysB', say: [['radio', 'All units, on me! End this!']] }], allyAt: { doc: { x: 0, z: 1, y: 2.9 } }, cp: true,
+      say: [['tank', 'He taught the Hound. He taught me. Do not let him get close.']], after: [['tank', 'Rhys is down. VANTAGE is done.'], ['doc', 'And the green seed is ready. Enough for a city, if we can get it into the air.']] },
+  ],
+  end: [['june', 'Rhys had a phone. One message. From Harold Voss.'], ['june', '"Trial begins at Blackwell tonight. All of it. Into the water, the vents, the pills. By morning, nobody in that building will feel a thing."'], ['sparks', 'Tonight. Blackwell. That is... that is now.'], ['smokes', 'I work at Blackwell. Everybody I know is at Blackwell. Let us go.']],
+});
+
+/* ---------- 12 · LIGHTS OUT (BLACKWELL HOSPITAL: the night it fell) */
+CAMP_MISSIONS.push({
+  id: 'm12', title: 'LIGHTS OUT', map: 'blackwell', place: 'BLACKWELL HOSPITAL', when: 'DAY 19 · 23:55',
+  brief: 'Harold is releasing Nightshade into Blackwell Hospital tonight: in the water, the vents and the pill trolleys. The crew splits up to stop it. But the trial has already started, and the first patients are getting up off their beds. They are not in pain any more. They are not anything any more.',
+  tasks: ['INTO BLACKWELL', 'SHUT THE VENTS', 'THE PILL TROLLEYS', 'THE FIRST INFECTED', 'HAROLD VOSS', 'THE LONG NIGHT'],
+  env: { top: 0x06080e, horizon: 0x1a1a24, fog: 0.012, sunI: 0.25, exposure: 1.3 },
+  start: { x: 0, z: 37.5, y: 0, yaw: 0 }, allies: ['tank', 'smokes', 'sparks', 'doc'], loadout: { p: 'marc', s: 'sidearm', e: 'frag', n: 3 },
+  tins: [{ x: -36, z: 25.5 }, { x: 36, z: 25.5 }, { x: 5, z: -30.5 }],
+  squads: {
+    lobby: { alert: true, pts: [{ x: 4.5, z: 24 }, { x: -4, z: 22, kind: 'smg' }, { x: 8, z: 18 }] },
+    vent1: { alert: true, pts: [{ x: 14, z: 8 }, { x: 20, z: 2, kind: 'shotgun' }, { x: 28, z: 10 }] },
+    vent2: { alert: true, pts: [{ x: -16, z: 4 }, { x: -24, z: -2, kind: 'smg' }, { x: -28, z: 12 }] },
+    inf1: { pts: [{ x: 14, z: 8.4, kind: 'infected' }, { x: 16, z: 25.5, kind: 'infected' }, { x: -30, z: 13.4, kind: 'infected' }, { x: 28, z: 6, kind: 'infected' }] },
+    inf2: { pts: [{ x: -5.75, z: 31.75, kind: 'infected' }, { x: 30, z: -11.2, kind: 'infected' }, { x: -24.6, z: -2.2, kind: 'infected' }, { x: -16.2, z: 5.6, kind: 'infected' }, { x: 0.7, z: 12, kind: 'infected' }] },
+    inf3: { pts: [{ x: -36, z: 25.5, kind: 'infected' }, { x: 36, z: 25.5, kind: 'infected' }, { x: -16, z: -25.5, kind: 'infected' }, { x: 5, z: -30.5, kind: 'infected' }, { x: 0.7, z: -12, kind: 'infected' }, { x: -6, z: -8.5, kind: 'infected' }] },
+    harold: { alert: true, pts: [{ x: -5.6, z: -26.2, kind: 'officer', boss: true, name: 'HAROLD VOSS', hp: 1200, gun: 'deadeye', scale: 1.0 }, { x: -2, z: -24, kind: 'heavy' }, { x: -9, z: -24, kind: 'heavy' }] },
+    haroldInf: { pts: [{ x: 0.7, z: -8, kind: 'infected' }, { x: -3.2, z: -20, kind: 'infected' }, { x: 5, z: -30.5, kind: 'infected' }, { x: -16, z: -25.5, kind: 'infected' }] },
+    night: { pts: [{ x: 0.7, z: 2, kind: 'infected' }, { x: 14, z: 8.4, kind: 'infected' }, { x: -16.2, z: 5.6, kind: 'infected' }, { x: 28, z: 6, kind: 'infected' }, { x: -30, z: 13.4, kind: 'infected' }, { x: 16, z: 25.5, kind: 'infected' }] },
+    night2: { pts: [{ x: -5.75, z: 31.75, kind: 'infected' }, { x: 30, z: -11.2, kind: 'infected' }, { x: -24.6, z: -2.2, kind: 'infected' }, { x: 0.7, z: -12, kind: 'infected' }, { x: -6, z: -8.5, kind: 'infected' }, { x: 36, z: 25.5, kind: 'infected' }, { x: -36, z: 25.5, kind: 'infected' }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'OUTSIDE BLACKWELL', secs: 1, say: [['smokes', 'Blackwell. Eleven years I have pushed trolleys in there.'], ['doc', 'The vents start pumping at midnight. Three vent controls on the ground floor. Shut them, and it cannot spread through the air.'], ['tank', 'Sparks, the power. Smokes, the pill trolleys. June, with me. Go.']] },
+    { type: 'clear', goal: 'FIGHT INTO THE LOBBY', spawn: ['lobby'], squads: ['lobby'], cp: true, say: [['radio', 'Intruders at the south entrance. The trial must not be interrupted.']] },
+    { type: 'multi', goal: 'SHUT THE THREE VENT CONTROLS BEFORE MIDNIGHT', verb: 'SHUT THE VENT', secs: 2.4, prop: 'panel', t: 150, failTime: 'midnight · the vents started pumping', spawn: ['vent1', 'vent2'], cp: true,
+      spots: [{ x: 25, z: 13.4 }, { x: -25, z: -13.4 }, { x: -9.4, z: 3.5 }],
+      say: [['sparks', 'Vents are on a timer! You have until midnight!']], after: [['sparks', 'Vents shut! It is not in the air!'], ['smokes', 'The pill trolleys are already out. Somebody already gave the night meds. Oh no. Oh no no no.']] },
+    { type: 'hold', goal: 'SURVIVE THE FIRST INFECTED', at: { x: 0.7, z: 5, r: 14 }, secs: 75, cp: true, env: { top: 0x020306, horizon: 0x140a0a, fog: 0.02, sunI: 0.12 },
+      waves: [{ t: 1, sq: 'inf1' }, { t: 25, sq: 'inf2' }, { t: 50, sq: 'inf3' }],
+      say: [['doc', 'The patients from the trial ward. They are up. They are... they are not in pain. They are not anything.'], ['tank', 'They are coming at us! Shoot them, they do not stop!']], after: [['smokes', 'They will not stay down! Shoot the head!'], ['june', 'Harold. Where is Harold?'], ['sparks', 'North lobby! On the cameras! He is trying to leave!']] },
+    { type: 'boss', goal: 'STOP HAROLD VOSS IN THE NORTH LOBBY', spawn: ['harold'], squads: ['harold'], adds: [{ at: 0.6, sq: 'haroldInf', say: [['harold', 'Do you see? No pain, no fear. This is the cure for being human. And you cannot stop it.']] }], cp: true,
+      say: [['harold', 'Miss Alvarez. Again. You burned my farm, my convoy, my plane, my factory. And here we are anyway.'], ['june', 'It ends here, Harold.'], ['harold', 'It has just begun.']], after: [['harold', 'You think this is over? It is in the water. It is in every patient. By morning…'], ['june', 'By morning you will be in jail.'], ['doc', 'June. Look at his arm. He gave himself the pills. He is turning.']] },
+    { type: 'hold', goal: 'THE LONG NIGHT · HOLD THE ATRIUM UNTIL DAWN', at: { x: 0.7, z: 0, r: 14 }, secs: 90, cp: true,
+      waves: [{ t: 1, sq: 'night' }, { t: 40, sq: 'night2' }],
+      say: [['tank', 'Doors are locked. We are inside with them. All of us.'], ['smokes', 'Then we do what we do. Stay together. Stay high. Stay alive.']] },
+  ],
+  end: [['june', 'Harold ran out through the loading dock. His truck, twelve pallets of Nightshade. North, to the Works.'], ['doc', 'And we are locked in Blackwell with a hospital full of them.'], ['smokes', 'Okay. Okay. Here is what we do. We find the generators, we find the keycard, we find the medical weed. I know every back door in this place.'], ['tank', 'Then that is the plan. Survive tonight. Then go after him.'], ['sparks', 'This is how it starts, isn\'t it? This is how everything starts.'], ['june', 'Smoke up, everybody. It is going to be a long night.']],
+});
 /* ================================================================== ZOMBIES SPECIALS: strays, fiends, bloaters, barricaded windows
    STRAY ROUNDS: every 5th round only STRAYS come - junkie dogs that got into the Nightshade stash: fast, low, purple
      eyes, they bite. The fog thickens; the last stray drops a RE-UP.
@@ -18591,6 +19767,7 @@ function actions(act) {
   if (/^perf-/.test(act) && typeof perfAct === 'function' && perfAct(act)) return;
   if (/^(wk-|pr-|weekly$|range$)/.test(act) && typeof wkAct === 'function' && wkAct(act)) return;
   if (/^(lk-|rw-|locker$|rewards$)/.test(act) && typeof lockerAct === 'function' && lockerAct(act)) return;
+  if (/^(cp-|campaign$)/.test(act) && typeof campAct === 'function' && campAct(act)) return;
   if (typeof zombAct === 'function' && zombAct(act)) return;
   switch (act) {
     case 'deploy': case 'play': toLobby(); break;
@@ -18667,6 +19844,7 @@ function goBack() {
   else if ($('presOv')) presClose();
   else if (curScreen === 'weekly') wkBack();
   else if (curScreen === 'bpass') bpBack();
+  else if (curScreen === 'campaign') { sfx.ui(); showScreen('menu'); }
   else if (curScreen === 'locker' || curScreen === 'rewards') { if (BOXV.ov) { if (BOXV.ov.classList.contains('done')) boxClose(); } else if ($('boxSee')) lockerAct('rw-see-close'); else lockerBack(); }
   else if (curScreen === 'settings' && curTab === 'BUTTONS') actions('pad-back');
   else if (curScreen === 'settings' || curScreen === 'howto' || curScreen === 'credits') showScreen(returnScreen);
@@ -19011,6 +20189,7 @@ function tick(dt) {
     if (G.state === 'respawning' && G.dc) { G.dc.t += dt; aimDeathCam(dt, Math.min(G.dc.t / G.dc.dur, 1)); }
     updateBots(dt); updateMatch(dt); updateGrenades(dt); updateHud();
   }
+  else if (G.state === 'campdead') { try { campUpdate(dt); } catch (err) { reportError(err); } }
   else if (G.state === 'deathcam' && inMatch()) { updateDeathCam(dt); updateBots(dt); updateMatch(dt); updateGrenades(dt); }
   else if (G.state === 'dead' && G.dcHold) { if (G.dc) { G.dc.t += dt; aimDeathCam(dt, Math.min(G.dc.t / G.dc.dur, 1)); } }
   else if (G.state === 'dead') { P.pitch = lerp(P.pitch, -0.35, dt * 2); camera.rotation.set(P.pitch, P.yaw, lerp(camera.rotation.z, 0.5, dt * 2)); camera.position.y = lerp(camera.position.y, 0.5, dt * 3); }
@@ -19097,7 +20276,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { NAVDBG: { lvN, lvH, NN, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
