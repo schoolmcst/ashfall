@@ -49,7 +49,7 @@ function voiceSetMode(m) { VOICE.mode = m; voiceSave(); if (m === 'off') voiceSt
 function voiceOut(bytes) { const r = voiceRoom(); if (!r) return; let s = ''; for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]); r.voice(btoa(s), ++VOICE.seq); }
 // one frame in from `label`, with the speaker's name
 function voiceIn(label, name, d, seq) {
-  if (VOICE.mode === 'off' || !vAudio() || VOICE.muted.has(name)) return;
+  if (VOICE.mode === 'off' || !vAudio() || VOICE.muted.has(name) || (typeof lnBlocked === 'function' && lnBlocked(name))) return;
   let S0 = VOICE.spk.get(label);
   if (!S0) {
     S0 = { name, next: 0, gain: vCtx.createGain(), t: 0 };

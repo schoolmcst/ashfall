@@ -1,4 +1,4 @@
-/* ================================================================== BATTLE PASS · SEASON 1: AFTERSHOCK
+/* ================================================================== BATTLE PASS · SEASONS (1 AFTERSHOCK, 2 HARVEST)
    100 tiers. Every match's XP also fills the pass (2,500 XP a tier). Two rows:
    - FREE row: DZ, free CHANCE BOX openings (standard / elite / prestige) and a few cosmetics
    - PREMIUM row: one pass-only cosmetic on every tier (camos, skins, stickers; tier 100 is the master skin)
@@ -6,11 +6,19 @@
    set PROG.bp.prem = true when a purchase is confirmed (bpSetPremium); everything earned so far on the premium row is
    then handed out at once. Boxes and DZ stay on the free row on purpose, so paying never buys box openings.
    Saved inside ashfall.prog.v1 (PROG.bp, PROG.tok), so the save backup keeps it. */
-const PASS = { season: 1, name: 'AFTERSHOCK', tiers: 100, tierXp: 2500, ends: '2026-12-31', premiumFree: true };
+// the seasons, by date: the game shows whichever one is running today (after the last one ends, the last one keeps going
+// until the next is added). A new season only needs its items (progress.js) and a line here.
+const SEASONS = [
+  { season: 1, name: 'AFTERSHOCK', starts: '2026-01-01', ends: '2026-12-31', col: '#ff5a14' },
+  { season: 2, name: 'HARVEST', starts: '2027-01-01', ends: '2027-03-31', col: '#e0802a' },
+];
+const BPT = { fake: null };   // tests: a fake date
+const bpNow = () => BPT.fake ? new Date(BPT.fake) : new Date();
+function bpSeasonFor(d) { const t = +d; let pick = SEASONS[0]; for (const S of SEASONS) if (t >= +new Date(S.starts + 'T00:00:00')) pick = S; return pick; }
+const PASS = { season: 1, name: 'AFTERSHOCK', tiers: 100, tierXp: 2500, ends: '2026-12-31', starts: '2026-01-01', col: '#ff5a14', premiumFree: true };
 const BP_BOX = { 25: 'prestige', 50: 'prestige', 75: 'prestige', 100: 'prestige', 10: 'elite', 30: 'elite', 45: 'elite', 60: 'elite', 70: 'elite', 90: 'elite',
   5: 'std', 15: 'std', 20: 'std', 35: 'std', 40: 'std', 55: 'std', 65: 'std', 80: 'std', 85: 'std', 95: 'std' };
 const BP_PREM = {}, BP_FREEIT = {};
-for (const c of COSM) if (c.bp === PASS.season) (c.track === 'f' ? BP_FREEIT : BP_PREM)[c.tier] = c.id;
 // what each tier gives on each row
 function bpReward(t, prem) {
   if (prem) return BP_PREM[t] ? { type: 'item', id: BP_PREM[t] } : null;
@@ -18,7 +26,24 @@ function bpReward(t, prem) {
   if (BP_BOX[t]) return { type: 'box', box: BP_BOX[t] };
   return { type: 'dz', n: 100 + 25 * Math.floor(t / 20) };
 }
-if (!PROG.bp || PROG.bp.s !== PASS.season) PROG.bp = { s: PASS.season, xp: 0, cf: 0, cp: 0, prem: false };
+// pick today's season; a new season starts every player at tier 1 (the old season's tiers stay in PROG.bpHist, its items
+// stay owned) and leaves a note for the SEASON COMPLETE popup
+function bpUseSeason() {
+  let S = bpSeasonFor(bpNow());
+  if (PROG.bp && PROG.bp.s > S.season) S = SEASONS.find(x => x.season === PROG.bp.s) || S;   // a clock set back never takes you to an older season
+  Object.assign(PASS, { season: S.season, name: S.name, ends: S.ends, starts: S.starts, col: S.col });
+  for (const k in BP_PREM) delete BP_PREM[k]; for (const k in BP_FREEIT) delete BP_FREEIT[k];
+  for (const c of COSM) if (c.bp === PASS.season) (c.track === 'f' ? BP_FREEIT : BP_PREM)[c.tier] = c.id;
+  if (PROG.bp && PROG.bp.s && PROG.bp.s !== PASS.season && PROG.bp.s < PASS.season) {
+    const old = PROG.bp, tier = Math.min(100, 1 + Math.floor((old.xp || 0) / PASS.tierXp));
+    PROG.bpHist = PROG.bpHist || {}; PROG.bpHist[old.s] = { xp: old.xp || 0, tier };
+    PROG.bpSwitched = { from: old.s, fromName: (SEASONS.find(x => x.season === old.s) || {}).name || '', tier, to: PASS.season };
+    PROG.bp = null;
+  }
+  if (!PROG.bp || PROG.bp.s !== PASS.season) PROG.bp = { s: PASS.season, xp: 0, cf: 0, cp: 0, prem: false };
+  try { saveProg(); } catch (e) {}
+}
+bpUseSeason();
 if (!PROG.tok) PROG.tok = { std: 0, elite: 0, prestige: 0 };
 const bpPremium = () => PASS.premiumFree || !!PROG.bp.prem;
 const bpTier = (xp = PROG.bp.xp) => Math.min(PASS.tiers, 1 + Math.floor(xp / PASS.tierXp));
@@ -41,7 +66,8 @@ function bpSync() {
 function bpGain(xp) { const from = bpTier(); PROG.bp.xp += Math.max(0, xp | 0); const got = bpSync(); return { xp, from, to: bpTier(), got }; }
 function bpSetPremium(on) { PROG.bp.prem = !!on; saveProg(); return bpSync(); }   // the future purchase hook
 try { bpSync(); } catch (e) {}
-const bpDaysLeft = () => Math.max(0, Math.ceil((new Date(PASS.ends + 'T23:59:59') - Date.now()) / 864e5));
+const bpDaysLeft = () => Math.max(0, Math.ceil((new Date(PASS.ends + 'T23:59:59') - bpNow()) / 864e5));
+const bpDaysIn = () => Math.floor((bpNow() - new Date(PASS.starts + 'T00:00:00')) / 864e5);
 const BOX_NAME = { std: 'STANDARD', elite: 'ELITE', prestige: 'PRESTIGE' }, BOX_COL = { std: '#9aa3a9', elite: '#4aa3ff', prestige: '#f2b84b' };
 const bpRewardName = r => !r ? '' : r.type === 'item' ? COS[r.id].name : r.type === 'box' ? BOX_NAME[r.box] + ' BOX' : r.n + ' DZ';
 // a line for the match results screen
@@ -69,6 +95,7 @@ function bpCell(t, prem) {
   return `<button class="bp-c${prem ? ' prem' : ''}${have ? ' got' : ''}${cur ? ' next' : ''}${sel ? ' on' : ''}" data-bpt="${t}${prem ? 'p' : 'f'}" style="--rc:${col}">${art}<small>${bpRewardName(r)}</small>${have ? '<i class="bp-ok">✓</i>' : ''}</button>`;
 }
 function renderBattlePass() {
+  { const st = $('bpSeasonT'); if (st) st.textContent = `SEASON ${PASS.season} · ${PASS.name}`; }
   const p = bpProgress(), prem = bpPremium(), t0 = BPV.page * 10 + 1, days = bpDaysLeft();
   $('bpTop').innerHTML = progCardHtml();
   $('bpHead').innerHTML = `<div class="bp-tier"><small>TIER</small><b>${p.t}</b></div><div class="bp-prog"><div class="bp-prog-h"><span>${p.t >= PASS.tiers ? 'PASS COMPLETE' : `${p.into.toLocaleString()} / ${p.need.toLocaleString()} XP TO TIER ${p.t + 1}`}</span><span>${days} DAYS LEFT</span></div><div class="pg-bar"><s style="width:${p.frac * 100}%"></s></div>
@@ -92,7 +119,7 @@ function renderBpDetail() {
     if (c.kind === 'banner') pic = bannerCardHtml(c.id, (typeof NET !== 'undefined' && NET.nick) || 'PLAYER', lvlInfo(PROG.xp).l, true);
     else { const g = c.kind === 'sticker' ? gunPic(gun, camoFor(gun), c.id, charmFor(gun)) : c.kind === 'charm' ? gunPic(gun, camoFor(gun), stickerFor(gun), c.id) : gunPic(gun, c.id, stickerFor(gun), charmFor(gun));
       pic = `<div class="bp-pic" data-pic="${g.key}">${g.url ? `<img src="${g.url}" alt="">` : ''}</div><div class="bp-sw${c.kind === 'sticker' || c.kind === 'charm' ? ' stk' : ''}" style="background-image:url(${swatchUrl(c.id)})"></div>`; }
-    head = `<small style="color:${RAR[c.r].col}">${RAR[c.r].name} ${kindName(c)} · SEASON 1</small><b>${c.name}</b>`;
+    head = `<small style="color:${RAR[c.r].col}">${RAR[c.r].name} ${kindName(c)} · SEASON ${c.bp || PASS.season}</small><b>${c.name}</b>`;
     if (have && PROG.owned[c.id]) acts = c.kind === 'banner' ? `<button class="btn primary" data-act="bp-eq-bn"${bannerFor() === c.id ? ' disabled' : ''}>${bannerFor() === c.id ? 'EQUIPPED' : 'EQUIP BANNER'}</button>` : `<button class="btn primary" data-act="bp-eq-${c.kind === 'sticker' ? 'stk' : c.kind === 'charm' ? 'chm' : 'camo'}">EQUIP ON ALL WEAPONS</button>`;
   } else if (r.type === 'box') {
     pic = `<div class="bp-pic box"><span class="bp-crate big" style="--bc:${BOX_COL[r.box]}"><span>${BOX_NAME[r.box][0]}</span></span></div>`;
@@ -122,7 +149,7 @@ function bpAct(act) {
 }
 (() => {
   const d = document.createElement('div'); d.id = 'bpass'; d.className = 'screen cod pg-scr hide';
-  d.innerHTML = `<div class="cod-top"><div class="cod-title"><small>SEASON 1 · ${PASS.name}</small><b>BATTLE PASS</b></div><div style="flex:1"></div><div class="cod-card" id="bpTop"></div></div>
+  d.innerHTML = `<div class="cod-top"><div class="cod-title"><small id="bpSeasonT">SEASON ${PASS.season} · ${PASS.name}</small><b>BATTLE PASS</b></div><div style="flex:1"></div><div class="cod-card" id="bpTop"></div></div>
 <div class="bp-body"><div class="bp-head" id="bpHead"></div><div class="bp-main"><div class="bp-detail rw-card" id="bpDetail"></div><div class="bp-right"><div class="bp-track" id="bpTrack"></div><div class="bp-pages" id="bpPages"></div></div></div></div>
 <div class="cod-foot"><button class="btn" data-act="bp-back">&lsaquo; BACK</button><span class="padhint">B BACK</span></div>`;
   document.body.appendChild(d);
@@ -165,3 +192,28 @@ function bpAct(act) {
 @media (max-width:1100px){.bp-main{grid-template-columns:210px 1fr;gap:10px}.bp-pic{height:84px}.bp-dh b{font-size:18px}.bp-c{min-height:108px;padding:4px}.bp-c .bp-art{height:58px}.bp-track{grid-template-columns:44px repeat(10,minmax(0,1fr));gap:4px}.bp-rowl{font-size:8px;letter-spacing:.1em}.bp-head{gap:12px;padding:10px 12px}.bp-tier b{font-size:34px}.bp-prem{min-width:0}.bp-how{display:none}}`;
   document.head.appendChild(s);
 })();
+
+/* ---------- the season on the main menu: a countdown in the last 7 days, SEASON N IS LIVE in the first 7 days, and the
+   SEASON COMPLETE popup the first time the game opens after a switch */
+function bpStrip() {
+  const menu = $('menu'); if (!menu) return; let el = $('bpStrip');
+  const left = bpDaysLeft(), inn = bpDaysIn(), next = SEASONS.find(x => x.season === PASS.season + 1);
+  let txt = '';
+  if (left <= 7 && next) txt = `<b>SEASON ${PASS.season} · ${PASS.name} ENDS IN ${left} DAY${left === 1 ? '' : 'S'}</b><span>finish your tiers · SEASON ${next.season}: ${next.name} starts ${new Date(next.starts + 'T00:00:00').toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</span>`;
+  else if (inn >= 0 && inn < 7 && PASS.season > 1) txt = `<b>SEASON ${PASS.season} · ${PASS.name} IS LIVE</b><span>a new battle pass · 100 tiers · open BATTLE PASS</span>`;
+  if (!txt) { if (el) el.remove(); return; }
+  if (!el) { el = document.createElement('button'); el.id = 'bpStrip'; el.dataset.act = 'bpass'; const t = menu.querySelector('.cod-main'); menu.insertBefore(el, t); }
+  el.style.setProperty('--ec', PASS.col); el.innerHTML = txt;
+}
+function bpSeasonPopup() {
+  const sw = PROG.bpSwitched; if (!sw || $('bpSwOv')) return;
+  const ov = document.createElement('div'); ov.className = 'pr-ov'; ov.id = 'bpSwOv';
+  ov.innerHTML = `<div class="pr-box"><small>BATTLE PASS</small><b>SEASON ${sw.from} COMPLETE</b><p style="color:#ccc;font-size:13px;line-height:1.5">You reached <em style="color:#fff;font-style:normal">TIER ${sw.tier}</em> in ${sw.fromName}. Everything you earned is yours to keep, in the LOCKER.</p><p style="font-size:15px;letter-spacing:.2em;color:${PASS.col}">SEASON ${sw.to}: ${PASS.name} IS LIVE</p><div class="pr-a"><button class="btn primary" data-bpsw="go">SEE THE NEW PASS</button><button class="btn" data-bpsw="x">LATER</button></div></div>`;
+  document.body.appendChild(ov);
+  const close = go => { delete PROG.bpSwitched; saveProg(); ov.remove(); if (go) openBattlePass(); };
+  ov.querySelector('[data-bpsw="go"]').onclick = () => close(true); ov.querySelector('[data-bpsw="x"]').onclick = () => close(false);
+  setTimeout(() => { try { ov.querySelector('button').focus(); } catch (e) {} }, 0);
+}
+setInterval(() => { try { if (typeof curScreen !== 'undefined' && curScreen === 'menu') { bpStrip(); if (!$('hcSplash') && !document.querySelector('.app-notes')) bpSeasonPopup(); } } catch (e) {} }, 1500);
+(() => { const s = document.createElement('style'); s.textContent = `#bpStrip{display:flex;align-items:center;gap:14px;margin:0 3vw 8px;padding:8px 14px;border:1px solid var(--ec);background:linear-gradient(90deg,color-mix(in srgb,var(--ec) 22%,transparent),rgba(10,12,13,.7));color:#fff;font-family:inherit;text-align:left;cursor:pointer;pointer-events:auto}
+#bpStrip b{font-size:12px;letter-spacing:.2em;color:var(--ec)}#bpStrip span{font-size:11px;letter-spacing:.08em;color:#ddd}`; document.head.appendChild(s); })();

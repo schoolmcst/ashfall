@@ -23,10 +23,16 @@ const SHADOWQ = {
   ultra:   { res: 4096, R: 50, far: 50 },
   extreme: { res: 8192, R: 64, far: 70 },
 };
+// a simple word filter for other players' names and chat (SETTINGS > ACCOUNT > FILTER: on by default)
+const DZ_BAD = ['fuck', 'shit', 'bitch', 'cunt', 'pussy', 'whore', 'slut', 'asshole', 'faggot', 'nigger', 'nigga', 'retard', 'tranny', 'wetback', 'motherf'];
+const DZ_BADW = ['fag', 'fags', 'fuk', 'fck', 'dick', 'dicks', 'cock', 'cocks', 'cum', 'spic', 'kys', 'twat', 'wank', 'jizz', 'rape', 'nazi', 'hitler', 'dyke', 'bastard', 'chink', 'kike'];   // whole words only (cockpit, spicy, document are fine)
+const DZ_BAD_RE = new RegExp('(' + DZ_BAD.join('|') + ')|\\b(' + DZ_BADW.join('|') + ')\\b', 'gi');
+const dzFilterOn = () => typeof S === 'undefined' || S.chatFilter !== false;
+function dzFilter(t) { if (!dzFilterOn()) return t; const flat = s => s.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4|@/g, 'a').replace(/5|\$/g, 's').replace(/7/g, 't'); const f = flat(String(t)); if (!DZ_BAD_RE.test(f)) return t; DZ_BAD_RE.lastIndex = 0; let out = String(t).split(''), m; const re = new RegExp(DZ_BAD_RE.source, 'gi'); while ((m = re.exec(f))) for (let i = m.index; i < m.index + m[0].length; i++) out[i] = '*'; return out.join(''); }
 const FXQ = { low: 0.35, medium: 0.65, high: 1, ultra: 1.5 };
 const DEFAULTS = {
   quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
-  master: 80, sfx: 100, ambience: 60, music: 50, perfMode: false, perfGraph: false, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
+  master: 80, sfx: 100, ambience: 60, music: 50, chatFilter: true, perfMode: false, perfGraph: false, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,

@@ -253,8 +253,117 @@ const BP_ITEMS = [
   ['STORMBORN', 99, 'skin', 'plasma', 3, [0x020614, 0x2a6aff, 0xbfe4ff], {}, { anim: 'scroll', emis: 2.4 }],
   ['AFTERSHOCK MASTER', 100, 'skin', 'cracked', 3, [0x050505, 0xffb03a, 0x0e0e10], { glow: 1 }, { anim: 'pulse', emis: 3, metal: 0.8, rough: 0.15 }],
 ];
-for (const [name, tier, kind, t, r, c, gx, mx, track] of BP_ITEMS) {
-  const flat = kind !== 'camo' && kind !== 'skin', base = { id: 'bp1_' + slug(name) + ({ sticker: '_st', charm: '_ch', banner: '_bn' }[kind] || ''), name, kind, r, bp: 1, tier, track: (flat ? mx : track) === 'f' ? 'f' : 'p' };
+// ---- BATTLE PASS · SEASON 2: HARVEST (Jan 1 - Mar 31, 2027): drying rooms, trimmed buds, burlap, sun-cured green, autumn orange
+const BP2_ITEMS = [
+  ['HARVEST MOON', 1, 'banner', 'grad', 0, ['#0a0e1a', '#3a2a5a', '#ffb03a'], { em: ['leaf', '#ffb03a', '#0a0e1a'] }, 'f'],
+  ['TRIM JOB', 12, 'sticker', 'text', 0, ['#1a2a10', '#9adf5a'], 'TRIM JOB', 'f'],
+  ['BURLAP', 33, 'camo', 'burlap', 0, [0x6a5030, 0xb09060], null, null, 'f'],
+  ['HARVEST SACK', 52, 'charm', 'cube', 1, [0x8a6a40, 0xc8a878], {  }, 'f'],
+  ['FIELD LEAF', 77, 'camo', 'leaves', 1, [0x3a2a14, 0x4a7a2a, 0x2a4a1a], null, null, 'f'],
+  ['S2 SURVIVOR', 98, 'sticker', 'leaf', 2, ['#0b0c0d', '#e0802a'], null, 'f'],
+  ['HARVEST', 1, 'camo', 'leaves', 1, [0x6b5a2a, 0x9a7a3a, 0x3f5a22, 0xe08a2a], { glowIdx: 3 }, { anim: 'pulse', emis: 1.2 }],
+  ['TRIM BIN', 2, 'camo', 'blobs', 0, [0x6b5a2a, 0x9a7a3a, 0x3f5a22, 0xe08a2a], null, null],
+  ['FIELD DAY', 3, 'banner', 'rays', 0, ['#9adf5a', '#b84a14', '#2a4a1a'], { em: ['leaf', '#9adf5a', '#1a2a10'] }, null],
+  ['HANG DRY', 4, 'camo', 'leaves', 0, [0x2a4a1a, 0x4a7a2a, 0x1a2a10, 0x9adf5a], null, null],
+  ['TERRACOTTA', 5, 'skin', 'facets', 0, [0xb84a14, 0xe0802a], null, { rough: 0.06, metal: 0.5 }],
+  ['S2', 6, 'sticker', 'eye', 0, ['#2a1a0a', '#e0802a'], null],
+  ['MASON JAR', 7, 'charm', 'star', 0, [0x6a2a0a, 0x9adf5a, 0x2a1a04], null, null],
+  ['SEED BANK', 8, 'camo', 'stripes', 0, [0x8a8a3a, 0x5a5a24, 0xb0a050, 0x2a2a12], null, null],
+  ['BURLAP SACK', 9, 'camo', 'splat', 0, [0x3a1a5a, 0x7a3aaa, 0x1a0a2a, 0xc87aff], null, null],
+  ['OAK BARREL', 10, 'skin', 'facets', 0, [0xb84a14, 0xe0802a], null, { rough: 0.06, metal: 0.5 }],
+  ['DRY LEAF', 11, 'camo', 'leaves', 0, [0x3a1a5a, 0x7a3aaa, 0x1a0a2a, 0xc87aff], null, null],
+  ['HARVESTED', 12, 'sticker', 'text', 0, ['#0b0c0d', '#e0a040'], 'HARVESTED'],
+  ['CURE ROOM', 13, 'camo', 'splinter', 0, [0xd8e8f0, 0x9ab8c8, 0x5a7a8a, 0xffffff], null, null],
+  ['STICKY FINGERS', 14, 'camo', 'leaves', 0, [0xb84a14, 0xe0802a, 0x6a2a0a, 0xf2c04a], null, null],
+  ['DRY SEASON', 15, 'banner', 'grad', 1, ['#9adf5a', '#b84a14', '#2a4a1a'], null, null],
+  ['HARVEST DUST', 16, 'camo', 'fade', 1, [0x5a3a0a, 0xa06a1a, 0x2a1a04, 0xe0a040], null, null],
+  ['LIGHTER', 17, 'charm', 'coin', 1, [0xe0802a, 0x4a7a2a, 0x2a1a04], null, null],
+  ['CURED', 18, 'sticker', 'text', 1, ['#1a2a10', '#9adf5a'], 'CURED'],
+  ['TOP COLA', 19, 'camo', 'splinter', 1, [0x3a1a5a, 0x7a3aaa, 0x1a0a2a, 0xc87aff], null, null],
+  ['DRYING ROOM', 20, 'camo', 'stripes', 2, [0x8a8a3a, 0x5a5a24, 0xb0a050, 0x2a2a12], null, null],
+  ['SUGAR LEAF', 21, 'camo', 'fleck', 1, [0x3a2a1a, 0x5a4028, 0x24180e, 0x7a5a38], null, null],
+  ['FAN LEAF', 22, 'camo', 'digital', 1, [0x6b5a2a, 0x9a7a3a, 0x3f5a22, 0xe08a2a], null, null],
+  ['TRICHOME FROST', 23, 'camo', 'digital', 1, [0x0a0e1a, 0x1a2a3a, 0x3a5a2a, 0x9adf5a], null, null],
+  ['DANK', 24, 'sticker', 'flame', 1, ['#0b0c0d', '#e0a040'], null],
+  ['SUN-CURED', 25, 'skin', 'damascus', 2, [0x8a5a24, 0xe0a04a], null, { rough: 0.3, metal: 0.6 }],
+  ['LATE BLOOM', 26, 'camo', 'digital', 1, [0xd8e8f0, 0x9ab8c8, 0x5a7a8a, 0xffffff], null, null],
+  ['ROLLING TRAY', 27, 'charm', 'star', 1, [0xf2c04a, 0x9adf5a, 0xa06a1a], null, null],
+  ['GREENHOUSE GLASS', 28, 'camo', 'fade', 1, [0x6b5a2a, 0x9a7a3a, 0x3f5a22, 0xe08a2a], null, null],
+  ['ROOT BALL', 29, 'camo', 'leopard', 1, [0x8a8a8a, 0xc8c8c8, 0x4a4a4a, 0xe8e8e8], null, null],
+  ['LIT', 30, 'sticker', 'text', 1, ['#0b0c0d', '#e0a040'], 'LIT'],
+  ['CLONE TRAY', 31, 'camo', 'digital', 1, [0x8a8a8a, 0xc8c8c8, 0x4a4a4a, 0xe8e8e8], null, null],
+  ['HAYSTACK', 32, 'camo', 'digital', 1, [0x6b5a2a, 0x9a7a3a, 0x3f5a22, 0xe08a2a], null, null],
+  ['PUMPKIN PATCH', 33, 'camo', 'blobs', 1, [0x8a8a8a, 0xc8c8c8, 0x4a4a4a, 0xe8e8e8], null, null],
+  ['CORN MAZE', 34, 'camo', 'burlap', 1, [0x0a0e1a, 0x1a2a3a, 0x3a5a2a, 0x9adf5a], null, null],
+  ['CLAY POT', 35, 'skin', 'marble', 1, [0x8a6a40, 0xc8a878], { vein: 0.1, glow: 0xc8a878 }, { rough: 0.2, metal: 0.3 }],
+  ['420', 36, 'sticker', 'leaf', 1, ['#1a2a10', '#9adf5a'], null],
+  ['SEED POD', 37, 'charm', 'coin', 1, [0xe0802a, 0x9adf5a, 0xe0a040], null, null],
+  ['SCARECROW', 38, 'camo', 'digital', 1, [0x8a8a8a, 0xc8c8c8, 0x4a4a4a, 0xe8e8e8], null, null],
+  ['PICKERS', 39, 'banner', 'grad', 1, ['#3a5a2a', '#e0802a', '#1a2a10'], { em: ['leaf', '#9adf5a', '#1a2a10'] }, null],
+  ['COPPER STILL', 40, 'skin', 'solid', 2, [0x3a1a5a], { fx: 'brushed' }, { rough: 0.3, metal: 0.75 }],
+  ['FIRST FROST', 41, 'camo', 'leaves', 2, [0x2a1a3a, 0xc2563a, 0xffa04a, 0x5a2a4a], { glowIdx: 3 }, { anim: 'twinkle', emis: 2.0 }],
+  ['SEED', 42, 'sticker', 'leaf', 2, ['#1a2a10', '#9adf5a'], null],
+  ['AMBER RESIN', 43, 'camo', 'fleck', 2, [0x0a0e1a, 0x1a2a3a, 0x3a5a2a, 0x9adf5a], { glowIdx: 3 }, { anim: 'twinkle', emis: 2.0 }],
+  ['MOLDY BUD', 44, 'camo', 'cracked', 2, [0x6b5a2a, 0x9a7a3a, 0x3f5a22, 0xe08a2a], { glow: 1 }, { anim: 'scroll', emis: 2.0 }],
+  ['TOBACCO', 45, 'skin', 'facets', 2, [0x2a4a1a, 0x4a7a2a], null, { rough: 0.06, metal: 0.5 }],
+  ['HEIRLOOM', 46, 'camo', 'splat', 2, [0xb84a14, 0xe0802a, 0x6a2a0a, 0xf2c04a], null, null],
+  ['ACORN', 47, 'charm', 'dice', 2, [0xe0802a, 0x2a4a1a, 0xa06a1a], null, null],
+  ['SPROUT', 48, 'sticker', 'flame', 2, ['#0b0c0d', '#e0a040'], null],
+  ['PURPLE HAZE', 49, 'camo', 'waves', 2, [0x8a6a40, 0xc8a878], null, null],
+  ['AUTUMN KUSH', 50, 'camo', 'leaves', 3, [0x2a1a0a, 0xe0802a, 0xb84a14, 0xf2c04a], { glowIdx: 1 }, { anim: 'scroll', emis: 1.8 }],
+  ['MOONLIT FIELD', 51, 'banner', 'grad', 2, ['#3a5a2a', '#6a2a0a', '#1a2a10'], null, null],
+  ['SKUNK FIELD', 52, 'camo', 'splinter', 2, [0xd8e8f0, 0x9ab8c8, 0x5a7a8a, 0xffffff], { glowIdx: 3 }, { anim: 'twinkle', emis: 2.0 }],
+  ['DIRT ROAD', 53, 'camo', 'leaves', 2, [0x0a0e1a, 0x1a2a3a, 0x3a5a2a, 0x9adf5a], { glowIdx: 3 }, { anim: 'pulse', emis: 2.0 }],
+  ['PURP', 54, 'sticker', 'flame', 2, ['#1a2a10', '#9adf5a'], null],
+  ['ANTIQUE BRASS', 55, 'skin', 'carbon', 2, [0xb84a14, 0xe0802a], null, { rough: 0.3, metal: 0.5 }],
+  ['CROP DUSTER', 56, 'camo', 'circuit', 2, [0x8a8a8a, 0xc8c8c8, 0x4a4a4a, 0xe8e8e8], null, { anim: 'scroll', emis: 2.0 }],
+  ['PINE CONE', 57, 'charm', 'coin', 2, [0x6a2a0a, 0x1a2a10, 0x2a1a04], null, null],
+  ['BARN DOOR', 58, 'camo', 'multicam', 2, [0x5a3a0a, 0xa06a1a, 0x2a1a04, 0xe0a040], null, null],
+  ['HARVEST NIGHT', 59, 'camo', 'splinter', 2, [0x3a1a5a, 0x7a3aaa, 0x1a0a2a, 0xc87aff], { glowIdx: 3 }, { anim: 'scroll', emis: 2.0 }],
+  ['CROP CIRCLE', 60, 'banner', 'rays', 2, ['#1a2a10', '#9adf5a'], { em: ['leaf', '#9adf5a', '#1a2a10'] }, null],
+  ['OCTOBER', 61, 'camo', 'topo', 2, [0x3a1a5a, 0x7a3aaa, 0x1a0a2a, 0xc87aff], { glow: 1 }, { anim: 'scroll', emis: 2.0 }],
+  ['BONFIRE', 62, 'camo', 'splat', 2, [0x5a3a0a, 0xa06a1a, 0x2a1a04, 0xe0a040], null, null],
+  ['HARVEST FEST', 63, 'banner', 'chevron', 2, ['#3a5a2a', '#6a2a0a', '#1a2a10'], { em: ['leaf', '#9adf5a', '#1a2a10'] }, null],
+  ['SMOKEHOUSE', 64, 'camo', 'leaves', 2, [0x0a0e1a, 0x1a2a3a, 0x3a5a2a, 0x9adf5a], { glowIdx: 3 }, { anim: 'twinkle', emis: 2.0 }],
+  ['CEDAR', 65, 'skin', 'marble', 2, [0x2a4a1a, 0x4a7a2a], { vein: 0.1, glow: 0x9adf5a }, { rough: 0.2, metal: 0.3 }],
+  ['GROWER', 66, 'sticker', 'text', 2, ['#0b0c0d', '#e0a040'], 'GROWER'],
+  ['HARVEST DIE', 67, 'charm', 'coin', 2, [0xe0802a, 0x9adf5a, 0xa06a1a], null, null],
+  ['HAY FEVER', 68, 'camo', 'multicam', 2, [0x2a1a3a, 0xc2563a, 0xffa04a, 0x5a2a4a], null, null],
+  ['STRAIN HUNTER', 69, 'camo', 'waves', 2, [0x2a4a1a, 0x4a7a2a, 0x1a2a10, 0x9adf5a], null, null],
+  ['DARK ROAST', 70, 'skin', 'marble', 2, [0x8a6a40, 0xc8a878], { vein: 0.1, glow: 0xc8a878 }, { rough: 0.2, metal: 0.3 }],
+  ['PHENO', 71, 'camo', 'blobs', 2, [0x8a8a3a, 0x5a5a24, 0xb0a050, 0x2a2a12], null, null],
+  ['BIG BUD', 72, 'sticker', 'text', 2, ['#2a1a0a', '#e0802a'], 'BIG BUD'],
+  ['GROW TENT', 73, 'camo', 'fade', 2, [0x8a6a40, 0xc8a878], null, null],
+  ['HIGH TIMES', 74, 'camo', 'topo', 2, [0x8a8a3a, 0x5a5a24, 0xb0a050, 0x2a2a12], { glow: 1 }, { anim: 'scroll', emis: 2.0 }],
+  ['FALL COLORS', 75, 'banner', 'stars', 3, ['#0a0e1a', '#b84a14', '#4a7a2a'], { em: ['leaf', '#9adf5a', '#1a2a10'] }, null],
+  ['NUG RUN', 76, 'camo', 'leaves', 3, [0x2a1a3a, 0xc2563a, 0xffa04a, 0x5a2a4a], { glowIdx: 3 }, { anim: 'pulse', emis: 2.3 }],
+  ['MASON JAR II', 77, 'charm', 'coin', 3, [0x6a2a0a, 0x4a7a2a, 0x2a1a04], null, null],
+  ['SMOKE BREAK', 78, 'sticker', 'leaf', 3, ['#1a2a10', '#9adf5a'], null],
+  ['LEAF STORM', 79, 'camo', 'circuit', 3, [0x3a2a1a, 0x5a4028, 0x24180e, 0x7a5a38], null, { anim: 'scroll', emis: 2.3 }],
+  ['RYE', 80, 'skin', 'solid', 3, [0x5a3a0a], { fx: 'bands' }, { rough: 0.15, metal: 0.85, anim: 'twinkle', emis: 1.6 }],
+  ['KIEF', 81, 'camo', 'circuit', 3, [0xd8e8f0, 0x9ab8c8, 0x5a7a8a, 0xffffff], null, { anim: 'pulse', emis: 2.3 }],
+  ['HASH ROSIN', 82, 'camo', 'waves', 3, [0x8a6a40, 0xc8a878], { glowIdx: 3 }, { anim: 'twinkle', emis: 2.3 }],
+  ['JAR TEST', 83, 'camo', 'plasma', 3, [0x5a3a0a, 0xa06a1a, 0x2a1a04, 0xe0a040], null, { anim: 'twinkle', emis: 2.3 }],
+  ['PICKER', 84, 'sticker', 'star', 3, ['#1a0a2a', '#c87aff'], null],
+  ['PEWTER', 85, 'skin', 'solid', 3, [0x8a8a8a], { fx: 'bands' }, { rough: 0.15, metal: 0.85, anim: 'twinkle', emis: 1.6 }],
+  ['BUD ROT', 86, 'camo', 'splinter', 3, [0x3a2a1a, 0x5a4028, 0x24180e, 0x7a5a38], { glowIdx: 3 }, { anim: 'scroll', emis: 2.3 }],
+  ['LIGHTER II', 87, 'charm', 'cube', 3, [0xe0802a, 0x9adf5a, 0x5a3a0a], null, null],
+  ['GOLDEN HOUR', 88, 'camo', 'leaves', 3, [0x0a0e1a, 0x1a2a3a, 0x3a5a2a, 0x9adf5a], { glowIdx: 3 }, { anim: 'twinkle', emis: 2.3 }],
+  ['DUSK FIELD', 89, 'camo', 'waves', 3, [0x8a6a40, 0xc8a878], null, null],
+  ['S2 II', 90, 'sticker', 'text', 3, ['#1a0a2a', '#c87aff'], 'S2 II'],
+  ['THE BACK FORTY', 91, 'camo', 'fleck', 3, [0x2a4a1a, 0x4a7a2a, 0x1a2a10, 0x9adf5a], { glowIdx: 3 }, { anim: 'twinkle', emis: 2.3 }],
+  ['ORCHARD', 92, 'camo', 'cracked', 3, [0x2a4a1a, 0x4a7a2a, 0x1a2a10, 0x9adf5a], { glow: 1 }, { anim: 'scroll', emis: 2.3 }],
+  ['TRELLIS', 93, 'camo', 'splinter', 3, [0x0a0e1a, 0x1a2a3a, 0x3a5a2a, 0x9adf5a], { glowIdx: 3 }, { anim: 'twinkle', emis: 2.3 }],
+  ['IRRIGATION', 94, 'camo', 'waves', 3, [0x8a6a40, 0xc8a878], { glowIdx: 3 }, { anim: 'scroll', emis: 2.3 }],
+  ['IRON SICKLE', 95, 'skin', 'solid', 3, [0x8a8a8a], { fx: 'bands' }, { rough: 0.15, metal: 0.85, anim: 'twinkle', emis: 1.6 }],
+  ['HARVESTED II', 96, 'sticker', 'eye', 3, ['#2a1a0a', '#e0802a'], null],
+  ['ROLLING TRAY II', 97, 'charm', 'flame', 3, [0x6a2a0a, 0x9adf5a, 0x2a1a04], null, null],
+  ['TRIM BIN II', 98, 'camo', 'leaves', 3, [0x8a6a40, 0xc8a878], { glowIdx: 3 }, { anim: 'scroll', emis: 2.3 }],
+  ['LAST LIGHT', 99, 'banner', 'stars', 3, ['#0a0e1a', '#f2c04a', '#2a4a1a'], { em: ['leaf', '#9adf5a', '#1a2a10'] }, null],
+  ['REAPER\'S HARVEST', 100, 'skin', 'leaves', 3, [0x120804, 0xff7a1a, 0x5a1a06, 0xffb03a], { glowIdx: 1 }, { anim: 'scroll', emis: 3, metal: 0.6, rough: 0.2 }],
+];
+for (const [S, LIST] of [[1, BP_ITEMS], [2, BP2_ITEMS]]) for (const [name, tier, kind, t, r, c, gx, mx, track] of LIST) {
+  const flat = kind !== 'camo' && kind !== 'skin', base = { id: 'bp' + S + '_' + slug(name) + ({ sticker: '_st', charm: '_ch', banner: '_bn' }[kind] || ''), name, kind, r, bp: S, tier, track: (flat ? mx : track) === 'f' ? 'f' : 'p' };
   if (kind === 'sticker') COSM.push(Object.assign(base, { g: { t: 'sticker', d: t, c, txt: gx } }));
   else if (flat) COSM.push(Object.assign(base, { g: Object.assign({ t, c }, gx || {}) }));
   else COSM.push(Object.assign(base, { g: Object.assign({ t, c }, gx || {}), m: mx || undefined }));
@@ -377,6 +486,24 @@ function cosmPaint(c, N) {
   if (g.t === 'blobs' || g.t === 'digital') {
     const n1 = fbmT(R, 3, 3), n2 = fbmT(R, 4, 3), n3 = fbmT(R, 6, 2), q = g.t === 'digital' ? 40 : 0;
     fn = (u, v) => { if (q) { u = Math.floor(u * q) / q; v = Math.floor(v * q) / q; } let col = C[0]; if (n1(u, v) > 0.54) col = C[1]; if (n2(u, v) > 0.6) col = C[2]; if (n3(u, v) > 0.64) col = C[3]; return [col[0], col[1], col[2], 0]; };
+  } else if (g.t === 'leaves') {   // SEASON 2: scattered fan leaves (seamless), two leaf colours, glow on the second if asked
+    const N = 6, pts = [];
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) pts.push({ x: (i + 0.2 + R() * 0.6) / N, y: (j + 0.2 + R() * 0.6) / N, a: R() * Math.PI * 2, s: (0.45 + R() * 0.4) / N, k: R() < 0.5 ? 1 : 2 });
+    fn = (u, v) => {
+      for (const p of pts) {
+        let dx = u - p.x, dy = v - p.y; dx -= Math.round(dx); dy -= Math.round(dy);
+        const ca = Math.cos(p.a), sa = Math.sin(p.a), lx = dx * ca + dy * sa, ly = -dx * sa + dy * ca;
+        if (lx * lx + ly * ly > p.s * p.s * 1.1) continue;
+        for (let q = -3; q <= 3; q++) {
+          const ang = q * 0.42, L = p.s * (1 - Math.abs(q) * 0.14), dX = Math.sin(ang), dY = -Math.cos(ang), t = lx * dX + ly * dY, n = Math.abs(lx * dY - ly * dX);
+          if (t > 0 && t < L && n < L * 0.17 * Math.sin(Math.PI * t / L)) { const col = C[p.k] || C[1]; return [col[0], col[1], col[2], g.glowIdx === p.k ? 1 : 0]; }
+        }
+      }
+      return [C[0][0], C[0][1], C[0][2], 0];
+    };
+  } else if (g.t === 'burlap') {   // SEASON 2: woven sack cloth
+    const n = fbmT(R, 24, 2), P = 40;
+    fn = (u, v) => { const cx = Math.floor(u * P), cy = Math.floor(v * P), over = (cx + cy) & 1, th = over ? Math.abs(Math.sin(v * P * Math.PI)) : Math.abs(Math.sin(u * P * Math.PI)); const col = mix(C[0], C[1], Math.min(1, th * 0.75 + n(u, v) * 0.35)); return [col[0], col[1], col[2], 0]; };
   } else if (g.t === 'tiger') {
     const n = fbmT(R, 4, 3), m = fbmT(R, 5, 2);
     fn = (u, v) => { const s = Math.sin((u * 5 + n(u, v) * 1.1 + v * 1) * Math.PI * 2); const col = s > 0.35 && m(u, v) > 0.36 ? C[1] : s < -0.75 ? C[2] : C[0]; return [col[0], col[1], col[2], 0]; };
@@ -872,7 +999,7 @@ function renderLocker() {
   $('lkFilters').innerHTML = `<button class="cod-tab" data-act="lk-back">&lsaquo; WEAPONS</button>` + [['camo', 'CAMOS'], ['grind', 'CHALLENGES'], ['sticker', 'STICKERS'], ['charm', 'CHARMS']].map(([k, n]) => `<button class="cod-tab${tab === k ? ' on' : ''}" data-lktab="${k}">${n}</button>`).join('');
   body.className = 'lk-body';
   body.innerHTML = `<div class="lk-left"><div class="lk-gun-h"><small>${CATS[d.cat].name}</small><b>${d.name}</b></div><canvas id="lkPrev" width="480" height="200"></canvas><div id="lkInfo"></div><div class="lk-acts" id="lkActs2"></div></div><div class="lk-right"><div class="lk-sub">${tab === 'camo' ? 'CAMOS & SKINS · YOU OWN ' + items.length : tab === 'sticker' ? 'STICKERS · ONE PER GUN · YOU OWN ' + items.length : 'CHARMS · HANG ONE ON EACH GUN · YOU OWN ' + items.length}</div><div class="lk-grid" id="lkGrid"></div></div>`;
-  $('lkInfo').innerHTML = sel ? `<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} ${kindName(sel)}${sel.bp ? ' · SEASON 1' : ''}</small><b>${sel.name}</b></div>${sel.secret ? `<div class="lk-secret${sel.universal ? ' prime' : ''}">${sel.universal ? 'SECRET PRIME · WORKS ON EVERY GUN' : 'SECRET · ONLY FOR THE ' + d.name}${typeof SECRET_VID !== 'undefined' && SECRET_VID[sel.id] ? ' <button class="mini lk-rv" data-act="lk-reveal">▶ PLAY REVEAL</button>' : ''}</div>` : ''}
+  $('lkInfo').innerHTML = sel ? `<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} ${kindName(sel)}${sel.bp ? ' · SEASON ' + sel.bp : ''}</small><b>${sel.name}</b></div>${sel.secret ? `<div class="lk-secret${sel.universal ? ' prime' : ''}">${sel.universal ? 'SECRET PRIME · WORKS ON EVERY GUN' : 'SECRET · ONLY FOR THE ' + d.name}${typeof SECRET_VID !== 'undefined' && SECRET_VID[sel.id] ? ' <button class="mini lk-rv" data-act="lk-reveal">▶ PLAY REVEAL</button>' : ''}</div>` : ''}
 <div class="lk-acts"><button class="btn primary" data-act="lk-apply"${on ? ' disabled' : ''}>${on ? 'EQUIPPED' : 'EQUIP ON ' + d.name}</button>${(sel.secret && !sel.universal) || sel.grind ? '' : `<button class="btn" data-act="lk-all">EQUIP ON ALL WEAPONS</button>`}</div>`
     : `<div class="lk-name"><small>NO ${word}</small><b>${tab === 'camo' ? 'FACTORY FINISH' : 'NONE'}</b></div>`;
   $('lkActs2').innerHTML = `<button class="btn" data-act="lk-clear-${tab}"${!curT ? ' disabled' : ''}>REMOVE ${word}</button>`;
@@ -891,7 +1018,7 @@ function renderBanners(body) {
   const nick = (typeof NET !== 'undefined' && NET.nick) || 'PLAYER', lv = lvlInfo(PROG.xp).l;
   body.className = 'lk-body';
   body.innerHTML = `<div class="lk-left"><div class="lk-gun-h"><small>YOUR ACCOUNT</small><b>BANNER</b></div>${bannerCardHtml(sel.id, nick, lv, true)}
-<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} BANNER${sel.bp ? ' · SEASON 1' : ''}</small><b>${sel.name}</b></div>
+<div class="lk-name" style="--rc:${RAR[sel.r].col}"><small>${RAR[sel.r].name} BANNER${sel.bp ? ' · SEASON ' + sel.bp : ''}</small><b>${sel.name}</b></div>
 <div class="lk-acts"><button class="btn primary" data-act="lk-banner"${sel.id === cur ? ' disabled' : ''}>${sel.id === cur ? 'EQUIPPED' : 'EQUIP BANNER'}</button></div>
 <p class="lk-note">Your banner shows on your player card, in lobbies, and on the death cam when you knock out another player.</p></div>
 <div class="lk-right"><div class="lk-sub">BANNERS · YOU OWN ${items.length}</div><div class="lk-bgrid" id="lkGrid">${items.map(c => `<button class="lk-bn${c.id === sel.id ? ' on' : ''}${c.id === cur ? ' eq' : ''}" data-lkb="${c.id}" style="--rc:${RAR[c.r].col}"><img src="${bannerUrl(c.id)}" alt=""><b>${c.name}</b><small>${c.id === cur ? 'EQUIPPED' : RAR[c.r].name}</small></button>`).join('')}</div></div>`;

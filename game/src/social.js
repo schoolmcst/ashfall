@@ -74,7 +74,7 @@ function socTick() {
   // visitors asking to be friends
   for (const p of SOC.inbox.peers()) {
     const pr = p.presence; if (p.sameTab || !pr || !pr.req) continue;
-    const c = cleanFcode(pr.c); if (c.length !== 6 || SOC.answered[c] !== undefined || FRIENDS.some(f => f.c === c)) continue;
+    const c = cleanFcode(pr.c); if (c.length !== 6 || SOC.answered[c] !== undefined || FRIENDS.some(f => f.c === c) || (typeof lnBlocked === 'function' && lnBlocked(cleanNick(pr.n), c))) continue;
     if (!SOC.incoming.has(c)) { SOC.incoming.set(c, { n: cleanNick(pr.n), t: Date.now() }); showFriendToast(c); socRender(); }
   }
   if ((SOC.peekT -= 0.5) <= 0 && (curScreen === 'lobby' || curScreen === 'leaderboard')) { SOC.peekT = 30; socPeekAll(); }

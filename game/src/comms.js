@@ -27,7 +27,7 @@ function renderPauseSide() {
 <label class="pz-sl">MIC SENSITIVITY <b id="vcSensV">${VOICE.sens}</b><input type="range" id="vcSens" min="0" max="100" value="${VOICE.sens}"></label>
 <div class="pz-meter"><i id="vcMeter"></i></div>`;
   }
-  const mutes = players.length ? `<div class="pz-h">PLAYERS · MUTE TURNS OFF THEIR VOICE AND CHAT</div><div class="pz-pl">${players.map((n, i) => { const m = VOICE.muted.has(n) || CHAT.muted.has(n); return `<button class="btn mini${m ? ' on' : ''}" data-act="vm-${i}">${chatEsc(n)} · ${m ? 'MUTED' : 'MUTE'}</button>`; }).join('')}</div>` : '';
+  const mutes = players.length ? `<div class="pz-h">PLAYERS · MUTE TURNS OFF THEIR VOICE AND CHAT</div><div class="pz-pl">${players.map((n, i) => { const m = VOICE.muted.has(n) || CHAT.muted.has(n); return `<button class="btn mini${m ? ' on' : ''}" data-act="vm-${i}">${chatEsc(n)} · ${m ? 'MUTED' : 'MUTE'}</button><button class="btn mini${lnBlocked(n) ? ' on' : ''}" data-act="bk-p${i}">${lnBlocked(n) ? 'BLOCKED' : 'BLOCK'}</button>`; }).join('')}</div>` : '';
   el.innerHTML = tabs + body + mutes; el._players = players;
   const vv = $('vcVol'), vs = $('vcSens');
   if (vv) vv.oninput = () => { VOICE.vol = +vv.value; $('vcVolV').textContent = vv.value; voiceSave(); };

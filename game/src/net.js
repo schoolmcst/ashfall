@@ -11,7 +11,7 @@ NET.app = !!(window.ASHFALL_APP && typeof P2P !== 'undefined' && P2P.available()
 const NICK_KEY = 'ashfall.nick.v1', ROOMC_KEY = 'ashfall.roomcode.v1';
 try { NET.nick = localStorage.getItem(NICK_KEY) || ''; NET.code = localStorage.getItem(ROOMC_KEY) || 'public'; } catch (e) {}
 if (!NET.nick) NET.nick = 'PLAYER' + ((Math.random() * 900 + 100) | 0);
-const cleanNick = s => String(s || '').toUpperCase().replace(/[^A-Z0-9 _-]/g, '').trim().slice(0, 14) || 'PLAYER';
+const cleanNick = s => dzFilter(String(s || '').toUpperCase().replace(/[^A-Z0-9 _-]/g, '').trim().slice(0, 14)) || 'PLAYER';
 const cleanCode = s => String(s || '').toLowerCase().replace(/[^a-z0-9-]/g, '').slice(0, 20) || 'public';
 NET.nick = cleanNick(NET.nick); NET.code = cleanCode(NET.code);
 const netRoomName = () => `ashfall-${NET.mode}-${NET.code}`;

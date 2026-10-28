@@ -128,7 +128,7 @@ function evStrip() {
   if (!e) { if (el) el.remove(); return; }
   if (!el && menu) { el = document.createElement('div'); el.id = 'evStrip'; const t = menu.querySelector('.cod-main'); menu.insertBefore(el, t); }
   if (!el) return;
-  const ms = Math.max(0, evLeft(e)), dd = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24, k = e.id + '-' + evNow().getFullYear(), n = PROG.ev && PROG.ev[k] | 0;
+  const ms = Math.max(0, evLeft(e)), dd = Math.floor(ms / 864e5), hh = Math.floor(ms / 36e5) % 24, k = e.id + '-' + evNow().getFullYear(), n = (PROG.ev && PROG.ev[k]) | 0;
   el.style.setProperty('--ec', e.col);
   el.innerHTML = `<b>EVENT · ${e.name}</b><span>${e.sub}${e.card ? ` · ${Math.min(3, n)}/3` : ''}</span><em>ENDS IN ${dd}D ${hh}H</em>`;
 }

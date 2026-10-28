@@ -7,7 +7,7 @@ const CHAT = { log: [], seq: 0, mine: { all: [], party: [] }, seen: new Map(), o
 try { const o = JSON.parse(localStorage.getItem('ashfall.chat.v1') || 'null'); if (o) { CHAT.mode = ['on', 'party', 'off'].includes(o.mode) ? o.mode : 'on'; CHAT.muted = new Set((o.muted || []).slice(0, 50)); } } catch (e) {}
 const chatSave = () => { try { localStorage.setItem('ashfall.chat.v1', JSON.stringify({ mode: CHAT.mode, muted: [...CHAT.muted] })); } catch (e) {} };
 const QUICK_CHAT = ['Nice shot!', 'Thanks!', 'Need backup!', 'On my way', 'Enemy spotted', 'Push now!', 'Fall back', 'GG'];
-const chatClean = t => String(t || '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 90);
+const chatClean = t => dzFilter(String(t || '').replace(/[\u0000-\u001f<>]/g, '').replace(/\s+/g, ' ').trim().slice(0, 90));
 const chatEsc = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 // a new match: empty the match chat (party lines stay)
 function chatNewMatch() { CHAT.log = CHAT.log.filter(m => m.ch === 'party'); CHAT.mine.all = []; for (const k of [...CHAT.seen.keys()]) if (k.startsWith('all|')) CHAT.seen.delete(k); chatRender(); }
@@ -34,7 +34,7 @@ function chatIngest(ch, peer, name, cm) {
     if (!Array.isArray(e)) continue; const s = +e[0] | 0, txt = chatClean(e[1]); if (!txt || s <= (last || 0)) continue;
     max = Math.max(max, s);
     if (last === undefined) continue;   // first time we see this player: don't replay their old lines
-    if (CHAT.muted.has(name) || (ch === 'all' && CHAT.mode !== 'on') || CHAT.mode === 'off') continue;
+    if (CHAT.muted.has(name) || (typeof lnBlocked === 'function' && lnBlocked(name)) || (ch === 'all' && CHAT.mode !== 'on') || CHAT.mode === 'off') continue;
     chatAdd({ ch, who: name, txt });
   }
   CHAT.seen.set(key, max);

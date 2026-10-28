@@ -1,17 +1,14 @@
 {
- "version": "1.2.59",
+ "version": "1.2.60",
  "notes": [
-  "NEW: CAMPAIGN - FIRST HARVEST. A 12-mission story on the main menu (CAMPAIGN), three weeks before the night Blackwell fell. Checkpoints, the crew fights and talks beside you, 3 hidden STASH TINS per mission, RECRUIT / REGULAR / VETERAN, XP for every mission.",
-  "1 LAST DELIVERY: VANTAGE raids the Green Coast Collective - hold the greenhouse, get Mara out, protect the van, CAPTAIN KESS. 2 THE PLUG: photograph the grey boats unseen, find the manifest, catch the fake buyer, snipe from the catwalk.",
-  "3 PAPER TRAIL: tail a courier, decrypt the drive, run the metro tunnel. 4 HIGH RISE: silent takedowns on the Lazarus tower, rescue Doc, hold the helipad, THE WARDEN.",
-  "5 PURPLE DUST: burn the Nightshade fields, sniper duel with HAWK, beat the dust storm. 6 COLD STORAGE: cut the power, sneak through the dark, break Tank out, steal the seed case.",
-  "7 THE PASS: mine the crossings, hit the convoy, protect Tank, THE HOUND. 8 WHEELS UP: meet Sparks, scan the cargo, catch the loader, blow the plane's cargo.",
-  "9 THE WORKS: the graveyard, Harold's safe, THE FOREMAN, out through the fire. 10 SOURCE: the Grower's journal, walk him to his lighthouse, burn the first field.",
-  "11 LAST STAND: defend the hideout, COMMANDER RHYS. 12 LIGHTS OUT: Blackwell Hospital, HAROLD VOSS and the first infected - leading straight into ZOMBIES chapter one.",
-  "CONTACT HIGH: infected bots now kill in one hit up close, like infected players.",
-  "ZOMBIES: no more finisher takedowns on zombies (the lock could get you killed in a horde). ZOMBIES LEADERBOARD: best round on any map and games played.",
-  "FIX: the traffic lights at VERNON SQUARE were invisible."
+  "NEW: SEASON 2 - HARVEST (BETA). Starts Jan 1: a new 100-tier battle pass with 106 new items - camos, charms, stickers, calling cards and the REAPER'S HARVEST skin at tier 100. Free during beta.",
+  "Your Season 1 items stay yours forever. The menu counts down the last 7 days of a season, and a popup tells you when the new one starts.",
+  "NEW: SAVE CODES. Settings > ACCOUNT > YOUR SAVE makes a code (or a file) with all your progress. Paste it on another PC to load it.",
+  "NEW: BLOCK PLAYERS. Block from the pause menu player list - you won't see their chat, hear their voice or get their invites. Manage the list in Settings > ACCOUNT.",
+  "NEW: WORD FILTER for chat and names (on by default, Settings > ACCOUNT > SAFETY).",
+  "NEW: ERROR REPORTS. If a red error ever shows, it now has COPY REPORT and HIDE buttons. Settings > ACCOUNT > HELP shows recent errors.",
+  "FIX: the event progress could show NaN/3."
  ],
- "sha256": "c0cb17239c04fb4253c5024cbf918642b65d9ca69eb1c68e99aaf2dfc10e7ea8",
+ "sha256": "c60e071cb81e521630844ac5fab1c4ae9e2ab420269b8ad02da07f8ed8b1204e",
  "minApp": "1.0.0"
 }
