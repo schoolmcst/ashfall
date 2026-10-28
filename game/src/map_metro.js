@@ -171,7 +171,7 @@ function dressMetro(s) {
   hydrant(-21.6, Z(27.6), sw); hydrant(-33.9, Z(37.8), sw);
   trashBin(-34.4, Z(11.4), sw, 'paintGreen'); trashBin(-20.8, Z(29.5), sw, 'paintGreen');
   dumpster(-41.4, Z(39), sw, false, 'paintGreen'); blk(-21.6, Z(14.6), 0.5, 0.5, 1.05, 'paintBlue', { y: sw, walk: false });
-  trafficLight(-21.4, Z(25.4), sw, s > 0 ? 's' : 'n'); trafficLight(-34.6, Z(25.4), sw, s > 0 ? 's' : 'n');
+  trafficLightOld(-21.4, Z(25.4), sw, s > 0 ? 's' : 'n'); trafficLightOld(-34.6, Z(25.4), sw, s > 0 ? 's' : 'n');
   for (const [x, z] of [[-29.4, 3.6], [-29.8, 5.2], [-24.6, 14.2], [-25.2, 15.4]]) cone(x, Z(z), y);
   for (const [x, z] of [[-28, 16], [-25, 33], [10, 31]]) manhole(x, Z(z), y);
   for (const [x, z, r] of [[-30.5, 12, 1.8], [-24, 30.5, 1.4], [14, 29.5, 1.6], [-8, 34, 1.2]]) puddle(x, Z(z), y, r);

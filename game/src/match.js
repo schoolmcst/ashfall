@@ -112,7 +112,7 @@ const sideOf = team => !M.def.teams ? -1 : M.mode === 'snd' ? (team === M.snd.at
 const MATCH_CFG_KEY = 'ashfall.match.v1';
 let LOBBY = { mode: 'tdm', map: 'random' };
 // 'random' picks any map except the one you just played
-function pickMapFor(sel, mode) { if (sel && MAPS[sel] && (!MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
+function pickMapFor(sel, mode) { if (sel && MAPS[sel] && (mode === "camp" || !MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
 try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || (MAPS[o.map] && !MAPS[o.map].hidden))) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; if (o && Array.isArray(o.playlist)) LOBBY.playlist = o.playlist.filter(k => MODES[k] && MODES[k].online); } catch (e) {}
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
@@ -334,7 +334,7 @@ function botsHear(x, z, team, r, who) {
 // shot by someone: turn to them straight away
 function botWasHit(e, by) {
   if (!e.entry || e.net) return;
-  e.hitT = M.t; if (e.camp) campAlert(e);
+  e.hitT = M.t; if (e.camp && e.hp > 0) campAlert(e);   // a silent one-shot kill does not raise the alarm
   const t = by === 'player' ? 'P' : by && by.group ? by : null; if (!t) return;
   const p = tpos(t); e.lkp = { x: p.x, z: p.z, y: p.y || 0 }; e.lkpT = M.t; e.lkpWho = t;
   if (!e.tgt && losTo(e, t)) { e.tgt = t; e.aim = Math.max(e.aim, 0.35 * e.iq); }

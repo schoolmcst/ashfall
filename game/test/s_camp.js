@@ -19,7 +19,7 @@ module.exports = async p => {
     const chk = (lab, q) => { if (q && !ok(q.x, q.z, q.y || 0)) bad.push(lab + ' ' + q.x + ',' + q.z); };
     m.tins.forEach((t, i) => chk('tin' + i, t));
     for (const [n, s] of Object.entries(m.squads)) (s.pts || s).forEach((q, i) => { chk('sq:' + n + i, q); for (const w of q.path || []) chk('sq:' + n + i + ' path', { x: w[0], z: w[1], y: w[2] || 0 }); });
-    m.steps.forEach((s, i) => { chk('step' + i + ' at', s.at); chk('step' + i + ' to', s.to); for (const q of s.spots || []) chk('step' + i + ' spot', q); for (const w of s.path || []) chk('step' + i + ' path', { x: w[0], z: w[1], y: w[2] || 0 }); });
+    m.steps.forEach((s, i) => { chk('step' + i + ' at', s.at); chk('step' + i + ' to', s.to); for (const q of s.spots || []) chk('step' + i + ' spot', q); chk('step' + i + ' obj', s.obj); for (const w of s.path || []) chk('step' + i + ' path', { x: w[0], z: w[1], y: w[2] || 0 }); });
     return bad;
   });
   await shot('start', 2500);
@@ -52,6 +52,9 @@ module.exports = async p => {
       if (st.type === 'carry') { A.CAMP.carry = { item: 'X' }; tp(st.to); }
       if (st.type === 'escort') { const a = A.CAMP.allies.find(e => e.ally === st.who); const end = st.path[st.path.length - 1]; if (a) { a.group.position.set(end[0], end[2] || 0, end[1]); } tp({ x: end[0] + 1, z: end[1] }); A.CAMP.escI = st.path.length - 1; }
       if (st.type === 'talk') { A.CAMP.talking = false; A.CAMP.q.length = 0; }
+      if (st.type === 'upload') { A.CAMP.upOn = true; A.CAMP.upP = 1; tp(st.at); }
+      if (st.type === 'route') { A.CAMP.rtI = st.spots.length - 1; tp(st.spots[st.spots.length - 1]); }
+      if (st.type === 'tail') { const rr = A.campAlive(st.squads[0])[0]; if (rr) { const end = rr.camp.path[rr.camp.path.length - 1]; rr.group.position.set(end[0], end[2] || 0, end[1]); rr.camp.pi = rr.camp.path.length - 1; tp({ x: end[0] + 10, z: end[1] }); } }
       for (let k = 0; k < 40 && A.CAMP.i === i0 && !A.CAMP.done; k++) { if (A.G.state === 'paused') A.G.state = 'playing'; A.CAMP.talking = false; A.CAMP.q.length = 0; await w(250); if (k === 20) kill(); }
       return { moved: A.CAMP.i !== i0 || A.CAMP.done, dead: A.CAMP.dead, state: A.G.state, enemies: A.enemies.filter(e => e.camp && !e.camp.ally).length, err: (document.getElementById('err') || {}).textContent || '' };
     });

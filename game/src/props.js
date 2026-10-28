@@ -117,7 +117,7 @@ function manhole(x, z, y) { batchAdd('dark', new THREE.CircleGeometry(0.4, 16), 
 function stripes(x, z, y, alongX, n, len = 2.6, key = 'paintWhite') { for (let i = 0; i < n; i++) { const o = (i - (n - 1) / 2) * 0.9; floorQuad(x + (alongX ? 0 : o), z + (alongX ? o : 0), alongX ? len : 0.45, alongX ? 0.45 : len, y + 0.004, key, 1); } }
 function rubbleScatter(x, z, y, r = 2, n = 8) { for (let i = 0; i < n; i++) { const s = 0.08 + Math.random() * 0.22, px = x + (Math.random() - 0.5) * 2 * r, pz = z + (Math.random() - 0.5) * 2 * r; if (!placeProp('rock' + (i % 3), mat4(px, y + s * 0.2, pz, Math.random() * 3, Math.random() * 3, Math.random() * 3, s * 2, s * 1.3, s * 2), { rock: 'concrete' })) batchAdd('concrete', new THREE.DodecahedronGeometry(s, 0), mat4(px, y + s * 0.4, pz)); } }
 function paperScatter(x, z, y, r = 2, n = 6) { for (let i = 0; i < n; i++) batchAdd('cloth1', new THREE.PlaneGeometry(0.21, 0.3), mat4(x + (Math.random() - 0.5) * 2 * r, y + 0.01 + i * 0.001, z + (Math.random() - 0.5) * 2 * r, -Math.PI / 2, 0, Math.random() * 6), false); }
-function trafficLight(x, z, y, face) {
+function trafficLightOld(x, z, y, face) {   // the street kind (face n/s/e/w); props2 has the newer one called trafficLight
   const [fx, fz] = DIRV[face]; CYL('dark', 0.07, 0.08, 3.6, 8, x, y + 1.8, z);
   B('dark', 0.32, 0.9, 0.28, x, y + 3.9, z); for (const [k, h] of [['redLight', 4.2], ['dark', 3.9], ['greenLight', 3.6]]) B(k, 0.18, 0.18, 0.04, x + fx * 0.15, y + h, z + fz * 0.15, 0, 0, 0, false);
   PZ(x, y, z, 0.25, 3.6, 0.25, { noRay: true });

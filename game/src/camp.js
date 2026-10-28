@@ -137,6 +137,7 @@ function campSpawnSquad(name, opt = {}) {
     e.camp = { sq: name, post: { x: pt.x, z: pt.z, y }, path: pt.path || null, pi: 0, look: pt.look, mode: pt.mode || def.mode || 'post', alert: !!(opt.alert || def.alert || pt.alert), r: pt.r || def.r || 7, runner: pt.runner, boss: pt.boss, tag: pt.tag };
     if (pt.look !== undefined) { e.group.rotation.y = pt.look; e.lookYaw = pt.look; }
     if (pt.boss) { e.boss = true; e.name = pt.name || 'BOSS'; e.group.scale.setScalar(pt.scale || 1.15); e.group.userData.scale = pt.scale || 1.15; }
+    if (kind === 'infected') { e.team = 1; infDress(e); e.speed = pt.speed || 5.4; e.meleeDmg = 34 * (CAMP.diff === 'veteran' ? 1.4 : CAMP.diff === 'recruit' ? 0.7 : 1); e.hp = e.maxHp = (pt.hp || 140) * D.hp; e.camp.alert = true; }
     if (pt.runner) { e.camp.mode = 'run'; e.speed = pt.speed || 5; e.dmg = 0; e.hold = 0; }
     if (pt.target) e.camp.target = true;
     if (e.camp.target) campTag(e, pt.mark || 'TARGET');
@@ -192,6 +193,7 @@ function campGoal(e, keep, near, set) {
     if (d > 6 || !keep) { const a = TAU * (CAMP.allies.indexOf(e) / Math.max(1, CAMP.allies.length)) + P.yaw + Math.PI; return set({ x: P.x + Math.sin(a) * 2.6, z: P.z + Math.cos(a) * 2.6, y: P.y }, 1.2); }
     return e.goal;
   }
+  if (c.mode === 'run' && c.backT > 0) { const p = c.path[Math.max(0, c.pi - 1)]; e.lookYaw = Math.atan2(P.x - e.group.position.x, P.z - e.group.position.z); return set({ x: e.group.position.x, z: e.group.position.z, y: e.group.position.y }, 0.3); }
   if (c.mode === 'run') { const p = c.path && c.path[c.pi]; if (p) { if (Math.hypot(p[0] - e.group.position.x, p[1] - e.group.position.z) < 1.5) c.pi++; const q = c.path[Math.min(c.pi, c.path.length - 1)]; e.tgt = null; return set({ x: q[0], z: q[1], y: q[2] || 0 }, 0.3); } return null; }
   if (!c.alert) {
     if (c.path) { const p = c.path[c.pi % c.path.length]; if (Math.hypot(p[0] - e.group.position.x, p[1] - e.group.position.z) < 1.2) c.pi++; const q = c.path[c.pi % c.path.length]; return set({ x: q[0], z: q[1], y: q[2] !== undefined ? q[2] : c.post.y }, 1.5); }
@@ -220,6 +222,8 @@ function campBegin(i) {
   if (st.type === 'escort') { const a = campAllyOf(st.who) || campAlly(st.who); a.camp.esc = true; a.hp = a.maxHp = st.hp || 600; CAMP.escPt = { x: st.path[0][0], z: st.path[0][1], y: st.path[0][2] || 0 }; }
   if (st.type === 'snipe' && st.gun) { try { const w = WEAPONS.findIndex(x => x && x.def.id === st.gun); if (w < 0) campLoadout({ p: st.gun, s: (WEAPONS[1] && WEAPONS[1].def.id) || 'sidearm' }); } catch (e) {} }
   if (st.loadout) campLoadout(st.loadout);
+  if (st.env) try { applyEnv(Object.assign({}, MAPS[curMap].env, CAMP.m.env || {}, st.env)); } catch (e) {}
+  CAMP.upP = 0; CAMP.upOn = false; CAMP.rtI = 0; CAMP.addI = 0; CAMP.tailT = 0; CAMP.tailClose = 0; CAMP.seenBack = 0; CAMP.lookT = 6;
   campPropsFor(st);
   if (st.say) campSay(st.say);
   if (st.banner) showBanner(st.banner[0], st.banner[1] || '');
@@ -252,7 +256,9 @@ function campUpdate(dt) {
   switch (st.type) {
     case 'go': if (near(st.at)) campStepDone(); break;
     case 'talk': if (!CAMP.talking && CAMP.stT > (st.secs || 0.5)) campStepDone(); break;
-    case 'clear': case 'boss': if (left(st.squads) <= (st.min || 0) && CAMP.stT > 1) campStepDone(); break;
+    case 'clear': case 'boss':
+      if (st.adds) { const b = (st.squads || st.spawn || []).flatMap(n => campAlive(n)).find(e => e.boss); for (; b && CAMP.addI < st.adds.length && b.hp / b.maxHp <= st.adds[CAMP.addI].at; CAMP.addI++) { campSpawnSquad(st.adds[CAMP.addI].sq, { alert: true }); if (st.adds[CAMP.addI].say) campSay(st.adds[CAMP.addI].say); } }
+      if (left(st.squads) <= (st.min || 0) && CAMP.stT > 1) campStepDone(); break;
     case 'snipe': if (left(st.squads) <= 0 && CAMP.stT > 1) campStepDone(); else if (st.at && !near(st.at, (st.at.r || 3) + 4) && CAMP.stT > 2) campOut(dt, 'GET BACK TO THE OVERWATCH SPOT'); else campIn(); break;
     case 'hold': case 'defend': {
       for (; CAMP.waveI < (st.waves || []).length && CAMP.stT >= st.waves[CAMP.waveI].t; CAMP.waveI++) campSpawnSquad(st.waves[CAMP.waveI].sq, { alert: true });
@@ -270,6 +276,32 @@ function campUpdate(dt) {
     }
     case 'carry': if (CAMP.carry && near(st.to, st.to.r || 3)) { CAMP.carry = null; campStepDone(); } break;
     case 'photo': campPhotoTick(dt); break;
+    case 'upload': {   // started with USE, then it runs while you stay close (waves come at you)
+      if (!CAMP.upOn) break;
+      for (; CAMP.waveI < (st.waves || []).length && CAMP.upT >= st.waves[CAMP.waveI].t; CAMP.waveI++) campSpawnSquad(st.waves[CAMP.waveI].sq, { alert: true });
+      const inR = near(st.at, st.at.r || 7); CAMP.upT += dt;
+      if (inR) { CAMP.upP = Math.min(1, CAMP.upP + dt / st.secs); campIn(); } else campOut(dt, 'GET BACK TO THE ' + (st.thing || 'UPLOAD') + ' · IT STOPS WHEN YOU LEAVE');
+      if (CAMP.upP >= 1) campStepDone();
+      break;
+    }
+    case 'tail': {   // follow without being seen: not too close, not too far
+      const r = campAlive(st.squads[0])[0];
+      if (!r) { if (CAMP.stT > 1) campFail(st.failKill || 'you were supposed to follow him, not shoot him'); break; }
+      const c = r.camp, g = r.group.position, d = Math.hypot(g.x - P.x, g.z - P.z), end = c.path[c.path.length - 1];
+      if (c.pi >= c.path.length - 1 && Math.hypot(end[0] - g.x, end[1] - g.z) < 2) { scene.remove(r.group); enemies.splice(enemies.indexOf(r), 1); campStepDone(); break; }
+      if (d > (st.far || 32)) { CAMP.tailT = (CAMP.tailT || 0) + dt; showCenter('YOU ARE LOSING HIM', Math.max(0, Math.ceil(8 - CAMP.tailT)) + ' s'); CAMP.outing = true; if (CAMP.tailT > 8) campFail('you lost him'); }
+      else { if (CAMP.tailT) { CAMP.tailT = 0; campIn(); } }
+      if (d < (st.near || 6) && CAMP.stT > 2) { const fx = Math.sin(r.group.rotation.y), fz = Math.cos(r.group.rotation.y); CAMP.tailClose = (CAMP.tailClose || 0) + dt; if (CAMP.tailClose > 1.4 || (fx * (P.x - g.x) + fz * (P.z - g.z)) / (d || 1) > 0.3) campFail(st.failSpot || 'he saw you'); } else CAMP.tailClose = 0;
+      // he looks back now and then
+      if ((CAMP.lookT = (CAMP.lookT || 0) - dt) <= 0) { CAMP.lookT = rnd(7, 12); r.camp.backT = 1.6; }
+      if (r.camp.backT > 0) { r.camp.backT -= dt; const d2 = d; if (d2 < 18 && G.crouchK < 0.5 && gridClear(g.x, g.z, P.x, P.z, g.y, P.y)) { CAMP.seenBack = (CAMP.seenBack || 0) + dt; if (CAMP.seenBack > 0.7) campFail('he looked back and saw you · crouch or hide when he turns'); } }
+      else CAMP.seenBack = 0;
+      break;
+    }
+    case 'route': {   // checkpoints one after another
+      const q = st.spots[CAMP.rtI]; if (q && near(q, q.r || 3)) { CAMP.rtI++; try { tone(880, 0.08, 0.05, 'triangle'); } catch (e) {} if (CAMP.rtI >= st.spots.length) campStepDone(); else showMsg(`${CAMP.rtI} OF ${st.spots.length}`); }
+      break;
+    }
   }
 }
 function campOut(dt, txt) { CAMP.outing = true; CAMP.outT += dt; showCenter(txt, Math.max(0, Math.ceil(10 - CAMP.outT)) + ' s'); if (CAMP.outT > 10) { hideCenter(); campFail('you left the area'); } else if (CAMP.outT < dt * 1.5) {} }
@@ -309,7 +341,7 @@ function campPhotoTick(dt) {
       _cmR.set(new THREE.Vector3(P.x, P.y + P.eye, P.z), new THREE.Vector3(dx / d, dy / d, dz / d)); _cmR.far = Math.max(0.1, d - 0.8); if (_cmR.intersectObjects(wallMeshes, false).length) return; best = k;
     });
   }
-  if (best >= 0) { CAMP.phP += dt; CAMP.phK = best; showCenter('PHOTOGRAPHING · ' + st.spots[best].label, Math.round(Math.min(1, CAMP.phP / 1.1) * 100) + '%'); if (CAMP.phP >= 1.1) { CAMP.photos.add(best); CAMP.phP = 0; hideCenter(); campFlash(); showMsg(`PHOTO ${CAMP.photos.size} OF ${st.spots.length} · ${st.spots[best].label}`); if (st.spots[best].say) campSay(st.spots[best].say); if (CAMP.photos.size >= st.spots.length) campStepDone(); } }
+  if (best >= 0) { CAMP.phP += dt; CAMP.phK = best; showCenter((st.verbP || 'PHOTOGRAPHING') + ' · ' + st.spots[best].label, Math.round(Math.min(1, CAMP.phP / 1.1) * 100) + '%'); if (CAMP.phP >= 1.1) { CAMP.photos.add(best); CAMP.phP = 0; hideCenter(); if (!st.noFlash) campFlash(); showMsg(`${st.photoWord || 'PHOTO'} ${CAMP.photos.size} OF ${st.spots.length} · ${st.spots[best].label}`); if (st.spots[best].say) campSay(st.spots[best].say); if (CAMP.photos.size >= st.spots.length) campStepDone(); } }
   else if (CAMP.phK !== null) { CAMP.phP = 0; CAMP.phK = null; hideCenter(); }
 }
 function campFlash() { const f = document.createElement('div'); f.className = 'camp-flash'; document.body.appendChild(f); setTimeout(() => f.remove(), 400); try { burst(0.15, 4000, 0.2, 'highpass'); tone(2400, 0.05, 0.05, 'square'); } catch (e) {} }
@@ -321,6 +353,7 @@ function campInteract(dt, held) {
   const close = (p, r) => Math.hypot(P.x - p.x, P.z - p.z) < (r || 1.9) && Math.abs((P.y || 0) - (p.y || 0)) < 2;
   let spot = null, key = null, secs = st.secs || 2, verb = st.verb || 'USE';
   if (st.type === 'use' || st.type === 'pick') { if (!CAMP.stepDone && close(st.at, st.at.r)) { spot = st.at; key = 'u'; if (st.type === 'pick') { secs = st.secs || 0.6; verb = st.verb || 'TAKE ' + (st.item || 'IT'); } } }
+  if (st.type === 'upload' && !CAMP.upOn && close(st.at, 1.9)) { spot = st.at; key = 'up'; secs = 1.2; verb = st.verb || 'START THE UPLOAD'; }
   if (st.type === 'carry' && !CAMP.carry && close(st.at, st.at.r)) { spot = st.at; key = 'c'; secs = 0.8; verb = 'PICK UP ' + (st.item || 'IT'); }
   if (st.type === 'multi') st.spots.forEach((s, j) => { if (!spot && !CAMP.multi.has(j) && close(s, s.r)) { spot = s; key = 'm' + j; verb = s.verb || st.verb || 'USE'; } });
   if (st.type === 'search') st.spots.forEach((s, j) => { if (!spot && !CAMP.searched.has(j) && close(s, s.r)) { spot = s; key = 's' + j; secs = st.secs || 1.4; verb = s.verb || st.verb || 'SEARCH'; } });
@@ -330,6 +363,7 @@ function campInteract(dt, held) {
   if (CAMP.useP >= secs) {
     CAMP.useP = 0; CAMP.useK = null;
     if (key === 'u') { campPropUsed(st.at); if (st.type === 'pick') showMsg((st.item || 'GOT IT') + ''); campStepDone(); }
+    else if (key === 'up') { CAMP.upOn = true; CAMP.upT = 0; campPropUsed(st.at); showBanner(st.thing ? st.thing + ' STARTED' : 'UPLOAD STARTED', 'stay close until it finishes'); if (st.sayStart) campSay(st.sayStart); }
     else if (key === 'c') { CAMP.carry = { item: st.item || 'THE BAG' }; campPropUsed(st.at); showBanner('CARRYING ' + (st.item || 'THE BAG'), 'you are slower · no sprinting'); campHud(true); }
     else if (key[0] === 'm') { const j = +key.slice(1); CAMP.multi.add(j); campPropUsed(st.spots[j]); try { if (st.boom) { sfx.explode(at(spot.x, spot.z, 30, spot.y)); explosionFx(new THREE.Vector3(spot.x, (spot.y || 0) + 0.4, spot.z), 0.5); } } catch (e) {}
       if (st.spots[j].say) campSay(st.spots[j].say); showMsg(`${CAMP.multi.size} OF ${st.spots.length}`); if (CAMP.multi.size >= st.spots.length) campStepDone(); }
@@ -381,8 +415,8 @@ function campComplete() {
   let o = $('campEndEl'); if (o) o.remove(); o = document.createElement('div'); o.id = 'campEndEl'; o.className = 'camp-end';
   o.innerHTML = `<div class="ce-box"><small>MISSION ${idx + 1} COMPLETE · ${D.name}</small><b>${m.title}</b>
     <div class="ce-grid">${[['TIME', fmtT(secs)], ['KILLS', MS.kills], ['HEADSHOTS', MS.heads], ['ACCURACY', acc + '%'], ['DEATHS', CAMP.deaths], ['STASH TINS', `${tins.size} / 3`]].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('')}</div>
-    <div class="ce-xp">+${xp.toLocaleString()} XP${dz ? ` · +${dz} DZ` : ''}</div>
-    <div class="ce-btns">${next ? `<button class="btn primary" data-act="cp-next">NEXT MISSION · ${next.title}</button>` : `<button class="btn primary" data-act="cp-menu">${CAMP_MISSIONS.length < CAMP_PLAN.length ? 'MORE MISSIONS COMING SOON' : 'THE END · BACK TO THE CAMPAIGN'}</button>`}<button class="btn" data-act="cp-menu">MISSION SELECT</button></div></div>`;
+    <div class="ce-xp">+${xp.toLocaleString()} XP${dz ? ` · +${dz} DZ` : ''}</div>${!next && CAMP_MISSIONS.length >= CAMP_PLAN.length ? '<div class="ce-next">FIRST HARVEST · THE END<br><small>THE STORY CONTINUES IN ZOMBIES · CHAPTER ONE: THE GREEN CURE</small></div>' : ''}
+    <div class="ce-btns">${next ? `<button class="btn primary" data-act="cp-next">NEXT MISSION · ${next.title}</button>` : `<button class="btn primary" data-act="cp-menu">${CAMP_MISSIONS.length < CAMP_PLAN.length ? 'MORE MISSIONS COMING SOON' : 'THE END · BACK TO THE CAMPAIGN'}</button>`}<button class="btn" data-act="cp-menu">MISSION SELECT</button>${!next && CAMP_MISSIONS.length >= CAMP_PLAN.length ? '<button class="btn" data-act="go-zombies">PLAY ZOMBIES · CHAPTER ONE</button>' : ''}</div></div>`;
   document.body.appendChild(o);
   try { sfx.streak(); } catch (e) {}
   if (m.end) campSay(m.end);
@@ -478,9 +512,11 @@ function campTargets() {
   if (st.type === 'multi') return st.spots.filter((s, j) => !CAMP.multi.has(j));
   if (st.type === 'search') return st.spots.filter((s, j) => !CAMP.searched.has(j));
   if (st.type === 'photo') return st.spots.filter((s, j) => !CAMP.photos.has(j)).map(s => Object.assign({ y: (s.y || 0) + (s.h || 1) }, s, { y: (s.y || 0) + (s.h || 1) - 1 }));
-  if (st.type === 'hold' || st.type === 'snipe') return st.at ? [st.at] : [];
+  if (st.type === 'hold' || st.type === 'snipe' || st.type === 'upload') return st.at ? [st.at] : [];
+  if (st.type === 'route') return st.spots[CAMP.rtI] ? [st.spots[CAMP.rtI]] : [];
   if (st.type === 'defend') return CAMP.defObj ? [CAMP.defObj] : [];
   if (st.type === 'escort') { const a = campAllyOf(st.who); return a ? [{ x: a.group.position.x, z: a.group.position.z, y: a.group.position.y + 1.2, label: campChar(st.who).name }] : []; }
+  if (st.type === 'tail') return (st.squads || []).flatMap(n => campAlive(n)).map(e => ({ x: e.group.position.x, z: e.group.position.z, y: e.group.position.y + 1.0, enemy: true, label: 'TARGET' }));
   if (st.type === 'chase' || st.type === 'boss' || (st.type === 'clear' && st.mark)) return (st.squads || st.spawn || []).flatMap(n => campAlive(n)).map(e => ({ x: e.group.position.x, z: e.group.position.z, y: e.group.position.y + 1.0, enemy: true }));
   return [];
 }
@@ -488,9 +524,9 @@ function campHud(force) {
   let h = $('campHudEl'); if (!campOn()) { if (h) h.remove(); return; }
   if (!h) { h = document.createElement('div'); h.id = 'campHudEl'; ($('hud') || document.body).appendChild(h); }
   const st = CAMP.st, m = CAMP.m; if (!st) return;
-  const extra = st.type === 'multi' ? ` (${CAMP.multi.size}/${st.spots.length})` : st.type === 'photo' ? ` (${CAMP.photos.size}/${st.spots.length})` : st.type === 'clear' || st.type === 'snipe' ? (() => { const n = (st.squads || st.spawn || []).reduce((a, s) => a + campAlive(s).length, 0); return n ? ` (${n} left)` : ''; })() : '';
+  const extra = st.type === 'upload' && CAMP.upOn ? ` · ${Math.floor(CAMP.upP * 100)}%` : st.type === 'route' ? ` (${CAMP.rtI}/${st.spots.length})` : st.type === 'multi' ? ` (${CAMP.multi.size}/${st.spots.length})` : st.type === 'photo' ? ` (${CAMP.photos.size}/${st.spots.length})` : st.type === 'clear' || st.type === 'snipe' ? (() => { const n = (st.squads || st.spawn || []).reduce((a, s) => a + campAlive(s).length, 0); return n ? ` (${n} left)` : ''; })() : '';
   const timer = st.t ? ` · ${fmtT(Math.max(0, st.t - CAMP.stT))}` : (st.type === 'hold' || st.type === 'defend') ? ` · ${fmtT(Math.max(0, st.secs - CAMP.stT))}` : '';
-  const key = st.goal + extra + timer + (CAMP.carry ? '|c' : '') + (CAMP.defObj ? Math.ceil(CAMP.defObj.hp) : '') + (st.stealth || st.quiet ? (CAMP.alarmed ? 'A' : 'q') : '');
+  const key = st.goal + extra + timer + (st.type === 'upload' ? Math.floor(CAMP.upP * 100) : '') + (CAMP.carry ? '|c' : '') + (CAMP.defObj ? Math.ceil(CAMP.defObj.hp) : '') + (st.stealth || st.quiet ? (CAMP.alarmed ? 'A' : 'q') : '');
   if (!force && h._k === key) return; h._k = key;
   const bar = CAMP.defObj ? `<div class="ch-bar"><span>${CAMP.defObj.name}</span><s style="width:${Math.max(0, CAMP.defObj.hp / CAMP.defObj.max * 100)}%"></s></div>` : '';
   const boss = (st.type === 'boss' ? (st.squads || st.spawn || []).flatMap(n => campAlive(n)).filter(e => e.boss) : []).map(e => `<div class="ch-bar boss"><span>${e.name}</span><s style="width:${Math.max(0, e.hp / e.maxHp * 100)}%"></s></div>`).join('');
@@ -589,7 +625,7 @@ setTimeout(() => {
 .camp-end{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(6,8,10,.86);z-index:20;pointer-events:auto}
 .ce-box{width:min(720px,92vw);text-align:center}.ce-box>small{font-size:12px;letter-spacing:.35em;color:#e0b44a}.ce-box>b{display:block;font-size:42px;letter-spacing:.14em;color:#fff;margin:8px 0 18px}
 .ce-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}.ce-grid div{border:1px solid rgba(255,255,255,.15);padding:10px;background:rgba(255,255,255,.04)}.ce-grid small{display:block;font-size:10px;letter-spacing:.24em;color:#aaa}.ce-grid b{font-size:22px;color:#fff}
-.ce-xp{font-size:16px;letter-spacing:.2em;color:#8adf6a;margin-bottom:16px}.ce-btns{display:flex;gap:10px;justify-content:center}
+.ce-xp{font-size:16px;letter-spacing:.2em;color:#8adf6a;margin-bottom:16px}.ce-next{font-size:22px;letter-spacing:.3em;color:#e0b44a;margin:-4px 0 18px}.ce-next small{font-size:11px;letter-spacing:.24em;color:#ccc}.ce-btns{display:flex;gap:10px;justify-content:center}
 #campaign .cp-sum{margin-left:auto;font-size:12px;letter-spacing:.2em;color:#e0b44a;align-self:center}
 #campaign .cp-main{display:grid;grid-template-columns:minmax(260px,360px) 1fr;gap:16px;padding:12px 28px 24px;height:calc(100% - 90px);box-sizing:border-box}
 #campaign .cp-list{overflow:auto;display:flex;flex-direction:column;gap:6px;pointer-events:auto}
