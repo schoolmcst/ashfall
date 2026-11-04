@@ -1,11 +1,12 @@
 {
- "version": "1.2.66",
+ "version": "1.2.67",
  "notes": [
-  "NEW: 6 more photo-scanned surfaces (SCANNED TEXTURES): painted steel, bare steel panels, plaster walls, tiled floors, fabric and deck planks. Downloaded once, then loaded from disk.",
-  "Every map: containers, ship hulls and painted walls no longer use the rusty-metal photo, carpets and velvet no longer use the concrete one. Each surface keeps its own colour.",
-  "Still in from 1.2.65: the frame drop fix, brighter shadows and SHADOW BRIGHTNESS.",
-  "Still in from 1.2.64: THE HIGH TIDE (zombies chapter six), THE DISCO BONG, BLOOM & COLOUR graphics."
+  "GUNSMITH 2.0 (BETA): 7 new attachments. FLASH HIDER, PORTED BARREL, HANDSTOP, TAC LIGHT, JUNGLE MAGS (two mags taped together for fast reloads), WEIGHTED STOCK and MATCH GRADE ammo. 146 new gun builds.",
+  "INSPECT: drag the gun in the LOADOUT and LOCKER to turn it any way round, scroll to zoom in on a part, double-click to reset. On a controller the right stick turns it.",
+  "THE STASH PACK: 8 new charms in chance boxes. FAN LEAF, BIC FLICK, SPECIAL BROWNIE, GRINDER, STASH JAR, LIT JOINT, MINI BONG and the rare NIGHTSHADE LEAF.",
+  "Still in from 1.2.66: 6 more photo-scanned surfaces (painted steel, steel, plaster, tile, fabric, deck planks).",
+  "Still in from 1.2.65: the frame drop fix, brighter shadows and SHADOW BRIGHTNESS."
  ],
- "sha256": "36d69a76564a6b9f08a9b6609c90d4004fca821582df36e57054e7413e53fada",
+ "sha256": "006bb17078a3107810c4a4a627674495f58a26d64403367664ad9d125d7c7834",
  "minApp": "1.0.0"
 }

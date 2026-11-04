@@ -128,6 +128,10 @@ const CHARM_DEFS = [
   ['fire', 'FIREBALL', 2, 'flame', [0xff5a14, 0xffd23f, 0xff7a1a]], ['volt', 'VOLT', 2, 'bolt', [0x2a8aff, 0xbfe4ff, 0x4aa8ff]], ['rdice', 'RED DICE', 2, 'dice', [0xd62e3a, 0xffffff]],
   ['gem', 'DIAMOND', 3, 'gem', [0xbfe8ff, 0xffffff, 0x7fd0ff], { spin: 1 }], ['coin', 'DZ COIN', 3, 'coin', [0xe9b949, 0xffe28a], { metal: 1, spin: 1 }], ['orb', 'PLASMA ORB', 3, 'orb', [0x7a2cff, 0xb8bcc2, 0xff3cf0]],
   ['gskull', 'GOLD SKULL', 3, 'skull', [0xf2c14e, 0x3b2a05], { metal: 1 }],
+  // 1.2.67 GUNSMITH 2.0: the stash pack
+  ['leaf', 'FAN LEAF', 0, 'leaf', [0x1e7a1e, 0x14481a]], ['lighter', 'BIC FLICK', 0, 'lighter', [0xe04a9a, 0xff9a2a, 0xffb03a]], ['brownie', 'SPECIAL BROWNIE', 0, 'brownie', [0x4a2a14, 0xf2ece0]],
+  ['grinder', 'GRINDER', 1, 'grinder', [0x7a8088, 0x3adf5a], { metal: 1 }], ['jar', 'STASH JAR', 1, 'jar', [0xc8e8d8, 0x2f6a14, 0x111111]], ['joint', 'LIT JOINT', 2, 'joint', [0xf2ece0, 0x7a5a3a, 0xff6a1a]],
+  ['bong', 'MINI BONG', 2, 'bong', [0x6ad8ff, 0x1a6a3a, 0x5adf4a]], ['purple', 'NIGHTSHADE LEAF', 3, 'leaf', [0x7a2cff, 0x2a0a5a, 0xb06cff], { spin: 1 }],
 ];
 for (const [id, name, r, t, c, o] of CHARM_DEFS) COSM.push({ id: 'ch_' + id, name, kind: 'charm', r, g: Object.assign({ t, c }, o || {}) });
 // ---- account BANNERS: the card behind your name (lobby, your player card, and the death cam when you kill another player)
@@ -729,6 +733,19 @@ function charmBuild(id) {
     case 'gem': { const m = chmMat(c0, { metalness: 0.2, roughness: 0.04, emissive: c2 === undefined ? 0x000000 : c2, emissiveIntensity: 0.6, flatShading: true }); const o = add(new THREE.OctahedronGeometry(0.0105, 0), m); o.scale.set(1, 1.35, 1); break; }
     case 'coin': { const a = add(new THREE.CylinderGeometry(0.0105, 0.0105, 0.0026, 24), M0); a.rotation.x = Math.PI / 2; const b = add(new THREE.CylinderGeometry(0.0072, 0.0072, 0.0034, 6), M1); b.rotation.x = Math.PI / 2; break; }
     case 'orb': add(new THREE.SphereGeometry(0.0075, 16, 12), chmMat(c0, { emissive: c2 === undefined ? c0 : c2, emissiveIntensity: 2.2, roughness: 0.2 })); for (let i = 0; i < 2; i++) { const t = add(new THREE.TorusGeometry(0.0092, 0.0008, 6, 24), chmMat(c1, { metalness: 1, roughness: 0.25 })); t.rotation.y = i * Math.PI / 2; } break;
+    case 'leaf': { const m = c2 !== undefined ? chmMat(c0, { emissive: c2, emissiveIntensity: 0.9 }) : M0;   // seven leaflets fanned out from the stem
+      for (let i = -3; i <= 3; i++) { const a = i * 0.42, len = 0.016 - Math.abs(i) * 0.0028, lf = add(new THREE.SphereGeometry(0.0032, 8, 6), m, Math.sin(a) * len * 0.55, Math.cos(a) * len * 0.55 - 0.002, 0); lf.scale.set(0.55, len / 0.0064, 0.25); lf.rotation.z = -a; }
+      add(new THREE.CylinderGeometry(0.0008, 0.0008, 0.008, 5), M1, 0, -0.007, 0); break; }
+    case 'lighter': add(new THREE.BoxGeometry(0.009, 0.019, 0.006), chmMat(c0, { roughness: 0.25 })); add(new THREE.BoxGeometry(0.0094, 0.004, 0.0064), steel, 0, 0.0115, 0);
+      add(new THREE.ConeGeometry(0.0022, 0.007, 8), chmMat(c1, { emissive: c2, emissiveIntensity: 2.0, transparent: true, opacity: 0.9 }), 0, 0.0175, 0); break;
+    case 'brownie': add(new THREE.BoxGeometry(0.016, 0.009, 0.016), chmMat(c0, { roughness: 0.85 })); for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(0.016, 0.0012, 0.0018), M1, 0, 0.0048, -0.005 + i * 0.005); { const l = add(new THREE.BoxGeometry(0.004, 0.0008, 0.0025), chmMat(0x3a9a3a), 0, 0.0056, 0); l.rotation.y = 0.6; } break;
+    case 'grinder': add(new THREE.CylinderGeometry(0.0095, 0.0095, 0.006, 18), M0, 0, 0.003); add(new THREE.CylinderGeometry(0.0095, 0.0095, 0.006, 18), M0, 0, -0.0035); add(new THREE.CylinderGeometry(0.0097, 0.0097, 0.0012, 18), chmMat(c1, { emissive: c1, emissiveIntensity: 0.8 }), 0, 0); break;
+    case 'jar': add(new THREE.CylinderGeometry(0.0078, 0.0078, 0.016, 14), chmMat(c0, { transparent: true, opacity: 0.45, roughness: 0.05 })); { const b = add(new THREE.SphereGeometry(0.0055, 10, 8), chmMat(c1, { roughness: 0.9 }), 0, -0.002); b.scale.set(1, 1.2, 1); }
+      add(new THREE.CylinderGeometry(0.0082, 0.0082, 0.004, 14), chmMat(c2), 0, 0.0095); break;
+    case 'joint': { const j = add(new THREE.CylinderGeometry(0.0035, 0.0018, 0.026, 10), chmMat(c0, { roughness: 0.9 })); j.rotation.z = 0.35; add(new THREE.CylinderGeometry(0.0019, 0.0019, 0.004, 8), M1, 0.0045, -0.0115).rotation.z = 0.35;
+      add(new THREE.SphereGeometry(0.0034, 8, 6), chmMat(c2, { emissive: c2, emissiveIntensity: 1.2 }), -0.0045, 0.0122); break; }
+    case 'bong': add(new THREE.CylinderGeometry(0.0045, 0.0045, 0.022, 12), chmMat(c0, { transparent: true, opacity: 0.55, roughness: 0.05 }), 0, 0.003); add(new THREE.SphereGeometry(0.0072, 12, 9), chmMat(c0, { transparent: true, opacity: 0.55, roughness: 0.05 }), 0, -0.009);
+      add(new THREE.SphereGeometry(0.0058, 10, 8), chmMat(c1, { emissive: c2, emissiveIntensity: 0.7, transparent: true, opacity: 0.85 }), 0, -0.0095); { const s = add(new THREE.CylinderGeometry(0.001, 0.001, 0.012, 6), steel, 0.0055, -0.004); s.rotation.z = -0.8; add(new THREE.CylinderGeometry(0.0026, 0.0014, 0.003, 8), steel, 0.0098, 0.0005); } break;
     default: add(new THREE.SphereGeometry(0.008, 12, 9), M0);
   }
   body.traverse(o => { if (o.isMesh) { o.userData.att = true; o.renderOrder = 2; } });

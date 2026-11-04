@@ -28,17 +28,21 @@ const ATT = [
   { id: 'brake', slot: 'muzzle', c: ['ar', 'lmg', 'mr', 'sr'], name: 'Muzzle Brake', desc: 'Big recoil reduction, but the blast and flash give your position away.', mods: { recoil: -0.2, spread: 0.08, ads: 0.05, spot: 0.25, len: 0.06 } },
   { id: 'choke', slot: 'muzzle', c: ['sg'], name: 'Full Choke', desc: 'Tightens the pellet pattern so it carries further. Less forgiving up close.', mods: { spread: -0.18, adsSpread: -0.18, range: 0.15, ads: 0.06, move: -0.03, len: 0.05 } },
   { id: 'spreader', slot: 'muzzle', c: ['sg'], name: 'Spreader Choke', desc: 'Throws a wide pattern for room clearing. Falls apart at range.', mods: { spread: 0.35, adsSpread: 0.35, pellets: 2, range: -0.2, len: 0.04 } },
+  { id: 'flashhider', slot: 'muzzle', c: ['ar', 'smg', 'lmg', 'mr', 'sr'], name: 'Flash Hider', desc: 'Pronged cage that hides most of the flash. Harder to spot, a touch more kick than a brake would give.', mods: { spot: -0.2, recoil: -0.04, len: 0.04 } },
   // ---------- barrels
   { id: 'stdbarrel', slot: 'barrel', c: ALLC, name: 'Standard Barrel', desc: 'Factory length.', mods: {} },
   { id: 'long', slot: 'barrel', c: GUNC, not: ['coach'], name: 'Long Barrel', desc: 'More velocity and reach. Heavier and slower to swing.', mods: { dmg: 0.04, range: 0.3, adsSpread: -0.1, ads: 0.12, move: -0.05, spread: 0.1, len: 0.12 } },
   { id: 'short', slot: 'barrel', c: GUNC, name: 'Short Barrel', desc: 'Handy in tight spaces. Loses velocity and climbs more.', mods: { ads: -0.15, move: 0.05, spread: -0.15, range: -0.3, dmg: -0.06, recoil: 0.12 } },
   { id: 'heavy', slot: 'barrel', c: ['ar', 'lmg', 'mr', 'sr', 'sg'], not: ['coach'], name: 'Heavy Barrel', desc: 'Thick profile soaks up recoil and holds accuracy. Weighs a lot.', mods: { recoil: -0.13, range: 0.1, move: -0.07, ads: 0.15 } },
+  { id: 'ported', slot: 'barrel', c: ['ar', 'smg', 'lmg', 'mr', 'pi'], name: 'Ported Barrel', desc: 'Gas ports cut along the top push the muzzle down. Louder and brighter, a little looser.', mods: { recoil: -0.1, spot: 0.15, spread: 0.05 } },
   // ---------- underbarrel
   { id: 'nounder', slot: 'underbarrel', c: ALLC, name: 'None', desc: 'Clean rail.', mods: {} },
   { id: 'vgrip', slot: 'underbarrel', c: RIF, name: 'Vertical Grip', desc: 'Better control on long bursts. Slower to bring to the eye.', mods: { recoil: -0.13, ads: 0.08 } },
   { id: 'agrip', slot: 'underbarrel', c: RIF, name: 'Angled Grip', desc: 'Faster to aim. Gives up a little recoil control.', mods: { ads: -0.12, recoil: 0.06 } },
   { id: 'bipod', slot: 'underbarrel', c: ['lmg', 'mr', 'sr'], name: 'Bipod', desc: 'Folded legs add mass up front: steadier aim and less kick, slower to move and aim.', mods: { recoil: -0.16, adsSpread: -0.1, ads: 0.1, move: -0.04 } },
   { id: 'laser', slot: 'underbarrel', c: GUNC, name: 'Laser Sight', desc: 'Tighter hip-fire and a visible aim point. The beam gives you away.', mods: { spread: -0.22, ads: 0.05, spot: 0.35, laser: 1 } },
+  { id: 'handstop', slot: 'underbarrel', c: RIF, name: 'Handstop', desc: 'A small stop to pull against. A bit of everything: steadier and a bit quicker to aim.', mods: { ads: -0.05, recoil: -0.05, move: -0.02 } },
+  { id: 'taclight', slot: 'underbarrel', c: GUNC, name: 'Tac Light', desc: 'Weapon light for dark rooms. Steadier hip-fire, but the lamp makes you easy to spot.', mods: { spread: -0.12, ads: 0.03, spot: 0.25 } },
   // ---------- magazines
   { id: 'stdmag', slot: 'magazine', c: ALLC, name: 'Standard Magazine', desc: 'Factory capacity.', mods: {} },
   { id: 'extmag', slot: 'magazine', c: ['ar', 'smg', 'mr', 'sr', 'sg'], not: ['breacher', 'rampart', 'kestrel'], name: 'Extended Mag', desc: 'More rounds per magazine. Longer to swap and a bit heavier.', mods: { mag: 0.5, reload: 0.15, ads: 0.07, move: -0.02 } },
@@ -49,16 +53,19 @@ const ATT = [
   { id: 'speedload', slot: 'magazine', c: ['sg'], only: ['breacher', 'rampart'], name: 'Shell Carrier', desc: 'Side saddle for faster reloads. Short tube holds two fewer.', mods: { reload: -0.35, magAdd: -2 } },
   { id: 'pextmag', slot: 'magazine', c: ['pi'], not: ['magnum'], name: 'Extended Mag', desc: 'More rounds. Sticks out of the grip and slows reloads.', mods: { mag: 0.6, reload: 0.12, ads: 0.06 } },
   { id: 'speedloader', slot: 'magazine', c: ['pi'], only: ['magnum'], name: 'Speedloader', desc: 'All six rounds at once. Much faster reloads, a little bulk on the belt.', mods: { reload: -0.35, move: -0.02 } },
+  { id: 'jungle', slot: 'magazine', c: ['ar', 'smg', 'mr'], not: ['kestrel', 'wasp'], name: 'Jungle Mags', desc: 'Two magazines taped together: flip and go for much faster reloads. Heavier to carry.', mods: { reload: -0.22, move: -0.03 } },
   // ---------- stocks
   { id: 'stdstock', slot: 'stock', c: ALLC, name: 'Standard Stock', desc: 'Factory stock.', mods: {} },
   { id: 'nostock', slot: 'stock', c: ['ar', 'smg', 'mr', 'sg'], name: 'No Stock', desc: 'Very fast and light. Nothing to brace against, so recoil and aim suffer.', mods: { ads: -0.2, move: 0.07, recoil: 0.25, adsSpread: 0.15 } },
   { id: 'tacstock', slot: 'stock', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'sg'], name: 'Tactical Stock', desc: 'Cheek riser and padded butt for a steady hold. Bulkier.', mods: { recoil: -0.1, adsSpread: -0.08, ads: 0.1, move: -0.03 } },
   { id: 'lightstock', slot: 'stock', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'sg'], name: 'Skeleton Stock', desc: 'Cut-down frame. Quicker handling, less damping.', mods: { move: 0.04, ads: -0.08, recoil: 0.1 } },
+  { id: 'heavystock', slot: 'stock', c: ['ar', 'lmg', 'mr', 'sr'], name: 'Weighted Stock', desc: 'Steel weights in the butt soak up recoil. Slow to raise and to carry.', mods: { recoil: -0.12, ads: 0.1, move: -0.04 } },
   // ---------- ammo
   { id: 'fmj', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Full Metal Jacket', desc: 'Standard ball ammunition.', mods: {} },
   { id: 'hollow', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Hollow Point', desc: 'Expands on impact for more damage. Sheds energy fast and splashes on armour.', mods: { dmg: 0.06, range: -0.18, vsHeavy: -0.15 } },
   { id: 'ap', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Armour Piercing', desc: 'Punches through Heavy armour. Passes through soft targets with less effect.', mods: { vsHeavy: 0.35, range: 0.2, dmg: -0.05 } },
   { id: 'subsonic', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Subsonic', desc: 'No supersonic crack, softer kick. Slow and weak at range.', mods: { spot: -0.2, recoil: -0.12, dmg: -0.05, range: -0.15 } },
+  { id: 'match', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Match Grade', desc: 'Hand-loaded for consistency: tighter groups from the hip and aimed. A little lighter per hit.', mods: { spread: -0.1, adsSpread: -0.14, dmg: -0.04 } },
   { id: 'buck', slot: 'ammo', c: ['sg'], name: '00 Buckshot', desc: 'The standard shell.', mods: {} },
   { id: 'slug', slot: 'ammo', c: ['sg'], name: 'Slugs', desc: 'One heavy projectile: rifle-like reach, but you have to actually hit.', mods: { pellets: -8, dmgX: 5.5, spread: -0.85, adsSpread: -0.88, range: 2.0, head: -0.3, recoil: 0.25 } },
   { id: 'flechette', slot: 'ammo', c: ['sg'], name: 'Flechette', desc: 'Darts that fly flatter and further. Each hits softer.', mods: { pellets: 3, dmg: -0.3, range: 0.4, spread: -0.1 } },
@@ -257,6 +264,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   // barrels
   const tip = -(base + barrelExtra);
   if (barrelExtra) { tubeZ(br * 0.95, barrelExtra + 0.02, M.dark, 0, my, -base + 0.01); if (def.blender === 'rifle') add(new THREE.BoxGeometry(0.06, 0.06, 0.1), M.poly, 0, 0.004, -0.6); }
+  if (E('barrel') === 'ported') { tubeZ(Math.max(br * 1.35, 0.012), 0.12, M.dark, 0, my, -base + 0.14); for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(0.006, 0.003, 0.012), M.poly, 0, my + Math.max(br * 1.35, 0.012), -base + 0.04 + k * 0.025); }
   if (E('barrel') === 'heavy') tubeZ(Math.max(br * 1.55, 0.014), 0.16, M.dark, 0, my, -base + 0.24);
   // muzzle devices
   const mz = E('muzzle'), mr = Math.max(0.017, br * 1.9);
@@ -272,6 +280,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   if (mz === 'choke') tubeZ(br + 0.003, 0.05, M.dark, 0, my, tip + 0.005, 16);
   if (mz === 'spreader') add(new THREE.BoxGeometry(0.05, 0.016, 0.05), M.dark, 0, my, tip - 0.02);
   }
+  if (mz === 'flashhider') { const r = Math.max(0.012, br * 1.5); tubeZ(r, 0.02, M.dark, 0, my, tip + 0.005); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; add(new THREE.BoxGeometry(0.004, 0.004, 0.045), M.dark, Math.cos(a) * r * 0.9, my + Math.sin(a) * r * 0.9, tip - 0.035); } }
   // optics: everything sits on the rail at (railY, opticZ)
   const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); };
   const notStock = !(def.blender && !hasHQ(def) && op === def.optic);
@@ -367,6 +376,8 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   } else {
   if (ub === 'vgrip') add(new THREE.BoxGeometry(0.028, 0.085, 0.032), M.poly, 0, uy - 0.042, uz, 0.15);
   if (ub === 'agrip') add(new THREE.BoxGeometry(0.03, 0.03, 0.08), M.poly, 0, uy - 0.012, uz + 0.16, -0.5);
+  if (ub === 'handstop') add(new THREE.BoxGeometry(0.024, 0.026, 0.02), M.poly, 0, uy - 0.012, uz - 0.02, 0.4);
+  if (ub === 'taclight') { tubeZ(0.012, 0.06, M.dark, 0.018, uy - 0.006, uz + 0.0); add(new THREE.CircleGeometry(0.0105, 14), M.dot, 0.018, uy - 0.006, uz - 0.0605); add(new THREE.BoxGeometry(0.012, 0.012, 0.02), M.dark, 0.008, uy - 0.003, uz - 0.03); }
   if (ub === 'bipod') { add(new THREE.BoxGeometry(0.03, 0.02, 0.03), M.dark, 0, uy - 0.008, uz); for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.008, 0.008, 0.2), M.dark, s * 0.012, uy - 0.018, uz + 0.1); }
   if (ub === 'laser' && u.laser) {
     const [lx, ly, lz] = u.laser;
@@ -389,6 +400,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
       const p = isFinite(bb.min.y) && HQ('pext', 0, bb.min.y + 0.004, (bb.min.z + bb.max.z) / 2 + 0.002, 1, u.mag); if (p) { p.rotation.x = 0.2; u.magX = p; }
     }
     if (mg === 'drum' && tall && !hd) { const d =new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.055, 22), M.dark); d.rotation.z = Math.PI / 2; d.position.set(0, -0.085, 0.005); u.mag.add(d); u.drum = d; }
+    if (mg === 'jungle' && tall && inner) { const jg = new THREE.Group(), c2 = inner.clone(); c2.position.x += 0.034; c2.rotation.y += 0.04; jg.add(c2); for (const yy of [-0.03, -0.07]) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.04), M.tan); t.position.set(inner.position.x + 0.017, inner.position.y + yy, inner.position.z); jg.add(t); } u.mag.add(jg); u.magX = jg; }
     if (mg === 'fastmag' && tall) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.012, 0.01), M.tan); t.position.set(0, u.magStyle === 'short' ? -0.06 : -0.105, -0.012); u.mag.add(t); u.magX = t; }
     if (mg === 'pextmag' && u.pistol && !u.magX) { const t =new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.05), M.poly); t.position.set(0, -0.02, 0.004); t.rotation.x = 0.2; u.mag.add(t); u.magX = t; }
   }
@@ -403,6 +415,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   else if (st === 'lightstock' && HQ('lightstock', 0, sy, sz)) {}
   else if (st === 'tacstock') { add(new THREE.BoxGeometry(0.044, 0.025, 0.12), M.poly, 0, sy + 0.04, sz + 0.14); add(new THREE.BoxGeometry(0.06, 0.1, 0.02), M.poly, 0, sy - 0.02, sz + 0.27); }
   else if (st === 'lightstock') add(new THREE.BoxGeometry(0.012, 0.012, 0.18), M.dark, 0, sy + 0.022, sz + 0.14);
+  if (st === 'heavystock') { add(new THREE.BoxGeometry(0.05, 0.07, 0.16), M.poly, 0, sy, sz + 0.14); add(new THREE.BoxGeometry(0.056, 0.11, 0.025), M.dark, 0, sy - 0.015, sz + 0.23); for (const s of [-1, 1]) add(new THREE.CylinderGeometry(0.008, 0.008, 0.004, 10), M.brass, s * 0.0285, sy, sz + 0.17, 0, 0, Math.PI / 2); }
   // muzzle flash follows the new muzzle
   if (u.flash) u.flash.position.z = -(w.len + 0.06);
 }
@@ -584,11 +597,23 @@ function resetLoadoutWeapon() {
 function loadoutTab(d) { selectClass(ACTIVE_CLASS + d); }
 
 /* ---------- 3D preview of the selected gun (rendered off-screen by the main renderer, copied to a 2D canvas) */
-const PV = { want: null, key: '', obj: null, scene: null, cam: null, rt: null, buf: null, img: null, t: 0, acc: 0 };
+const PV = { want: null, key: '', obj: null, scene: null, cam: null, rt: null, buf: null, img: null, t: 0, acc: 0, ins: { yaw: 0, pitch: 0, zoom: 1, px: 0, py: 0, idle: 5, drag: false, lx: 0, ly: 0 } };
 const pvCamo = w => (w.camo !== undefined ? w.camo : (typeof camoFor === 'function' ? camoFor(w.def.id) : null));
 const pvStk = w => (w.stk !== undefined ? w.stk : (typeof stickerFor === 'function' ? stickerFor(w.def.id) : null));
 const pvChm = w => (w.chm !== undefined ? w.chm : (typeof charmFor === 'function' ? charmFor(w.def.id) : null));
 function previewKey(w) { return w.def.id + '|' + JSON.stringify(ATTS[w.def.id] || {}) + '|' + (w.ovr ? w.ovr.id : '') + '|' + pvCamo(w) + '|' + pvStk(w); }
+// INSPECT controls on the preview canvas (loadout and locker): drag to turn, wheel to zoom toward the pointer,
+// double-click to reset; on a controller the right stick turns it (see pvInspectPad)
+function pvInspectWire(cv) {
+  const I = PV.ins; cv.style.cursor = 'grab'; cv.style.touchAction = 'none'; cv.title = 'DRAG TO TURN · SCROLL TO ZOOM · DOUBLE-CLICK TO RESET';
+  cv.onpointerdown = e => { I.drag = true; I.lx = e.clientX; I.ly = e.clientY; I.idle = 0; cv.style.cursor = 'grabbing'; try { cv.setPointerCapture(e.pointerId); } catch (er) {} };
+  cv.onpointermove = e => { if (!I.drag) return; const dx = e.clientX - I.lx, dy = e.clientY - I.ly; I.lx = e.clientX; I.ly = e.clientY; I.yaw += dx * 0.012; I.pitch = clamp(I.pitch + dy * 0.01, -1.3, 1.3); I.idle = 0; };
+  const up = () => { I.drag = false; cv.style.cursor = 'grab'; }; cv.onpointerup = up; cv.onpointercancel = up;
+  cv.onwheel = e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width - 0.5, my = 0.5 - (e.clientY - r.top) / r.height, z0 = I.zoom;
+    I.zoom = clamp(I.zoom * (e.deltaY > 0 ? 1.12 : 1 / 1.12), 0.38, 1.25); const k = (z0 - I.zoom) * 0.9; I.px = clamp(I.px + mx * k, -0.45, 0.45); I.py = clamp(I.py + my * k * 0.42, -0.2, 0.2); if (I.zoom >= 1) { I.px *= 0.5; I.py *= 0.5; } I.idle = 0; };
+  cv.ondblclick = () => { Object.assign(I, { yaw: 0, pitch: 0, zoom: 1, px: 0, py: 0, idle: 5 }); };
+}
+function pvInspectPad(rx, ry, dt) { const I = PV.ins; if (Math.abs(rx) < 0.2 && Math.abs(ry) < 0.2) return; I.yaw += rx * dt * 3; I.pitch = clamp(I.pitch + ry * dt * 2, -1.3, 1.3); I.idle = 0; }
 function updatePreview(dt) {
   if ((curScreen !== 'loadout' && curScreen !== 'locker') || !PV.want) return;
   const cv = $(curScreen === 'locker' ? 'lkPrev' : 'loPrev'); if (!cv || !cv.getContext) return;
@@ -603,7 +628,7 @@ function updatePreview(dt) {
     PV.rt = new THREE.WebGLRenderTarget(W, H); PV.rt.texture.encoding = THREE.sRGBEncoding;
     PV.buf = new Uint8Array(W * H * 4);
   }
-  if (PV.cv !== cv) { PV.cv = cv; cv.width = W; cv.height = H; PV.ctx = cv.getContext('2d'); PV.img = PV.ctx.createImageData(W, H); }
+  if (PV.cv !== cv) { PV.cv = cv; cv.width = W; cv.height = H; PV.ctx = cv.getContext('2d'); PV.img = PV.ctx.createImageData(W, H); pvInspectWire(cv); }
   const key = previewKey(PV.want);
   if (key !== PV.key) {
     PV.key = key; if (PV.obj) PV.scene.remove(PV.obj);
@@ -618,8 +643,13 @@ function updatePreview(dt) {
     const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
     g.position.sub(c); PV.size = Math.max(sz.z, sz.y * 2.4, 0.2); PV.dbg = [sz.x, sz.y, sz.z].map(v => +v.toFixed(2));
   }
-  PV.obj.rotation.set(0.12, -Math.PI / 2 + Math.sin(PV.t * 0.7) * 0.35, 0);
-  const hf = Math.atan(Math.tan(14 * Math.PI / 180) * PV.cam.aspect); PV.cam.position.set(0, 0.02, PV.size / (2 * Math.tan(hf)) * 1.12); PV.cam.lookAt(0, 0, 0);
+  // INSPECT: drag turns the gun (any way round), the wheel zooms in on a part; left alone it eases back to the slow sway
+  const I = PV.ins; I.idle += 1 / 30;
+  if (I.idle > 4 && !I.drag) { const k = 0.06; I.yaw += (0 - I.yaw) * k; I.pitch += (0 - I.pitch) * k; I.zoom += (1 - I.zoom) * k; I.px += (0 - I.px) * k; I.py += (0 - I.py) * k; }
+  const sway = I.idle > 4 ? Math.sin(PV.t * 0.7) * 0.35 : 0;
+  PV.obj.rotation.set(0.12 + I.pitch, -Math.PI / 2 + sway + I.yaw, 0, 'YXZ');
+  const hf = Math.atan(Math.tan(14 * Math.PI / 180) * PV.cam.aspect), dist = PV.size / (2 * Math.tan(hf)) * 1.12 * I.zoom;
+  PV.cam.position.set(I.px * PV.size, 0.02 + I.py * PV.size, dist); PV.cam.lookAt(I.px * PV.size, I.py * PV.size, 0);
   const prevT = renderer.getRenderTarget(), prevTM = renderer.toneMapping, prevCC = renderer.getClearColor(new THREE.Color()), prevCA = renderer.getClearAlpha();
   renderer.setRenderTarget(PV.rt); renderer.setClearColor(0x000000, 0); renderer.clear(); updateGunShader(); renderer.render(PV.scene, PV.cam);
   renderer.readRenderTargetPixels(PV.rt, 0, 0, W, H, PV.buf); renderer.setRenderTarget(prevT); renderer.toneMapping = prevTM; renderer.setClearColor(prevCC, prevCA);
