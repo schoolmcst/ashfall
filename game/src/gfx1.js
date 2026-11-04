@@ -2,7 +2,10 @@
 // Fog is applied after tone mapping, so it takes a plain sRGB colour; materials and lights want linear colours.
 const C = hex => new THREE.Color(hex).convertSRGBToLinear();
 // anti-aliasing and which GPU to use are fixed when the page starts (Settings > VIDEO says 'applies on next launch')
-const renderer = new THREE.WebGLRenderer({ antialias: S.aa !== 'off', powerPreference: S.gpuPref === 'low' ? 'low-power' : 'high-performance' });
+// 1.2.71: with BLOOM & COLOUR on, the picture is drawn into the post target (which has its own 4x MSAA, or FXAA) and only
+// copied to the screen, so the screen itself needs no MSAA (that was a full-screen resolve every frame for nothing)
+const CTX_AA = S.aa !== 'off' && (S.post === 'off' || ((+S.postV | 0) < 1 && S.quality === 'low'));
+const renderer = new THREE.WebGLRenderer({ antialias: CTX_AA, powerPreference: S.gpuPref === 'low' ? 'low-power' : 'high-performance' });
 renderer.outputEncoding = THREE.sRGBEncoding;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 1.05;

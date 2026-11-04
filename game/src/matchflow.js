@@ -9,6 +9,18 @@ const LOAD_TIPS = ['Aim down sights for a perfect first shot - keep firing and t
 function matchHold(pick) {
   G.loadT = LOAD_SECS; G.holdT = LOAD_SECS + (pick ? PICK_SECS : 0); G.pickShown = false;
   mouseDown = false; mouseAds = false; showLoadScreen(); try { rpStart(); } catch (e) {} try { brainMatchStart(); } catch (e) {}
+  setTimeout(() => { try { zlpMatch(); } catch (e) {} warmShaders(); }, 600);   // while the loading screen is up (the light pool first: the shaders depend on the number of lights)
+}
+// 1.2.71: compile every shader a fight needs while the loading screen is up, so the first explosion, blood, sparks,
+// smoke or ragdoll in a match does not stall a frame. The effects are made far below the map, then everything in the
+// scene (the map, the soldiers, the mode's props, the effects) and the gun is compiled at once.
+function warmShaders() {
+  try {
+    const v = new THREE.Vector3(0, -300, 0);
+    explosionFx(v, 1); for (const k of ['blood', 'dust', 'metal', 'spark', 'wood']) chunks(k, v, 2, 1, 0.3);
+    puff(v.x, v.y, v.z, { color: 0x888888, size: 1, grow: 1, life: 0.3, op: 0.5 }); addTracer(v, new THREE.Vector3(1, -300, 0), 0.05, 0.02);
+    renderer.compile(scene, camera); renderer.compile(vmScene, vmCamera);
+  } catch (e) {}
 }
 function showLoadScreen() {
   const el = $('loadscr'); if (!el) return;

@@ -239,10 +239,15 @@ function zlpAdopt() {
   scene.traverse(o => { if (o.isPointLight && !zlpSkip(o) && o.parent) found.push(o); });
   for (const l of found) { const par = l.parent; par.remove(l); ZLP.virt.push({ l, par, w: new THREE.Vector3() }); }
 }
-function zlpStart() {
+function zlpStart(n) {
   zlpStop();
-  ZLP.pool = []; for (let i = 0; i < zlPoolSize(); i++) { const l = new THREE.PointLight(0xffffff, 0, 10, 2); scene.add(l); ZLP.pool.push(l); }
-  ZLP.on = true; ZLP.map = curMap; ZLP.virt = []; zlpAdopt(); ZLP.t = 0; ZLP.scanT = 1; zlpAssign();
+  ZLP.pool = []; for (let i = 0; i < (n || zlPoolSize()); i++) { const l = new THREE.PointLight(0xffffff, 0, 10, 2); scene.add(l); ZLP.pool.push(l); }
+  ZLP.on = true; ZLP.n = n || 0; ZLP.map = curMap; ZLP.virt = []; zlpAdopt(); ZLP.t = 0; ZLP.scanT = 1; zlpAssign();
+}
+// 1.2.71: multiplayer maps get the pool too when they have more than 8 lamps (8 real lights, shadows every other frame)
+function zlpMatch() {
+  if (M && M.mode === 'zomb') return; let n = 0; scene.traverse(o => { if (o.isPointLight && o !== muzzleLight && o !== enemyFlashLight && !ZLP.pool.includes(o)) n++; });
+  if (n > 8) zlpStart(S.perfMode ? 4 : 8); else zlpStop();
 }
 // give the lights back (the map may be reused by another mode) and remove the pool
 function zlpStop() {

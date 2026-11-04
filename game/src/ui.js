@@ -617,7 +617,7 @@ function tick(dt) {
   try { rpTick(dt); } catch (e) {}
   if (G.holdT > 0 && M && !G.bench && G.state !== 'over' && G.state !== 'plobby') updateHold(dt);
   skyMat.uniforms.time.value += dt; sky.position.copy(camera.position);
-  updateGrain(dt); updateAmbience(NOW); updateFires(dt, NOW); if (typeof hospFlicker === "function") hospFlicker(dt); if (typeof ZLP !== "undefined" && ZLP.on && G.state !== "playing") renderer.shadowMap.autoUpdate = true; if (typeof audioTick === 'function') audioTick(dt); if (typeof zpTick === 'function' && M && M.mode === 'zomb') zpTick(dt);
+  updateGrain(dt); updateAmbience(NOW); updateFires(dt, NOW); if (ZLP.on && ZLP.n) try { zlpTick(dt); } catch (e) {} if (typeof hospFlicker === "function") hospFlicker(dt); if (typeof ZLP !== "undefined" && ZLP.on && G.state !== "playing") renderer.shadowMap.autoUpdate = true; if (typeof audioTick === 'function') audioTick(dt); if (typeof zpTick === 'function' && M && M.mode === 'zomb') zpTick(dt);
   fpsAcc += dt; fpsN++; if (fpsAcc >= 0.5) { if (S.showFps) $('fps').textContent = Math.round(fpsN / fpsAcc) + ' FPS' + (S.dynRes && DR.scale < 0.999 ? `  ·  RES ${Math.round(DR.scale * 100)}%` : ''); fpsAcc = 0; fpsN = 0; }
   if (G.state === 'playing') {
     G.time += dt;
@@ -689,8 +689,9 @@ function frame(now) {
   requestAnimationFrame(frame);
   const rafDt = (now - lastRaf) / 1000; lastRaf = now;
   if (curScreen && G.state !== 'playing') try { sampleHz(rafDt); } catch (e) {}
-  if (S.fpsCap > 0 && !G.bench && !G.noRender) {
-    const step = 1000 / S.fpsCap;
+  const capFps = S.fpsCap > 0 ? S.fpsCap : (G.state === 'menu' && !G.bench ? 60 : 0);   // 1.2.71: menus never draw faster than 60 (no point heating the GPU behind a menu)
+  if (capFps > 0 && !G.bench && !G.noRender) {
+    const step = 1000 / capFps;
     if (now < capDue - 1.5) return;                      // not due yet (1.5 ms slack so 60 on a 60 Hz screen never skips)
     capDue += step; if (capDue < now - step) capDue = now + step;   // steady cadence; after a stall start fresh (no burst)
   }

@@ -36,7 +36,7 @@ function rpTick(dt) {
   if (!REC && M && M.def && G.state === 'playing' && !G.bench) rpStart();   // any match that started without the usual start screen still records
   if (!REC || !M || M.over || G.state === 'menu' || G.state === 'plobby' || G.state === 'over') return;
   // map picture once, while the loading screen still covers the hitch
-  if (!REC.planTried && REC.t > 0.3) { REC.planTried = true; try { REC.plan = rpPlanShot(); } catch (e) { REC.plan = null; } }
+  if (!REC.planTried && REC.t > 0.3 && RP_PLAN[curMap]) { REC.planTried = true; REC.plan = RP_PLAN[curMap]; }   // the picture itself is taken when the match ends
   // keep a copy saved as the match goes, so quitting mid-match (or closing the game) still leaves a replay
   REC.saveT = (REC.saveT || 0) + dt; if (REC.saveT > 30 && REC.frames.length >= RP_HZ * 5) { REC.saveT = 0; RPLAST = rpPack(0, true); sbPut('replay', RPLAST); }
   REC.t += dt; REC.acc += dt; if (REC.acc < 1 / RP_HZ || REC.frames.length >= RP_MAX) return;
@@ -53,16 +53,25 @@ function rpTick(dt) {
   if (REC.teams && M.teamScore) { const s = REC.score[REC.score.length - 1], a = M.teamScore[M.myTeam] | 0, b = M.teamScore[1 - M.myTeam] | 0; if (!s || s[1] !== a || s[2] !== b) REC.score.push([f[0], a, b]); }
 }
 function rpFeed(html) { if (REC && !M.over && REC.feed.length < 3000) REC.feed.push([Math.round(REC.t * 10), String(html).slice(0, 400)]); }
-// top-down picture of the current map (entities hidden)
+// top-down picture of the current map (entities hidden), drawn into its own small target so the game's canvas is never
+// resized (1.2.71: resizing it cost a hitch at the start of every match and could leave it drawing at the wrong size);
+// one picture per map, kept for the session
+const RP_PLAN = {};
 function rpPlanShot() {
-  const r = renderer, sc = scene, cam = new THREE.OrthographicCamera(-RP_EXT, RP_EXT, RP_EXT, -RP_EXT, 1, 400);
+  if (RP_PLAN[curMap]) return RP_PLAN[curMap];
+  const r = renderer, sc = scene, cam = new THREE.OrthographicCamera(-RP_EXT, RP_EXT, RP_EXT, -RP_EXT, 1, 400), S2 = 512;
   cam.position.set(0, 200, 0); cam.up.set(0, 0, -1); cam.lookAt(0, 0, 0);
   const hidden = []; for (const e of enemies.concat(typeof dying !== 'undefined' ? dying : [])) if (e.group && e.group.visible) { e.group.visible = false; hidden.push(e.group); }
   const fog = sc.fog ? sc.fog.density : 0; if (sc.fog) sc.fog.density = 0;
-  const W = r.domElement.width, H = r.domElement.height, S2 = 640;
+  const rt = new THREE.WebGLRenderTarget(S2, S2); rt.texture.encoding = THREE.sRGBEncoding; const prev = r.getRenderTarget(), px = new Uint8Array(S2 * S2 * 4);
   let url = null;
-  try { r.setSize(S2, S2, false); r.setViewport(0, 0, S2, S2); r.clear(); r.render(sc, cam); url = r.domElement.toDataURL('image/jpeg', 0.72); }
-  finally { for (const g of hidden) g.visible = true; if (sc.fog) sc.fog.density = fog; r.setSize(W, H, false); r.setViewport(0, 0, W, H); }
+  try {
+    r.setRenderTarget(rt); r.clear(); r.render(sc, cam); r.readRenderTargetPixels(rt, 0, 0, S2, S2, px);
+    const cv = document.createElement('canvas'); cv.width = cv.height = S2; const cx = cv.getContext('2d'), img = cx.createImageData(S2, S2), row = S2 * 4;
+    for (let y = 0; y < S2; y++) img.data.set(px.subarray((S2 - 1 - y) * row, (S2 - y) * row), y * row);
+    cx.putImageData(img, 0, 0); url = cv.toDataURL('image/jpeg', 0.72);
+  } finally { r.setRenderTarget(prev); rt.dispose(); for (const g of hidden) g.visible = true; if (sc.fog) sc.fog.density = fog; }
+  if (url) RP_PLAN[curMap] = url;
   return url;
 }
 function rpPack(won, partial) {

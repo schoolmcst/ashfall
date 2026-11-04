@@ -103,7 +103,7 @@ function updatePlayer(dt) {
   camera.position.set(P.x + rnd(-shk, shk), P.y + P.eye + Math.sin(P.bob * 2) * 0.025 * (hs / 5) * bobOn + rnd(-shk, shk), P.z + rnd(-shk, shk));
   camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn);
   if (M && M.ph && phMeProp() && playerAlive()) {   // PROP HUNT: a prop sees itself from behind (pulled in when a wall is in the way)
-    const back = new THREE.Vector3(Math.sin(P.yaw) * Math.cos(P.pitch), -Math.sin(P.pitch) + 0.35, Math.cos(P.yaw) * Math.cos(P.pitch)).normalize(), eye = new THREE.Vector3(P.x, P.y + 1.3, P.z);
+    const back = (G._phB || (G._phB = new THREE.Vector3())).set(Math.sin(P.yaw) * Math.cos(P.pitch), -Math.sin(P.pitch) + 0.35, Math.cos(P.yaw) * Math.cos(P.pitch)).normalize(), eye = (G._phE || (G._phE = new THREE.Vector3())).set(P.x, P.y + 1.3, P.z);
     let dist = 3.4; try { _pr.set(eye, back); _pr.far = dist; const h = _pr.intersectObjects(wallMeshes, false)[0]; if (h) dist = Math.max(0.6, h.distance - 0.25); } catch (e) {}
     camera.position.copy(eye).addScaledVector(back, dist);
   }

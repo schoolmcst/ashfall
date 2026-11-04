@@ -9,7 +9,7 @@ function perfModeSet(on) {
   if (on) { S.perfSaved = {}; for (const k in PERF_SET) S.perfSaved[k] = S[k]; Object.assign(S, PERF_SET); S.perfMode = true; }
   else { if (S.perfSaved) Object.assign(S, S.perfSaved); S.perfSaved = null; S.perfMode = false; }
   try { applyVideoSettings(); } catch (e) {} saveSettings();
-  try { if (typeof ZLP !== 'undefined' && ZLP.on) { zlpStop(); zlpStart(); } } catch (e) {}
+  try { if (typeof ZLP !== 'undefined' && ZLP.on) { const m = ZLP.n; zlpStop(); if (m) zlpMatch(); else zlpStart(); } } catch (e) {}
   try { if (curScreen === 'settings') renderSettings(); } catch (e) {}
   perfBtn();
 }
