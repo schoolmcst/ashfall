@@ -14,6 +14,7 @@ function m3Setup() {
   if (M.mode === 'ru') ruSetup();
   if (M.mode === 'pp') ppSetup();
   try { phClear(); } catch (e) {} M.ph = null; if (M.mode === 'ph') phSetup();
+  try { brClear(); } catch (e) {} M.br = null; if (M.mode === 'br') brSetup();
 }
 // the key that names an actor in the carry list (the same on every machine online)
 function ruKey(who) {

@@ -25,6 +25,7 @@ const MODES = {
   rsnd: { name: 'RANKED SEARCH & DESTROY', short: 'RANKED S&D', icon: 'RNK', desc: 'Ranked play, 4 v 4 Search & Destroy, first to 6 rounds. Wins raise your SR, losses lower it.', teams: true, respawn: 0, score: 6, time: 0, perTeam: 4, unit: 'ROUNDS', online: true, base: 'snd', ranked: true },
   osnd: { name: 'ONLINE SEARCH & DESTROY', short: 'ONLINE S&D', icon: 'S&D', desc: 'Real people, one life per round. Attackers plant the bomb at A or B, defenders stop them. First to 4 rounds.', teams: true, respawn: 0, score: 4, time: 0, perTeam: 5, unit: 'ROUNDS', online: true, base: 'snd' },
   ru: { name: 'RE-UP', short: 'RE-UP', icon: 'RUP', desc: 'Grind, dealer style: every kill drops a stash bag. Grab them, carry them, and bank them at one of the two STASH HOUSES to score. Die carrying and you drop the whole pile.', teams: true, respawn: 3, score: 40, time: 10, perTeam: 6, unit: 'BAGS' },
+  br: { name: 'LAST TOKE', short: 'BR', icon: 'BR', desc: 'Battle royale: sixteen players, one life, everyone starts with a pistol. Loot crates for better guns, stay inside the closing Nightshade cloud, be the last one standing.', teams: false, respawn: 0, score: 999, time: 15, players: 16, unit: 'KILLS' },
   ph: { name: 'PROP HUNT', short: 'PROPS', icon: 'PRP', desc: 'Hunters against props, swapping every two minutes. Props become crates, barrels, jars and bongs and hide; hunters find them, but every missed shot hurts.', teams: true, respawn: 4, score: 999, time: 6, perTeam: 5, unit: 'POINTS' },
   pp: { name: 'PUFF PUFF PASS', short: 'PASS', icon: 'PPP', desc: 'Free-for-all where everyone holds the SAME gun. Every 40 seconds it gets passed on to a new one from the whole armory. Most kills wins.', teams: false, respawn: 2.5, score: 25, time: 10, players: 8, unit: 'KILLS' },
   oru: { name: 'ONLINE RE-UP', short: 'ONLINE RE-UP', icon: 'RUP', desc: 'Real people, grind: grab the stash bags that drop on every kill and bank them at a STASH HOUSE. Die carrying and you drop the lot.', teams: true, respawn: 3, score: 30, time: 0, perTeam: 6, unit: 'BAGS', online: true, base: 'ru' },
@@ -34,7 +35,7 @@ const MODES = {
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'inf', 'gf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'inf', 'gf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 // bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
@@ -238,7 +239,7 @@ const playerAlive = () => (G.state === 'playing' || pausedOnline()) && M.me && M
 function respawnPlayer() {
   if (NET.spec) { G.state = 'spectate'; G.specIdx = G.specIdx || 0; return; }   // WATCH: spectators never spawn
   const p = pickSpawnFor(M.myTeam, sideOf(M.myTeam)); placePlayer(p);
-  if (M.mode === 'gun') equipGunGame(M.me.level); else if (M.pp) ppEquipMe(); else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
+  if (M.mode === 'gun') equipGunGame(M.me.level); else if (M.pp) ppEquipMe(); else if (M.br) { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; M.br.myTier = -1; } else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
   G.state = 'playing'; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide'); $('killcam').classList.remove('kcv'); try { kcYou(null); } catch (e) {} vig.style.opacity = 0;
   camera.fov = baseFov; camera.updateProjectionMatrix(); lockPointer(); hideCenter();
 }
@@ -772,11 +773,11 @@ function timeUp() {
 // after the death cam in a match: respawn, or spectate a team-mate in S&D
 function afterDeathInMatch() {
   $('killcam').classList.add('hide');
-  if (M.mode === 'snd' || M.mode === 'gf') { G.state = 'spectate'; G.specIdx = 0; G.dc = null; return; }
+  if (M.mode === 'snd' || M.mode === 'gf' || M.br) { G.state = 'spectate'; G.specIdx = 0; G.dc = null; return; }
   G.state = 'respawning'; G.respT = 1.2; G.dcHold = !!G.dc;
 }
 function updateSpectate(dt) {
-  const mates = NET.spec ? (enemies.filter(e => e.net === NET.specPeer).length ? enemies.filter(e => e.net === NET.specPeer) : enemies.filter(e => e.net)) : enemies.filter(e => e.team === M.myTeam), sn = M.snd;
+  const mates = M.br ? enemies.filter(e => e.entry && e.entry.alive !== false) : NET.spec ? (enemies.filter(e => e.net === NET.specPeer).length ? enemies.filter(e => e.net === NET.specPeer) : enemies.filter(e => e.net)) : enemies.filter(e => e.team === M.myTeam), sn = M.snd;
   if (G.specNext) { G.specIdx++; G.specNext = false; }
   const m = mates.length ? mates[G.specIdx % mates.length] : null;
   if (m) {

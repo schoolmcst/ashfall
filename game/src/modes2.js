@@ -26,6 +26,7 @@ function m2Actors() {
 // bots: about half go for the objective (more for the 'obj' role), the rest keep hunting
 function m2Goal(e, keep, near, set) {
   if (M.ru) return ruGoal(e, keep, near, set);
+  if (M.br) { const g = brGoal(e, keep, near, set); if (g) return g; }
   const ex = e.group.position.x, ez = e.group.position.z;
   if (M.mode === 'kc' && M.kc && M.kc.tags.length) {
     let best = null, bd = 1e9; for (const t of M.kc.tags) { const d = Math.hypot(t.x - ex, t.z - ez); if (d < bd) { bd = d; best = t; } }
@@ -41,7 +42,7 @@ function m2Goal(e, keep, near, set) {
   }
   return null;
 }
-function m2Update(dt) { if (M.mode === 'kc' && M.kc) kcUpdate(dt); if (M.mode === 'dom' && M.dom) domUpdate(dt); if (M.mode === 'ru' && M.ru) ruUpdate(dt); if (M.mode === 'pp' && M.pp) ppUpdate(dt); if (M.ph) phUpdate(dt); }
+function m2Update(dt) { if (M.mode === 'kc' && M.kc) kcUpdate(dt); if (M.mode === 'dom' && M.dom) domUpdate(dt); if (M.mode === 'ru' && M.ru) ruUpdate(dt); if (M.mode === 'pp' && M.pp) ppUpdate(dt); if (M.ph) phUpdate(dt); if (M.br) brUpdate(dt); }
 function m2Pack() {
   const ts = M.teamScore || [0, 0];
   if (M.mode === 'ru' && M.ru) return ruPack();
@@ -61,12 +62,14 @@ function m2HudInfo() {
   if (M.mode === 'ru' && M.ru) return ruHud();
   if (M.mode === 'pp' && M.pp) return ppHud();
   if (M.ph) return phHud();
+  if (M.br) return brHud();
   if (M.mode === 'kc' && M.kc) { const near = M.kc.tags.filter(t => Math.hypot(t.x - P.x, t.z - P.z) < 25), e = near.filter(t => t.team !== M.myTeam).length, f = near.length - e; return `${e} ENEMY BAG${e === 1 ? '' : 'S'} NEARBY${f ? ` · ${f} OF YOUR TEAM'S TO SAVE` : ''}`; }
   if (M.mode === 'dom' && M.dom) return M.dom.pts.map(p => { const c = p.own === -1 ? '#ddd' : TEAM_COL[p.own === M.myTeam ? 0 : 1]; return `<span class="dom-l" style="--c:${c}${p.status ? ';--b:#ffd24a' : ''}">${p.n}</span>`; }).join('') + ` ${domHeld(M.myTeam)} HELD`;
   return '';
 }
 function m2Markers(out) {
   if (M.mode === 'ru' && M.ru) ruMarkers(out);
+  if (M.br) brMarkers(out);
   if (M.mode === 'kc' && M.kc) for (const t of M.kc.tags) { if (Math.hypot(t.x - P.x, t.z - P.z) > 30) continue; out.push({ x: t.x, y: t.y + 1.1, z: t.z, t: t.team === M.myTeam ? 'SAVE' : 'BAG', c: TEAM_COL[t.team === M.myTeam ? 0 : 1] }); }
   if (M.mode === 'dom' && M.dom) for (const p of M.dom.pts) out.push({ x: p.x, y: p.y + 2.6, z: p.z, t: p.n, c: p.status ? '#ffd24a' : p.own === -1 ? '#ffffff' : TEAM_COL[p.own === M.myTeam ? 0 : 1] });
 }
