@@ -260,7 +260,7 @@ function drawRadar() {
   const dot = (x, z) => { const dx = x - P.x, dz = z - P.z; let px = (dx * cs - dz * sn) * scale, py = (dx * sn + dz * cs) * scale; const l = Math.hypot(px, py); if (l > R) { px *= R / l; py *= R / l; } c.fillRect(W / 2 + px - 2, W / 2 + py - 2, 4, 4); };
   const pvp = inMatch();
   for (const e of enemies) { const fr = isFriend(e); if (pvp && !fr && !stkSeen(e) && !(M.t - (e.lastShotT || -9) < 2.5 && !e.stealth)) continue; c.fillStyle = fr ? TEAM_COL[0] : TEAM_COL[1]; dot(e.group.position.x, e.group.position.z); }
-  if (pvp) { c.fillStyle = '#ffd24a'; for (const m of markerList()) dot(m.x, m.z); }
+  if (pvp) { c.fillStyle = '#ffd24a'; for (const m of markerList()) if (m.t !== 'LOOT') dot(m.x, m.z); }   // LAST TOKE loot stays off the minimap
   c.fillStyle = '#6fcf5a'; for (const k of pickups) dot(k.x, k.z);
   if (typeof VH !== 'undefined' && VH.list.length) { c.fillStyle = '#ffffff'; for (const v of VH.list) if (!v.dead && !v.driver) dot(v.x, v.z); }   // LAST TOKE: free vehicles
 }

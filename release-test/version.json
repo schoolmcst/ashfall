@@ -1,11 +1,9 @@
 {
- "version": "1.2.75",
+ "version": "1.2.76",
  "notes": [
-  "BOTS DRIVE: in LAST TOKE they grab golf carts and dirt bikes to beat the cloud (and run you over)",
-  "LAST TOKE is now a full 16 players",
-  "LAST TOKE bots now go for the safe circle and the loot crates properly",
-  "free vehicles show on the minimap"
+  "UAV now shows enemies on the minimap only (ADVANCED UAV still marks them on screen)",
+  "LAST TOKE loot crates no longer clutter the minimap"
  ],
- "sha256": "c094c15475d6ac75004e5435beff46ada1791bbdbadd339e7ab45ee7bc79da30",
+ "sha256": "95f3189888270d2b661fb2947403f42b52118d3f489cd0643744fd6a7fa8045b",
  "minApp": "1.0.0"
 }

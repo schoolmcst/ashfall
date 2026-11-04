@@ -79,6 +79,9 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   (botGoal only called m2Goal for kc/dom/ru before: they ignored the circle and crates). Bots drive: vhBotWant (from brGoal
   when far from the circle), vhBotDrive (in the bots' loop, skips walking and shooting), vhPhys shared with the player;
   the host sends its bots' vehicles as presence `vb`. Free vehicles are white squares on the radar. Test: s_botdrive.
+- 1.2.76 TEST (owner asked): the plain UAV shows enemies on the minimap only (stkMarks needs STK.vuav; the ADVANCED UAV
+  still marks them on screen). LAST TOKE loot crates are not drawn on the minimap (drawRadar skips t === 'LOOT'); their
+  on-screen LOOT tags stay. Test: s_uavradar.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

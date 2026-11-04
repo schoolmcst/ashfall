@@ -1,7 +1,7 @@
 /* ================================================================== scorestreaks
    Points from kills since your last death earn the streaks you picked (three, in the SCORESTREAKS tab). Earned streaks
    wait in the bottom-right until you use them with the SCORESTREAK key (X by default); dying resets the points but
-   keeps what you already earned. UAVs show enemies on the radar and on screen; strikes drop shells / bombs on them. */
+   keeps what you already earned. the UAV shows enemies on the minimap (the ADVANCED UAV on screen too); strikes drop shells / bombs on them. */
 const STK_ICON = {
   uav: '<path d="M4 13 L20 13 M12 5 L12 21 M7 9 L17 9" stroke-width="2.2"/><circle cx="12" cy="13" r="2.4"/>',
   supply: '<rect x="4" y="7" width="16" height="13" rx="1"/><path d="M4 11 H20 M12 7 V20 M8 4 L12 7 L16 4"/>',
@@ -16,13 +16,13 @@ const STK_ICON = {
 };
 const STREAKS = {
   drone:  { name: 'DEALER DRONE', cost: 750, cd: 55, desc: 'A delivery drone flies to the nearest enemy and drops off a very loud package.' },
-  uav:    { name: 'UAV', cost: 550, cd: 45, desc: 'A spy plane shows every enemy on your radar and screen for 25 seconds.' },
+  uav:    { name: 'UAV', cost: 550, cd: 45, desc: 'A spy plane shows every enemy on your minimap for 25 seconds.' },
   supply: { name: 'SUPPLY DROP', cost: 650, cd: 50, desc: 'Refills all your ammo and grenades and heals you to full.' },
   cuav:   { name: 'SMOKE OUT', cost: 900, cd: 60, desc: 'Counter-UAV: a thick cloud of smoke jams the enemy radar and spy planes for 30 seconds, and their aim gets hazy.' },
   armor:  { name: 'BODY ARMOR', cost: 850, cd: 60, desc: '+40 health until you die.' },
   mortar: { name: 'MORTAR STRIKE', cost: 1050, cd: 70, desc: 'Three mortar shells land on enemy positions.' },
   sentry: { name: 'TRAP HOUSE TURRET', cost: 1150, cd: 70, desc: 'A sentry turret guards the spot in front of you for 30 seconds and shoots every enemy it sees.' },
-  vuav:   { name: 'ADVANCED UAV', cost: 1400, cd: 80, desc: 'Shows every enemy and the way they are facing for 35 seconds.' },
+  vuav:   { name: 'ADVANCED UAV', cost: 1400, cd: 80, desc: 'Shows every enemy on your minimap and on screen, and the way they are facing, for 35 seconds.' },
   air:    { name: 'AIRSTRIKE', cost: 1700, cd: 90, desc: 'A jet carpet-bombs a line straight through the enemy.' },
   gunship: { name: 'HIGH FLYER', cost: 2100, cd: 110, desc: 'A gunship circles high over the map for 22 seconds and shells every enemy it can see from the sky.' },
 };
@@ -96,7 +96,7 @@ const stkSeen = e => STK.uavT > 0 && !isFriend(e) && !e.ghost && !stkJammed();  
 const _sv = new THREE.Vector3();
 function stkMarks() {
   const lay = $('uavMarks'); if (!lay) return;
-  const on = STK.uavT > 0 && !stkJammed() && (G.state === 'playing' || G.state === 'paused');
+  const on = STK.uavT > 0 && STK.vuav && !stkJammed() && (G.state === 'playing' || G.state === 'paused');   // the plain UAV is radar only; the ADVANCED UAV marks them on screen too
   if (!on) { if (lay._n) { lay.innerHTML = ''; lay._n = 0; } return; }
   const list = enemies.filter(e => !isFriend(e)), W = innerWidth, H = innerHeight;
   while (lay.children.length < list.length) { const d = document.createElement('i'); lay.appendChild(d); }
