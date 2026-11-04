@@ -42,3 +42,13 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   console) runs any `Documents\ashfall\hq\jobs\*.py`. Drop job files through the device bridge; never click on or take
   focus from the owner's main monitor — they game on it.
 - Output JSON lands in `Documents\ashfall\hq\out\`; `hq/hqpack.py` packs them into `game/src/hqdata.js`.
+
+## Where things stand (handoff, Nov 2026)
+- TEST APP has 1.2.62 (zombies chapter 5 THE MARY JANE), 1.2.61 (DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS) and
+  1.2.60 (Season 2 HARVEST, save codes, block, word filter, error reports). None of it is public yet: release with
+  `tools/release.sh public` only when the owner says "send it".
+- Open: the owner saw red error boxes once. The error box now has COPY REPORT; ask for the pasted report.
+- Owner's rules: everything stays BETA; weed/drug theme; built-in voices only; gold is only the weapon-grind reward;
+  lots of pictures and time estimates in replies; never click or take focus on the owner's main monitor.
+- Leave secretvids.js and the SECRET_PACK block in progress.js untouched and never bring them up.
+- Tests that cover the newest work: s_season2.js, s_launch.js, s_modes3.js, mp_modes3.js, s_zship.js, s_zisle.js.
