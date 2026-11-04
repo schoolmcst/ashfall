@@ -1,11 +1,12 @@
 {
- "version": "1.2.69",
+ "version": "1.2.71",
  "notes": [
-  "NEW MODE: LAST TOKE (BETA). Battle royale: one life each, everyone starts with a pistol. Open LOOT CRATES (white common, blue rare, purple epic) for better guns and full health. The NIGHTSHADE CLOUD closes in four times, and outside it you choke. Last one standing wins. Offline vs bots for now.",
-  "NEW: CREW STASH HOUSE on the leaderboard CREW tab. Every member's matches earn CREW POINTS that build your hideout: couch, crew neon, pool table, grow tent, arcade, DJ booth, penthouse. A trophy shelf fills with the crew's zombies story completions. WEEKLY CREW GOAL: 1,000 DZ and a free ELITE box each.",
-  "NEW: WATCH a friend. When a friend is in an online match, press WATCH in your friends list to spectate their match without playing. The camera follows them, JUMP switches players.",
-  "Still in from 1.2.68: THE GROW OP, PROP HUNT, THE HOTBOX, night remasters, PRESTIGE 20, REPLAY THEATRE, new hit feedback and accessibility options."
+  "PERFORMANCE: no more hitch at the start of every match. The replay's map picture used to resize the whole game canvas, and could leave the game drawing more pixels than your screen has. It now uses its own small picture, made once per map.",
+  "PERFORMANCE: the shaders for explosions, blood, sparks, smoke and ragdolls are compiled during the loading screen, so the first fight of a match no longer stutters.",
+  "PERFORMANCE: maps with lots of lamps (DISPENSARY ROW, the night maps) keep only the 8 most important lights near you, and redraw shadows every other frame, like zombies already did.",
+  "PERFORMANCE: with BLOOM & COLOUR on, the screen no longer runs a second, wasted anti-aliasing pass (applies on next launch). Menus draw at most 60 frames a second.",
+  "Still in from 1.2.70: ONLINE LAST TOKE and the online PROP HUNT fix."
  ],
- "sha256": "a2546b8908f734d8bbb07d882593114fbf37c07df5c6a26accbdc08b2ecc0949",
+ "sha256": "866746d46c1fdad4ed9b3c88f51ebcefeb3e904b2b7dba83fe1e463313cc96df",
  "minApp": "1.0.0"
 }
