@@ -75,11 +75,11 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   updatePlayer (and the camera) while driving; no shooting (isFiring); ram damage; crash and explosion damage (vhBlast in
   explode); online the driver sends presence `vh` = [id, x, z, yaw, speed, hp]. Bots do not drive. Tests: s_stashisle,
   s_vehicles, _isle_bots (no-render bot sim).
-- 1.2.75 TEST: LAST TOKE is 16 players (match.js and lobby.js capped FFA counts at 12). BR bots now really use brGoal
+- 1.2.75 PUBLIC: LAST TOKE is 16 players (match.js and lobby.js capped FFA counts at 12). BR bots now really use brGoal
   (botGoal only called m2Goal for kc/dom/ru before: they ignored the circle and crates). Bots drive: vhBotWant (from brGoal
   when far from the circle), vhBotDrive (in the bots' loop, skips walking and shooting), vhPhys shared with the player;
   the host sends its bots' vehicles as presence `vb`. Free vehicles are white squares on the radar. Test: s_botdrive.
-- 1.2.76 TEST (owner asked): the plain UAV shows enemies on the minimap only (stkMarks needs STK.vuav; the ADVANCED UAV
+- 1.2.76 PUBLIC (owner asked; said send it): the plain UAV shows enemies on the minimap only (stkMarks needs STK.vuav; the ADVANCED UAV
   still marks them on screen). LAST TOKE loot crates are not drawn on the minimap (drawRadar skips t === 'LOOT'); their
   on-screen LOOT tags stay. Test: s_uavradar.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see

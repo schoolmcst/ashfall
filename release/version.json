@@ -1,9 +1,9 @@
 {
- "version": "1.2.74",
+ "version": "1.2.76",
  "notes": [
-  "NEW: GOLF CARTS and DIRT BIKES in LAST TOKE - drive, run people over, blow them up",
-  "on the bike: SPRINT + forward for a wheelie"
+  "UAV now shows enemies on the minimap only (ADVANCED UAV still marks them on screen)",
+  "LAST TOKE loot crates no longer clutter the minimap"
  ],
- "sha256": "9fd3614ee89776fda528c8516385dbc7a5b2343ad6f69e9ff16553595a431bac",
+ "sha256": "95f3189888270d2b661fb2947403f42b52118d3f489cd0643744fd6a7fa8045b",
  "minApp": "1.0.0"
 }
