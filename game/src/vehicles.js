@@ -81,33 +81,42 @@ function vhEngine(k) {
     VH.eng.o.frequency.value = (VH.me && VH.me.type === 'bike' ? 70 : 45) + k * (VH.me && VH.me.type === 'bike' ? 180 : 90); VH.eng.g.gain.value = vol * (0.35 + k * 0.65);
   } catch (e) {}
 }
+// the driving itself (the player's vehicle and the bots' share it): throttle, steering, walls, running people over
+function vhPhys(v, thr, steer, brake, dt, who) {
+  const T = v.T, me = who === 'me';
+  if (thr > 0) v.spd += thr * T.acc * dt * (v.spd < 0 ? 2 : 1); else if (thr < 0) v.spd += thr * T.acc * dt * (v.spd > 0 ? 1.6 : 0.6);
+  v.spd *= 1 - (thr ? 0.25 : 0.9) * dt; if (brake) v.spd *= 1 - 4 * dt;
+  v.spd = clamp(v.spd, -5, T.max * (me ? 1 : 0.8) * (M && M.feat && M.feat.lowgrav ? 1.1 : 1)); if (Math.abs(v.spd) < 0.05 && !thr) v.spd = 0;
+  const grip = clamp(Math.abs(v.spd) / 4, 0, 1) * (brake ? 1.35 : 1); v.yaw += -steer * T.turn * grip * Math.sign(v.spd || 1) * dt; v.steer = steer;
+  const fx = -Math.sin(v.yaw), fz = -Math.cos(v.yaw), nx = v.x + fx * v.spd * dt, nz = v.z + fz * v.spd * dt;
+  const q = { x: nx, z: nz }; resolve(q, T.r, v.y);
+  q.x = clamp(q.x, PLAYRECT[0] + T.r, PLAYRECT[1] - T.r); q.z = clamp(q.z, PLAYRECT[2] + T.r, PLAYRECT[3] - T.r);
+  let crash = false;
+  if (Math.hypot(q.x - nx, q.z - nz) > 0.02 && Math.abs(v.spd) > 3) {   // crashed into something
+    crash = true; const hard = Math.abs(v.spd);
+    if (NOW - v.hitT > 0.4) { v.hitT = NOW; vhDamage(v, hard * 4); if (me) { G.shake = Math.max(G.shake, clamp(hard / 300, 0.01, 0.05)); try { rumble(0.8, 0.5, 200); } catch (e) {} } try { sfx.thud(Object.assign({ vol: clamp(hard / 12, 0.3, 1.2) }, me ? {} : at(v.x, v.z, 25))); } catch (e) {} }
+    v.spd *= -0.25;
+  }
+  v.x = q.x; v.z = q.z; const gy = groundAt(v.x, v.z, v.y + 0.3); v.y = lerp(v.y, gy, clamp(dt * 12, 0, 1));
+  if (Math.abs(v.spd) > 5) {   // running people over
+    const hitK = Math.abs(v.spd) * (v.type === 'cart' ? 11 : 9);
+    for (const e of enemies.slice()) {
+      if (e === who || !e.entry || e.entry.alive === false || (me && e.team !== undefined && M.def && M.def.teams && e.team === M.myTeam)) continue;
+      const gp = e.group.position, d = Math.hypot(gp.x - v.x, gp.z - v.z); if (d > T.r + 0.55 || Math.abs(gp.y - v.y) > 1.4) continue;
+      if (e.vhHitT && NOW - e.vhHitT < 0.6) continue; e.vhHitT = NOW;
+      try { damageEnemy(e, hitK, false, { x: fx, z: fz }, false, me ? 'player' : who); sfx.thud(me ? { vol: 1 } : Object.assign({ vol: 1 }, at(v.x, v.z, 25))); } catch (er) {}
+      v.spd *= 0.75;
+    }
+    if (!me && playerAlive() && Math.hypot(P.x - v.x, P.z - v.z) < T.r + 0.55 && Math.abs(P.y - v.y) < 1.4 && (!G.vhHitT || NOW - G.vhHitT > 0.6)) { G.vhHitT = NOW; try { hurtPlayer(hitK, v.x, v.z, false); } catch (er) {} v.spd *= 0.75; }
+  }
+  return { fx, fz, crash };
+}
 // every frame of updatePlayer: true while I'm driving (the vehicle moves me instead of my legs)
 function vhPlayer(dt) {
   const v = VH.me; if (!v) return false;
   if (!playerAlive() || v.dead) { vhExit(true); return false; }
   const T = v.T, thr = clamp((kb('fwd') ? 1 : 0) - (kb('back') ? 1 : 0) - pad.my, -1, 1), steer = clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1), brake = kb('jump') || pad.jump;
-  if (thr > 0) v.spd += thr * T.acc * dt * (v.spd < 0 ? 2 : 1); else if (thr < 0) v.spd += thr * T.acc * dt * (v.spd > 0 ? 1.6 : 0.6);
-  v.spd *= 1 - (thr ? 0.25 : 0.9) * dt; if (brake) v.spd *= 1 - 4 * dt;
-  v.spd = clamp(v.spd, -5, T.max * (M && M.feat && M.feat.lowgrav ? 1.1 : 1)); if (Math.abs(v.spd) < 0.05 && !thr) v.spd = 0;
-  const grip = clamp(Math.abs(v.spd) / 4, 0, 1) * (brake ? 1.35 : 1), dy = -steer * T.turn * grip * Math.sign(v.spd || 1) * dt;
-  v.yaw += dy; P.yaw += dy;   // the view turns with the vehicle; the mouse still looks round
-  const fx = -Math.sin(v.yaw), fz = -Math.cos(v.yaw), nx = v.x + fx * v.spd * dt, nz = v.z + fz * v.spd * dt;
-  const q = { x: nx, z: nz }; resolve(q, T.r, v.y);
-  q.x = clamp(q.x, PLAYRECT[0] + T.r, PLAYRECT[1] - T.r); q.z = clamp(q.z, PLAYRECT[2] + T.r, PLAYRECT[3] - T.r);
-  const off = Math.hypot(q.x - nx, q.z - nz);
-  if (off > 0.02 && Math.abs(v.spd) > 3) {   // crashed into something
-    const hard = Math.abs(v.spd); if (NOW - v.hitT > 0.4) { v.hitT = NOW; vhDamage(v, hard * 4); G.shake = Math.max(G.shake, clamp(hard / 300, 0.01, 0.05)); try { sfx.thud({ vol: clamp(hard / 12, 0.3, 1.2) }); rumble(0.8, 0.5, 200); } catch (e) {} }
-    v.spd *= -0.25;
-  }
-  v.x = q.x; v.z = q.z; const gy = groundAt(v.x, v.z, v.y + 0.3); v.y = lerp(v.y, gy, clamp(dt * 12, 0, 1));
-  // running people over
-  if (Math.abs(v.spd) > 5) for (const e of enemies.slice()) {
-    if (!e.entry || e.entry.alive === false || (e.team !== undefined && M.def && M.def.teams && e.team === M.myTeam)) continue;
-    const gp = e.group.position, d = Math.hypot(gp.x - v.x, gp.z - v.z); if (d > T.r + 0.55 || Math.abs(gp.y - v.y) > 1.4) continue;
-    if (e.vhHitT && NOW - e.vhHitT < 0.6) continue; e.vhHitT = NOW;
-    try { damageEnemy(e, Math.abs(v.spd) * (v.type === 'cart' ? 11 : 9), false, { x: fx, z: fz }, false, 'player'); sfx.thud({ vol: 1 }); } catch (er) {}
-    v.spd *= 0.75;
-  }
+  const yaw0 = v.yaw, { fx, fz } = vhPhys(v, thr, steer, brake, dt, 'me'); P.yaw += v.yaw - yaw0;   // the view turns with the vehicle; the mouse still looks round
   P.x = v.x; P.z = v.z; P.y = v.y; P.vx = fx * v.spd; P.vz = fz * v.spd; P.vy = 0; P.onGround = true; P.eye = lerp(P.eye, T.eye - 0.1, clamp(10 * dt, 0, 1));
   P.recoilAcc = 0; try { const gun = gunObjs[G.cur]; if (gun && gun.visible) gun.visible = false; } catch (e) {}
   vhEngine(clamp(Math.abs(v.spd) / T.max, 0, 1));
@@ -124,9 +133,11 @@ function vhUpdate(dt) {
   if (!VH.list.length) return;
   for (const v of VH.list) {
     if (v.dead) continue;
+    if (v.bot && (!enemies.includes(v.bot) || v.bot.veh !== v)) { if (v.bot.veh === v) v.bot.veh = null; v.bot = null; v.driver = null; }   // its bot died at the wheel
+    if (v.want && (!enemies.includes(v.want) || v.want.veh)) v.want = null;
     if (v.net && NOW - v.netT > 1.5) { v.net = null; v.driver = null; v.spd = 0; }   // the remote driver stopped sending: it stays parked there
     if (v.net) { v.x = lerp(v.x, v.nx, clamp(dt * 10, 0, 1)); v.z = lerp(v.z, v.nz, clamp(dt * 10, 0, 1)); let dyw = v.nyaw - v.yaw; dyw = Math.atan2(Math.sin(dyw), Math.cos(dyw)); v.yaw += dyw * clamp(dt * 10, 0, 1); v.y = groundAt(v.x, v.z, v.y + 0.3); }
-    const k = v.spd / v.T.max; const st = v.driver === 'me' ? clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1) : 0; v.lean = lerp(v.lean, v.type === 'bike' ? clamp(-st * k * 0.5, -0.4, 0.4) : 0, clamp(dt * 6, 0, 1));
+    const k = v.spd / v.T.max; const st = v.driver ? v.steer || 0 : 0; v.lean = lerp(v.lean, v.type === 'bike' ? clamp(-st * k * 0.5, -0.4, 0.4) : 0, clamp(dt * 6, 0, 1));
     v.pitch = lerp(v.pitch, v.type === 'bike' && v.driver === 'me' && kb('fwd') && kb('sprint') && v.spd > 4 ? -0.35 : 0, clamp(dt * 4, 0, 1));   // SPRINT + forward on the bike: a wheelie
     v.g.position.set(v.x, v.y, v.z); v.g.rotation.set(v.pitch, v.yaw, v.lean, 'YXZ');
     for (const w of v.g.userData.wheels) w.rotation.x += v.spd * dt / 0.3;
@@ -146,3 +157,45 @@ function vhRemote(R, a) {
   v.net = R; v.driver = R; v.netT = NOW; v.nx = netNum(a[1], -ARENA, ARENA, v.x); v.nz = netNum(a[2], -ARENA, ARENA, v.z); v.nyaw = +a[3] || 0; v.spd = netNum(a[4], -10, 30, 0);
   const hp = netNum(a[5], -1, 999, v.hp); if (hp <= 0 && !v.dead) vhDamage(v, 9999, true); else v.hp = Math.min(v.hp, hp);
 }
+/* ---------- BOTS (offline, and the host's bots online): a bot that has a long way to run to the circle takes a free
+   vehicle close by, drives it there (steering round what is in the way, backing up when stuck), and gets out when it
+   arrives, when a fight starts close by, or when it is stuck for good. Bots in a vehicle don't shoot. */
+function vhBotWant(e, tx, tz) {
+  if (e.veh || e.net || !VH.list.length || (e.vhNoT && M.t < e.vhNoT)) return null;
+  const g = e.group.position; if (Math.hypot(tx - g.x, tz - g.z) < 35) return null;
+  let best = null, bd = 22; for (const v of VH.list) { if (v.dead || v.driver || (v.want && v.want !== e)) continue; const d = Math.hypot(v.x - g.x, v.z - g.z); if (d < bd) { bd = d; best = v; } }
+  if (!best) return null; best.want = e;
+  if (bd < 2.4) { vhBotEnter(e, best); return null; }
+  return { x: best.x, z: best.z, y: best.y || 0 };
+}
+function vhBotEnter(e, v) { e.veh = v; v.driver = e; v.bot = e; v.want = null; v.stuckN = 0; v.revT = 0; v.chkT = 1.2; v.cx0 = v.x; v.cz0 = v.z; e.goal = null; }
+function vhBotExit(e) {
+  const v = e.veh; e.veh = null; e.vhNoT = M.t + 12; e.goal = null; if (!v) return;
+  v.driver = null; v.bot = null; v.spd *= 0.3;
+  if (!enemies.includes(e)) return;
+  const o = openNear(v.x + Math.cos(v.yaw) * 1.8, v.z - Math.sin(v.yaw) * 1.8); e.group.position.set(o.x, groundAt(o.x, o.z, v.y + 0.5), o.z);
+}
+// in the bots' loop (match.js): true while this bot is driving (it skips walking and shooting this frame)
+function vhBotDrive(e, dt) {
+  const v = e.veh; if (!v) return false;
+  if (v.dead) { vhBotExit(e); return false; }
+  const B = M.br; let tx, tz;
+  if (B) { const t = B.to && B.closing ? B.to : { x: B.cx, z: B.cz }; tx = t.x; tz = t.z; } else if (e.goal) { tx = e.goal.x; tz = e.goal.z; } else { vhBotExit(e); return false; }
+  const dist = Math.hypot(tx - v.x, tz - v.z), tp = e.tgt ? tpos(e.tgt) : null, fight = tp && Math.hypot(tp.x - v.x, tp.z - v.z) < 22 && M.t - (e.seenT || -9) < 0.6;
+  if (dist < 10 || (fight && Math.random() < dt * 2) || v.stuckN >= 3) { vhBotExit(e); return false; }
+  let want = Math.atan2(-(tx - v.x), -(tz - v.z)); const look = 4 + Math.abs(v.spd) * 0.35;
+  const clear = a => gridClear(v.x, v.z, v.x - Math.sin(a) * look, v.z - Math.cos(a) * look, v.y, v.y);
+  if (!clear(want)) for (const o of [0.5, -0.5, 1, -1, 1.6, -1.6]) if (clear(want + o)) { want += o; break; }
+  const da = Math.atan2(Math.sin(want - v.yaw), Math.cos(want - v.yaw));
+  let thr = Math.abs(da) > 1.3 ? 0.35 : dist < 25 ? 0.6 : 1, steer = clamp(-da * 2, -1, 1);
+  if (v.revT > 0) { v.revT -= dt; thr = -1; steer = -steer; }
+  if ((v.chkT -= dt) <= 0) { v.chkT = 1.2; if (Math.hypot(v.x - v.cx0, v.z - v.cz0) < 1.2 && v.revT <= 0) { v.revT = 0.9; v.stuckN++; } else if (v.stuckN > 0) v.stuckN -= 0.34; v.cx0 = v.x; v.cz0 = v.z; }
+  vhPhys(v, thr, steer, false, dt, e);
+  e.group.position.set(v.x, v.y + 0.3, v.z); e.group.rotation.y = v.yaw + Math.PI; e.moveSp = 0; e.goal = null;
+  if (e.spawnProt > 0) e.spawnProt -= dt;
+  return true;
+}
+// online: the host sends its bots' vehicles in its own presence (vb), the same way a driver sends theirs
+function vhPackBots() { const out = []; for (const v of VH.list) if (v.bot && !v.dead) { const r1 = x => Math.round(x * 10) / 10; out.push([v.id, r1(v.x), r1(v.z), Math.round(v.yaw * 100) / 100, r1(v.spd), Math.ceil(v.hp)]); } return out.length ? out : undefined; }
+const VH_BOTR = { entry: { name: '~bots' } };
+function vhRemoteBots(list) { if (!Array.isArray(list)) return; for (const a of list.slice(0, 16)) vhRemote(VH_BOTR, a); }

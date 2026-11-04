@@ -72,7 +72,7 @@ function rosterHtml(k) {
     return `<div class="ros-h"><span>LOBBY</span><b>${n} V ${n}</b></div>` +
       `<div class="ros-team" style="--tc:${TEAM_COL[0]}"><div class="tn">YOUR TEAM</div>${p(me, 'me', 'READY')}${names.slice(0, n - 1).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` +
       `<div class="ros-team" style="--tc:${TEAM_COL[1]}"><div class="tn">ENEMY TEAM</div>${names.slice(8, 8 + n).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` + info; }
-  const n = clamp(cfg.players, 2, 12);
+  const n = clamp(cfg.players, 2, cfg.mode === 'br' || LOBBY.mode === 'br' ? 16 : 12);
   return `<div class="ros-h"><span>LOBBY</span><b>${n} PLAYERS</b></div><div class="ros-team"><div class="tn">FREE-FOR-ALL</div>${p(me, 'me', 'READY')}${names.slice(0, n - 1).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` + info;
 }
 function openModes() {

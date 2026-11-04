@@ -262,6 +262,7 @@ function drawRadar() {
   for (const e of enemies) { const fr = isFriend(e); if (pvp && !fr && !stkSeen(e) && !(M.t - (e.lastShotT || -9) < 2.5 && !e.stealth)) continue; c.fillStyle = fr ? TEAM_COL[0] : TEAM_COL[1]; dot(e.group.position.x, e.group.position.z); }
   if (pvp) { c.fillStyle = '#ffd24a'; for (const m of markerList()) dot(m.x, m.z); }
   c.fillStyle = '#6fcf5a'; for (const k of pickups) dot(k.x, k.z);
+  if (typeof VH !== 'undefined' && VH.list.length) { c.fillStyle = '#ffffff'; for (const v of VH.list) if (!v.dead && !v.driver) dot(v.x, v.z); }   // LAST TOKE: free vehicles
 }
 const el = { hp: $('hpnum'), fill: $('hpfill'), mag: $('mag'), name: $('wname'), gren: $('gren'), slots: $('slots'), wave: $('sWave'), kills: $('sKills'), score: $('sScore'), left: $('sLeft') };
 let lastMsg = '';

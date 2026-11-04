@@ -1,9 +1,11 @@
 {
- "version": "1.2.74",
+ "version": "1.2.75",
  "notes": [
-  "NEW: GOLF CARTS and DIRT BIKES in LAST TOKE - drive, run people over, blow them up",
-  "on the bike: SPRINT + forward for a wheelie"
+  "BOTS DRIVE: in LAST TOKE they grab golf carts and dirt bikes to beat the cloud (and run you over)",
+  "LAST TOKE is now a full 16 players",
+  "LAST TOKE bots now go for the safe circle and the loot crates properly",
+  "free vehicles show on the minimap"
  ],
- "sha256": "9fd3614ee89776fda528c8516385dbc7a5b2343ad6f69e9ff16553595a431bac",
+ "sha256": "c094c15475d6ac75004e5435beff46ada1791bbdbadd339e7ab45ee7bc79da30",
  "minApp": "1.0.0"
 }

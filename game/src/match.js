@@ -185,7 +185,7 @@ function startMatch(mode, custom) {
     const n = clamp(cfg.perTeam, 1, 8);
     for (let t = 0; t < 2; t++) for (let i = 0; i < (t === 0 ? n - 1 : n); i++) M.entries.push({ name: names[ni++ % names.length], team: t, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: i % 2 ? 'obj' : 'hunt' });
   } else {
-    const n = clamp(cfg.players, 2, 12);
+    const n = clamp(cfg.players, 2, M.mode === 'br' ? 16 : 12);   // LAST TOKE is sixteen
     for (let i = 1; i < n; i++) M.entries.push({ name: names[ni++ % names.length], team: i, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: 'hunt' });
   }
   if (mode === 'snd') M.snd = { round: 0, wins: [0, 0], att: 0, state: 'freeze', t: 0, bomb: null, site: 0 };
@@ -385,7 +385,7 @@ function botGoal(e, cands) {
   const set = (p, hold) => { e.goalT = M.t + (hold || rnd(3, 6)); return p; };
   if (e.inf) { const g = infGoal(e, set); if (g) return g; }
   if (e.camp) { const g = campGoal(e, keep, near, set); if (g) return g; }
-  if (M.kc || M.dom || M.ru) { const g = m2Goal(e, keep, near, set); if (g) return g; }
+  if (M.kc || M.dom || M.ru || M.br) { const g = m2Goal(e, keep, near, set); if (g) return g; }
   if (e.job) { const g = botRoleGoal(e, cands, keep, near, set); if (g) return g; }
   if (M.mode === 'hp' && M.hp && !M.hp.wait) {
     const z = LAYOUT.hp[M.hp.idx];
@@ -440,6 +440,7 @@ function updateBots(dt) {
     if (!e.entry || e.net) continue;
     if ((e.think -= dt) <= 0) { e.think = 0.28 + Math.random() * 0.12; botThink(e); }
     if (e.tgt && !botValidTarget(e, e.tgt)) e.tgt = null;
+    if (e.veh && vhBotDrive(e, dt)) continue;   // driving a LAST TOKE vehicle
     const ex = g.position.x, ez = g.position.z;
     let face = null, holding = false, mx = 0, mz = 0;
     const tp = e.tgt ? tpos(e.tgt) : null, dist = tp ? Math.hypot(tp.x - ex, tp.z - ez) : 1e9;
