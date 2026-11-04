@@ -1,17 +1,14 @@
 {
- "version": "1.2.59",
+ "version": "1.2.64",
  "notes": [
-  "NEW: CAMPAIGN - FIRST HARVEST. A 12-mission story on the main menu (CAMPAIGN), three weeks before the night Blackwell fell. Checkpoints, the crew fights and talks beside you, 3 hidden STASH TINS per mission, RECRUIT / REGULAR / VETERAN, XP for every mission.",
-  "1 LAST DELIVERY: VANTAGE raids the Green Coast Collective - hold the greenhouse, get Mara out, protect the van, CAPTAIN KESS. 2 THE PLUG: photograph the grey boats unseen, find the manifest, catch the fake buyer, snipe from the catwalk.",
-  "3 PAPER TRAIL: tail a courier, decrypt the drive, run the metro tunnel. 4 HIGH RISE: silent takedowns on the Lazarus tower, rescue Doc, hold the helipad, THE WARDEN.",
-  "5 PURPLE DUST: burn the Nightshade fields, sniper duel with HAWK, beat the dust storm. 6 COLD STORAGE: cut the power, sneak through the dark, break Tank out, steal the seed case.",
-  "7 THE PASS: mine the crossings, hit the convoy, protect Tank, THE HOUND. 8 WHEELS UP: meet Sparks, scan the cargo, catch the loader, blow the plane's cargo.",
-  "9 THE WORKS: the graveyard, Harold's safe, THE FOREMAN, out through the fire. 10 SOURCE: the Grower's journal, walk him to his lighthouse, burn the first field.",
-  "11 LAST STAND: defend the hideout, COMMANDER RHYS. 12 LIGHTS OUT: Blackwell Hospital, HAROLD VOSS and the first infected - leading straight into ZOMBIES chapter one.",
-  "CONTACT HIGH: infected bots now kill in one hit up close, like infected players.",
-  "ZOMBIES: no more finisher takedowns on zombies (the lock could get you killed in a horde). ZOMBIES LEADERBOARD: best round on any map and games played.",
-  "FIX: the traffic lights at VERNON SQUARE were invisible."
+  "NEW ZOMBIES MAP: THE HIGH TIDE - CHAPTER SIX: LAST CALL (BETA). The Mary Jane's sister ship is a 420 party cruise, still lit up and still playing music. The lido deck and its pool, the grand atrium, the Munchies Buffet, the High Rollers Casino, Club 420, the Kush Theatre and the VIP lounge at the bow.",
+  "7 chapters, 12 tapes and a new boss: THE CRUISE DIRECTOR (purple top hat, pink bow tie). Find the spark plugs and start the generator, take the purser's keycard, burn the Nightshade party favours, open the vault and fog the whole ship with the cure from the Club 420 fog machine.",
+  "NEW WONDER WEAPON: THE DISCO BONG. Fires a glowing disco ball that hangs in the air. Zombies around it dance and get zapped by its lasers.",
+  "A light-up dance floor, a disco ball and party beams once the power is back. LAUNCH PADS between the lido, the buffet, the casino and the bow. New AFTERPARTY camo for upgraded guns on this map.",
+  "Chapter five now leads into chapter six.",
+  "Still in from 1.2.63: BLOOM & COLOUR graphics (glow, colour grading, smoother edges; Settings > VIDEO > EFFECTS).",
+  "Still in from 1.2.62, 1.2.61 and 1.2.60: THE MARY JANE, DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS, Season 2 HARVEST, save codes, block, word filter, error reports."
  ],
- "sha256": "c0cb17239c04fb4253c5024cbf918642b65d9ca69eb1c68e99aaf2dfc10e7ea8",
+ "sha256": "53299159411d48d0b0ae7e72be7636ef3072965df1aa099f4d9b26d9e175e9b5",
  "minApp": "1.0.0"
 }
