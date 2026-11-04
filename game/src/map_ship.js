@@ -12,12 +12,12 @@ const SHIP = { flick: [], beam: null, piv: null, on: false, mastL: null };
 function shipMaterials() {
   if (MAT.shipHull) return;
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.015, roughness: 0.8, metalness: 0.3 }, o));
-  MAT.shipHull = std(TEX.metal, { color: C(0x5a1a16), roughness: 0.7 });
-  MAT.shipDeck = std(TEX.concrete, { color: C(0x4a5a4e), roughness: 0.85, metalness: 0.2 });
-  MAT.shipWhite = std(TEX.concrete, { color: C(0xe6e4dc), roughness: 0.75, metalness: 0.1 });
+  MAT.shipHull = std(TEX.paintm || TEX.metal, { color: C(0x5a1a16), roughness: 0.7 });
+  MAT.shipDeck = std(TEX.paintm || TEX.concrete, { color: C(0x4a5a4e), roughness: 0.85, metalness: 0.2 });
+  MAT.shipWhite = std(TEX.paintm || TEX.concrete, { color: C(0xe6e4dc), roughness: 0.75, metalness: 0.1 });
   MAT.shipRust = std(TEX.metal, { color: C(0x8a4a26), roughness: 0.9 });
-  MAT.shipYellow = std(TEX.metal, { color: C(0xe0b020), roughness: 0.6 });
-  MAT.shipBlue = std(TEX.metal, { color: C(0x2a4a7a), roughness: 0.6 });
+  MAT.shipYellow = std(TEX.paintm || TEX.metal, { color: C(0xe0b020), roughness: 0.6 });
+  MAT.shipBlue = std(TEX.paintm || TEX.metal, { color: C(0x2a4a7a), roughness: 0.6 });
   MAT.shipSea = new THREE.MeshStandardMaterial({ color: C(0x0a1a2a), roughness: 0.05, metalness: 0.4 });
   MAT.shipGlass = new THREE.MeshStandardMaterial({ color: C(0x1a2a30), emissive: C(0xffd890), emissiveIntensity: 0.25, roughness: 0.1 });
   MAT.shipLamp = new THREE.MeshStandardMaterial({ color: C(0x302a10), emissive: C(0xfff0c0), emissiveIntensity: 0.2 });

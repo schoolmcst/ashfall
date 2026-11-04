@@ -158,6 +158,10 @@ function buildTextures() {
       const grd = g.createLinearGradient(0, 64, 0, 64 - h); grd.addColorStop(0, 'rgb(40,' + (gr - 40) + ',20)'); grd.addColorStop(1, 'rgb(' + (110 + rr() * 40) + ',' + (gr + 40) + ',50)');
       g.fillStyle = grd; g.beginPath(); g.moveTo(x - 2, 64); g.quadraticCurveTo(x + lean * 0.3, 64 - h * 0.6, x + lean, 64 - h); g.quadraticCurveTo(x + lean * 0.3 + 2, 64 - h * 0.5, x + 2, 64); g.fill(); }
     TEX.grass = { map: toTex(c, true, 1) }; }
+  // surface families: each has its own texture object (a copy of a base pattern while offline), so the scanned photo
+  // swapped into one (realtex.js) only changes the surfaces that really are that thing
+  const fam = b => { const m = b.map.clone(); m.needsUpdate = true; return { map: m, bump: b.bump }; };
+  TEX.plaster = fam(TEX.concrete); TEX.fabric = fam(TEX.concrete); TEX.tile = fam(TEX.concrete); TEX.planks = fam(TEX.wood); TEX.steelp = fam(TEX.metal);
   // particle / decal sprites
   const spr = (size, draw, srgb) => { const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); if (srgb) t.encoding = THREE.sRGBEncoding; return t; };
   TEX.smoke = spr(64, (g, s) => { const r = makeRng(4); for (let i = 0; i < 9; i++) { const x = s / 2 + (r() - 0.5) * s * 0.3, y = s / 2 + (r() - 0.5) * s * 0.3, rad = s * (0.18 + r() * 0.17);

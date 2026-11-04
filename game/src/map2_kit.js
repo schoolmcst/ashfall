@@ -37,11 +37,11 @@ function buildMap2Materials() {
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.02, roughness: 0.95, metalness: 0 }, o));
   MAT.snow = std(TEX.concrete, { color: C(0xf4f7fa), roughness: 0.9, bumpScale: 0.035 });
   MAT.ice = new THREE.MeshStandardMaterial({ color: C(0xbfdcea), roughness: 0.15, metalness: 0.05 });
-  MAT.carpet = std(TEX.concrete, { color: C(0x3d4a5c), roughness: 1, bumpScale: 0.01 });
-  MAT.sheet = std(TEX.metal, { color: C(0xa9b0b5), roughness: 0.5, metalness: 0.6, bumpScale: 0.004 });
+  MAT.carpet = std(TEX.fabric, { color: C(0x3d4a5c), roughness: 1, bumpScale: 0.01 });
+  MAT.sheet = std(TEX.steelp, { color: C(0xa9b0b5), roughness: 0.5, metalness: 0.6, bumpScale: 0.004 });
   MAT.glassDark = new THREE.MeshStandardMaterial({ color: C(0x2a3a48), roughness: 0.05, metalness: 0.6, envMapIntensity: 1.6 });
-  MAT.whiteTile = std(TEX.concrete, { color: C(0xe8eaec), roughness: 0.45, bumpScale: 0.005 });
-  MAT.panel = std(TEX.concrete, { color: C(0xd6dce2), roughness: 0.55, metalness: 0.1, bumpScale: 0.004 });
+  MAT.whiteTile = std(TEX.tile, { color: C(0xe8eaec), roughness: 0.45, bumpScale: 0.005 });
+  MAT.panel = std(TEX.plaster, { color: C(0xd6dce2), roughness: 0.55, metalness: 0.1, bumpScale: 0.004 });
   MAT.mud = std(TEX.concrete, { color: C(0x8a6a48), roughness: 1, bumpScale: 0.03 });
   MAT.hay = std(TEX.concrete, { color: C(0xd8bc68), roughness: 1, bumpScale: 0.05 });
   MAT.redBarn = std(TEX.wood, { color: C(0x9c3a2c), roughness: 0.9 });

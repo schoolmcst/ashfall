@@ -11,7 +11,23 @@ const REALTEX_SETS = {
   brick:    { id: 'red_brick_03', d: 'diff', ns: 1.0 },
   wood:     { id: 'weathered_brown_planks', d: 'diff', ns: 0.8 },
   metal:    { id: 'rusty_metal_02', d: 'diff', ns: 0.6 },
+  // surface families (1.2.66): grey = turned to greyscale at that brightness, so each material's own colour stays
+  paintm:   { id: 'blue_metal_plate', d: 'diff', ns: 0.45, rm: 0.28, grey: 0.82 },     // painted steel: containers, hulls, ships
+  steelp:   { id: 'metal_plate_02', d: 'diff', ns: 0.5, rm: 0.66, grey: 0.7 },         // bare steel panels, sheet metal
+  plaster:  { id: 'painted_plaster_wall', d: 'diff', ns: 0.5, rm: 0.92, grey: 0.9 },   // painted indoor and outdoor walls
+  tile:     { id: 'floor_tiles_02', d: 'diff', ns: 0.6, rm: 0.38, grey: 0.85 },        // tiled floors
+  fabric:   { id: 'velour_velvet', d: 'diff', ns: 0.7, rm: 0.73, grey: 0.85 },         // carpet, velvet, felt, cloth
+  planks:   { id: 'wood_floor_deck', d: 'diff', ns: 0.8, rm: 0.44 },                   // clean deck and floor boards
 };
+// a photo as greyscale with its average brightness at L (the tint of the material decides the colour)
+function realTexGrey(img, L) {
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height), p = d.data; let sum = 0;
+  for (let i = 0; i < p.length; i += 4) { const y = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2]; p[i] = y; sum += y; }
+  const k = (L * 255) / Math.max(1, sum / (p.length / 4));
+  for (let i = 0; i < p.length; i += 4) { const y = Math.min(255, p[i] * k); p[i] = p[i + 1] = p[i + 2] = y; }
+  g.putImageData(d, 0, 0); return c;
+}
 const REALTEX = { loaded: {}, applied: false, failed: 0, pending: 0 };
 function realTexLoad(url) {
   return new Promise((res, rej) => {
@@ -29,7 +45,7 @@ function realTexStart() {
     const s = REALTEX_SETS[key], f = m => REALTEX_BASE + s.id + '/' + s.id + '_' + m + '_1k.jpg';
     REALTEX.pending++;
     Promise.all([realTexLoad(f(s.d)), realTexLoad(f('nor_gl')), realTexLoad(f('rough'))])
-      .then(([d, n, r]) => { REALTEX.loaded[key] = { d, n, r }; })
+      .then(([d, n, r]) => { REALTEX.loaded[key] = { d: s.grey ? realTexGrey(d, s.grey) : d, n, r }; })
       .catch(() => { REALTEX.failed++; })
       .finally(() => { REALTEX.pending--; });
   }
@@ -43,11 +59,15 @@ function realTexFrom(img, like, srgb) {
 }
 // Called from the main loop; swaps surfaces in once everything is downloaded, but never mid-match (adding maps
 // recompiles shaders, which would hitch).
+// A family made later (the painted-steel set is made with the first map) is swapped in on a later tick.
 function realTexTick() {
   if (REALTEX.applied || REALTEX.pending > 0 || typeof G === 'undefined' || G.state === 'playing') return;
-  const keys = Object.keys(REALTEX.loaded); if (!keys.length) { if (REALTEX.pending === 0) REALTEX.applied = true; return; }
-  REALTEX.applied = true;
-  const byMap = new Map();   // procedural colour texture -> { normal, rough, ns }
+  REALTEX.done = REALTEX.done || new Set();
+  const keys = Object.keys(REALTEX.loaded).filter(k => !REALTEX.done.has(k) && TEX[k] && TEX[k].map);
+  if (Object.keys(REALTEX.loaded).every(k => REALTEX.done.has(k))) { REALTEX.applied = true; return; }
+  if (!keys.length) return;
+  for (const k of keys) REALTEX.done.add(k);
+  const byMap = REALTEX.byMap || new Map();   // procedural colour texture -> { normal, rough, ns }
   // gun furniture and sleeves borrow the wood/concrete patterns as fine grain; planks and walls would look wrong there,
   // so they keep their own copy of the procedural texture
   try { for (const k in VM) { const m = VM[k]; if (!m || !m.map) continue; for (const key of keys) if (TEX[key] && m.map === TEX[key].map) { const c = m.map.clone(); c.needsUpdate = true; m.map = c; } } } catch (e) {}
@@ -55,11 +75,11 @@ function realTexTick() {
     const L = REALTEX.loaded[key], set = TEX[key]; if (!set || !set.map) continue;
     const old = set.map;
     old.image = L.d; old.needsUpdate = true;      // every material sharing this texture updates at once
-    byMap.set(old, { normal: realTexFrom(L.n, old, false), rough: realTexFrom(L.r, old, false), ns: REALTEX_SETS[key].ns });
+    byMap.set(old, { normal: realTexFrom(L.n, old, false), rough: realTexFrom(L.r, old, false), ns: REALTEX_SETS[key].ns, rm: REALTEX_SETS[key].rm, grey: !!REALTEX_SETS[key].grey });
   }
   REALTEX.byMap = byMap;
   realTexRepatch();
-  REALTEX.count = keys.length;
+  REALTEX.count = REALTEX.done.size;
 }
 // add the normal / roughness maps to every material that uses a swapped texture (again after each map load)
 function realTexRepatch() {
@@ -69,8 +89,10 @@ function realTexRepatch() {
     if (!m || !m.isMeshStandardMaterial || seen.has(m)) return; seen.add(m);
     const e = byMap.get(m.map); if (!e || m.userData.realTex) return; m.userData.realTex = true;
     m.normalMap = e.normal; m.normalScale = new THREE.Vector2(e.ns, e.ns); m.bumpMap = null;
-    m.roughnessMap = e.rough; m.roughness = Math.min(1, m.roughness * 1.15);
-    m.color.lerp(new THREE.Color(1, 1, 1), 0.35);   // the photos carry their own colour; soften the old tints
+    // families with rm: the roughness photo is scaled so its average matches the material's own roughness (a glossy
+    // scan no longer turns a painted wall into a wet one); older sets keep their tuning
+    m.roughnessMap = e.rough; m.roughness = e.rm ? Math.min(3, m.roughness / e.rm) : Math.min(1, m.roughness * 1.15);
+    if (!e.grey) m.color.lerp(new THREE.Color(1, 1, 1), 0.35);   // colour photos carry their own colour; soften the old tints (greyscale ones keep it)
     m.needsUpdate = true;
   };
   const walk = o => { if (!o) return; if (o.isMaterial) patch(o); else if (Array.isArray(o) || Object.getPrototypeOf(o) === Object.prototype) for (const k in o) walk(o[k]); };

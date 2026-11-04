@@ -47,7 +47,7 @@ const SCHEMA = {
     { k: 'shadowDist', t: 'range', name: 'SHADOW DISTANCE', hint: 'How far from you shadows are drawn, and soldiers cast shadows. Longer is softer and slower', min: 50, max: 200, step: 10, fmt: pct },
     { k: 'anis', t: 'seg', name: 'TEXTURE FILTERING', hint: 'Keeps the ground and walls sharp at an angle (anisotropic)', opts: () => [[1, '1×'], [2, '2×'], [4, '4×'], [8, '8×'], [16, '16×']].filter(o => o[0] <= Math.max(1, MAXANIS)) },
     { k: 'texQ', t: 'seg', name: 'TEXTURE QUALITY', hint: 'Detail of the built-in textures. Applies on next launch', opts: [['low', 'LOW'], ['high', 'HIGH']] },
-    { k: 'realTex', t: 'toggle', name: 'SCANNED TEXTURES', hint: 'Photo-scanned ground, brick, concrete, wood and metal from Poly Haven (CC0), downloaded once. Applies on next launch' },
+    { k: 'realTex', t: 'toggle', name: 'SCANNED TEXTURES', hint: 'Photo-scanned ground, brick, concrete, wood, metal, painted steel, plaster, tile, fabric and deck planks from Poly Haven (CC0), downloaded once. Applies on next launch' },
     { k: 'gunShader', t: 'toggle', name: 'CUSTOM GUN SHADER', hint: 'Physically based GGX shader on weapon metal. Turn off if guns look wrong' },
     { k: 'sheen', t: 'range', name: 'SURFACE SHEEN', hint: 'Fresnel glint on metal and wet surfaces at grazing angles', min: 0, max: 150, step: 10, fmt: pct },
     { t: 'head', name: 'EFFECTS' },

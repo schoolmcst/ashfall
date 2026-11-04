@@ -16,9 +16,9 @@ function airpMaterials() {
   const r = makeRng(909);
   const tile = cv(256, (g, n) => { g.fillStyle = '#b8b6ae'; g.fillRect(0, 0, n, n); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { const v = 176 + r() * 18 | 0; g.fillStyle = `rgb(${v},${v - 2},${v - 8})`; g.fillRect(i * 64 + 1, j * 64 + 1, 62, 62); } for (let q = 0; q < 26; q++) { g.fillStyle = `rgba(60,50,40,${0.05 + r() * 0.15})`; g.beginPath(); g.arc(r() * n, r() * n, 6 + r() * 30, 0, TAU); g.fill(); } });
   MAT.termFloor = new THREE.MeshStandardMaterial({ map: toTex(tile, true, 1), roughness: 0.35 });
-  MAT.termWall = std(TEX.concrete, { color: C(0xd8d6ce), roughness: 0.8 });
+  MAT.termWall = std(TEX.plaster, { color: C(0xd8d6ce), roughness: 0.8 });
   MAT.termDark = std(TEX.concrete, { color: C(0x3a3e44), roughness: 0.7 });
-  MAT.carpetBlue = std(TEX.concrete, { color: C(0x2e3c5c), roughness: 1, bumpScale: 0.02 });
+  MAT.carpetBlue = std(TEX.fabric, { color: C(0x2e3c5c), roughness: 1, bumpScale: 0.02 });
   MAT.planeWhite = new THREE.MeshStandardMaterial({ color: C(0xe8eaec), roughness: 0.35, metalness: 0.3 });
   MAT.planeStripe = new THREE.MeshStandardMaterial({ color: C(0x2a8a3a), roughness: 0.4, metalness: 0.3 });
   MAT.planeGrey = new THREE.MeshStandardMaterial({ color: C(0x8a9096), roughness: 0.5, metalness: 0.6 });

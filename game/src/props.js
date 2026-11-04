@@ -13,9 +13,9 @@ function buildPropMaterials() {
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding;
   MAT.fence = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5 });
   MAT.rubber = new THREE.MeshStandardMaterial({ color: C(0x1c1c1c), roughness: 0.9 });
-  MAT.cloth1 = new THREE.MeshStandardMaterial({ color: C(0xe8e2d4), roughness: 1, side: THREE.DoubleSide });
-  MAT.cloth2 = new THREE.MeshStandardMaterial({ color: C(0x5f7fa8), roughness: 1, side: THREE.DoubleSide });
-  MAT.cloth3 = new THREE.MeshStandardMaterial({ color: C(0xc0563f), roughness: 1, side: THREE.DoubleSide });
+  MAT.cloth1 = new THREE.MeshStandardMaterial({ color: C(0xe8e2d4), roughness: 1, side: THREE.DoubleSide, map: TEX.fabric.map });
+  MAT.cloth2 = new THREE.MeshStandardMaterial({ color: C(0x5f7fa8), roughness: 1, side: THREE.DoubleSide, map: TEX.fabric.map });
+  MAT.cloth3 = new THREE.MeshStandardMaterial({ color: C(0xc0563f), roughness: 1, side: THREE.DoubleSide, map: TEX.fabric.map });
   MAT.hazard = (() => { const cc = document.createElement('canvas'); cc.width = cc.height = 64; const gg = cc.getContext('2d'); gg.fillStyle = '#d9a52a'; gg.fillRect(0, 0, 64, 64); gg.fillStyle = '#1b1b1b'; for (let i = -64; i < 128; i += 32) { gg.beginPath(); gg.moveTo(i, 0); gg.lineTo(i + 16, 0); gg.lineTo(i + 80, 64); gg.lineTo(i + 64, 64); gg.fill(); } const tt = new THREE.CanvasTexture(cc); tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.encoding = THREE.sRGBEncoding; return new THREE.MeshStandardMaterial({ map: tt, roughness: 0.7 }); })();
   MAT.screen = new THREE.MeshStandardMaterial({ color: C(0x1a2630), emissive: C(0x5a8ab0), emissiveIntensity: 0.6, roughness: 0.3 });
   MAT.redLight = new THREE.MeshStandardMaterial({ color: C(0x400000), emissive: C(0xff3020), emissiveIntensity: 1.5 });

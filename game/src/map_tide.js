@@ -15,15 +15,15 @@ const TIDE = { flick: [], disco: null, tiles: [], beams: [], on: false, t: 0, po
 function tideMaterials() {
   if (MAT.tideHull) return;
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.015, roughness: 0.8, metalness: 0.2 }, o));
-  MAT.tideHull = std(TEX.metal, { color: C(0xeceae4), roughness: 0.55, metalness: 0.25 });
-  MAT.tideStripe = std(TEX.metal, { color: C(0x1a3a8a), roughness: 0.5 });
-  MAT.tideTeak = std(TEX.wood || TEX.concrete, { color: C(0xb88a5a), roughness: 0.7, metalness: 0.0 });
-  MAT.tideCarpet = std(TEX.concrete, { color: C(0x6a1430), roughness: 0.95, metalness: 0.0 });
-  MAT.tideFelt = std(TEX.concrete, { color: C(0x1a6a3a), roughness: 0.95, metalness: 0.0 });
-  MAT.tideVelvet = std(TEX.concrete, { color: C(0x8a1a2a), roughness: 0.9, metalness: 0.0 });
-  MAT.tidePurple = std(TEX.metal, { color: C(0x4a2a7a), roughness: 0.5 });
-  MAT.tidePink = std(TEX.metal, { color: C(0xe04a9a), roughness: 0.5 });
-  MAT.tideTile = std(TEX.concrete, { color: C(0x8ad8e8), roughness: 0.3, metalness: 0.1 });
+  MAT.tideHull = std(TEX.paintm || TEX.metal, { color: C(0xeceae4), roughness: 0.55, metalness: 0.25 });
+  MAT.tideStripe = std(TEX.paintm || TEX.metal, { color: C(0x1a3a8a), roughness: 0.5 });
+  MAT.tideTeak = std(TEX.planks || TEX.wood, { color: C(0xb88a5a), roughness: 0.7, metalness: 0.0 });
+  MAT.tideCarpet = std(TEX.fabric || TEX.concrete, { color: C(0x6a1430), roughness: 0.95, metalness: 0.0 });
+  MAT.tideFelt = std(TEX.fabric || TEX.concrete, { color: C(0x1a6a3a), roughness: 0.95, metalness: 0.0 });
+  MAT.tideVelvet = std(TEX.fabric || TEX.concrete, { color: C(0x8a1a2a), roughness: 0.9, metalness: 0.0 });
+  MAT.tidePurple = std(TEX.paintm || TEX.metal, { color: C(0x4a2a7a), roughness: 0.5 });
+  MAT.tidePink = std(TEX.paintm || TEX.metal, { color: C(0xe04a9a), roughness: 0.5 });
+  MAT.tideTile = std(TEX.tile || TEX.concrete, { color: C(0x8ad8e8), roughness: 0.3, metalness: 0.1 });
   MAT.tideWater = new THREE.MeshStandardMaterial({ color: C(0x1a8ab8), emissive: C(0x0a6aa8), emissiveIntensity: 0.55, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.88 });
   MAT.tideBulb = new THREE.MeshStandardMaterial({ color: C(0x302a10), emissive: C(0xffd8a0), emissiveIntensity: 1.6 });
   MAT.tideCabin = new THREE.MeshStandardMaterial({ color: C(0x1a2a30), emissive: C(0xffc880), emissiveIntensity: 0.6, roughness: 0.1 });

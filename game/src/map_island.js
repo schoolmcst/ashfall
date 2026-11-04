@@ -17,9 +17,9 @@ function isleMaterials() {
   }
   if (MAT.isleWhite) return;
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.02, roughness: 0.9, metalness: 0 }, o));
-  MAT.isleWhite = std(TEX.concrete, { color: C(0xf0ebe0), roughness: 0.85 });
-  MAT.isleRed = std(TEX.concrete, { color: C(0xb8382a), roughness: 0.8 });
-  MAT.isleTeal = std(TEX.wood, { color: C(0x4a9a94), roughness: 0.85 });
+  MAT.isleWhite = std(TEX.plaster, { color: C(0xf0ebe0), roughness: 0.85 });
+  MAT.isleRed = std(TEX.plaster, { color: C(0xb8382a), roughness: 0.8 });
+  MAT.isleTeal = std(TEX.planks, { color: C(0x4a9a94), roughness: 0.85 });
   MAT.isleCliff = new THREE.MeshStandardMaterial({ color: C(0x6e5e4c), roughness: 1, flatShading: true, map: TEX.concrete.map, bumpMap: TEX.concrete.bump, bumpScale: 0.05 });
   MAT.thatch = new THREE.MeshStandardMaterial({ color: C(0xb59a5a), roughness: 1, map: TEX.wood.map });
   MAT.sea = new THREE.MeshStandardMaterial({ color: C(0x1a5a74), roughness: 0.08, metalness: 0.3, transparent: true, opacity: 0.92 });

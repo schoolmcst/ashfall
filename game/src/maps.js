@@ -251,30 +251,30 @@ function lampLight(x, y, z, col = 0xffc27a, i = 1.0, dist = 14) { const l = new 
 function buildMapMaterials() {
   if (MAT.plaster) return;
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.012, roughness: 0.92, metalness: 0 }, o));
-  MAT.plaster = std(TEX.concrete, { color: C(0xf1e6d2), roughness: 0.96 });
-  MAT.plasterOchre = std(TEX.concrete, { color: C(0xe2b878), roughness: 0.96 });
-  MAT.plasterRose = std(TEX.concrete, { color: C(0xdca596), roughness: 0.96 });
+  MAT.plaster = std(TEX.plaster, { color: C(0xf1e6d2), roughness: 0.96 });
+  MAT.plasterOchre = std(TEX.plaster, { color: C(0xe2b878), roughness: 0.96 });
+  MAT.plasterRose = std(TEX.plaster, { color: C(0xdca596), roughness: 0.96 });
   MAT.terracotta = std(TEX.brick, { color: C(0xd27a4c), roughness: 0.85 });
   MAT.stone = std(TEX.concrete, { color: C(0xc9b89a), roughness: 0.95, bumpScale: 0.03 });
-  MAT.tile = std(TEX.concrete, { color: C(0xd8d4cc), roughness: 0.55 });
+  MAT.tile = std(TEX.tile, { color: C(0xd8d4cc), roughness: 0.55 });
   // painted steel: a light, grimy greyscale texture tinted per colour (clean enough to read the colour)
   const pt = paint(256, (u, v, x, y) => { const n = (Math.sin(x * 0.7) * 0.5 + 0.5) * 0.04, g = 205 + Math.random() * 22 - (y > 200 ? (y - 200) * 0.9 : 0) * Math.random(); return [g - n * 200, g - n * 200, g - n * 200, 0.5 + Math.random() * 0.1]; }, (cg, bg, sz) => {
     const r = makeRng(17); for (let i = 0; i < 26; i++) { const x = r() * sz, w = 2 + r() * 6, h = 20 + r() * 90; cg.fillStyle = `rgba(70,50,35,${0.06 + r() * 0.12})`; cg.fillRect(x, sz - h, w, h); }
     for (let i = 0; i < 40; i++) { cg.fillStyle = `rgba(110,70,40,${0.1 + r() * 0.2})`; cg.beginPath(); cg.arc(r() * sz, r() * sz, 1 + r() * 4, 0, TAU); cg.fill(); }
   });
-  const ps = { map: toTex(pt.cc, true, 1), bump: toTex(blurHeight(pt.bc), false, 1) };
+  const ps = TEX.paintm = { map: toTex(pt.cc, true, 1), bump: toTex(blurHeight(pt.bc), false, 1) };
   const paintMat = (hex, o) => std(ps, Object.assign({ color: C(hex), roughness: 0.55, metalness: 0.35, bumpScale: 0.004 }, o));
   MAT.paintRed = paintMat(0xa8402e); MAT.paintBlue = paintMat(0x2f5f92); MAT.paintGreen = paintMat(0x4b7a42);
   MAT.paintOrange = paintMat(0xd57a2e); MAT.paintYellow = paintMat(0xe2b13a); MAT.paintWhite = paintMat(0xdfe3e0);
-  MAT.steel = new THREE.MeshStandardMaterial({ color: C(0x5a5f63), roughness: 0.45, metalness: 0.8, map: TEX.metal.map, bumpMap: TEX.metal.bump, bumpScale: 0.004 });
+  MAT.steel = new THREE.MeshStandardMaterial({ color: C(0x5a5f63), roughness: 0.45, metalness: 0.8, map: TEX.steelp.map, bumpMap: TEX.steelp.bump, bumpScale: 0.004 });
   MAT.water = new THREE.MeshStandardMaterial({ color: C(0x1d3640), roughness: 0.12, metalness: 0.2, envMapIntensity: 1.4 });
   MAT.awningRed = new THREE.MeshStandardMaterial({ color: C(0xa8352c), roughness: 0.9, side: THREE.DoubleSide });
   MAT.awningGreen = new THREE.MeshStandardMaterial({ color: C(0x3d6b4a), roughness: 0.9, side: THREE.DoubleSide });
   MAT.awningStripe = new THREE.MeshStandardMaterial({ color: C(0xd8c9a0), roughness: 0.9, side: THREE.DoubleSide });
-  MAT.tileFloor = std(TEX.concrete, { color: C(0xb9b4aa), roughness: 0.5 });
+  MAT.tileFloor = std(TEX.tile, { color: C(0xb9b4aa), roughness: 0.5 });
   MAT.signal = new THREE.MeshStandardMaterial({ color: C(0xffe6a8), emissive: C(0xffd27a), emissiveIntensity: 1.6, roughness: 0.6 });
   MAT.signalCold = new THREE.MeshStandardMaterial({ color: C(0xe6f0ff), emissive: C(0xcfe2ff), emissiveIntensity: 1.4, roughness: 0.6 });
-  MAT.train = std(TEX.metal, { color: C(0xb7bcc0), roughness: 0.45, metalness: 0.6 });
+  MAT.train = std(TEX.paintm, { color: C(0xb7bcc0), roughness: 0.45, metalness: 0.6 });
   MAT.olive = new THREE.MeshStandardMaterial({ color: C(0x5d6b3a), roughness: 1, flatShading: true });
   MAT.windowGlass = new THREE.MeshStandardMaterial({ color: C(0xb8d0dc), roughness: 0.04, metalness: 0.2, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1.5 });
   buildPropMaterials();
