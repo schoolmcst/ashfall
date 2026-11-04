@@ -64,14 +64,14 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
 - 1.2.70-1.2.71 PUBLIC: online LAST TOKE (obr; host packs ['b', ...], players' opened crates in presence `bo`), Prop Hunt
   online pack code is 'q' (not 'h', that is hardpoint), optimize pass (warmShaders, light pool zlpMatch in MP, no canvas MSAA
   with post on, menu 60 fps cap, rpPlanShot renders off-screen).
-- 1.2.72 TEST: onboard.js (WELCOME card + STASH YARD training for new players, READY card, NEW MODES card for returning players
+- 1.2.72-1.2.74 PUBLIC (owner said send it). 1.2.72: onboard.js (WELCOME card + STASH YARD training for new players, READY card, NEW MODES card for returning players
   keyed `ashfall.newmodes`, menu tiles #featTile/#brTile, FEATURED THIS WEEK mode: FEAT_WEEKS, M.feat {lowgrav, bighead,
   pistols}, 2x XP), replay.js rpAutoClip (best multi-kill saved as a clip), growop.js growZRound/GROW_ZBOSS (zombies seeds).
-- 1.2.73 TEST: map_stash.js STASH ISLAND (brOnly, arena 64 = 128 m nav grid, play +-60). ARENA is now a per-map `let`
+- 1.2.73: map_stash.js STASH ISLAND (brOnly, arena 64 = 128 m nav grid, play +-60). ARENA is now a per-map `let`
   (world.js) set by setArena() in nav.js from map.arena (default 44); the ruins builder uses RUIN_A. On a big map
   flowField builds at most one new field a frame (FLOWB); callers walk straight that frame. pickMapFor sends LAST TOKE
   'random' to stashisle (offline and online via NET.mode). Menu cards (data-menu) close when a match starts.
-- 1.2.74 TEST: vehicles.js GOLF CART + DIRT BIKE in LAST TOKE (VH_SPOTS per map, else 4 seeded spots). vhPlayer() takes over
+- 1.2.74: vehicles.js GOLF CART + DIRT BIKE in LAST TOKE (VH_SPOTS per map, else 4 seeded spots). vhPlayer() takes over
   updatePlayer (and the camera) while driving; no shooting (isFiring); ram damage; crash and explosion damage (vhBlast in
   explode); online the driver sends presence `vh` = [id, x, z, yaw, speed, hp]. Bots do not drive. Tests: s_stashisle,
   s_vehicles, _isle_bots (no-render bot sim).
