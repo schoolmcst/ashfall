@@ -740,7 +740,7 @@ const dzFilterOn = () => typeof S === 'undefined' || S.chatFilter !== false;
 function dzFilter(t) { if (!dzFilterOn()) return t; const flat = s => s.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4|@/g, 'a').replace(/5|\$/g, 's').replace(/7/g, 't'); const f = flat(String(t)); if (!DZ_BAD_RE.test(f)) return t; DZ_BAD_RE.lastIndex = 0; let out = String(t).split(''), m; const re = new RegExp(DZ_BAD_RE.source, 'gi'); while ((m = re.exec(f))) for (let i = m.index; i < m.index + m[0].length; i++) out[i] = '*'; return out.join(''); }
 const FXQ = { low: 0.35, medium: 0.65, high: 1, ultra: 1.5 };
 const DEFAULTS = {
-  quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', post: 'high', bloom: 100, postV: 0, fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
+  quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', post: 'high', bloom: 100, shadowLift: 60, postV: 0, fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
   master: 80, sfx: 100, ambience: 60, music: 50, chatFilter: true, perfMode: false, perfGraph: false, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
@@ -1516,6 +1516,10 @@ function buildTextures() {
       const grd = g.createLinearGradient(0, 64, 0, 64 - h); grd.addColorStop(0, 'rgb(40,' + (gr - 40) + ',20)'); grd.addColorStop(1, 'rgb(' + (110 + rr() * 40) + ',' + (gr + 40) + ',50)');
       g.fillStyle = grd; g.beginPath(); g.moveTo(x - 2, 64); g.quadraticCurveTo(x + lean * 0.3, 64 - h * 0.6, x + lean, 64 - h); g.quadraticCurveTo(x + lean * 0.3 + 2, 64 - h * 0.5, x + 2, 64); g.fill(); }
     TEX.grass = { map: toTex(c, true, 1) }; }
+  // surface families: each has its own texture object (a copy of a base pattern while offline), so the scanned photo
+  // swapped into one (realtex.js) only changes the surfaces that really are that thing
+  const fam = b => { const m = b.map.clone(); m.needsUpdate = true; return { map: m, bump: b.bump }; };
+  TEX.plaster = fam(TEX.concrete); TEX.fabric = fam(TEX.concrete); TEX.tile = fam(TEX.concrete); TEX.planks = fam(TEX.wood); TEX.steelp = fam(TEX.metal);
   // particle / decal sprites
   const spr = (size, draw, srgb) => { const c = document.createElement('canvas'); c.width = c.height = size; draw(c.getContext('2d'), size); const t = new THREE.CanvasTexture(c); if (srgb) t.encoding = THREE.sRGBEncoding; return t; };
   TEX.smoke = spr(64, (g, s) => { const r = makeRng(4); for (let i = 0; i < 9; i++) { const x = s / 2 + (r() - 0.5) * s * 0.3, y = s / 2 + (r() - 0.5) * s * 0.3, rad = s * (0.18 + r() * 0.17);
@@ -1562,7 +1566,23 @@ const REALTEX_SETS = {
   brick:    { id: 'red_brick_03', d: 'diff', ns: 1.0 },
   wood:     { id: 'weathered_brown_planks', d: 'diff', ns: 0.8 },
   metal:    { id: 'rusty_metal_02', d: 'diff', ns: 0.6 },
+  // surface families (1.2.66): grey = turned to greyscale at that brightness, so each material's own colour stays
+  paintm:   { id: 'blue_metal_plate', d: 'diff', ns: 0.45, rm: 0.28, grey: 0.82 },     // painted steel: containers, hulls, ships
+  steelp:   { id: 'metal_plate_02', d: 'diff', ns: 0.5, rm: 0.66, grey: 0.7 },         // bare steel panels, sheet metal
+  plaster:  { id: 'painted_plaster_wall', d: 'diff', ns: 0.5, rm: 0.92, grey: 0.9 },   // painted indoor and outdoor walls
+  tile:     { id: 'floor_tiles_02', d: 'diff', ns: 0.6, rm: 0.38, grey: 0.85 },        // tiled floors
+  fabric:   { id: 'velour_velvet', d: 'diff', ns: 0.7, rm: 0.73, grey: 0.85 },         // carpet, velvet, felt, cloth
+  planks:   { id: 'wood_floor_deck', d: 'diff', ns: 0.8, rm: 0.44 },                   // clean deck and floor boards
 };
+// a photo as greyscale with its average brightness at L (the tint of the material decides the colour)
+function realTexGrey(img, L) {
+  const c = document.createElement('canvas'); c.width = img.width; c.height = img.height; const g = c.getContext('2d'); g.drawImage(img, 0, 0);
+  const d = g.getImageData(0, 0, c.width, c.height), p = d.data; let sum = 0;
+  for (let i = 0; i < p.length; i += 4) { const y = 0.299 * p[i] + 0.587 * p[i + 1] + 0.114 * p[i + 2]; p[i] = y; sum += y; }
+  const k = (L * 255) / Math.max(1, sum / (p.length / 4));
+  for (let i = 0; i < p.length; i += 4) { const y = Math.min(255, p[i] * k); p[i] = p[i + 1] = p[i + 2] = y; }
+  g.putImageData(d, 0, 0); return c;
+}
 const REALTEX = { loaded: {}, applied: false, failed: 0, pending: 0 };
 function realTexLoad(url) {
   return new Promise((res, rej) => {
@@ -1580,7 +1600,7 @@ function realTexStart() {
     const s = REALTEX_SETS[key], f = m => REALTEX_BASE + s.id + '/' + s.id + '_' + m + '_1k.jpg';
     REALTEX.pending++;
     Promise.all([realTexLoad(f(s.d)), realTexLoad(f('nor_gl')), realTexLoad(f('rough'))])
-      .then(([d, n, r]) => { REALTEX.loaded[key] = { d, n, r }; })
+      .then(([d, n, r]) => { REALTEX.loaded[key] = { d: s.grey ? realTexGrey(d, s.grey) : d, n, r }; })
       .catch(() => { REALTEX.failed++; })
       .finally(() => { REALTEX.pending--; });
   }
@@ -1594,11 +1614,15 @@ function realTexFrom(img, like, srgb) {
 }
 // Called from the main loop; swaps surfaces in once everything is downloaded, but never mid-match (adding maps
 // recompiles shaders, which would hitch).
+// A family made later (the painted-steel set is made with the first map) is swapped in on a later tick.
 function realTexTick() {
   if (REALTEX.applied || REALTEX.pending > 0 || typeof G === 'undefined' || G.state === 'playing') return;
-  const keys = Object.keys(REALTEX.loaded); if (!keys.length) { if (REALTEX.pending === 0) REALTEX.applied = true; return; }
-  REALTEX.applied = true;
-  const byMap = new Map();   // procedural colour texture -> { normal, rough, ns }
+  REALTEX.done = REALTEX.done || new Set();
+  const keys = Object.keys(REALTEX.loaded).filter(k => !REALTEX.done.has(k) && TEX[k] && TEX[k].map);
+  if (Object.keys(REALTEX.loaded).every(k => REALTEX.done.has(k))) { REALTEX.applied = true; return; }
+  if (!keys.length) return;
+  for (const k of keys) REALTEX.done.add(k);
+  const byMap = REALTEX.byMap || new Map();   // procedural colour texture -> { normal, rough, ns }
   // gun furniture and sleeves borrow the wood/concrete patterns as fine grain; planks and walls would look wrong there,
   // so they keep their own copy of the procedural texture
   try { for (const k in VM) { const m = VM[k]; if (!m || !m.map) continue; for (const key of keys) if (TEX[key] && m.map === TEX[key].map) { const c = m.map.clone(); c.needsUpdate = true; m.map = c; } } } catch (e) {}
@@ -1606,11 +1630,11 @@ function realTexTick() {
     const L = REALTEX.loaded[key], set = TEX[key]; if (!set || !set.map) continue;
     const old = set.map;
     old.image = L.d; old.needsUpdate = true;      // every material sharing this texture updates at once
-    byMap.set(old, { normal: realTexFrom(L.n, old, false), rough: realTexFrom(L.r, old, false), ns: REALTEX_SETS[key].ns });
+    byMap.set(old, { normal: realTexFrom(L.n, old, false), rough: realTexFrom(L.r, old, false), ns: REALTEX_SETS[key].ns, rm: REALTEX_SETS[key].rm, grey: !!REALTEX_SETS[key].grey });
   }
   REALTEX.byMap = byMap;
   realTexRepatch();
-  REALTEX.count = keys.length;
+  REALTEX.count = REALTEX.done.size;
 }
 // add the normal / roughness maps to every material that uses a swapped texture (again after each map load)
 function realTexRepatch() {
@@ -1620,8 +1644,10 @@ function realTexRepatch() {
     if (!m || !m.isMeshStandardMaterial || seen.has(m)) return; seen.add(m);
     const e = byMap.get(m.map); if (!e || m.userData.realTex) return; m.userData.realTex = true;
     m.normalMap = e.normal; m.normalScale = new THREE.Vector2(e.ns, e.ns); m.bumpMap = null;
-    m.roughnessMap = e.rough; m.roughness = Math.min(1, m.roughness * 1.15);
-    m.color.lerp(new THREE.Color(1, 1, 1), 0.35);   // the photos carry their own colour; soften the old tints
+    // families with rm: the roughness photo is scaled so its average matches the material's own roughness (a glossy
+    // scan no longer turns a painted wall into a wet one); older sets keep their tuning
+    m.roughnessMap = e.rough; m.roughness = e.rm ? Math.min(3, m.roughness / e.rm) : Math.min(1, m.roughness * 1.15);
+    if (!e.grey) m.color.lerp(new THREE.Color(1, 1, 1), 0.35);   // colour photos carry their own colour; soften the old tints (greyscale ones keep it)
     m.needsUpdate = true;
   };
   const walk = o => { if (!o) return; if (o.isMaterial) patch(o); else if (Array.isArray(o) || Object.getPrototypeOf(o) === Object.prototype) for (const k in o) walk(o[k]); };
@@ -2972,30 +2998,30 @@ function lampLight(x, y, z, col = 0xffc27a, i = 1.0, dist = 14) { const l = new 
 function buildMapMaterials() {
   if (MAT.plaster) return;
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.012, roughness: 0.92, metalness: 0 }, o));
-  MAT.plaster = std(TEX.concrete, { color: C(0xf1e6d2), roughness: 0.96 });
-  MAT.plasterOchre = std(TEX.concrete, { color: C(0xe2b878), roughness: 0.96 });
-  MAT.plasterRose = std(TEX.concrete, { color: C(0xdca596), roughness: 0.96 });
+  MAT.plaster = std(TEX.plaster, { color: C(0xf1e6d2), roughness: 0.96 });
+  MAT.plasterOchre = std(TEX.plaster, { color: C(0xe2b878), roughness: 0.96 });
+  MAT.plasterRose = std(TEX.plaster, { color: C(0xdca596), roughness: 0.96 });
   MAT.terracotta = std(TEX.brick, { color: C(0xd27a4c), roughness: 0.85 });
   MAT.stone = std(TEX.concrete, { color: C(0xc9b89a), roughness: 0.95, bumpScale: 0.03 });
-  MAT.tile = std(TEX.concrete, { color: C(0xd8d4cc), roughness: 0.55 });
+  MAT.tile = std(TEX.tile, { color: C(0xd8d4cc), roughness: 0.55 });
   // painted steel: a light, grimy greyscale texture tinted per colour (clean enough to read the colour)
   const pt = paint(256, (u, v, x, y) => { const n = (Math.sin(x * 0.7) * 0.5 + 0.5) * 0.04, g = 205 + Math.random() * 22 - (y > 200 ? (y - 200) * 0.9 : 0) * Math.random(); return [g - n * 200, g - n * 200, g - n * 200, 0.5 + Math.random() * 0.1]; }, (cg, bg, sz) => {
     const r = makeRng(17); for (let i = 0; i < 26; i++) { const x = r() * sz, w = 2 + r() * 6, h = 20 + r() * 90; cg.fillStyle = `rgba(70,50,35,${0.06 + r() * 0.12})`; cg.fillRect(x, sz - h, w, h); }
     for (let i = 0; i < 40; i++) { cg.fillStyle = `rgba(110,70,40,${0.1 + r() * 0.2})`; cg.beginPath(); cg.arc(r() * sz, r() * sz, 1 + r() * 4, 0, TAU); cg.fill(); }
   });
-  const ps = { map: toTex(pt.cc, true, 1), bump: toTex(blurHeight(pt.bc), false, 1) };
+  const ps = TEX.paintm = { map: toTex(pt.cc, true, 1), bump: toTex(blurHeight(pt.bc), false, 1) };
   const paintMat = (hex, o) => std(ps, Object.assign({ color: C(hex), roughness: 0.55, metalness: 0.35, bumpScale: 0.004 }, o));
   MAT.paintRed = paintMat(0xa8402e); MAT.paintBlue = paintMat(0x2f5f92); MAT.paintGreen = paintMat(0x4b7a42);
   MAT.paintOrange = paintMat(0xd57a2e); MAT.paintYellow = paintMat(0xe2b13a); MAT.paintWhite = paintMat(0xdfe3e0);
-  MAT.steel = new THREE.MeshStandardMaterial({ color: C(0x5a5f63), roughness: 0.45, metalness: 0.8, map: TEX.metal.map, bumpMap: TEX.metal.bump, bumpScale: 0.004 });
+  MAT.steel = new THREE.MeshStandardMaterial({ color: C(0x5a5f63), roughness: 0.45, metalness: 0.8, map: TEX.steelp.map, bumpMap: TEX.steelp.bump, bumpScale: 0.004 });
   MAT.water = new THREE.MeshStandardMaterial({ color: C(0x1d3640), roughness: 0.12, metalness: 0.2, envMapIntensity: 1.4 });
   MAT.awningRed = new THREE.MeshStandardMaterial({ color: C(0xa8352c), roughness: 0.9, side: THREE.DoubleSide });
   MAT.awningGreen = new THREE.MeshStandardMaterial({ color: C(0x3d6b4a), roughness: 0.9, side: THREE.DoubleSide });
   MAT.awningStripe = new THREE.MeshStandardMaterial({ color: C(0xd8c9a0), roughness: 0.9, side: THREE.DoubleSide });
-  MAT.tileFloor = std(TEX.concrete, { color: C(0xb9b4aa), roughness: 0.5 });
+  MAT.tileFloor = std(TEX.tile, { color: C(0xb9b4aa), roughness: 0.5 });
   MAT.signal = new THREE.MeshStandardMaterial({ color: C(0xffe6a8), emissive: C(0xffd27a), emissiveIntensity: 1.6, roughness: 0.6 });
   MAT.signalCold = new THREE.MeshStandardMaterial({ color: C(0xe6f0ff), emissive: C(0xcfe2ff), emissiveIntensity: 1.4, roughness: 0.6 });
-  MAT.train = std(TEX.metal, { color: C(0xb7bcc0), roughness: 0.45, metalness: 0.6 });
+  MAT.train = std(TEX.paintm, { color: C(0xb7bcc0), roughness: 0.45, metalness: 0.6 });
   MAT.olive = new THREE.MeshStandardMaterial({ color: C(0x5d6b3a), roughness: 1, flatShading: true });
   MAT.windowGlass = new THREE.MeshStandardMaterial({ color: C(0xb8d0dc), roughness: 0.04, metalness: 0.2, transparent: true, opacity: 0.16, depthWrite: false, side: THREE.DoubleSide, envMapIntensity: 1.5 });
   buildPropMaterials();
@@ -3090,9 +3116,9 @@ function buildPropMaterials() {
   const t = new THREE.CanvasTexture(c); t.wrapS = t.wrapT = THREE.RepeatWrapping; t.encoding = THREE.sRGBEncoding;
   MAT.fence = new THREE.MeshStandardMaterial({ map: t, alphaTest: 0.5, side: THREE.DoubleSide, metalness: 0.6, roughness: 0.5 });
   MAT.rubber = new THREE.MeshStandardMaterial({ color: C(0x1c1c1c), roughness: 0.9 });
-  MAT.cloth1 = new THREE.MeshStandardMaterial({ color: C(0xe8e2d4), roughness: 1, side: THREE.DoubleSide });
-  MAT.cloth2 = new THREE.MeshStandardMaterial({ color: C(0x5f7fa8), roughness: 1, side: THREE.DoubleSide });
-  MAT.cloth3 = new THREE.MeshStandardMaterial({ color: C(0xc0563f), roughness: 1, side: THREE.DoubleSide });
+  MAT.cloth1 = new THREE.MeshStandardMaterial({ color: C(0xe8e2d4), roughness: 1, side: THREE.DoubleSide, map: TEX.fabric.map });
+  MAT.cloth2 = new THREE.MeshStandardMaterial({ color: C(0x5f7fa8), roughness: 1, side: THREE.DoubleSide, map: TEX.fabric.map });
+  MAT.cloth3 = new THREE.MeshStandardMaterial({ color: C(0xc0563f), roughness: 1, side: THREE.DoubleSide, map: TEX.fabric.map });
   MAT.hazard = (() => { const cc = document.createElement('canvas'); cc.width = cc.height = 64; const gg = cc.getContext('2d'); gg.fillStyle = '#d9a52a'; gg.fillRect(0, 0, 64, 64); gg.fillStyle = '#1b1b1b'; for (let i = -64; i < 128; i += 32) { gg.beginPath(); gg.moveTo(i, 0); gg.lineTo(i + 16, 0); gg.lineTo(i + 80, 64); gg.lineTo(i + 64, 64); gg.fill(); } const tt = new THREE.CanvasTexture(cc); tt.wrapS = tt.wrapT = THREE.RepeatWrapping; tt.encoding = THREE.sRGBEncoding; return new THREE.MeshStandardMaterial({ map: tt, roughness: 0.7 }); })();
   MAT.screen = new THREE.MeshStandardMaterial({ color: C(0x1a2630), emissive: C(0x5a8ab0), emissiveIntensity: 0.6, roughness: 0.3 });
   MAT.redLight = new THREE.MeshStandardMaterial({ color: C(0x400000), emissive: C(0xff3020), emissiveIntensity: 1.5 });
@@ -3944,11 +3970,11 @@ function buildMap2Materials() {
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.02, roughness: 0.95, metalness: 0 }, o));
   MAT.snow = std(TEX.concrete, { color: C(0xf4f7fa), roughness: 0.9, bumpScale: 0.035 });
   MAT.ice = new THREE.MeshStandardMaterial({ color: C(0xbfdcea), roughness: 0.15, metalness: 0.05 });
-  MAT.carpet = std(TEX.concrete, { color: C(0x3d4a5c), roughness: 1, bumpScale: 0.01 });
-  MAT.sheet = std(TEX.metal, { color: C(0xa9b0b5), roughness: 0.5, metalness: 0.6, bumpScale: 0.004 });
+  MAT.carpet = std(TEX.fabric, { color: C(0x3d4a5c), roughness: 1, bumpScale: 0.01 });
+  MAT.sheet = std(TEX.steelp, { color: C(0xa9b0b5), roughness: 0.5, metalness: 0.6, bumpScale: 0.004 });
   MAT.glassDark = new THREE.MeshStandardMaterial({ color: C(0x2a3a48), roughness: 0.05, metalness: 0.6, envMapIntensity: 1.6 });
-  MAT.whiteTile = std(TEX.concrete, { color: C(0xe8eaec), roughness: 0.45, bumpScale: 0.005 });
-  MAT.panel = std(TEX.concrete, { color: C(0xd6dce2), roughness: 0.55, metalness: 0.1, bumpScale: 0.004 });
+  MAT.whiteTile = std(TEX.tile, { color: C(0xe8eaec), roughness: 0.45, bumpScale: 0.005 });
+  MAT.panel = std(TEX.plaster, { color: C(0xd6dce2), roughness: 0.55, metalness: 0.1, bumpScale: 0.004 });
   MAT.mud = std(TEX.concrete, { color: C(0x8a6a48), roughness: 1, bumpScale: 0.03 });
   MAT.hay = std(TEX.concrete, { color: C(0xd8bc68), roughness: 1, bumpScale: 0.05 });
   MAT.redBarn = std(TEX.wood, { color: C(0x9c3a2c), roughness: 0.9 });
@@ -5658,9 +5684,9 @@ function airpMaterials() {
   const r = makeRng(909);
   const tile = cv(256, (g, n) => { g.fillStyle = '#b8b6ae'; g.fillRect(0, 0, n, n); for (let i = 0; i < 4; i++) for (let j = 0; j < 4; j++) { const v = 176 + r() * 18 | 0; g.fillStyle = `rgb(${v},${v - 2},${v - 8})`; g.fillRect(i * 64 + 1, j * 64 + 1, 62, 62); } for (let q = 0; q < 26; q++) { g.fillStyle = `rgba(60,50,40,${0.05 + r() * 0.15})`; g.beginPath(); g.arc(r() * n, r() * n, 6 + r() * 30, 0, TAU); g.fill(); } });
   MAT.termFloor = new THREE.MeshStandardMaterial({ map: toTex(tile, true, 1), roughness: 0.35 });
-  MAT.termWall = std(TEX.concrete, { color: C(0xd8d6ce), roughness: 0.8 });
+  MAT.termWall = std(TEX.plaster, { color: C(0xd8d6ce), roughness: 0.8 });
   MAT.termDark = std(TEX.concrete, { color: C(0x3a3e44), roughness: 0.7 });
-  MAT.carpetBlue = std(TEX.concrete, { color: C(0x2e3c5c), roughness: 1, bumpScale: 0.02 });
+  MAT.carpetBlue = std(TEX.fabric, { color: C(0x2e3c5c), roughness: 1, bumpScale: 0.02 });
   MAT.planeWhite = new THREE.MeshStandardMaterial({ color: C(0xe8eaec), roughness: 0.35, metalness: 0.3 });
   MAT.planeStripe = new THREE.MeshStandardMaterial({ color: C(0x2a8a3a), roughness: 0.4, metalness: 0.3 });
   MAT.planeGrey = new THREE.MeshStandardMaterial({ color: C(0x8a9096), roughness: 0.5, metalness: 0.6 });
@@ -5829,9 +5855,9 @@ function isleMaterials() {
   }
   if (MAT.isleWhite) return;
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.02, roughness: 0.9, metalness: 0 }, o));
-  MAT.isleWhite = std(TEX.concrete, { color: C(0xf0ebe0), roughness: 0.85 });
-  MAT.isleRed = std(TEX.concrete, { color: C(0xb8382a), roughness: 0.8 });
-  MAT.isleTeal = std(TEX.wood, { color: C(0x4a9a94), roughness: 0.85 });
+  MAT.isleWhite = std(TEX.plaster, { color: C(0xf0ebe0), roughness: 0.85 });
+  MAT.isleRed = std(TEX.plaster, { color: C(0xb8382a), roughness: 0.8 });
+  MAT.isleTeal = std(TEX.planks, { color: C(0x4a9a94), roughness: 0.85 });
   MAT.isleCliff = new THREE.MeshStandardMaterial({ color: C(0x6e5e4c), roughness: 1, flatShading: true, map: TEX.concrete.map, bumpMap: TEX.concrete.bump, bumpScale: 0.05 });
   MAT.thatch = new THREE.MeshStandardMaterial({ color: C(0xb59a5a), roughness: 1, map: TEX.wood.map });
   MAT.sea = new THREE.MeshStandardMaterial({ color: C(0x1a5a74), roughness: 0.08, metalness: 0.3, transparent: true, opacity: 0.92 });
@@ -6047,12 +6073,12 @@ const SHIP = { flick: [], beam: null, piv: null, on: false, mastL: null };
 function shipMaterials() {
   if (MAT.shipHull) return;
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.015, roughness: 0.8, metalness: 0.3 }, o));
-  MAT.shipHull = std(TEX.metal, { color: C(0x5a1a16), roughness: 0.7 });
-  MAT.shipDeck = std(TEX.concrete, { color: C(0x4a5a4e), roughness: 0.85, metalness: 0.2 });
-  MAT.shipWhite = std(TEX.concrete, { color: C(0xe6e4dc), roughness: 0.75, metalness: 0.1 });
+  MAT.shipHull = std(TEX.paintm || TEX.metal, { color: C(0x5a1a16), roughness: 0.7 });
+  MAT.shipDeck = std(TEX.paintm || TEX.concrete, { color: C(0x4a5a4e), roughness: 0.85, metalness: 0.2 });
+  MAT.shipWhite = std(TEX.paintm || TEX.concrete, { color: C(0xe6e4dc), roughness: 0.75, metalness: 0.1 });
   MAT.shipRust = std(TEX.metal, { color: C(0x8a4a26), roughness: 0.9 });
-  MAT.shipYellow = std(TEX.metal, { color: C(0xe0b020), roughness: 0.6 });
-  MAT.shipBlue = std(TEX.metal, { color: C(0x2a4a7a), roughness: 0.6 });
+  MAT.shipYellow = std(TEX.paintm || TEX.metal, { color: C(0xe0b020), roughness: 0.6 });
+  MAT.shipBlue = std(TEX.paintm || TEX.metal, { color: C(0x2a4a7a), roughness: 0.6 });
   MAT.shipSea = new THREE.MeshStandardMaterial({ color: C(0x0a1a2a), roughness: 0.05, metalness: 0.4 });
   MAT.shipGlass = new THREE.MeshStandardMaterial({ color: C(0x1a2a30), emissive: C(0xffd890), emissiveIntensity: 0.25, roughness: 0.1 });
   MAT.shipLamp = new THREE.MeshStandardMaterial({ color: C(0x302a10), emissive: C(0xfff0c0), emissiveIntensity: 0.2 });
@@ -6232,15 +6258,15 @@ const TIDE = { flick: [], disco: null, tiles: [], beams: [], on: false, t: 0, po
 function tideMaterials() {
   if (MAT.tideHull) return;
   const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.015, roughness: 0.8, metalness: 0.2 }, o));
-  MAT.tideHull = std(TEX.metal, { color: C(0xeceae4), roughness: 0.55, metalness: 0.25 });
-  MAT.tideStripe = std(TEX.metal, { color: C(0x1a3a8a), roughness: 0.5 });
-  MAT.tideTeak = std(TEX.wood || TEX.concrete, { color: C(0xb88a5a), roughness: 0.7, metalness: 0.0 });
-  MAT.tideCarpet = std(TEX.concrete, { color: C(0x6a1430), roughness: 0.95, metalness: 0.0 });
-  MAT.tideFelt = std(TEX.concrete, { color: C(0x1a6a3a), roughness: 0.95, metalness: 0.0 });
-  MAT.tideVelvet = std(TEX.concrete, { color: C(0x8a1a2a), roughness: 0.9, metalness: 0.0 });
-  MAT.tidePurple = std(TEX.metal, { color: C(0x4a2a7a), roughness: 0.5 });
-  MAT.tidePink = std(TEX.metal, { color: C(0xe04a9a), roughness: 0.5 });
-  MAT.tideTile = std(TEX.concrete, { color: C(0x8ad8e8), roughness: 0.3, metalness: 0.1 });
+  MAT.tideHull = std(TEX.paintm || TEX.metal, { color: C(0xeceae4), roughness: 0.55, metalness: 0.25 });
+  MAT.tideStripe = std(TEX.paintm || TEX.metal, { color: C(0x1a3a8a), roughness: 0.5 });
+  MAT.tideTeak = std(TEX.planks || TEX.wood, { color: C(0xb88a5a), roughness: 0.7, metalness: 0.0 });
+  MAT.tideCarpet = std(TEX.fabric || TEX.concrete, { color: C(0x6a1430), roughness: 0.95, metalness: 0.0 });
+  MAT.tideFelt = std(TEX.fabric || TEX.concrete, { color: C(0x1a6a3a), roughness: 0.95, metalness: 0.0 });
+  MAT.tideVelvet = std(TEX.fabric || TEX.concrete, { color: C(0x8a1a2a), roughness: 0.9, metalness: 0.0 });
+  MAT.tidePurple = std(TEX.paintm || TEX.metal, { color: C(0x4a2a7a), roughness: 0.5 });
+  MAT.tidePink = std(TEX.paintm || TEX.metal, { color: C(0xe04a9a), roughness: 0.5 });
+  MAT.tideTile = std(TEX.tile || TEX.concrete, { color: C(0x8ad8e8), roughness: 0.3, metalness: 0.1 });
   MAT.tideWater = new THREE.MeshStandardMaterial({ color: C(0x1a8ab8), emissive: C(0x0a6aa8), emissiveIntensity: 0.55, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.88 });
   MAT.tideBulb = new THREE.MeshStandardMaterial({ color: C(0x302a10), emissive: C(0xffd8a0), emissiveIntensity: 1.6 });
   MAT.tideCabin = new THREE.MeshStandardMaterial({ color: C(0x1a2a30), emissive: C(0xffc880), emissiveIntensity: 0.6, roughness: 0.1 });
@@ -8401,6 +8427,17 @@ function renderStats() {
 function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(t.indexOf(statTab) + d + 3) % 3]; sfx.ui(); renderStats(); }
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
+{
+"v": "1.2.67",
+"d": "2026-11-04",
+"n": [
+"GUNSMITH 2.0 (BETA): 7 new attachments. FLASH HIDER, PORTED BARREL, HANDSTOP, TAC LIGHT, JUNGLE MAGS (two mags taped together for fast reloads), WEIGHTED STOCK and MATCH GRADE ammo. 146 new gun builds.",
+"INSPECT: drag the gun in the LOADOUT and LOCKER to turn it any way round, scroll to zoom in on a part, double-click to reset. On a controller the right stick turns it.",
+"THE STASH PACK: 8 new charms in chance boxes. FAN LEAF, BIC FLICK, SPECIAL BROWNIE, GRINDER, STASH JAR, LIT JOINT, MINI BONG and the rare NIGHTSHADE LEAF.",
+"Still in from 1.2.66: 6 more photo-scanned surfaces (painted steel, steel, plaster, tile, fabric, deck planks).",
+"Still in from 1.2.65: the frame drop fix, brighter shadows and SHADOW BRIGHTNESS."
+]
+},
 {
 "v": "1.2.64",
 "d": "2026-11-04",
@@ -11666,7 +11703,7 @@ const POST_OK = () => !POST.failed && S.post && S.post !== 'off' && !G.bench;
 // the grade for a map: from how dark its sky is (night maps glow more), or the map's own env.grade
 function postEnv(e) {
   const c = new THREE.Color(e.top), h = new THREE.Color(e.horizon), L = 0.3 * (c.r + h.r) + 0.55 * (c.g + h.g) + 0.15 * (c.b + h.b), night = clamp((0.55 - L) / 0.4, 0, 1);
-  Object.assign(POST.grade, { bloom: 0.3 + 0.3 * night, th: 0.92 - 0.14 * night, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.16 + 0.04 * night }, e.grade || {});
+  Object.assign(POST.grade, { bloom: 0.3 + 0.3 * night, th: 0.92 - 0.14 * night, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.1 + 0.03 * night }, e.grade || {});
 }
 const POST_VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
 function postMats() {
@@ -11674,11 +11711,11 @@ function postMats() {
   const mk = (fs, u) => new THREE.ShaderMaterial({ uniforms: u, vertexShader: POST_VS, fragmentShader: fs, depthTest: false, depthWrite: false, toneMapped: false });
   // bright pass + first downsample: the picture is sRGB, the glow is summed in linear light
   const bright = mk([
-    'uniform sampler2D src; uniform vec2 px; uniform float th; uniform float knee; varying vec2 vUv;',
+    'uniform sampler2D src; uniform vec2 px; uniform vec2 sc; uniform float th; uniform float knee; varying vec2 vUv;',
     'vec3 lin(vec3 c){ return c * c * (c * 0.305306 + 0.682171) + c * 0.012522; }',   // fast sRGB -> linear
-    'vec3 bp(vec2 uv){ vec3 c = texture2D(src, uv).rgb; float l = max(c.r, max(c.g, c.b)); float w = smoothstep(th, th + knee, l); return lin(c) * w; }',
+    'vec3 bp(vec2 uv){ vec3 c = texture2D(src, min(uv * sc, sc - px)).rgb; float l = max(c.r, max(c.g, c.b)); float w = smoothstep(th, th + knee, l); return lin(c) * w; }',
     'void main(){ vec3 s = bp(vUv) * 4.0; s += bp(vUv + vec2(-px.x, -px.y)); s += bp(vUv + vec2(px.x, -px.y)); s += bp(vUv + vec2(-px.x, px.y)); s += bp(vUv + px); gl_FragColor = vec4(s / 8.0, 1.0); }',
-  ].join('\n'), { src: { value: null }, px: { value: new THREE.Vector2() }, th: { value: 0.8 }, knee: { value: 0.2 } });
+  ].join('\n'), { src: { value: null }, px: { value: new THREE.Vector2() }, sc: { value: new THREE.Vector2(1, 1) }, th: { value: 0.8 }, knee: { value: 0.2 } });
   const down = mk([
     'uniform sampler2D src; uniform vec2 px; varying vec2 vUv;',
     'void main(){ vec3 s = texture2D(src, vUv).rgb * 4.0; s += texture2D(src, vUv - px).rgb; s += texture2D(src, vUv + px).rgb; s += texture2D(src, vUv + vec2(px.x, -px.y)).rgb; s += texture2D(src, vUv + vec2(-px.x, px.y)).rgb; gl_FragColor = vec4(s / 8.0, 1.0); }',
@@ -11692,7 +11729,7 @@ function postMats() {
   ].join('\n'), { src: { value: null }, base: { value: null }, px: { value: new THREE.Vector2() }, k: { value: 1 } });
   // the final picture: FXAA (when the picture has no MSAA), sharpen, bloom, grade, vignette
   const fin = mk([
-    'uniform sampler2D src; uniform sampler2D bloom; uniform vec2 px; uniform float bk; uniform float sat; uniform float con; uniform float warm; uniform float vig; uniform float sharp; uniform float fxaa; uniform float useBloom; varying vec2 vUv;',
+    'uniform sampler2D src; uniform sampler2D bloom; uniform vec2 px; uniform float bk; uniform float sat; uniform float con; uniform float warm; uniform float vig; uniform float sharp; uniform float fxaa; uniform float useBloom; uniform vec2 sc; uniform float lift; varying vec2 vUv;',
     'vec3 lin(vec3 c){ return c * c * (c * 0.305306 + 0.682171) + c * 0.012522; }',
     'vec3 srgb(vec3 c){ c = max(c, 0.0); vec3 s1 = sqrt(c), s2 = sqrt(s1), s3 = sqrt(s2); return 0.662002687 * s1 + 0.684122060 * s2 - 0.323583601 * s3 - 0.0225411470 * c; }',
     'float luma(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }',
@@ -11708,8 +11745,9 @@ function postMats() {
     '  vec3 b = a * 0.5 + 0.25 * (texture2D(src, uv + dir * -0.5).rgb + texture2D(src, uv + dir * 0.5).rgb);',
     '  float lB = luma(b); return (lB < lMin || lB > lMax) ? a : b; }',
     'void main(){',
-    '  vec3 c = fxaa > 0.5 ? fxaaAt(vUv) : texture2D(src, vUv).rgb;',
-    '  if (sharp > 0.0) { vec3 n = texture2D(src, vUv + vec2(px.x, 0.0)).rgb + texture2D(src, vUv - vec2(px.x, 0.0)).rgb + texture2D(src, vUv + vec2(0.0, px.y)).rgb + texture2D(src, vUv - vec2(0.0, px.y)).rgb;',
+    '  vec2 uv = min(vUv * sc, sc - px);',
+    '  vec3 c = fxaa > 0.5 ? fxaaAt(uv) : texture2D(src, uv).rgb;',
+    '  if (sharp > 0.0) { vec3 n = texture2D(src, uv + vec2(px.x, 0.0)).rgb + texture2D(src, uv - vec2(px.x, 0.0)).rgb + texture2D(src, uv + vec2(0.0, px.y)).rgb + texture2D(src, uv - vec2(0.0, px.y)).rgb;',
     '    vec3 d = c - n * 0.25; c = clamp(c + d * sharp, 0.0, 1.0); }',
     '  vec3 l = lin(c);',
     '  if (useBloom > 0.5) l += texture2D(bloom, vUv).rgb * bk;',
@@ -11717,12 +11755,13 @@ function postMats() {
     '  c = srgb(l);',
     '  float y = luma(c);',
     '  c = mix(vec3(y), c, sat);',
-    '  c = mix(c, c * c * (3.0 - 2.0 * c), (con - 1.0) * 4.0) + (1.0 - c) * c * 0.06;',   // S-curve that keeps the blacks, a slight lift in the shadows
+    '  c = mix(c, c * c * (3.0 - 2.0 * c), (con - 1.0) * 4.0 * smoothstep(0.35, 0.65, y));',   // contrast only in the mid and bright tones
+    '  c += lift * (1.0 - smoothstep(0.0, 0.5, y)) * (1.0 - c);',   // SHADOW BRIGHTNESS: lifts the dark tones (things in shadow stay visible)
     '  c *= mix(vec3(1.0 - warm * 0.5, 1.0, 1.0 + warm), vec3(1.0 + warm, 1.0, 1.0 - warm * 0.7), smoothstep(0.15, 0.85, y));',   // cool shadows, warm highlights
     '  vec2 q = vUv - 0.5; c *= 1.0 - vig * smoothstep(0.25, 0.85, dot(q, q) * 2.2);',
     '  gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);',
     '}',
-  ].join('\n'), { src: { value: null }, bloom: { value: null }, px: { value: new THREE.Vector2() }, bk: { value: 0.5 }, sat: { value: 1 }, con: { value: 1 }, warm: { value: 0 }, vig: { value: 0 }, sharp: { value: 0 }, fxaa: { value: 0 }, useBloom: { value: 1 } });
+  ].join('\n'), { src: { value: null }, bloom: { value: null }, px: { value: new THREE.Vector2() }, bk: { value: 0.5 }, sat: { value: 1 }, con: { value: 1 }, warm: { value: 0 }, vig: { value: 0 }, sharp: { value: 0 }, fxaa: { value: 0 }, useBloom: { value: 1 }, sc: { value: new THREE.Vector2(1, 1) }, lift: { value: 0.04 } });
   const copy = mk('uniform sampler2D src; varying vec2 vUv; void main(){ gl_FragColor = vec4(texture2D(src, vUv).rgb, 1.0); }', { src: { value: null } });
   POST.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fin); POST.quad.frustumCulled = false;
   POST.scene = new THREE.Scene(); POST.scene.add(POST.quad); POST.cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -11731,10 +11770,16 @@ function postMats() {
 function postFree() { if (POST.rt) POST.rt.dispose(); for (const l of POST.lv) l.dispose(); POST.rt = null; POST.lv = []; POST.w = POST.h = 0; }
 // (re)make the targets when the drawing size, the setting or the anti-aliasing changes
 const _pSz = new THREE.Vector2();
+// The targets are made at the full size (render scale without DYNAMIC RESOLUTION's reduction) and kept: when dynamic
+// resolution lowers the size, the frame is drawn into the bottom-left corner and the passes read just that corner.
+// Remaking ~10 targets (one with 4x MSAA) on every resolution step was a hitch every few seconds.
 function postTargets() {
-  renderer.getDrawingBufferSize(_pSz); const w = Math.max(2, _pSz.x | 0), h = Math.max(2, _pSz.y | 0), q = S.post, ms = S.aa !== 'off' && !!renderer.capabilities.isWebGL2;
-  if (POST.rt && POST.w === w && POST.h === h && POST.q === q && POST.ms === ms) return;
-  postFree(); POST.w = w; POST.h = h; POST.q = q; POST.ms = ms;
+  renderer.getDrawingBufferSize(_pSz); const dw = Math.max(2, _pSz.x | 0), dh = Math.max(2, _pSz.y | 0), q = S.post, ms = S.aa !== 'off' && !!renderer.capabilities.isWebGL2;
+  const bp = (typeof DR !== 'undefined' && DR.basePR) || renderer.getPixelRatio(), fw = Math.max(dw, Math.round(innerWidth * bp)), fh = Math.max(dh, Math.round(innerHeight * bp));
+  POST.dw = dw; POST.dh = dh;
+  if (POST.rt && POST.w >= dw && POST.h >= dh && POST.q === q && POST.ms === ms && !(POST.w > fw * 1.05 || POST.h > fh * 1.05)) return;
+  const w = fw, h = fh;
+  postFree(); POST.w = w; POST.h = h; POST.q = q; POST.ms = ms; POST.dw = dw; POST.dh = dh;
   const o = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, depthBuffer: true, stencilBuffer: false };
   POST.rt = ms ? new THREE.WebGLMultisampleRenderTarget(w, h, o) : new THREE.WebGLRenderTarget(w, h, o);
   if (ms) POST.rt.samples = 4;
@@ -11753,11 +11798,13 @@ function postPass(mat, out) { POST.quad.material = mat; renderer.setRenderTarget
 // draw the frame: draw(rt) renders the world (and the gun) into the target; then the finishing passes go to the screen
 function postFrame(draw) {
   const M = postMats(); postTargets();
+  POST.rt.viewport.set(0, 0, POST.dw, POST.dh); POST.rt.scissor.set(0, 0, POST.dw, POST.dh); POST.rt.scissorTest = true;
   renderer.setRenderTarget(POST.rt); renderer.clear(); draw();
+  const sx = POST.dw / POST.w, sy = POST.dh / POST.h;
   const g = POST.grade, glow = clamp(S.bloom == null ? 100 : S.bloom, 0, 200) / 100, L = POST.nl, D = POST.lv.slice(0, L), U = POST.up, useB = glow > 0 && L > 0;
   if (useB) {
     // down: bright pass into the first level, then smaller and smaller
-    M.bright.uniforms.src.value = POST.rt.texture; M.bright.uniforms.px.value.set(1 / POST.w, 1 / POST.h).multiplyScalar(D[0].width < POST.w / 3 ? 1.5 : 1); M.bright.uniforms.th.value = g.th; M.bright.uniforms.knee.value = g.knee;
+    M.bright.uniforms.src.value = POST.rt.texture; M.bright.uniforms.px.value.set(1 / POST.w, 1 / POST.h).multiplyScalar(D[0].width < POST.w / 3 ? 1.5 : 1); M.bright.uniforms.sc.value.set(sx, sy); M.bright.uniforms.th.value = g.th; M.bright.uniforms.knee.value = g.knee;
     postPass(M.bright, D[0]);
     for (let i = 1; i < L; i++) { M.down.uniforms.src.value = D[i - 1].texture; M.down.uniforms.px.value.set(0.5 / D[i - 1].width, 0.5 / D[i - 1].height); postPass(M.down, D[i]); }
     // up: the smallest level, blurred, added onto the next bigger one (wide soft glow plus a tight core)
@@ -11766,7 +11813,7 @@ function postFrame(draw) {
     POST.bloomTex = prev.texture;
   }
   const f = M.fin.uniforms;
-  f.src.value = POST.rt.texture; f.bloom.value = useB ? POST.bloomTex : POST.rt.texture; f.useBloom.value = useB ? 1 : 0; f.px.value.set(1 / POST.w, 1 / POST.h);
+  f.src.value = POST.rt.texture; f.bloom.value = useB ? POST.bloomTex : POST.rt.texture; f.useBloom.value = useB ? 1 : 0; f.px.value.set(1 / POST.w, 1 / POST.h); f.sc.value.set(sx, sy); f.lift.value = 0.1 * clamp(S.shadowLift == null ? 60 : S.shadowLift, 0, 100) / 100;
   f.bk.value = g.bloom * glow; f.sat.value = g.sat; f.con.value = g.con; f.warm.value = g.warm; f.vig.value = g.vig;
   f.fxaa.value = POST.ms || S.aa === 'off' ? 0 : 1; f.sharp.value = S.post === 'high' ? 0.22 : 0;
   postPass(M.fin, null);
@@ -11890,17 +11937,21 @@ const ATT = [
   { id: 'brake', slot: 'muzzle', c: ['ar', 'lmg', 'mr', 'sr'], name: 'Muzzle Brake', desc: 'Big recoil reduction, but the blast and flash give your position away.', mods: { recoil: -0.2, spread: 0.08, ads: 0.05, spot: 0.25, len: 0.06 } },
   { id: 'choke', slot: 'muzzle', c: ['sg'], name: 'Full Choke', desc: 'Tightens the pellet pattern so it carries further. Less forgiving up close.', mods: { spread: -0.18, adsSpread: -0.18, range: 0.15, ads: 0.06, move: -0.03, len: 0.05 } },
   { id: 'spreader', slot: 'muzzle', c: ['sg'], name: 'Spreader Choke', desc: 'Throws a wide pattern for room clearing. Falls apart at range.', mods: { spread: 0.35, adsSpread: 0.35, pellets: 2, range: -0.2, len: 0.04 } },
+  { id: 'flashhider', slot: 'muzzle', c: ['ar', 'smg', 'lmg', 'mr', 'sr'], name: 'Flash Hider', desc: 'Pronged cage that hides most of the flash. Harder to spot, a touch more kick than a brake would give.', mods: { spot: -0.2, recoil: -0.04, len: 0.04 } },
   // ---------- barrels
   { id: 'stdbarrel', slot: 'barrel', c: ALLC, name: 'Standard Barrel', desc: 'Factory length.', mods: {} },
   { id: 'long', slot: 'barrel', c: GUNC, not: ['coach'], name: 'Long Barrel', desc: 'More velocity and reach. Heavier and slower to swing.', mods: { dmg: 0.04, range: 0.3, adsSpread: -0.1, ads: 0.12, move: -0.05, spread: 0.1, len: 0.12 } },
   { id: 'short', slot: 'barrel', c: GUNC, name: 'Short Barrel', desc: 'Handy in tight spaces. Loses velocity and climbs more.', mods: { ads: -0.15, move: 0.05, spread: -0.15, range: -0.3, dmg: -0.06, recoil: 0.12 } },
   { id: 'heavy', slot: 'barrel', c: ['ar', 'lmg', 'mr', 'sr', 'sg'], not: ['coach'], name: 'Heavy Barrel', desc: 'Thick profile soaks up recoil and holds accuracy. Weighs a lot.', mods: { recoil: -0.13, range: 0.1, move: -0.07, ads: 0.15 } },
+  { id: 'ported', slot: 'barrel', c: ['ar', 'smg', 'lmg', 'mr', 'pi'], name: 'Ported Barrel', desc: 'Gas ports cut along the top push the muzzle down. Louder and brighter, a little looser.', mods: { recoil: -0.1, spot: 0.15, spread: 0.05 } },
   // ---------- underbarrel
   { id: 'nounder', slot: 'underbarrel', c: ALLC, name: 'None', desc: 'Clean rail.', mods: {} },
   { id: 'vgrip', slot: 'underbarrel', c: RIF, name: 'Vertical Grip', desc: 'Better control on long bursts. Slower to bring to the eye.', mods: { recoil: -0.13, ads: 0.08 } },
   { id: 'agrip', slot: 'underbarrel', c: RIF, name: 'Angled Grip', desc: 'Faster to aim. Gives up a little recoil control.', mods: { ads: -0.12, recoil: 0.06 } },
   { id: 'bipod', slot: 'underbarrel', c: ['lmg', 'mr', 'sr'], name: 'Bipod', desc: 'Folded legs add mass up front: steadier aim and less kick, slower to move and aim.', mods: { recoil: -0.16, adsSpread: -0.1, ads: 0.1, move: -0.04 } },
   { id: 'laser', slot: 'underbarrel', c: GUNC, name: 'Laser Sight', desc: 'Tighter hip-fire and a visible aim point. The beam gives you away.', mods: { spread: -0.22, ads: 0.05, spot: 0.35, laser: 1 } },
+  { id: 'handstop', slot: 'underbarrel', c: RIF, name: 'Handstop', desc: 'A small stop to pull against. A bit of everything: steadier and a bit quicker to aim.', mods: { ads: -0.05, recoil: -0.05, move: -0.02 } },
+  { id: 'taclight', slot: 'underbarrel', c: GUNC, name: 'Tac Light', desc: 'Weapon light for dark rooms. Steadier hip-fire, but the lamp makes you easy to spot.', mods: { spread: -0.12, ads: 0.03, spot: 0.25 } },
   // ---------- magazines
   { id: 'stdmag', slot: 'magazine', c: ALLC, name: 'Standard Magazine', desc: 'Factory capacity.', mods: {} },
   { id: 'extmag', slot: 'magazine', c: ['ar', 'smg', 'mr', 'sr', 'sg'], not: ['breacher', 'rampart', 'kestrel'], name: 'Extended Mag', desc: 'More rounds per magazine. Longer to swap and a bit heavier.', mods: { mag: 0.5, reload: 0.15, ads: 0.07, move: -0.02 } },
@@ -11911,16 +11962,19 @@ const ATT = [
   { id: 'speedload', slot: 'magazine', c: ['sg'], only: ['breacher', 'rampart'], name: 'Shell Carrier', desc: 'Side saddle for faster reloads. Short tube holds two fewer.', mods: { reload: -0.35, magAdd: -2 } },
   { id: 'pextmag', slot: 'magazine', c: ['pi'], not: ['magnum'], name: 'Extended Mag', desc: 'More rounds. Sticks out of the grip and slows reloads.', mods: { mag: 0.6, reload: 0.12, ads: 0.06 } },
   { id: 'speedloader', slot: 'magazine', c: ['pi'], only: ['magnum'], name: 'Speedloader', desc: 'All six rounds at once. Much faster reloads, a little bulk on the belt.', mods: { reload: -0.35, move: -0.02 } },
+  { id: 'jungle', slot: 'magazine', c: ['ar', 'smg', 'mr'], not: ['kestrel', 'wasp'], name: 'Jungle Mags', desc: 'Two magazines taped together: flip and go for much faster reloads. Heavier to carry.', mods: { reload: -0.22, move: -0.03 } },
   // ---------- stocks
   { id: 'stdstock', slot: 'stock', c: ALLC, name: 'Standard Stock', desc: 'Factory stock.', mods: {} },
   { id: 'nostock', slot: 'stock', c: ['ar', 'smg', 'mr', 'sg'], name: 'No Stock', desc: 'Very fast and light. Nothing to brace against, so recoil and aim suffer.', mods: { ads: -0.2, move: 0.07, recoil: 0.25, adsSpread: 0.15 } },
   { id: 'tacstock', slot: 'stock', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'sg'], name: 'Tactical Stock', desc: 'Cheek riser and padded butt for a steady hold. Bulkier.', mods: { recoil: -0.1, adsSpread: -0.08, ads: 0.1, move: -0.03 } },
   { id: 'lightstock', slot: 'stock', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'sg'], name: 'Skeleton Stock', desc: 'Cut-down frame. Quicker handling, less damping.', mods: { move: 0.04, ads: -0.08, recoil: 0.1 } },
+  { id: 'heavystock', slot: 'stock', c: ['ar', 'lmg', 'mr', 'sr'], name: 'Weighted Stock', desc: 'Steel weights in the butt soak up recoil. Slow to raise and to carry.', mods: { recoil: -0.12, ads: 0.1, move: -0.04 } },
   // ---------- ammo
   { id: 'fmj', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Full Metal Jacket', desc: 'Standard ball ammunition.', mods: {} },
   { id: 'hollow', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Hollow Point', desc: 'Expands on impact for more damage. Sheds energy fast and splashes on armour.', mods: { dmg: 0.06, range: -0.18, vsHeavy: -0.15 } },
   { id: 'ap', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Armour Piercing', desc: 'Punches through Heavy armour. Passes through soft targets with less effect.', mods: { vsHeavy: 0.35, range: 0.2, dmg: -0.05 } },
   { id: 'subsonic', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Subsonic', desc: 'No supersonic crack, softer kick. Slow and weak at range.', mods: { spot: -0.2, recoil: -0.12, dmg: -0.05, range: -0.15 } },
+  { id: 'match', slot: 'ammo', c: ['ar', 'smg', 'lmg', 'mr', 'sr', 'pi'], name: 'Match Grade', desc: 'Hand-loaded for consistency: tighter groups from the hip and aimed. A little lighter per hit.', mods: { spread: -0.1, adsSpread: -0.14, dmg: -0.04 } },
   { id: 'buck', slot: 'ammo', c: ['sg'], name: '00 Buckshot', desc: 'The standard shell.', mods: {} },
   { id: 'slug', slot: 'ammo', c: ['sg'], name: 'Slugs', desc: 'One heavy projectile: rifle-like reach, but you have to actually hit.', mods: { pellets: -8, dmgX: 5.5, spread: -0.85, adsSpread: -0.88, range: 2.0, head: -0.3, recoil: 0.25 } },
   { id: 'flechette', slot: 'ammo', c: ['sg'], name: 'Flechette', desc: 'Darts that fly flatter and further. Each hits softer.', mods: { pellets: 3, dmg: -0.3, range: 0.4, spread: -0.1 } },
@@ -12119,6 +12173,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   // barrels
   const tip = -(base + barrelExtra);
   if (barrelExtra) { tubeZ(br * 0.95, barrelExtra + 0.02, M.dark, 0, my, -base + 0.01); if (def.blender === 'rifle') add(new THREE.BoxGeometry(0.06, 0.06, 0.1), M.poly, 0, 0.004, -0.6); }
+  if (E('barrel') === 'ported') { tubeZ(Math.max(br * 1.35, 0.012), 0.12, M.dark, 0, my, -base + 0.14); for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(0.006, 0.003, 0.012), M.poly, 0, my + Math.max(br * 1.35, 0.012), -base + 0.04 + k * 0.025); }
   if (E('barrel') === 'heavy') tubeZ(Math.max(br * 1.55, 0.014), 0.16, M.dark, 0, my, -base + 0.24);
   // muzzle devices
   const mz = E('muzzle'), mr = Math.max(0.017, br * 1.9);
@@ -12134,6 +12189,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   if (mz === 'choke') tubeZ(br + 0.003, 0.05, M.dark, 0, my, tip + 0.005, 16);
   if (mz === 'spreader') add(new THREE.BoxGeometry(0.05, 0.016, 0.05), M.dark, 0, my, tip - 0.02);
   }
+  if (mz === 'flashhider') { const r = Math.max(0.012, br * 1.5); tubeZ(r, 0.02, M.dark, 0, my, tip + 0.005); for (let k = 0; k < 4; k++) { const a = k * Math.PI / 2 + Math.PI / 4; add(new THREE.BoxGeometry(0.004, 0.004, 0.045), M.dark, Math.cos(a) * r * 0.9, my + Math.sin(a) * r * 0.9, tip - 0.035); } }
   // optics: everything sits on the rail at (railY, opticZ)
   const lensAt = (y, z, wdt, h) => { add(new THREE.PlaneGeometry(wdt, h), M.lens, 0, y, z); };
   const notStock = !(def.blender && !hasHQ(def) && op === def.optic);
@@ -12229,6 +12285,8 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   } else {
   if (ub === 'vgrip') add(new THREE.BoxGeometry(0.028, 0.085, 0.032), M.poly, 0, uy - 0.042, uz, 0.15);
   if (ub === 'agrip') add(new THREE.BoxGeometry(0.03, 0.03, 0.08), M.poly, 0, uy - 0.012, uz + 0.16, -0.5);
+  if (ub === 'handstop') add(new THREE.BoxGeometry(0.024, 0.026, 0.02), M.poly, 0, uy - 0.012, uz - 0.02, 0.4);
+  if (ub === 'taclight') { tubeZ(0.012, 0.06, M.dark, 0.018, uy - 0.006, uz + 0.0); add(new THREE.CircleGeometry(0.0105, 14), M.dot, 0.018, uy - 0.006, uz - 0.0605); add(new THREE.BoxGeometry(0.012, 0.012, 0.02), M.dark, 0.008, uy - 0.003, uz - 0.03); }
   if (ub === 'bipod') { add(new THREE.BoxGeometry(0.03, 0.02, 0.03), M.dark, 0, uy - 0.008, uz); for (const s of [-1, 1]) add(new THREE.BoxGeometry(0.008, 0.008, 0.2), M.dark, s * 0.012, uy - 0.018, uz + 0.1); }
   if (ub === 'laser' && u.laser) {
     const [lx, ly, lz] = u.laser;
@@ -12251,6 +12309,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
       const p = isFinite(bb.min.y) && HQ('pext', 0, bb.min.y + 0.004, (bb.min.z + bb.max.z) / 2 + 0.002, 1, u.mag); if (p) { p.rotation.x = 0.2; u.magX = p; }
     }
     if (mg === 'drum' && tall && !hd) { const d =new THREE.Mesh(new THREE.CylinderGeometry(0.065, 0.065, 0.055, 22), M.dark); d.rotation.z = Math.PI / 2; d.position.set(0, -0.085, 0.005); u.mag.add(d); u.drum = d; }
+    if (mg === 'jungle' && tall && inner) { const jg = new THREE.Group(), c2 = inner.clone(); c2.position.x += 0.034; c2.rotation.y += 0.04; jg.add(c2); for (const yy of [-0.03, -0.07]) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.012, 0.04), M.tan); t.position.set(inner.position.x + 0.017, inner.position.y + yy, inner.position.z); jg.add(t); } u.mag.add(jg); u.magX = jg; }
     if (mg === 'fastmag' && tall) { const t = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.012, 0.01), M.tan); t.position.set(0, u.magStyle === 'short' ? -0.06 : -0.105, -0.012); u.mag.add(t); u.magX = t; }
     if (mg === 'pextmag' && u.pistol && !u.magX) { const t =new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.04, 0.05), M.poly); t.position.set(0, -0.02, 0.004); t.rotation.x = 0.2; u.mag.add(t); u.magX = t; }
   }
@@ -12265,6 +12324,7 @@ function attachVisuals(g, def, factory, wlen, ovr) {
   else if (st === 'lightstock' && HQ('lightstock', 0, sy, sz)) {}
   else if (st === 'tacstock') { add(new THREE.BoxGeometry(0.044, 0.025, 0.12), M.poly, 0, sy + 0.04, sz + 0.14); add(new THREE.BoxGeometry(0.06, 0.1, 0.02), M.poly, 0, sy - 0.02, sz + 0.27); }
   else if (st === 'lightstock') add(new THREE.BoxGeometry(0.012, 0.012, 0.18), M.dark, 0, sy + 0.022, sz + 0.14);
+  if (st === 'heavystock') { add(new THREE.BoxGeometry(0.05, 0.07, 0.16), M.poly, 0, sy, sz + 0.14); add(new THREE.BoxGeometry(0.056, 0.11, 0.025), M.dark, 0, sy - 0.015, sz + 0.23); for (const s of [-1, 1]) add(new THREE.CylinderGeometry(0.008, 0.008, 0.004, 10), M.brass, s * 0.0285, sy, sz + 0.17, 0, 0, Math.PI / 2); }
   // muzzle flash follows the new muzzle
   if (u.flash) u.flash.position.z = -(w.len + 0.06);
 }
@@ -12446,11 +12506,23 @@ function resetLoadoutWeapon() {
 function loadoutTab(d) { selectClass(ACTIVE_CLASS + d); }
 
 /* ---------- 3D preview of the selected gun (rendered off-screen by the main renderer, copied to a 2D canvas) */
-const PV = { want: null, key: '', obj: null, scene: null, cam: null, rt: null, buf: null, img: null, t: 0, acc: 0 };
+const PV = { want: null, key: '', obj: null, scene: null, cam: null, rt: null, buf: null, img: null, t: 0, acc: 0, ins: { yaw: 0, pitch: 0, zoom: 1, px: 0, py: 0, idle: 5, drag: false, lx: 0, ly: 0 } };
 const pvCamo = w => (w.camo !== undefined ? w.camo : (typeof camoFor === 'function' ? camoFor(w.def.id) : null));
 const pvStk = w => (w.stk !== undefined ? w.stk : (typeof stickerFor === 'function' ? stickerFor(w.def.id) : null));
 const pvChm = w => (w.chm !== undefined ? w.chm : (typeof charmFor === 'function' ? charmFor(w.def.id) : null));
 function previewKey(w) { return w.def.id + '|' + JSON.stringify(ATTS[w.def.id] || {}) + '|' + (w.ovr ? w.ovr.id : '') + '|' + pvCamo(w) + '|' + pvStk(w); }
+// INSPECT controls on the preview canvas (loadout and locker): drag to turn, wheel to zoom toward the pointer,
+// double-click to reset; on a controller the right stick turns it (see pvInspectPad)
+function pvInspectWire(cv) {
+  const I = PV.ins; cv.style.cursor = 'grab'; cv.style.touchAction = 'none'; cv.title = 'DRAG TO TURN · SCROLL TO ZOOM · DOUBLE-CLICK TO RESET';
+  cv.onpointerdown = e => { I.drag = true; I.lx = e.clientX; I.ly = e.clientY; I.idle = 0; cv.style.cursor = 'grabbing'; try { cv.setPointerCapture(e.pointerId); } catch (er) {} };
+  cv.onpointermove = e => { if (!I.drag) return; const dx = e.clientX - I.lx, dy = e.clientY - I.ly; I.lx = e.clientX; I.ly = e.clientY; I.yaw += dx * 0.012; I.pitch = clamp(I.pitch + dy * 0.01, -1.3, 1.3); I.idle = 0; };
+  const up = () => { I.drag = false; cv.style.cursor = 'grab'; }; cv.onpointerup = up; cv.onpointercancel = up;
+  cv.onwheel = e => { e.preventDefault(); const r = cv.getBoundingClientRect(), mx = (e.clientX - r.left) / r.width - 0.5, my = 0.5 - (e.clientY - r.top) / r.height, z0 = I.zoom;
+    I.zoom = clamp(I.zoom * (e.deltaY > 0 ? 1.12 : 1 / 1.12), 0.38, 1.25); const k = (z0 - I.zoom) * 0.9; I.px = clamp(I.px + mx * k, -0.45, 0.45); I.py = clamp(I.py + my * k * 0.42, -0.2, 0.2); if (I.zoom >= 1) { I.px *= 0.5; I.py *= 0.5; } I.idle = 0; };
+  cv.ondblclick = () => { Object.assign(I, { yaw: 0, pitch: 0, zoom: 1, px: 0, py: 0, idle: 5 }); };
+}
+function pvInspectPad(rx, ry, dt) { const I = PV.ins; if (Math.abs(rx) < 0.2 && Math.abs(ry) < 0.2) return; I.yaw += rx * dt * 3; I.pitch = clamp(I.pitch + ry * dt * 2, -1.3, 1.3); I.idle = 0; }
 function updatePreview(dt) {
   if ((curScreen !== 'loadout' && curScreen !== 'locker') || !PV.want) return;
   const cv = $(curScreen === 'locker' ? 'lkPrev' : 'loPrev'); if (!cv || !cv.getContext) return;
@@ -12465,7 +12537,7 @@ function updatePreview(dt) {
     PV.rt = new THREE.WebGLRenderTarget(W, H); PV.rt.texture.encoding = THREE.sRGBEncoding;
     PV.buf = new Uint8Array(W * H * 4);
   }
-  if (PV.cv !== cv) { PV.cv = cv; cv.width = W; cv.height = H; PV.ctx = cv.getContext('2d'); PV.img = PV.ctx.createImageData(W, H); }
+  if (PV.cv !== cv) { PV.cv = cv; cv.width = W; cv.height = H; PV.ctx = cv.getContext('2d'); PV.img = PV.ctx.createImageData(W, H); pvInspectWire(cv); }
   const key = previewKey(PV.want);
   if (key !== PV.key) {
     PV.key = key; if (PV.obj) PV.scene.remove(PV.obj);
@@ -12480,8 +12552,13 @@ function updatePreview(dt) {
     const c = box.getCenter(new THREE.Vector3()), sz = box.getSize(new THREE.Vector3());
     g.position.sub(c); PV.size = Math.max(sz.z, sz.y * 2.4, 0.2); PV.dbg = [sz.x, sz.y, sz.z].map(v => +v.toFixed(2));
   }
-  PV.obj.rotation.set(0.12, -Math.PI / 2 + Math.sin(PV.t * 0.7) * 0.35, 0);
-  const hf = Math.atan(Math.tan(14 * Math.PI / 180) * PV.cam.aspect); PV.cam.position.set(0, 0.02, PV.size / (2 * Math.tan(hf)) * 1.12); PV.cam.lookAt(0, 0, 0);
+  // INSPECT: drag turns the gun (any way round), the wheel zooms in on a part; left alone it eases back to the slow sway
+  const I = PV.ins; I.idle += 1 / 30;
+  if (I.idle > 4 && !I.drag) { const k = 0.06; I.yaw += (0 - I.yaw) * k; I.pitch += (0 - I.pitch) * k; I.zoom += (1 - I.zoom) * k; I.px += (0 - I.px) * k; I.py += (0 - I.py) * k; }
+  const sway = I.idle > 4 ? Math.sin(PV.t * 0.7) * 0.35 : 0;
+  PV.obj.rotation.set(0.12 + I.pitch, -Math.PI / 2 + sway + I.yaw, 0, 'YXZ');
+  const hf = Math.atan(Math.tan(14 * Math.PI / 180) * PV.cam.aspect), dist = PV.size / (2 * Math.tan(hf)) * 1.12 * I.zoom;
+  PV.cam.position.set(I.px * PV.size, 0.02 + I.py * PV.size, dist); PV.cam.lookAt(I.px * PV.size, I.py * PV.size, 0);
   const prevT = renderer.getRenderTarget(), prevTM = renderer.toneMapping, prevCC = renderer.getClearColor(new THREE.Color()), prevCA = renderer.getClearAlpha();
   renderer.setRenderTarget(PV.rt); renderer.setClearColor(0x000000, 0); renderer.clear(); updateGunShader(); renderer.render(PV.scene, PV.cam);
   renderer.readRenderTargetPixels(PV.rt, 0, 0, W, H, PV.buf); renderer.setRenderTarget(prevT); renderer.toneMapping = prevTM; renderer.setClearColor(prevCC, prevCA);
@@ -14387,6 +14464,10 @@ const CHARM_DEFS = [
   ['fire', 'FIREBALL', 2, 'flame', [0xff5a14, 0xffd23f, 0xff7a1a]], ['volt', 'VOLT', 2, 'bolt', [0x2a8aff, 0xbfe4ff, 0x4aa8ff]], ['rdice', 'RED DICE', 2, 'dice', [0xd62e3a, 0xffffff]],
   ['gem', 'DIAMOND', 3, 'gem', [0xbfe8ff, 0xffffff, 0x7fd0ff], { spin: 1 }], ['coin', 'DZ COIN', 3, 'coin', [0xe9b949, 0xffe28a], { metal: 1, spin: 1 }], ['orb', 'PLASMA ORB', 3, 'orb', [0x7a2cff, 0xb8bcc2, 0xff3cf0]],
   ['gskull', 'GOLD SKULL', 3, 'skull', [0xf2c14e, 0x3b2a05], { metal: 1 }],
+  // 1.2.67 GUNSMITH 2.0: the stash pack
+  ['leaf', 'FAN LEAF', 0, 'leaf', [0x1e7a1e, 0x14481a]], ['lighter', 'BIC FLICK', 0, 'lighter', [0xe04a9a, 0xff9a2a, 0xffb03a]], ['brownie', 'SPECIAL BROWNIE', 0, 'brownie', [0x4a2a14, 0xf2ece0]],
+  ['grinder', 'GRINDER', 1, 'grinder', [0x7a8088, 0x3adf5a], { metal: 1 }], ['jar', 'STASH JAR', 1, 'jar', [0xc8e8d8, 0x2f6a14, 0x111111]], ['joint', 'LIT JOINT', 2, 'joint', [0xf2ece0, 0x7a5a3a, 0xff6a1a]],
+  ['bong', 'MINI BONG', 2, 'bong', [0x6ad8ff, 0x1a6a3a, 0x5adf4a]], ['purple', 'NIGHTSHADE LEAF', 3, 'leaf', [0x7a2cff, 0x2a0a5a, 0xb06cff], { spin: 1 }],
 ];
 for (const [id, name, r, t, c, o] of CHARM_DEFS) COSM.push({ id: 'ch_' + id, name, kind: 'charm', r, g: Object.assign({ t, c }, o || {}) });
 // ---- account BANNERS: the card behind your name (lobby, your player card, and the death cam when you kill another player)
@@ -14988,6 +15069,19 @@ function charmBuild(id) {
     case 'gem': { const m = chmMat(c0, { metalness: 0.2, roughness: 0.04, emissive: c2 === undefined ? 0x000000 : c2, emissiveIntensity: 0.6, flatShading: true }); const o = add(new THREE.OctahedronGeometry(0.0105, 0), m); o.scale.set(1, 1.35, 1); break; }
     case 'coin': { const a = add(new THREE.CylinderGeometry(0.0105, 0.0105, 0.0026, 24), M0); a.rotation.x = Math.PI / 2; const b = add(new THREE.CylinderGeometry(0.0072, 0.0072, 0.0034, 6), M1); b.rotation.x = Math.PI / 2; break; }
     case 'orb': add(new THREE.SphereGeometry(0.0075, 16, 12), chmMat(c0, { emissive: c2 === undefined ? c0 : c2, emissiveIntensity: 2.2, roughness: 0.2 })); for (let i = 0; i < 2; i++) { const t = add(new THREE.TorusGeometry(0.0092, 0.0008, 6, 24), chmMat(c1, { metalness: 1, roughness: 0.25 })); t.rotation.y = i * Math.PI / 2; } break;
+    case 'leaf': { const m = c2 !== undefined ? chmMat(c0, { emissive: c2, emissiveIntensity: 0.9 }) : M0;   // seven leaflets fanned out from the stem
+      for (let i = -3; i <= 3; i++) { const a = i * 0.42, len = 0.016 - Math.abs(i) * 0.0028, lf = add(new THREE.SphereGeometry(0.0032, 8, 6), m, Math.sin(a) * len * 0.55, Math.cos(a) * len * 0.55 - 0.002, 0); lf.scale.set(0.55, len / 0.0064, 0.25); lf.rotation.z = -a; }
+      add(new THREE.CylinderGeometry(0.0008, 0.0008, 0.008, 5), M1, 0, -0.007, 0); break; }
+    case 'lighter': add(new THREE.BoxGeometry(0.009, 0.019, 0.006), chmMat(c0, { roughness: 0.25 })); add(new THREE.BoxGeometry(0.0094, 0.004, 0.0064), steel, 0, 0.0115, 0);
+      add(new THREE.ConeGeometry(0.0022, 0.007, 8), chmMat(c1, { emissive: c2, emissiveIntensity: 2.0, transparent: true, opacity: 0.9 }), 0, 0.0175, 0); break;
+    case 'brownie': add(new THREE.BoxGeometry(0.016, 0.009, 0.016), chmMat(c0, { roughness: 0.85 })); for (let i = 0; i < 3; i++) add(new THREE.BoxGeometry(0.016, 0.0012, 0.0018), M1, 0, 0.0048, -0.005 + i * 0.005); { const l = add(new THREE.BoxGeometry(0.004, 0.0008, 0.0025), chmMat(0x3a9a3a), 0, 0.0056, 0); l.rotation.y = 0.6; } break;
+    case 'grinder': add(new THREE.CylinderGeometry(0.0095, 0.0095, 0.006, 18), M0, 0, 0.003); add(new THREE.CylinderGeometry(0.0095, 0.0095, 0.006, 18), M0, 0, -0.0035); add(new THREE.CylinderGeometry(0.0097, 0.0097, 0.0012, 18), chmMat(c1, { emissive: c1, emissiveIntensity: 0.8 }), 0, 0); break;
+    case 'jar': add(new THREE.CylinderGeometry(0.0078, 0.0078, 0.016, 14), chmMat(c0, { transparent: true, opacity: 0.45, roughness: 0.05 })); { const b = add(new THREE.SphereGeometry(0.0055, 10, 8), chmMat(c1, { roughness: 0.9 }), 0, -0.002); b.scale.set(1, 1.2, 1); }
+      add(new THREE.CylinderGeometry(0.0082, 0.0082, 0.004, 14), chmMat(c2), 0, 0.0095); break;
+    case 'joint': { const j = add(new THREE.CylinderGeometry(0.0035, 0.0018, 0.026, 10), chmMat(c0, { roughness: 0.9 })); j.rotation.z = 0.35; add(new THREE.CylinderGeometry(0.0019, 0.0019, 0.004, 8), M1, 0.0045, -0.0115).rotation.z = 0.35;
+      add(new THREE.SphereGeometry(0.0034, 8, 6), chmMat(c2, { emissive: c2, emissiveIntensity: 1.2 }), -0.0045, 0.0122); break; }
+    case 'bong': add(new THREE.CylinderGeometry(0.0045, 0.0045, 0.022, 12), chmMat(c0, { transparent: true, opacity: 0.55, roughness: 0.05 }), 0, 0.003); add(new THREE.SphereGeometry(0.0072, 12, 9), chmMat(c0, { transparent: true, opacity: 0.55, roughness: 0.05 }), 0, -0.009);
+      add(new THREE.SphereGeometry(0.0058, 10, 8), chmMat(c1, { emissive: c2, emissiveIntensity: 0.7, transparent: true, opacity: 0.85 }), 0, -0.0095); { const s = add(new THREE.CylinderGeometry(0.001, 0.001, 0.012, 6), steel, 0.0055, -0.004); s.rotation.z = -0.8; add(new THREE.CylinderGeometry(0.0026, 0.0014, 0.003, 8), steel, 0.0098, 0.0005); } break;
     default: add(new THREE.SphereGeometry(0.008, 12, 9), M0);
   }
   body.traverse(o => { if (o.isMesh) { o.userData.att = true; o.renderOrder = 2; } });
@@ -21046,11 +21140,12 @@ const SCHEMA = {
     { k: 'shadowDist', t: 'range', name: 'SHADOW DISTANCE', hint: 'How far from you shadows are drawn, and soldiers cast shadows. Longer is softer and slower', min: 50, max: 200, step: 10, fmt: pct },
     { k: 'anis', t: 'seg', name: 'TEXTURE FILTERING', hint: 'Keeps the ground and walls sharp at an angle (anisotropic)', opts: () => [[1, '1×'], [2, '2×'], [4, '4×'], [8, '8×'], [16, '16×']].filter(o => o[0] <= Math.max(1, MAXANIS)) },
     { k: 'texQ', t: 'seg', name: 'TEXTURE QUALITY', hint: 'Detail of the built-in textures. Applies on next launch', opts: [['low', 'LOW'], ['high', 'HIGH']] },
-    { k: 'realTex', t: 'toggle', name: 'SCANNED TEXTURES', hint: 'Photo-scanned ground, brick, concrete, wood and metal from Poly Haven (CC0), downloaded once. Applies on next launch' },
+    { k: 'realTex', t: 'toggle', name: 'SCANNED TEXTURES', hint: 'Photo-scanned ground, brick, concrete, wood, metal, painted steel, plaster, tile, fabric and deck planks from Poly Haven (CC0), downloaded once. Applies on next launch' },
     { k: 'gunShader', t: 'toggle', name: 'CUSTOM GUN SHADER', hint: 'Physically based GGX shader on weapon metal. Turn off if guns look wrong' },
     { k: 'sheen', t: 'range', name: 'SURFACE SHEEN', hint: 'Fresnel glint on metal and wet surfaces at grazing angles', min: 0, max: 150, step: 10, fmt: pct },
     { t: 'head', name: 'EFFECTS' },
     { k: 'post', t: 'seg', name: 'BLOOM & COLOUR', hint: 'Glow on lights, neon, fire and muzzle flashes, film colour grading, edge smoothing. LOW is lighter on the graphics card', opts: [['off', 'OFF'], ['low', 'LOW'], ['high', 'HIGH']] },
+    { k: 'shadowLift', t: 'range', name: 'SHADOW BRIGHTNESS', hint: 'Lifts the darkest parts of the picture so things in shadow stay easy to see (BLOOM & COLOUR on)', min: 0, max: 100, step: 10, fmt: pct },
     { k: 'bloom', t: 'range', name: 'GLOW', hint: 'How strong the glow is (BLOOM & COLOUR on)', min: 0, max: 200, step: 10, fmt: pct },
     { k: 'fxQ', t: 'seg', name: 'EFFECTS QUALITY', hint: 'Sparks, debris, dust and smoke from shots and explosions', opts: [['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
     { k: 'grass', t: 'range', name: 'GRASS DENSITY', min: 0, max: 100, step: 5, fmt: pct },
@@ -21125,7 +21220,7 @@ const SCHEMA = {
   ],
 };
 let curTab = 'VIDEO';
-const VIDEO_KEYS = new Set(['quality', 'post', 'bloom', 'renderScale', 'dynRes', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'fov', 'brightness', 'sheen', 'gunShader', 'grain', 'showFps', 'radar', 'crosshair', 'crosshairColor']);
+const VIDEO_KEYS = new Set(['quality', 'post', 'bloom', 'shadowLift', 'renderScale', 'dynRes', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'fov', 'brightness', 'sheen', 'gunShader', 'grain', 'showFps', 'radar', 'crosshair', 'crosshairColor']);
 // changing one of these by hand turns the preset into CUSTOM
 const DETAIL_KEYS = new Set(['renderScale', 'post', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'texQ', 'grain']);
 const gpuShort = () => { let n = String(GPU_NAME || 'UNKNOWN'); const m = /^ANGLE \((.*)\)$/.exec(n); if (m) { const p = m[1].split(/,\s*(?![^()]*\))/); n = p.length > 1 ? p[1] : p[0]; }
@@ -21447,6 +21542,7 @@ function pollPad(dt) {
   if (padCapture) { for (let i = 0; i < gp.buttons.length; i++) if (press(i) && i !== 9) { const f = padCapture; padCapture = null; f(i); break; } prevBtn = gp.buttons.map(b => b.pressed); return; }
   // a screen open over a running match (the class pick before it starts) is a menu: the pad drives it, not the soldier
   const playing = G.state === 'playing' && !curScreen;
+  if ((curScreen === 'loadout' || curScreen === 'locker') && typeof pvInspectPad === 'function') pvInspectPad(lx, ly, dt);   // right stick turns the gun preview
   if (gp.buttons.some(b => b.pressed) || Math.hypot(rawL[0], rawL[1]) > 0.4 || Math.hypot(rawR[0], rawR[1]) > 0.4) inputMode('pad');
   if (G.state === 'deathcam') { if ((press(0) || press(9)) && G.dc && G.dc.t > 0.6) finishDeath(); prevBtn = gp.buttons.map(b => b.pressed); return; }
   if (press(9)) { if (playing || G.state === 'respawning' || G.state === 'spectate' || G.state === 'zdown' || G.state === 'zspec') pauseGame(); else if (G.state === 'paused') resumeGame(); else if (curScreen === 'lobby') actions('lob-start'); else if (curScreen === 'menu') toLobby(); else if (G.state === 'dead') restartMatch(); }
@@ -21729,7 +21825,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { ruDrop, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { lvN, lvH, NN, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { ruDrop, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { lvN, lvH, NN, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

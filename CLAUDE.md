@@ -51,7 +51,8 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   reaches players once that branch is merged into main.
 - After that: 1.2.65 (frame-drop fix: post.js keeps its targets across dynamic resolution; SHADOW BRIGHTNESS), 1.2.66
   (scanned surface families in realtex.js: paintm/steelp/plaster/tile/fabric/planks, greyscale + matched roughness) and
-  1.2.67 (GUNSMITH 2.0: 7 attachments, drag/zoom INSPECT on the preview, 8 weed charms; test s_gunsmith.js) are TEST only.
+  1.2.67 (GUNSMITH 2.0: 7 attachments, drag/zoom INSPECT on the preview, 8 weed charms; test s_gunsmith.js). All of it
+  is PUBLIC as 1.2.67 (owner said "send it").
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.
