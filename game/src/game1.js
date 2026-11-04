@@ -67,9 +67,10 @@ function hurtPlayer(dmg, fx, fz, boom) {
   if (G.health <= 0) { G.health = 0; die(); }
 }
 
-function isFiring() { return mouseDown || pad.fire; }
+function isFiring() { return !VH.me && (mouseDown || pad.fire); }
 let wasSprint = false;
 function updatePlayer(dt) {
+  if (VH.me && vhPlayer(dt)) return { moving: false, sprint: false };   // driving a LAST TOKE vehicle
   const w = WEAPONS[G.cur];
   const crouch = kb('crouch') || pad.crouch;
   const hold = typeof holding === 'function' && holding();
@@ -416,7 +417,7 @@ function blastClear(p, x, y, z) {
 }
 function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
   const dp = Math.hypot(P.x - p.x, P.y + 1 - p.y, P.z - p.z);
-  sfx.explode(at(p.x, p.z, 30)); explosionFx(p, 1); if (by === 'player' && typeof zcEvent === 'function') zcEvent('b', p);
+  sfx.explode(at(p.x, p.z, 30)); explosionFx(p, 1); try { vhBlast(p, R); } catch (e) {} if (by === 'player' && typeof zcEvent === 'function') zcEvent('b', p);
   for (const e of enemies.slice()) {
     if (by === 'player' && isFriend(e)) continue;
     if (by && by.group && (e === by ? false : e.team === by.team)) continue;   // a bot's grenade spares its own team

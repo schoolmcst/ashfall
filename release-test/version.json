@@ -1,9 +1,9 @@
 {
- "version": "1.2.73",
+ "version": "1.2.74",
  "notes": [
-  "NEW MAP: STASH ISLAND - LAST TOKE's own island, twice the size of any map (8 places to loot)",
-  "fix: the welcome card no longer stays up when a match starts"
+  "NEW: GOLF CARTS and DIRT BIKES in LAST TOKE - drive, run people over, blow them up",
+  "on the bike: SPRINT + forward for a wheelie"
  ],
- "sha256": "adadf325d0edea114a6dc6c2355c9fda9871ff01267f6530f9333740856ee271",
+ "sha256": "9fd3614ee89776fda528c8516385dbc7a5b2343ad6f69e9ff16553595a431bac",
  "minApp": "1.0.0"
 }

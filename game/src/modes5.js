@@ -21,6 +21,7 @@ function brSetup() {
     const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
     const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier); c.id = M.br.crates.length; M.br.crates.push(c);
   }
+  try { vhSetup(); } catch (e) {}
   if (!$('brCloud')) { const d = document.createElement('div'); d.id = 'brCloud'; ($('hud') || document.body).appendChild(d); const s = document.createElement('style'); s.textContent = '#brCloud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;background:radial-gradient(circle at 50% 50%,rgba(120,40,200,.15),rgba(90,20,160,.6));z-index:4}'; document.head.appendChild(s); }
 }
 function brCrate(x, z, tier) {
@@ -42,7 +43,7 @@ function brOpen(c, who) {
 }
 const brAliveBots = () => enemies.filter(e => e.entry && e.entry.alive !== false);
 function brUpdate(dt) {
-  const B = M.br; if (!B) return;
+  const B = M.br; if (!B) return; try { vhUpdate(dt); } catch (e) {}
   if (!B.armed) { B.armed = true; brArmAll(); }   // the first frame of the match: everyone down to a pistol (after the class was equipped)
   // the cloud: wait, then close on the next circle (a spot inside the current one)
   B.t -= dt; const host = netHostNow();
@@ -86,10 +87,10 @@ function brGoal(e, keep, near, set) {
 }
 function brHud() {
   const B = M.br; if (!B) return ''; const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
-  return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}`;
+  return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}`;
 }
 function brMarkers(out) { const B = M.br; if (!B) return; for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
-function brClear() { if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
+function brClear() { try { vhClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
 
 /* ---------- online */
 function brPack() {

@@ -61,6 +61,20 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   CREW tab; crew points travel on friend cards: cp/ck/ckw), WATCH a friend (specWatch in net.js; spectators publish spec:1 and
   are skipped by inRoom). Prop Hunt online and WATCH are untested here (mp tests cannot reach the signalling server).
   Tests: s_growop, s_prophunt, s_zhotbox, s_theatre, s_crewhouse, s_lasttoke.
+- 1.2.70-1.2.71 PUBLIC: online LAST TOKE (obr; host packs ['b', ...], players' opened crates in presence `bo`), Prop Hunt
+  online pack code is 'q' (not 'h', that is hardpoint), optimize pass (warmShaders, light pool zlpMatch in MP, no canvas MSAA
+  with post on, menu 60 fps cap, rpPlanShot renders off-screen).
+- 1.2.72 TEST: onboard.js (WELCOME card + STASH YARD training for new players, READY card, NEW MODES card for returning players
+  keyed `ashfall.newmodes`, menu tiles #featTile/#brTile, FEATURED THIS WEEK mode: FEAT_WEEKS, M.feat {lowgrav, bighead,
+  pistols}, 2x XP), replay.js rpAutoClip (best multi-kill saved as a clip), growop.js growZRound/GROW_ZBOSS (zombies seeds).
+- 1.2.73 TEST: map_stash.js STASH ISLAND (brOnly, arena 64 = 128 m nav grid, play +-60). ARENA is now a per-map `let`
+  (world.js) set by setArena() in nav.js from map.arena (default 44); the ruins builder uses RUIN_A. On a big map
+  flowField builds at most one new field a frame (FLOWB); callers walk straight that frame. pickMapFor sends LAST TOKE
+  'random' to stashisle (offline and online via NET.mode). Menu cards (data-menu) close when a match starts.
+- 1.2.74 TEST: vehicles.js GOLF CART + DIRT BIKE in LAST TOKE (VH_SPOTS per map, else 4 seeded spots). vhPlayer() takes over
+  updatePlayer (and the camera) while driving; no shooting (isFiring); ram damage; crash and explosion damage (vhBlast in
+  explode); online the driver sends presence `vh` = [id, x, z, yaw, speed, hp]. Bots do not drive. Tests: s_stashisle,
+  s_vehicles, _isle_bots (no-render bot sim).
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.
