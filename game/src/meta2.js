@@ -88,11 +88,11 @@ function renderCrewBoard() {
     const rows = [{ n: me.n + ' (YOU)', s: me.s, z: me.z, r: rankState().sr, on: true, me: true }, ...mates.map(f => ({ n: f.n, s: f.s || [0, 0, 0, 0, 0, 0], z: f.z, r: f.r || 0, on: f.on }))].sort((a, b) => b.s[0] - a.s[0]);
     const tot = rows.reduce((t, r) => [t[0] + r.s[0], t[1] + r.s[2], t[2] + r.s[3]], [0, 0, 0]);
     h += `<div class="cw-head"><b>[${C.tag}] ${C.name}</b><span>${rows.length} MEMBER${rows.length > 1 ? 'S' : ''} · ${tot[0]} KILLS · ${tot[1]} WINS</span><button class="mini" id="cwLeave">LEAVE</button></div>
-<table class="st-table"><tr><th>#</th><th>MEMBER</th><th>RANK</th><th>KILLS</th><th>K/D</th><th>WINS</th><th>MATCHES</th></tr>` + rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td><span class="dot ${r.on ? 'on' : ''}"></span> ${r.n}</td><td>${RANKS[rankOf(r.r)].n} · ${r.r}</td><td>${r.s[0]}</td><td>${kdS(r.s[0], r.s[1])}</td><td>${r.s[2]}</td><td>${r.s[3]}</td></tr>`).join('') + '</table>';
+${typeof chHtml === 'function' ? chHtml() : ''}<table class="st-table"><tr><th>#</th><th>MEMBER</th><th>RANK</th><th>KILLS</th><th>K/D</th><th>WINS</th><th>MATCHES</th></tr>` + rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td><span class="dot ${r.on ? 'on' : ''}"></span> ${r.n}</td><td>${RANKS[rankOf(r.r)].n} · ${r.r}</td><td>${r.s[0]}</td><td>${kdS(r.s[0], r.s[1])}</td><td>${r.s[2]}</td><td>${r.s[3]}</td></tr>`).join('') + '</table>';
   }
   if (joinable.length) h += `<div class="cw-join"><b>FRIENDS' CREWS</b>` + joinable.map(f => `<div class="ros-p"><span class="dot ${f.on ? 'on' : ''}"></span><div class="fr-nm"><b>[${f.cw[2]}] ${f.cw[1]}</b><small>${f.n}'S CREW</small></div><button class="mini fr-join" data-cwj="${FRIENDS.indexOf(f)}">JOIN</button></div>`).join('') + '</div>';
   else if (!FRIENDS.length) h += `<div class="net-hint" style="padding:10px 2px">Add friends with their friend code to grow your crew.</div>`;
-  $('lbBody').innerHTML = h;
+  $('lbBody').innerHTML = h; try { chWire(); } catch (e) {}
   for (const b of $('lbTabs').children) b.onclick = () => { SOC.lbSort = b.dataset.lb; sfx.ui(); renderLeaderboard(); };
   const mk = $('cwMake'); if (mk) { for (const i of [$('cwName'), $('cwTag')]) { i.onkeydown = e => e.stopPropagation(); i.onkeyup = e => e.stopPropagation(); } mk.onclick = () => { if (crewMake($('cwName').value, $('cwTag').value)) renderLeaderboard(); }; }
   const lv = $('cwLeave'); if (lv) lv.onclick = () => { crewLeave(); renderLeaderboard(); };

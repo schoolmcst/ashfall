@@ -112,6 +112,7 @@ function partyWire() {
   add.onclick = () => { const c = cleanFcode($('frCode').value); if (c.length !== 6 || c === MYCODE) { $('frCode').focus(); return; } sfx.ui(); socSendRequest(c); };
   socWire(); const lb = $('lbOpen'); if (lb) lb.onclick = () => { sfx.ui(); openLeaderboard(); };
   for (const b of document.querySelectorAll('[data-fj]')) b.onclick = () => { sfx.ui(); partyJoin(FRIENDS[+b.dataset.fj].c); };
+  for (const b of document.querySelectorAll('[data-fw]')) b.onclick = () => { sfx.ui(); specWatch(FRIENDS[+b.dataset.fw]); };
   for (const b of document.querySelectorAll('[data-fd]')) b.onclick = () => { FRIENDS.splice(+b.dataset.fd, 1); friendsSave(); partyRender(); };
   const lv = $('partyLeave'); if (lv) lv.onclick = () => { sfx.ui(); partyLeave(); };
 }

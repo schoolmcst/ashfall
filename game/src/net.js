@@ -119,6 +119,7 @@ function netSwitchMap(id) {
   showBanner(mapName(id), MAPS[id].place.toLowerCase());
 }
 function netLeave() {
+  if (NET.spec && !NET.specKeep) { NET.spec = false; NET.specPeer = ''; }
   const r = NET.room; NET.room = null; NET.on = false; NET.priv = null;
   if (r) { try { if (r !== NET.ns && r.leave) r.leave().catch(() => {}); else r.presence({ on: null, rm: null }).catch(() => {}); } catch (e) {} }
   for (const [, R] of NET.rem) netDropBot(R, false);
@@ -130,6 +131,7 @@ function netSelf() { for (const p of netPeers()) if (p.sameTab) return p.peer; r
 /* ---------- my state out */
 const r2 = v => Math.round(v * 100) / 100, r3 = v => Math.round(v * 1000) / 1000;
 function netPublish() {
+  if (NET.spec) { NET.room.presence({ v: 1, on: 1, spec: 1, rm: netRoomName(), n: NET.nick, a: 0, ep: NET.ep }); return; }   // WATCH: a spectator only says it is there
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, cm: typeof CHAT !== 'undefined' && CHAT.mine.all.length ? CHAT.mine.all.slice() : undefined, bn: typeof bannerFor === 'function' ? bannerFor() : '', lv: typeof lvlInfo === 'function' ? lvlInfo(PROG.xp).l : 1, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
     ph: M.ph && phMeProp() ? M.ph.kind : -1, a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, ct: crewTag() || undefined, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
@@ -187,7 +189,7 @@ function netFeedName(R) { return R ? nameHtml(R.entry) : '?'; }
 function netTick(dt) {
   if (!NET.on || !NET.room || !inMatch() || !M.online) return;
   NET.me = NET.me || netSelf();
-  const peers = netPeers(), seenNow = new Set(), rn = netRoomName(), inRoom = pr => (NET.app || pr.rm === rn) && pr.on;
+  const peers = netPeers(), seenNow = new Set(), rn = netRoomName(), inRoom = pr => (NET.app || pr.rm === rn) && pr.on && !pr.spec;
   const isHost = NET.app && NET.room.host, botBy = lbl => isHost && lbl ? M.entries.find(en => en.botLabel === lbl) : null;
   // pick a team once the room has answered (the side with fewer players)
   if (!NET.teamSet && performance.now() / 1000 - NET.joinedAt > 1.4) {
@@ -429,3 +431,11 @@ setTimeout(() => {
 .app-notes b{display:block;font-size:18px;letter-spacing:.14em;color:#ffd24a;margin-bottom:12px}.app-notes ul{margin:0 0 18px;padding-left:20px;line-height:1.55;font-size:14px}`;
   document.head.appendChild(s);
 })();
+// WATCH a friend's match (1.2.68): join their room as an invisible spectator that never spawns; the camera follows them
+function specWatch(f) {
+  if (!f || !f.sp || !NET.app) return; const [kind, mode, code, peer] = f.sp;
+  NET.spec = true; NET.specKeep = true; NET.specPeer = peer; NET.specName = f.n;
+  if (kind === 'code') NET.code = code; LOBBY.mode = mode; NET.kind = kind; NET.slot = kind === 'slot' ? code : '';
+  try { startMatch(mode); } finally { NET.kind = 'quick'; setTimeout(() => { NET.specKeep = false; }, 0); }
+  setTimeout(() => { try { if (NET.spec && inMatch()) { G.state = 'spectate'; showBanner('WATCHING ' + (f.n || 'A FRIEND'), 'you are not in the match · ESC to leave'); } } catch (e) {} }, 6500);
+}

@@ -10,7 +10,8 @@ const pendingSave = () => { try { localStorage.setItem(PENDING_KEY, JSON.stringi
 // what friends see about you
 function socMyCard() {
   const st = careerOf(true), doing = M && M.online && NET.on ? (NET.priv && !NET.priv.started ? 'IN A LOBBY' : 'IN A MATCH · ' + (M.def ? M.def.short.replace(/^ONLINE /, '') : '')) : curScreen === 'lobby' ? 'IN THE LOBBY' : 'IN THE MENUS';
-  return { n: NET.nick, c: MYCODE, d: doing, p: partyMembers().length, s: [st.kills, st.deaths, st.wins, st.matches, Math.round(st.time), st.score], z: typeof zstCard === 'function' ? zstCard() : [0, 0, 0, 0], r: typeof rankState === 'function' ? rankState().sr : 0, cw: PROG.crew ? [PROG.crew.id, PROG.crew.name, PROG.crew.tag] : undefined };
+  const sp = M && M.online && NET.on && NET.room && !NET.spec && NET.joinKind ? [NET.joinKind, NET.mode, NET.joinKind === 'slot' ? NET.slot : NET.code, NET.me] : null;   // where to WATCH me
+  return { sp, n: NET.nick, c: MYCODE, d: doing, p: partyMembers().length, s: [st.kills, st.deaths, st.wins, st.matches, Math.round(st.time), st.score], z: typeof zstCard === 'function' ? zstCard() : [0, 0, 0, 0], r: typeof rankState === 'function' ? rankState().sr : 0, cp: PROG.cr && PROG.crew && PROG.cr.id === PROG.crew.id ? PROG.cr.cp | 0 : 0, ck: PROG.cr && PROG.cr.wk === wkKey() ? PROG.cr.k | 0 : 0, ckw: wkKey(), cw: PROG.crew ? [PROG.crew.id, PROG.crew.name, PROG.crew.tag] : undefined };
 }
 async function socHostInbox() {
   if (!NET.app || SOC.inbox || SOC.busy || performance.now() < SOC.retryT) return;
@@ -32,7 +33,7 @@ async function socPeekAll() {
   if (SOC.peeking || !NET.app) return; SOC.peeking = true;
   for (const f of FRIENDS.slice()) {
     const r = await socPeek(f.c);
-    if (r && r.card) { const cd = r.card.card; f.on = true; f.seen = Date.now(); f.n = cleanNick(cd.n) || f.n; f.d = String(cd.d || '').slice(0, 40); f.s = Array.isArray(cd.s) ? cd.s.map(v => +v || 0).slice(0, 6) : f.s; f.z = Array.isArray(cd.z) ? cd.z.map(v => +v || 0).slice(0, 4) : f.z; f.r = +cd.r || 0; f.cw = Array.isArray(cd.cw) ? cd.cw.slice(0, 3).map(v => String(v).slice(0, 40)) : null; }
+    if (r && r.card) { const cd = r.card.card; f.on = true; f.seen = Date.now(); f.n = cleanNick(cd.n) || f.n; f.d = String(cd.d || '').slice(0, 40); f.sp = Array.isArray(cd.sp) && cd.sp.length === 4 && ['quick', 'slot', 'code'].includes(cd.sp[0]) && MODES[cd.sp[1]] && MODES[cd.sp[1]].online ? cd.sp.map(String) : null; f.s = Array.isArray(cd.s) ? cd.s.map(v => +v || 0).slice(0, 6) : f.s; f.z = Array.isArray(cd.z) ? cd.z.map(v => +v || 0).slice(0, 4) : f.z; f.r = +cd.r || 0; f.cw = Array.isArray(cd.cw) ? cd.cw.slice(0, 3).map(v => String(v).slice(0, 40)) : null; f.cp = Math.max(0, Math.min(1e7, +cd.cp || 0)); f.ck = Math.max(0, Math.min(1e5, +cd.ck || 0)); f.ckw = String(cd.ckw || ''); }
     else f.on = false;
     if (r) r.room.leave();
     socRender();
@@ -92,7 +93,7 @@ function socRender() { if (typeof partyRender === 'function') partyRender(); if 
 function socialHtml() {
   const inc = [...SOC.incoming.entries()], fr = FRIENDS.slice().sort((a, b) => (b.on ? 1 : 0) - (a.on ? 1 : 0) || a.n.localeCompare(b.n));
   return (inc.length ? inc.map(([c, q]) => `<div class="ros-p fr-in"><span class="lv">✉</span>${q.n}<em>WANTS TO BE FRIENDS</em><button class="mini fr-join" data-acc="${c}">ACCEPT</button><button class="mini" data-dec="${c}">✕</button></div>`).join('') : '') +
-    (fr.length ? fr.map(f => `<div class="ros-p"><span class="dot ${f.on ? 'on' : ''}"></span><div class="fr-nm"><b>${f.n}</b><small>${f.on ? (f.d || 'ONLINE') : 'OFFLINE'}</small></div><button class="mini fr-join" data-fj="${FRIENDS.indexOf(f)}" ${f.on ? '' : 'disabled'} title="Join their party">JOIN</button><button class="mini fr-del" data-fd="${FRIENDS.indexOf(f)}" title="Remove friend">✕</button></div>`).join('')
+    (fr.length ? fr.map(f => `<div class="ros-p"><span class="dot ${f.on ? 'on' : ''}"></span><div class="fr-nm"><b>${f.n}</b><small>${f.on ? (f.d || 'ONLINE') : 'OFFLINE'}</small></div><button class="mini fr-join" data-fj="${FRIENDS.indexOf(f)}" ${f.on ? '' : 'disabled'} title="Join their party">JOIN</button>${f.on && f.sp ? `<button class="mini fr-join" data-fw="${FRIENDS.indexOf(f)}" title="Watch their match without playing">WATCH</button>` : ''}<button class="mini fr-del" data-fd="${FRIENDS.indexOf(f)}" title="Remove friend">✕</button></div>`).join('')
       : `<div class="ros-p" style="color:var(--dim)">No friends yet. Send a request with their friend code below.</div>`) +
     FR_PENDING.map(c => `<div class="ros-p" style="color:var(--dim)"><span class="lv">…</span>${c}<em>${SOC.sending.get(c) === 'waiting' ? 'WAITING FOR THEM TO ACCEPT' : 'REQUEST PENDING'}</em><button class="mini" data-pc="${c}" title="Cancel">✕</button></div>`).join('');
 }

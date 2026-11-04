@@ -42,7 +42,7 @@ function growMatch(won) {
     if (typeof M !== 'undefined' && M) { if (M.growDone) return; M.growDone = true; }   // once per match (zombies ends through two paths)
     const g = growLoad(), k = (typeof MS !== 'undefined' && MS) ? MS.kills | 0 : 0, zr = (typeof M !== 'undefined' && M && M.mode === 'zomb' && typeof Z !== 'undefined') ? Z.round | 0 : 0;
     const w = 1 + (k >= 15 || zr >= 10 ? 1 : 0), l = Math.floor(k / 8) + Math.floor(zr / 8), n = (won === 1 ? 1 : 0) + Math.floor(zr / 5);
-    g.res.w += w; g.res.l += l; g.res.n += n; growSave();
+    g.res.w += w; g.res.l += l; g.res.n += n; growSave(); try { crewMatch(won, k, zr); } catch (e) {}
     const parts = [`+${w} WATER`, l ? `+${l} LIGHT` : '', n ? `+${n} NUTRIENTS` : ''].filter(Boolean).join(' · ');
     setTimeout(() => { try { toast2('GROW OP · ' + parts); } catch (e) {} }, 2600);
     growDot();
