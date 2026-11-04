@@ -1,5 +1,6 @@
 /* ================================================================== world: materials, geometry helpers, map */
-const ARENA = 44;
+let ARENA = 44;   // half the size of the area the nav and collision grids cover; 44 for every map, bigger for a map that sets arena (1.2.73)
+const RUIN_A = 44;   // the original map (ASH RUINS) is built at this size whatever the arena
 const boxes = [];      // collision boxes
 const wallMeshes = []; // raycast targets (bullets, line of sight, blasts)
 const MAT = {};
@@ -108,7 +109,7 @@ function addCollider(cx, cz, w, d, h, mesh, o) {
 /* ------------------------------------------------------------------ collision */
 const STEP = 0.35, HEAD = 1.75;
 // uniform grid over the arena so collision queries only look at nearby boxes (was: every box, every call)
-const GCELL = 4, GMARGIN = 1.0, GORIG = -ARENA - 6, GN = Math.ceil((ARENA * 2 + 12) / GCELL);
+const GCELL = 4, GMARGIN = 1.0; let GORIG = -ARENA - 6, GN = Math.ceil((ARENA * 2 + 12) / GCELL);
 let boxGrid = null, boxGridN = -1, boxGridDirty = true;
 const EMPTY = [];
 function rebuildBoxGrid() {
@@ -181,7 +182,7 @@ function ruinBlocked(x, z, r) {
 }
 function buildWorld() {
   // ground + roads
-  const ground = new THREE.Mesh(new THREE.PlaneGeometry(ARENA * 2 + 60, ARENA * 2 + 60), MAT.ground);
+  const ground = new THREE.Mesh(new THREE.PlaneGeometry(RUIN_A * 2 + 60, RUIN_A * 2 + 60), MAT.ground);
   ground.rotation.x = -Math.PI / 2; ground.receiveShadow = true; scene.add(ground);
   const road = (cx, cz, w, l, alongX) => {
     const m = new THREE.Mesh(scaledPlane(alongX ? l : w, alongX ? w : l, 4), MAT.asphalt);
@@ -190,17 +191,17 @@ function buildWorld() {
     for (let i = 1; i < uv.length; i += 2) uv[i] *= l / 4;
     ln.rotation.x = -Math.PI / 2; ln.rotation.z = alongX ? Math.PI / 2 : 0; ln.position.set(cx, 0.03, cz); scene.add(ln);
   };
-  road(0, 2, 6, ARENA * 2, true);
+  road(0, 2, 6, RUIN_A * 2, true);
   road(0, 10, 6, 68, false);
 
   // perimeter wall with buttresses
-  addBox(0, -ARENA - 0.5, ARENA * 2 + 2, 1, 7, 'concrete');
-  addBox(0, ARENA + 0.5, ARENA * 2 + 2, 1, 7, 'concrete');
-  addBox(-ARENA - 0.5, 0, 1, ARENA * 2, 7, 'concrete');
-  addBox(ARENA + 0.5, 0, 1, ARENA * 2, 7, 'concrete');
-  for (let t = -ARENA + 6; t < ARENA; t += 11) {
-    batchAdd('concrete', scaledBox(1.1, 7.6, 0.7, 3, Math.random(), 0), mat4(t, 3.8, -ARENA + 0.3)); batchAdd('concrete', scaledBox(1.1, 7.6, 0.7, 3, Math.random(), 0), mat4(t, 3.8, ARENA - 0.3));
-    batchAdd('concrete', scaledBox(0.7, 7.6, 1.1, 3, Math.random(), 0), mat4(-ARENA + 0.3, 3.8, t)); batchAdd('concrete', scaledBox(0.7, 7.6, 1.1, 3, Math.random(), 0), mat4(ARENA - 0.3, 3.8, t));
+  addBox(0, -RUIN_A - 0.5, RUIN_A * 2 + 2, 1, 7, 'concrete');
+  addBox(0, RUIN_A + 0.5, RUIN_A * 2 + 2, 1, 7, 'concrete');
+  addBox(-RUIN_A - 0.5, 0, 1, RUIN_A * 2, 7, 'concrete');
+  addBox(RUIN_A + 0.5, 0, 1, RUIN_A * 2, 7, 'concrete');
+  for (let t = -RUIN_A + 6; t < RUIN_A; t += 11) {
+    batchAdd('concrete', scaledBox(1.1, 7.6, 0.7, 3, Math.random(), 0), mat4(t, 3.8, -RUIN_A + 0.3)); batchAdd('concrete', scaledBox(1.1, 7.6, 0.7, 3, Math.random(), 0), mat4(t, 3.8, RUIN_A - 0.3));
+    batchAdd('concrete', scaledBox(0.7, 7.6, 1.1, 3, Math.random(), 0), mat4(-RUIN_A + 0.3, 3.8, t)); batchAdd('concrete', scaledBox(0.7, 7.6, 1.1, 3, Math.random(), 0), mat4(RUIN_A - 0.3, 3.8, t));
   }
 
   // ruined buildings
@@ -348,7 +349,7 @@ function buildWorld() {
 
   // rocks and scattered debris
   for (let i = 0; i < 46; i++) {
-    const x = rnd(-ARENA + 2, ARENA - 2), z = rnd(-ARENA + 2, ARENA - 2), s = 0.15 + Math.random() * (i < 8 ? 0.8 : 0.3);
+    const x = rnd(-RUIN_A + 2, RUIN_A - 2), z = rnd(-RUIN_A + 2, RUIN_A - 2), s = 0.15 + Math.random() * (i < 8 ? 0.8 : 0.3);
     if (ruinBlocked(x, z, 0.5)) continue;
     const rm = mat4(x, s * 0.25, z, (Math.random() - 0.5) * 0.6, Math.random() * TAU, (Math.random() - 0.5) * 0.6, s * 2 * (1 + Math.random() * 0.5), s * 2 * (0.6 + Math.random() * 0.4), s * 2 * (1 + Math.random() * 0.5));
     if (!placeProp('rock' + (i % 3), rm)) batchAdd('rock', new THREE.DodecahedronGeometry(s, 0), mat4(x, s * 0.4, z, Math.random() * 3, Math.random() * 3, Math.random() * 3, 1 + Math.random() * 0.5, 0.6 + Math.random() * 0.4, 1 + Math.random() * 0.5));
@@ -388,7 +389,7 @@ function buildGrass(o = {}) {
   grassMesh = new THREE.InstancedMesh(mergeGeos(cards), mat, grassMax);
   const dummy = new THREE.Object3D(); let n = 0, guard = 0;
   while (n < grassMax && guard++ < grassMax * 6) {
-    const x = rnd(-ARENA + 1, ARENA - 1), z = rnd(-ARENA + 1, ARENA - 1);
+    const x = rnd(-RUIN_A + 1, RUIN_A - 1), z = rnd(-RUIN_A + 1, RUIN_A - 1);
     const gc = cellOf(z) * NN + cellOf(x);
     if (navBlocked[gc] || (lvN[gc] > 1) || (o.avoid && o.avoid(x, z))) continue;
     const s = 0.7 + Math.random() * 0.9;

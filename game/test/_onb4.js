@@ -1,0 +1,2 @@
+module.exports = async p => { await p.evaluate(() => { document.querySelectorAll('.onb-ov').forEach(o => o.remove()); window.__A.PROG.xp = 5000; localStorage.setItem('ashfall.onb', '1'); localStorage.removeItem('ashfall.newmodes'); });
+  let err = ''; try { await p.evaluate(() => window.__A.onbNewModes()); } catch (e) { err = e.message.slice(0, 300); } await p.waitForTimeout(500); return p.evaluate(err => ({ err, ov: [...document.querySelectorAll('.onb-ov b')].map(b => b.textContent).slice(0, 1), st: window.__A.G.state, hc: !!document.getElementById('hcSplash') }), err); };

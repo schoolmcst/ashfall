@@ -1,0 +1,3 @@
+module.exports = async p => { const a = await p.evaluate(() => ({ ov: document.querySelectorAll('.onb-ov').length, html: (document.querySelector('.onb-ov') || {}).innerHTML ? document.querySelector('.onb-ov').innerHTML.slice(0, 200) : '' }));
+  await p.evaluate(() => { localStorage.removeItem('ashfall.onb'); localStorage.removeItem('ashfall.newmodes'); window.__A.showScreen('menu'); }); await p.waitForTimeout(3000);
+  return [a, await p.evaluate(() => ({ ov: document.querySelectorAll('.onb-ov').length, st: window.__A.G.state, hid: document.getElementById('menu').classList.contains('hide'), onb: localStorage.getItem('ashfall.onb') }))]; };

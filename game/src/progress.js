@@ -451,6 +451,7 @@ function progMatchXP(won, partial) {
   }
   let sum = rows.reduce((s, r) => s + r[1], 0);
   if (online && sum) { const b = Math.round(sum * 0.25); rows.push(['ONLINE BONUS +25%', b]); sum += b; }
+  try { if (M && M.feat && sum) { rows.push(['FEATURED · ' + M.feat.name + ' · 2× XP', sum]); sum *= 2; } } catch (e) {}
   try { const ev = evActive(); if (ev && ev.xp > 1 && sum) { const b = Math.round(sum * (ev.xp - 1)); rows.push([ev.name + ' · ' + ev.xp + '× XP', b]); sum += b; } } catch (e) {}
   if (!sum) return null;
   const before = PROG.xp; PROG.xp = Math.min(XP_AT[MAXLVL], PROG.xp + sum);

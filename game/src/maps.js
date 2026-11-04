@@ -317,7 +317,7 @@ function loadMap(id) {
   if (curMap === id && boxes.length) return false;
   const t0 = performance.now();
   clearWorld(); buildMapMaterials();
-  const map = MAPS[id]; curMap = id; PLAYRECT = map.play || [-43.5, 43.5, -43.5, 43.5];
+  const map = MAPS[id]; setArena(map.arena || 44); curMap = id; PLAYRECT = map.play || [-43.5, 43.5, -43.5, 43.5];
   applyEnv(map.env);
   const before = new Set(scene.children);
   map.build(); flushBatches(); rayFlush();

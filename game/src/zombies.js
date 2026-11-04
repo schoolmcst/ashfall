@@ -209,7 +209,7 @@ function zombRecall(dt) {
   }
 }
 function zombRound() {
-  Z.round++; Z.toSpawn = Math.min(80, 6 + (Z.round - 1) * 3); Z.spawnT = 1; Z.active = true; try { zspRoundStart(Z.round); } catch (e) { reportError(e); }
+  Z.round++; try { growZRound(Z.round); } catch (e) {} Z.toSpawn = Math.min(80, 6 + (Z.round - 1) * 3); Z.spawnT = 1; Z.active = true; try { zspRoundStart(Z.round); } catch (e) { reportError(e); }
   G.wave = Z.round; if (!(ZC.on && ZC.down)) G.health = G.maxHp; if (ZC.on && ZC.dead) zcRespawn();
   if (!Z.dogRound) showBanner(`ROUND ${Z.round}`, Z.round === 1 ? 'here they come' : Z.round % 5 === 0 ? 'they are getting faster' : `${Z.toSpawn} zombies`);
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}

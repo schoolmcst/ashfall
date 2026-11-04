@@ -149,7 +149,7 @@ function zsStation() {
 function zsBuild() {
   zsClear();
   if (!zmapIs(curMap)) return;
-  Object.assign(ZS, { cook: -1, cookT: 0, done: false, chapter: -1, bossOut: false, boss: null, bloodItem: null }); ZS.flags.clear(); ZS.mine.clear(); ZS.said.clear();
+  Object.assign(ZS, { cook: -1, cookT: 0, done: false, chapter: -1, bossOut: false, boss: null, bloodItem: null, seedGiven: false }); ZS.flags.clear(); ZS.mine.clear(); ZS.said.clear();
   ZS.off = !zsWanted(); if (ZS.off) return;
   ZS.objs = ZS_ITEMS.map(it => ({ it, g: zsMake(it) }));
   ZS.tapes = ZS_TAPES.map((t, i) => ({ t, i, g: zsMake({ kind: 'tape', at: t.at }) }));
@@ -266,7 +266,9 @@ function zsBossDied(e) {
   zsDropBlood(p.x, p.z, groundAt(p.x, p.z, (p.y || 0) + 0.3));
   showBanner(ZS_TEXT.bossDown, ZS_TEXT.bossDownSub); try { sfx.streak(); } catch (err) {}
 }
-function zsDropBlood(x, z, y) { if (ZS.bloodItem || zsHas('blood')) return; ZS.bloodItem = { at: { x, z, y }, g: zsMake({ kind: 'blood', look: ZS_TEXT.dropLook, at: { x, z, y } }) }; }
+function zsDropBlood(x, z, y) { if (ZS.bloodItem || zsHas('blood')) return;
+  if (!ZS.seedGiven) { ZS.seedGiven = true; setTimeout(() => { try { growSeed(GROW_ZBOSS[curMap] || 'sour', ZS_TEXT.boss.toLowerCase() + ' dropped it'); } catch (err) {} }, 3500); }   // every player in the game gets the boss's seed
+  ZS.bloodItem = { at: { x, z, y }, g: zsMake({ kind: 'blood', look: ZS_TEXT.dropLook, at: { x, z, y } }) }; }
 function zsPlayTape(t) {
   if (ZS.playing) return;
   ZS.heard.add(t.i); try { localStorage.setItem(ZS_TEXT.keyTapes, JSON.stringify([...ZS.heard])); } catch (e) {}

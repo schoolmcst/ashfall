@@ -158,3 +158,12 @@ setInterval(growDot, 30000);
 .gr-tab.ready{position:relative}.gr-tab.ready:after{content:'';position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#7adf6a;box-shadow:0 0 8px #7adf6a}`;
   document.head.appendChild(s);
 })();
+
+/* ---------- 1.2.72 ZOMBIES SEEDS: bosses and high rounds drop seeds for the grow room (solo and co-op, everyone gets theirs) */
+const GROW_ZBOSS = { blackwell: 'sour', works: 'sour', terminal9: 'haze', mauiwowie: 'haze', maryjane: 'north', hightide: 'cure' };
+function growSeed(id, why) {
+  const s = STRAIN[id]; if (!s) return; const g = growLoad(); g.seeds[id] = (g.seeds[id] | 0) + 1; growSave(); growDot();
+  try { showBanner(`${s.name} SEED`, `${why} · it is in your GROW OP`); sfx.pickup(); } catch (e) {}
+}
+// a zombies round reached: round 10, 20, 30... pays a seed (rarer the higher you get)
+function growZRound(r) { if (!r || r % 10) return; const pool = r >= 40 ? ['north', 'cure'] : r >= 30 ? ['haze', 'north'] : r >= 20 ? ['sour', 'haze'] : ['blue', 'sour']; growSeed(pool[(Math.random() * pool.length) | 0], `round ${r}`); }

@@ -33,7 +33,7 @@ function brCrate(x, z, tier) {
 }
 // everyone back to a pistol at the start
 function brArmAll() { if (!M.br) return; try { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } catch (e) {} for (const e of enemies) if (e.entry && !e.net) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; } M.br.myTier = -1; }
-function brGun(tier) { const pool = ARMORY.filter(d => BR_TIERS[tier].cats.includes(d.cat) && CATS[d.cat] && (CATS[d.cat].slot === 'primary' || d.cat === 'pi')); return pool.length ? pool[(Math.random() * pool.length) | 0] : ARM.marc; }
+function brGun(tier) { const cats = M && M.feat && M.feat.pistols ? ['pi'] : BR_TIERS[tier].cats; const pool = ARMORY.filter(d => cats.includes(d.cat) && CATS[d.cat] && (CATS[d.cat].slot === 'primary' || d.cat === 'pi')); return pool.length ? pool[(Math.random() * pool.length) | 0] : ARM.marc; }
 function brOpen(c, who) {
   if (c.open) return; c.open = true; M.br.group.remove(c.g); const d = brGun(c.tier), T = BR_TIERS[c.tier];
   if (who === 'player' && M.online && M.br.mine.indexOf(c.id) < 0) M.br.mine.push(c.id);

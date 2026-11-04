@@ -82,7 +82,7 @@ function rpFinish(won) {
   if (!REC || REC.frames.length < RP_HZ * 3) { REC = null; return; }
   if (!REC.plan) { try { REC.plan = rpPlanShot(); } catch (e) { REC.plan = null; } }
   RPLAST = rpPack(won, false); REC = null; RV.img = null;
-  sbPut('replay', RPLAST); try { rpLibAdd(RPLAST); } catch (e) {}
+  sbPut('replay', RPLAST); try { rpLibAdd(RPLAST); } catch (e) {} try { rpAutoClip(RPLAST); } catch (e) {}
 }
 
 /* ---------- viewer */
@@ -253,4 +253,18 @@ function rpLibShow() {
   L.classList.remove('hide');
   for (const el of L.querySelectorAll('.rp-li')) el.onclick = ev => { if (ev.target.dataset.rpdel !== undefined) return; const r = (el.dataset.rpk === 'c' ? RP_LIB.clips : RP_LIB.matches)[+el.dataset.rpi]; if (r) { sfx.ui(); openReplay(r); } };
   for (const b of L.querySelectorAll('[data-rpdel]')) b.onclick = () => { RP_LIB.clips.splice(+b.dataset.rpdel, 1); sbPut('clips', RP_LIB.clips); sfx.ui(); rpLibShow(); };
+}
+
+// 1.2.72 AUTO CLIP: when a match ends, your best multi-kill (the most kills inside 10 seconds, at least 2) is saved as a
+// clip on its own, from 3 s before the first kill to 3 s after the last, named after it (DOUBLE KILL, TRIPLE KILL...)
+const RP_MULTI = ['', '', 'DOUBLE KILL', 'TRIPLE KILL', 'QUAD KILL', 'MEGA KILL'];
+function rpAutoClip(R) {
+  const mine = (R.feed || []).filter(f => /^<b>YOU<\/b>/.test(f[1])).map(f => f[0] / 10); if (mine.length < 2) return null;
+  let best = null;
+  for (let i = 0; i < mine.length; i++) { let j = i; while (j + 1 < mine.length && mine[j + 1] - mine[i] <= 10) j++; const n = j - i + 1; if (n >= 2 && (!best || n > best.n)) best = { n, a: mine[i], b: mine[j] }; }
+  if (!best) return null;
+  const i0 = RV.in, o0 = RV.out, prev = RPLAST; RPLAST = R; RV.in = Math.max(0, best.a - 3); RV.out = Math.min(R.len, best.b + 3);
+  let ok = false; try { ok = rpSaveClip(); } finally { RV.in = i0; RV.out = o0; RPLAST = prev; }
+  if (ok && RP_LIB.clips[0]) { RP_LIB.clips[0].clip = `${RP_MULTI[Math.min(best.n, 5)] || best.n + ' KILLS'} · ${R.name || 'MATCH'} · ${(MAPS[R.map] || {}).name || R.map}`; RP_LIB.clips[0].auto = 1; sbPut('clips', RP_LIB.clips); try { toast2(`${RP_MULTI[Math.min(best.n, 5)] || best.n + ' KILLS'} SAVED AS A CLIP · REPLAY > LIBRARY`); } catch (e) {} }
+  return ok ? best : null;
 }

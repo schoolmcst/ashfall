@@ -2,10 +2,11 @@
    The arena is cut into 1 m cells. Each cell can have up to NL walkable floors (the ground, a balcony above it, a roof
    above that). Bots path over (cell, floor) nodes: they can climb stairs and ramps, walk off ledges (drop up to DROP),
    and never try to walk up a sheer wall. Flow fields toward any goal are built on demand and cached. */
-const NCELL = 0.5, NN = ARENA * 2 / NCELL, NL = 3, DROP = 3.4, CLIMB = 0.4, CLIMB_STAIR = 0.75, BODY = 1.65;
+const NCELL = 0.5, NL = 3, DROP = 3.4, CLIMB = 0.4, CLIMB_STAIR = 0.75, BODY = 1.65;
 const NX = [1, -1, 0, 0, 1, 1, -1, -1], NZ = [0, 0, 1, -1, 1, -1, 1, -1];
-const lvN = new Uint8Array(NN * NN), lvH = new Float32Array(NN * NN * NL), lvS = new Uint8Array(NN * NN * NL);   // floors per cell, their heights, stair flag
-const navBlocked = new Uint8Array(NN * NN);   // 1 = no walkable floor at ground level (spawns, grass, legacy checks)
+let NN = ARENA * 2 / NCELL;
+let lvN = new Uint8Array(NN * NN), lvH = new Float32Array(NN * NN * NL), lvS = new Uint8Array(NN * NN * NL);   // floors per cell, their heights, stair flag
+let navBlocked = new Uint8Array(NN * NN);   // 1 = no walkable floor at ground level (spawns, grass, legacy checks)
 const cellOf = v => clamp(Math.floor((v + ARENA) / NCELL), 0, NN - 1);
 const cellPos = i => -ARENA + (i + 0.5) * NCELL;   // centre of cell column/row i
 function buildNav() {
@@ -64,7 +65,14 @@ function diagOk(cx, cz, nx, nz, h) {
 }
 
 /* ---------- flow fields */
-const FLOW = new Map(), flowQ = new Int32Array(NN * NN * NL);
+const FLOW = new Map(); let flowQ = new Int32Array(NN * NN * NL);
+// 1.2.73: the grids cover the map being loaded: 88 x 88 m for every map, more for a map that asks (arena), so the big
+// map pays for its size and the others do not
+function setArena(a) {
+  a = a || 44; if (a === ARENA) return; ARENA = a; NN = ARENA * 2 / NCELL;
+  lvN = new Uint8Array(NN * NN); lvH = new Float32Array(NN * NN * NL); lvS = new Uint8Array(NN * NN * NL); navBlocked = new Uint8Array(NN * NN); flowQ = new Int32Array(NN * NN * NL); FLOW.clear();
+  GORIG = -ARENA - 6; GN = Math.ceil((ARENA * 2 + 12) / GCELL); boxGridDirty = true;
+}
 function nodeOf(x, z, y) {
   y = y || 0;
   let cx = cellOf(x), cz = cellOf(z), c = cz * NN + cx, l = levelAt(c, y);

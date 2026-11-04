@@ -7,6 +7,7 @@ const LOAD_TIPS = ['Aim down sights for a perfect first shot - keep firing and t
   'Stuns only blind people looking at them - turn away!', 'Press Y / Q in the lobby to choose the modes in your playlist.', 'Your friend code is in Settings > Account. Friends can join your party with it.',
   'Each scope zoom has its own sensitivity in Settings > Controls.', 'Hold E (X on a controller) to plant or defuse in Search & Destroy.'];
 function matchHold(pick) {
+  try { featApply(); } catch (e) {}
   G.loadT = LOAD_SECS; G.holdT = LOAD_SECS + (pick ? PICK_SECS : 0); G.pickShown = false;
   mouseDown = false; mouseAds = false; showLoadScreen(); try { rpStart(); } catch (e) {} try { brainMatchStart(); } catch (e) {}
   setTimeout(() => { try { zlpMatch(); } catch (e) {} warmShaders(); }, 600);   // while the loading screen is up (the light pool first: the shaders depend on the number of lights)
