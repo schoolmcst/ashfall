@@ -42,7 +42,8 @@ function finishMatchStats(won) {
   ms.played++; if (won === 1) ms.wins++; ms.kills += MS.kills; ms.deaths += MS.deaths; ms.best = Math.max(ms.best, mode === 'surv' ? G.wave : MS.kills);
   for (const id in MS.weapons) { const a = MS.weapons[id], b = st.weapons[id] || (st.weapons[id] = { kills: 0, shots: 0, hits: 0, heads: 0 }); for (const k in a) b[k] += a[k]; }
   saveStats();
-  try { progMatchXP(won, false); } catch (e) {}   // levels and DZ (progress.js)
+  try { progMatchXP(won, false); } catch (e) {}
+  try { if (!G.bench && !(M && M.mode === 'range')) growMatch(won); } catch (e) {}   // GROW OP supplies   // levels and DZ (progress.js)
 }
 // add what happened so far when there is no result (leaving early, a round you only saw part of);
 // two minutes or more of play still counts as a match played (no win or loss)

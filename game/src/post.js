@@ -10,7 +10,8 @@
    Presets: LOW = OFF, MEDIUM = LOW, HIGH and ULTRA = HIGH. PERFORMANCE MODE turns it off. */
 const POST = { rt: null, ms: false, w: 0, h: 0, lv: [], quad: null, cam: null, mats: null, half: false, failed: false,
   grade: { bloom: 0.5, th: 0.78, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.18 } };
-const POST_OK = () => !POST.failed && S.post && S.post !== 'off' && !G.bench;
+const POST_OK = () => !POST.failed && ((S.post && S.post !== 'off') || (S.cbFilter && S.cbFilter !== 'off')) && !G.bench;
+const CBF = { off: 0, deut: 1, prot: 2, trit: 3 };
 // the grade for a map: from how dark its sky is (night maps glow more), or the map's own env.grade
 function postEnv(e) {
   const c = new THREE.Color(e.top), h = new THREE.Color(e.horizon), L = 0.3 * (c.r + h.r) + 0.55 * (c.g + h.g) + 0.15 * (c.b + h.b), night = clamp((0.55 - L) / 0.4, 0, 1);
@@ -40,7 +41,13 @@ function postMats() {
   ].join('\n'), { src: { value: null }, base: { value: null }, px: { value: new THREE.Vector2() }, k: { value: 1 } });
   // the final picture: FXAA (when the picture has no MSAA), sharpen, bloom, grade, vignette
   const fin = mk([
-    'uniform sampler2D src; uniform sampler2D bloom; uniform vec2 px; uniform float bk; uniform float sat; uniform float con; uniform float warm; uniform float vig; uniform float sharp; uniform float fxaa; uniform float useBloom; uniform vec2 sc; uniform float lift; varying vec2 vUv;',
+    'uniform sampler2D src; uniform sampler2D bloom; uniform vec2 px; uniform float bk; uniform float sat; uniform float con; uniform float warm; uniform float vig; uniform float sharp; uniform float fxaa; uniform float useBloom; uniform vec2 sc; uniform float lift; uniform float cbm; uniform float cbk; varying vec2 vUv;',
+    // COLOUR FILTER: simulate the colour vision deficiency, then move the colour that is lost into channels that are seen (daltonize)
+    'vec3 dalton(vec3 c, float m){ float L = 17.8824*c.r + 43.5161*c.g + 4.11935*c.b, M = 3.45565*c.r + 27.1554*c.g + 3.86714*c.b, S = 0.0299566*c.r + 0.184309*c.g + 1.46709*c.b;',
+    '  if (m > 2.5) { vec3 st = vec3(dot(c, vec3(1.255528, -0.076749, -0.178779)), dot(c, vec3(-0.078411, 0.930809, 0.147602)), dot(c, vec3(0.004733, 0.691367, 0.3039))); vec3 et = c - st; return c + vec3(0.7*et.b + et.r, 0.7*et.b + et.g, 0.0) * 0.6; }',   // tritanopia (Machado 2009, full)
+    '  if (m < 1.5) M = 0.494207*L + 1.24827*S; else L = 2.02344*M - 2.52581*S;',
+    '  vec3 sim = vec3(0.0809444479*L - 0.130504409*M + 0.116721066*S, -0.0102485335*L + 0.0540193266*M - 0.113614708*S, -0.000365296938*L - 0.00412161469*M + 0.693511405*S);',
+    '  vec3 e = c - sim; return c + vec3(0.0, 0.7*e.r + e.g, 0.7*e.r + e.b); }',
     'vec3 lin(vec3 c){ return c * c * (c * 0.305306 + 0.682171) + c * 0.012522; }',
     'vec3 srgb(vec3 c){ c = max(c, 0.0); vec3 s1 = sqrt(c), s2 = sqrt(s1), s3 = sqrt(s2); return 0.662002687 * s1 + 0.684122060 * s2 - 0.323583601 * s3 - 0.0225411470 * c; }',
     'float luma(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }',
@@ -70,9 +77,10 @@ function postMats() {
     '  c += lift * (1.0 - smoothstep(0.0, 0.5, y)) * (1.0 - c);',   // SHADOW BRIGHTNESS: lifts the dark tones (things in shadow stay visible)
     '  c *= mix(vec3(1.0 - warm * 0.5, 1.0, 1.0 + warm), vec3(1.0 + warm, 1.0, 1.0 - warm * 0.7), smoothstep(0.15, 0.85, y));',   // cool shadows, warm highlights
     '  vec2 q = vUv - 0.5; c *= 1.0 - vig * smoothstep(0.25, 0.85, dot(q, q) * 2.2);',
+    '  if (cbm > 0.5) c = mix(c, dalton(clamp(c, 0.0, 1.0), cbm), cbk);',
     '  gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);',
     '}',
-  ].join('\n'), { src: { value: null }, bloom: { value: null }, px: { value: new THREE.Vector2() }, bk: { value: 0.5 }, sat: { value: 1 }, con: { value: 1 }, warm: { value: 0 }, vig: { value: 0 }, sharp: { value: 0 }, fxaa: { value: 0 }, useBloom: { value: 1 }, sc: { value: new THREE.Vector2(1, 1) }, lift: { value: 0.04 } });
+  ].join('\n'), { src: { value: null }, bloom: { value: null }, px: { value: new THREE.Vector2() }, bk: { value: 0.5 }, sat: { value: 1 }, con: { value: 1 }, warm: { value: 0 }, vig: { value: 0 }, sharp: { value: 0 }, fxaa: { value: 0 }, useBloom: { value: 1 }, sc: { value: new THREE.Vector2(1, 1) }, lift: { value: 0.04 }, cbm: { value: 0 }, cbk: { value: 1 } });
   const copy = mk('uniform sampler2D src; varying vec2 vUv; void main(){ gl_FragColor = vec4(texture2D(src, vUv).rgb, 1.0); }', { src: { value: null } });
   POST.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fin); POST.quad.frustumCulled = false;
   POST.scene = new THREE.Scene(); POST.scene.add(POST.quad); POST.cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
@@ -112,7 +120,7 @@ function postFrame(draw) {
   POST.rt.viewport.set(0, 0, POST.dw, POST.dh); POST.rt.scissor.set(0, 0, POST.dw, POST.dh); POST.rt.scissorTest = true;
   renderer.setRenderTarget(POST.rt); renderer.clear(); draw();
   const sx = POST.dw / POST.w, sy = POST.dh / POST.h;
-  const g = POST.grade, glow = clamp(S.bloom == null ? 100 : S.bloom, 0, 200) / 100, L = POST.nl, D = POST.lv.slice(0, L), U = POST.up, useB = glow > 0 && L > 0;
+  const g = POST.grade, glow = clamp(S.bloom == null ? 100 : S.bloom, 0, 200) / 100, L = POST.nl, D = POST.lv.slice(0, L), U = POST.up, useB = glow > 0 && L > 0 && !!S.post && S.post !== 'off';
   if (useB) {
     // down: bright pass into the first level, then smaller and smaller
     M.bright.uniforms.src.value = POST.rt.texture; M.bright.uniforms.px.value.set(1 / POST.w, 1 / POST.h).multiplyScalar(D[0].width < POST.w / 3 ? 1.5 : 1); M.bright.uniforms.sc.value.set(sx, sy); M.bright.uniforms.th.value = g.th; M.bright.uniforms.knee.value = g.knee;
@@ -126,7 +134,10 @@ function postFrame(draw) {
   const f = M.fin.uniforms;
   f.src.value = POST.rt.texture; f.bloom.value = useB ? POST.bloomTex : POST.rt.texture; f.useBloom.value = useB ? 1 : 0; f.px.value.set(1 / POST.w, 1 / POST.h); f.sc.value.set(sx, sy); f.lift.value = 0.1 * clamp(S.shadowLift == null ? 60 : S.shadowLift, 0, 100) / 100;
   f.bk.value = g.bloom * glow; f.sat.value = g.sat; f.con.value = g.con; f.warm.value = g.warm; f.vig.value = g.vig;
+  f.cbm.value = CBF[S.cbFilter] || 0; f.cbk.value = clamp((S.cbFilterK == null ? 100 : S.cbFilterK) / 100, 0, 1);
+  if (!S.post || S.post === 'off') { f.bk.value = 0; f.sat.value = 1; f.con.value = 1; f.warm.value = 0; f.vig.value = 0; f.lift.value = 0; }   // only the colour filter
   f.fxaa.value = POST.ms || S.aa === 'off' ? 0 : 1; f.sharp.value = S.post === 'high' ? 0.22 : 0;
+  if (!S.post || S.post === 'off') f.useBloom.value = 0;
   postPass(M.fin, null);
 }
 // the frame through the finishing passes, or straight to the screen; a GPU that cannot do it falls back for good

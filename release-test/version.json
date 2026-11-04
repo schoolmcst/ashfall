@@ -1,12 +1,16 @@
 {
- "version": "1.2.67",
+ "version": "1.2.68",
  "notes": [
-  "GUNSMITH 2.0 (BETA): 7 new attachments. FLASH HIDER, PORTED BARREL, HANDSTOP, TAC LIGHT, JUNGLE MAGS (two mags taped together for fast reloads), WEIGHTED STOCK and MATCH GRADE ammo. 146 new gun builds.",
-  "INSPECT: drag the gun in the LOADOUT and LOCKER to turn it any way round, scroll to zoom in on a part, double-click to reset. On a controller the right stick turns it.",
-  "THE STASH PACK: 8 new charms in chance boxes. FAN LEAF, BIC FLICK, SPECIAL BROWNIE, GRINDER, STASH JAR, LIT JOINT, MINI BONG and the rare NIGHTSHADE LEAF.",
-  "Still in from 1.2.66: 6 more photo-scanned surfaces (painted steel, steel, plaster, tile, fabric, deck planks).",
-  "Still in from 1.2.65: the frame drop fix, brighter shadows and SHADOW BRIGHTNESS."
+  "NEW: THE GROW OP (BETA). Your own grow room on the main menu: plant seeds, and they grow in real time, even while the game is closed. Matches pay WATER, LIGHT and NUTRIENTS. Harvests pay XP, DZ and seeds, and the first harvest of each of the 6 strains unlocks its strain camo.",
+  "NEW MODE: PROP HUNT. Hunters against props, swapping every 2 minutes. Props turn into crates, barrels, jars, bongs or potted plants and hide (third person). Hunters are blind for 20 seconds, and every missed shot costs 4 health. Offline, online and in private matches.",
+  "NEW ZOMBIES MAP: THE HOTBOX (ENDLESS). An abandoned grow warehouse with no story and no doors, where the rounds never stop. The dead come in from the DRYING RING that loops round the outside. It counts on the zombies leaderboard.",
+  "NIGHT REMASTERS: ASH RUINS, KESSEL DOCKS, CASTELLMARE and VERNON SQUARE are back in the rotation at night, with moonlight, burning barrels and darker clouds.",
+  "PRESTIGE: 10 more ranks (to PRESTIGE 20: HASH, ROSIN, LIVE RESIN ... MARY JANE LEGEND), each with its own prestige charm.",
+  "REPLAY THEATRE: your last 10 matches, follow any player, a HEAT MAP of every death, and clips (MARK IN, MARK OUT, SAVE CLIP), kept in the LIBRARY.",
+  "FEEL: new hit markers (yellow on headshots, a red pop on kills), kill sounds, and a screen glow that grows with your streak (Settings > KILL EFFECTS).",
+  "ACCESSIBILITY: COLOUR FILTER for deuteranopia, protanopia and tritanopia (the whole picture, glow included), SUBTITLE SIZE and SUBTITLE BACKGROUND, AIM ASSIST STRENGTH.",
+  "Still in from 1.2.67: GUNSMITH 2.0, scanned surfaces, the frame drop fix and SHADOW BRIGHTNESS."
  ],
- "sha256": "006bb17078a3107810c4a4a627674495f58a26d64403367664ad9d125d7c7834",
+ "sha256": "7ad9bd687ac3e83395a4e985610363415a2d8b606b72d0d9affb2a0f2a293260",
  "minApp": "1.0.0"
 }

@@ -20,5 +20,9 @@ function cbApply() {
 const cbEnemy = () => TEAM_COL[1], cbFriend = () => TEAM_COL[0];
 (() => { const s = document.createElement('style'); s.textContent = '#uavMarks i{border-color:var(--enemy,#ff4a3a)!important;background:rgba(var(--enemy-rgb,255,74,58),.35)!important;box-shadow:0 0 6px rgba(var(--enemy-rgb,255,60,40),.8)!important}#uavMarks i.adv{background:var(--enemy,#ff4a3a)!important}'; document.head.appendChild(s); })();
 try { cbApply(); } catch (e) {}
+// SUBTITLE SIZE and SUBTITLE BACKGROUND (zombies survivors, campaign crew)
+(() => { const s = document.createElement('style'); s.textContent = '#zSub{font-size:var(--subsz,16px)!important;padding:var(--subpad,0);border-radius:6px;background:var(--subbg,transparent)}'; document.head.appendChild(s); })();
+function subApply() { const r = document.documentElement.style; r.setProperty('--subsz', (({ normal: 16, large: 22, xl: 28 })[S.subSize] || 16) + 'px'); r.setProperty('--subbg', S.subBg ? 'rgba(0,0,0,.72)' : 'transparent'); r.setProperty('--subpad', S.subBg ? '6px 12px' : '0'); }
+try { subApply(); } catch (e) {}
 // the zoom when aiming: affected by your FOV (the old way) or the same at any FOV
 const adsFovFor = (w, baseFov) => S.adsFov === 'independent' ? w.adsFov : w.adsFov * baseFov / 75;

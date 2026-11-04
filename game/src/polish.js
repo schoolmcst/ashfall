@@ -30,6 +30,7 @@ function onKill(e, head, boom, bonusOnly) {
   let multiTxt = '';
   if (G.multi >= 2) { const b = 50 * G.multi; extra += b; multiTxt = MULTI[Math.min(G.multi, 5)]; sfx.multi(G.multi); }
   G.streak = (G.streak || 0) + 1;
+  try { fbKillSound(head, G.multi); fbKillGlow(G.streak, head); } catch (err) {}
   if (G.streak % 5 === 0) { const b = G.streak * 20; extra += b; showBanner(`${G.streak} KILL STREAK`, `+${b} bonus`); sfx.streak(); }
   G.score += extra; if (!(boom && e.killedBy === 'strike')) stkAdd(pts + Math.min(extra, 100));   // streak kills don't feed streaks; bonuses count up to +100
   popScore('+' + (pts + extra), multiTxt ? 'big' : head ? 'head' : '', [multiTxt, ...tags].filter(Boolean).join(' · '));

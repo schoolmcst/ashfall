@@ -100,7 +100,7 @@ function renderPlobby(full) {
   if (!full && NET.priv.key === key) return; NET.priv.key = key;
   const box = $('plSet'); box.innerHTML = '';
   const rows = [
-    { name: 'MODE', t: 'seg', opts: [['tdm', 'TDM'], ['ffa', 'FFA'], ['gun', 'GUN GAME'], ['hp', 'HARDPOINT'], ['ctf', 'CTF'], ['kc', 'BAGGED UP'], ['dom', 'TURF WAR'], ['ru', 'RE-UP'], ['pp', 'PUFF PASS'], ['inf', 'CONTACT HIGH'], ['gf', 'BACK ALLEY'], ['snd', 'S&D']], get: () => c.md, set: v => { c.md = v; c.sc = clamp(MODES[PRIV_MODE[v]].score, PRIV_SC[v][0], PRIV_SC[v][1]); } },
+    { name: 'MODE', t: 'seg', opts: [['tdm', 'TDM'], ['ffa', 'FFA'], ['gun', 'GUN GAME'], ['hp', 'HARDPOINT'], ['ctf', 'CTF'], ['kc', 'BAGGED UP'], ['dom', 'TURF WAR'], ['ru', 'RE-UP'], ['pp', 'PUFF PASS'], ['ph', 'PROP HUNT'], ['inf', 'CONTACT HIGH'], ['gf', 'BACK ALLEY'], ['snd', 'S&D']], get: () => c.md, set: v => { c.md = v; c.sc = clamp(MODES[PRIV_MODE[v]].score, PRIV_SC[v][0], PRIV_SC[v][1]); } },
     { name: 'MAP', t: 'seg', opts: MAP_CHOICES().map(id => [id, id === 'random' ? 'RANDOM' : MAPS[id].name]), get: () => c.mp, set: v => { c.mp = v; } },
     { name: 'BOTS', hint: 'On top of the real players', t: 'range', min: 0, max: 11, step: 1, get: () => c.b, set: v => { c.b = v; }, fmt: v => v || 'NONE' },
     ...(c.md === 'snd' || c.md === 'gf' ? [] : [{ name: 'TIME LIMIT', hint: 'The leader wins when time runs out', t: 'range', min: 0, max: 30, step: 1, get: () => c.tl, set: v => { c.tl = v; }, fmt: v => v ? v + ' MIN' : 'NONE' }]),

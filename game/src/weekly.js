@@ -1,11 +1,11 @@
 /* ================================================================== PRESTIGE, THE PLUG'S LIST (weekly challenges), THE STASH YARD (firing range)
    PRESTIGE: at level 100 you can go back to level 1 (keeping everything you own) for a prestige emblem, a calling card,
-   2,000 DZ and a free PRESTIGE box; prestiges 3, 6 and 10 add a finish. Ten prestiges.
+   2,000 DZ and a free PRESTIGE box; prestiges 3, 6 and 10 add a finish. Twenty prestiges: 11-20 (1.2.68) each add a prestige charm.
    THE PLUG'S LIST: six jobs a week (Monday to Sunday, picked the same for everyone from the week's date), each paying
    XP and DZ; all six pay a free PRESTIGE box. Counted when a match ends.
    THE STASH YARD: a firing range and tutorial in the STACKYARD: targets that stand (and some that strafe), a list of basics
    to tick off, live accuracy. Nothing there counts for XP, stats or camo challenges. Saved in PROG (pres, wk, range). */
-const PRES_MAX = 10;
+const PRES_MAX = 20;   // 1.2.68: ten more (11-20), each with its own charm
 
 /* ---------- prestige */
 const PRES_EM = {};
@@ -17,6 +17,7 @@ function presEmblem(n) {
 function presRewards(n) {
   const out = [`${PRES_NAMES[n - 1]} emblem`, `P${n} calling card`, '2,000 DZ', 'a free PRESTIGE chance box'];
   if (PRES_FIN[n]) out.push(`${COS[PRES_FIN[n]].name} ${COS[PRES_FIN[n]].kind}`);
+  if (COS['pr_ch_' + n]) out.push(`the ${PRES_NAMES[n - 1]} charm`);
   return out;
 }
 function presOpen() {
@@ -32,7 +33,7 @@ function presClose() { const o = $('presOv'); if (o) o.remove(); }
 function presGo() {
   const pr = PROG.pres | 0; if (lvlOf(PROG.xp) < MAXLVL || pr >= PRES_MAX) return presClose();
   const n = pr + 1; PROG.pres = n; PROG.xp = 0; PROG.dz += 2000; PROG.tok = PROG.tok || { std: 0, elite: 0, prestige: 0 }; PROG.tok.prestige = (PROG.tok.prestige | 0) + 1;
-  PROG.owned['pr_bn_' + n] = 1; PROG.banner = 'pr_bn_' + n; if (PRES_FIN[n]) PROG.owned[PRES_FIN[n]] = 1;
+  PROG.owned['pr_bn_' + n] = 1; PROG.banner = 'pr_bn_' + n; if (PRES_FIN[n]) PROG.owned[PRES_FIN[n]] = 1; if (COS['pr_ch_' + n]) PROG.owned['pr_ch_' + n] = 1;
   saveProg(); presClose();
   showBanner(`PRESTIGE ${n}`, PRES_NAMES[n - 1]); try { sfx.streak(); } catch (e) {}
   toast2(`PRESTIGE ${n} · ${PRES_NAMES[n - 1]} · CALLING CARD EQUIPPED`);

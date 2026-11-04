@@ -25,14 +25,16 @@ const MODES = {
   rsnd: { name: 'RANKED SEARCH & DESTROY', short: 'RANKED S&D', icon: 'RNK', desc: 'Ranked play, 4 v 4 Search & Destroy, first to 6 rounds. Wins raise your SR, losses lower it.', teams: true, respawn: 0, score: 6, time: 0, perTeam: 4, unit: 'ROUNDS', online: true, base: 'snd', ranked: true },
   osnd: { name: 'ONLINE SEARCH & DESTROY', short: 'ONLINE S&D', icon: 'S&D', desc: 'Real people, one life per round. Attackers plant the bomb at A or B, defenders stop them. First to 4 rounds.', teams: true, respawn: 0, score: 4, time: 0, perTeam: 5, unit: 'ROUNDS', online: true, base: 'snd' },
   ru: { name: 'RE-UP', short: 'RE-UP', icon: 'RUP', desc: 'Grind, dealer style: every kill drops a stash bag. Grab them, carry them, and bank them at one of the two STASH HOUSES to score. Die carrying and you drop the whole pile.', teams: true, respawn: 3, score: 40, time: 10, perTeam: 6, unit: 'BAGS' },
+  ph: { name: 'PROP HUNT', short: 'PROPS', icon: 'PRP', desc: 'Hunters against props, swapping every two minutes. Props become crates, barrels, jars and bongs and hide; hunters find them, but every missed shot hurts.', teams: true, respawn: 4, score: 999, time: 6, perTeam: 5, unit: 'POINTS' },
   pp: { name: 'PUFF PUFF PASS', short: 'PASS', icon: 'PPP', desc: 'Free-for-all where everyone holds the SAME gun. Every 40 seconds it gets passed on to a new one from the whole armory. Most kills wins.', teams: false, respawn: 2.5, score: 25, time: 10, players: 8, unit: 'KILLS' },
   oru: { name: 'ONLINE RE-UP', short: 'ONLINE RE-UP', icon: 'RUP', desc: 'Real people, grind: grab the stash bags that drop on every kill and bank them at a STASH HOUSE. Die carrying and you drop the lot.', teams: true, respawn: 3, score: 30, time: 0, perTeam: 6, unit: 'BAGS', online: true, base: 'ru' },
+  oph: { name: 'ONLINE PROP HUNT', short: 'ONLINE PROPS', icon: 'PRP', desc: 'Real people, hunters against props, swapping every two minutes. Hide as a crate or a bong, or hunt them down.', teams: true, respawn: 4, score: 999, time: 6, perTeam: 6, unit: 'POINTS', online: true, base: 'ph' },
   opp: { name: 'ONLINE PUFF PUFF PASS', short: 'ONLINE PASS', icon: 'PPP', desc: 'Real people, every one for themselves, everyone on the same gun. It changes every 40 seconds.', teams: false, respawn: 2.5, score: 25, time: 0, players: 12, unit: 'KILLS', online: true, base: 'pp' },
   camp: { name: 'CAMPAIGN', short: 'STORY', icon: 'CMP', desc: 'FIRST HARVEST: the story missions.', teams: true, respawn: 0, score: 0, time: 0, perTeam: 1, unit: 'STEPS' },
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'inf', 'gf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'inf', 'gf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 // bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
@@ -265,7 +267,7 @@ function matchBotKilled(e, by, head, boom) {
 }
 function creditKill(ke, victim) {
   ke.kills++; ke.score += 100;
-  if (M.def.teams && M.mode === 'tdm') M.teamScore[ke.team]++;
+  if (M.def.teams && (M.mode === 'tdm' || (M.mode === 'ph' && !M.online))) M.teamScore[ke.team]++;
   if (M.mode === 'gun' && !M.online) {
     ke.level++;
     if (ke.isPlayer) { if (ke.level < GUN_LADDER.length) { equipGunGame(ke.level); popScore(`LEVEL ${ke.level + 1}`, 'big', ARM[GUN_LADDER[ke.level]].name); sfx.streak(); } }
@@ -436,7 +438,7 @@ function updateBots(dt) {
     let face = null, holding = false, mx = 0, mz = 0;
     const tp = e.tgt ? tpos(e.tgt) : null, dist = tp ? Math.hypot(tp.x - ex, tp.z - ez) : 1e9;
     // objective work (plant / defuse) keeps them still
-    const busy = sndBotAct(e, dt);
+    const busy = sndBotAct(e, dt) || (M.ph ? phBotAct(e, dt) : false);
     if (tp) face = Math.atan2(tp.x - ex, tp.z - ez);
     else if (e.lkp && M.t - e.lkpT < 5) face = Math.atan2(e.lkp.x - ex, e.lkp.z - ez);   // pre-aim where they expect you
     else if (e.lookYaw !== null && e.lookYaw !== undefined) face = e.lookYaw;   // checking around

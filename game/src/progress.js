@@ -133,7 +133,12 @@ const CHARM_DEFS = [
   ['grinder', 'GRINDER', 1, 'grinder', [0x7a8088, 0x3adf5a], { metal: 1 }], ['jar', 'STASH JAR', 1, 'jar', [0xc8e8d8, 0x2f6a14, 0x111111]], ['joint', 'LIT JOINT', 2, 'joint', [0xf2ece0, 0x7a5a3a, 0xff6a1a]],
   ['bong', 'MINI BONG', 2, 'bong', [0x6ad8ff, 0x1a6a3a, 0x5adf4a]], ['purple', 'NIGHTSHADE LEAF', 3, 'leaf', [0x7a2cff, 0x2a0a5a, 0xb06cff], { spin: 1 }],
 ];
+// PRESTIGE 11-20 charms (1.2.68): one per prestige, never from boxes. [prestige, shape, colours, options]
+const PRES_CHARMS = [[11, 'cube', [0x6a4a2a, 0xc8a070]], [12, 'jar', [0xe8d8b8, 0xd88a3a, 0x2a1a10]], [13, 'gem', [0xffe0a0, 0xffffff, 0xe8c070], { spin: 1 }], [14, 'gem', [0xffb84a, 0xffffff, 0xff9a2a]],
+  [15, 'orb', [0xb8c8e0, 0x6a7a90, 0xe8f0ff]], [16, 'skull', [0x9ae8ff, 0x3aff6a], { glowEyes: 1 }], [17, 'brownie', [0x3a2010, 0xff8ad0]], [18, 'duck', [0x8a6aff, 0xffd23a]],
+  [19, 'orb', [0x5a2cff, 0xb8bcc2, 0xff3cf0], { spin: 1 }], [20, 'leaf', [0x3aff6a, 0x0a3a1a, 0x7aff9a], { spin: 1 }]];
 for (const [id, name, r, t, c, o] of CHARM_DEFS) COSM.push({ id: 'ch_' + id, name, kind: 'charm', r, g: Object.assign({ t, c }, o || {}) });
+for (const [n, t, c, o] of PRES_CHARMS) COSM.push({ id: 'pr_ch_' + n, name: `P${n} CHARM`, kind: 'charm', r: 3, pres: n, g: Object.assign({ t, c }, o || {}) });
 // ---- account BANNERS: the card behind your name (lobby, your player card, and the death cam when you kill another player)
 // [id, name, rarity, style, colours, extra]. em = an emblem drawn on the right [shape, fill, ink, text]
 const BANNER_DEFS = [
@@ -373,8 +378,8 @@ for (const [S, LIST] of [[1, BP_ITEMS], [2, BP2_ITEMS]]) for (const [name, tier,
   else COSM.push(Object.assign(base, { g: Object.assign({ t, c }, gx || {}), m: mx || undefined }));
 }
 // ---- PRESTIGE: a calling card (banner) for every prestige, and three finishes (gold stays the weapon-grind reward)
-const PRES_NAMES = ['SEEDLING', 'SPROUT', 'CLONE', 'VEG', 'PRE-FLOWER', 'IN BLOOM', 'TRICHOME', 'HARVEST', 'CURED', 'KUSH KING'];
-const PRES_COL = ['#7fd16b', '#5fc24a', '#3fae5a', '#2f9a7a', '#2e86c1', '#7b5cff', '#c14bff', '#ff4fa3', '#ff7a2a', '#ffd23a'];
+const PRES_NAMES = ['SEEDLING', 'SPROUT', 'CLONE', 'VEG', 'PRE-FLOWER', 'IN BLOOM', 'TRICHOME', 'HARVEST', 'CURED', 'KUSH KING', 'HASH', 'ROSIN', 'LIVE RESIN', 'SHATTER', 'MOON ROCK', 'GHOST TRAIN', 'WAKE N BAKE', 'COUCH LOCK', 'COSMIC', 'MARY JANE LEGEND'];
+const PRES_COL = ['#7fd16b', '#5fc24a', '#3fae5a', '#2f9a7a', '#2e86c1', '#7b5cff', '#c14bff', '#ff4fa3', '#ff7a2a', '#ffd23a', '#c8a070', '#d88a3a', '#e8c070', '#ffb84a', '#b8c8e0', '#9ae8ff', '#ff8ad0', '#8a6aff', '#5a2cff', '#3aff6a'];
 const PRES_FIN = { 3: 'pr_chrome', 6: 'pr_resin', 10: 'pr_frost' };
 PRES_NAMES.forEach((nm, i) => { const n = i + 1, col = PRES_COL[i];
   COSM.push({ id: 'pr_bn_' + n, name: `P${n} · ${nm}`, kind: 'banner', r: n < 4 ? 1 : n < 8 ? 2 : 3, pres: n, g: { t: n < 4 ? 'grad' : n < 8 ? 'rays' : 'stars', c: n < 4 ? ['#0d1a0d', '#1f3a1a', col] : n < 8 ? ['#0b1410', col] : ['#05040b', col, '#1a3a1a'], em: ['leaf', col, '#0b0c0d', String(n)] } }); });
@@ -973,7 +978,7 @@ const cosmSwatch = (id, N = 64) => { try { return cosmCanvas(id, N).cc.toDataURL
 const SWATCH = {};
 function swatchUrl(id) { return SWATCH[id] || (SWATCH[id] = cosmSwatch(id, 72)); }
 function lockerGuns() { return ARMORY.filter(d => CATS[d.cat] && (CATS[d.cat].slot === 'primary' || CATS[d.cat].slot === 'secondary')); }
-function howToGet(c) { if (c.pres) return 'REACH PRESTIGE ' + c.pres; if (c.ev) return 'PLAY 3 MATCHES IN ITS EVENT'; return c.lvl ? 'REACH LEVEL ' + c.lvl : 'FOUND IN CHANCE BOXES'; }
+function howToGet(c) { if (c.grow) return 'HARVEST ' + (STRAIN[c.grow] ? STRAIN[c.grow].name : 'IT') + ' IN THE GROW OP'; if (c.pres) return 'REACH PRESTIGE ' + c.pres; if (c.ev) return 'PLAY 3 MATCHES IN ITS EVENT'; return c.lvl ? 'REACH LEVEL ' + c.lvl : 'FOUND IN CHANCE BOXES'; }
 const kindName = c => c.secret ? 'CAMO' : ({ camo: 'CAMO', skin: 'SKIN', sticker: 'STICKER', charm: 'CHARM', banner: 'BANNER' })[c.kind] || 'ITEM';
 function openLocker() {
   if (curScreen !== 'locker' && curScreen !== 'rewards') LK.ret = curScreen || 'lobby';

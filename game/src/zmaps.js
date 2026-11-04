@@ -785,3 +785,24 @@ ZMAPCFG.hightide = {
 };
 ZMAP_LIST.push('hightide');
 try { AUD_PROF.hightide = { len: 1.8, pow: 2.2, wet: 0.32, echo: 0.16, dark: 0.25, amb: 'wind', surf: 'wood' }; } catch (e) {}
+
+/* ---------- THE HOTBOX (endless: no story, no doors, the dead come in from the drying ring) */
+ZMAPCFG.hotbox = {
+  chapter: 'ENDLESS', mapLine: 'no story · no doors · how long can you last', classic: true, spawnMin: 16.6,
+  info: 'An endless arena: no story, no doors. The dead come in from the DRYING RING round the outside, which is also the loop to train them. The GUN UPGRADER (5000) is in the middle of the grow floor.',
+  doors: [], walls: [],
+  path: [[0, 5], [0, 3]], up: { x: 0, z: 0, y: 0 }, strips: [[-2.6, 0, 0.04, 5.2], [2.6, 0, 0.04, 5.2]],
+  perks: { revive: { x: -15.5, z: 8, y: 0, q: 1 }, double: { x: 15.5, z: -8, y: 0, q: 3 }, quick: { x: -8, z: -15.5, y: 0, q: 0 }, zoom: { x: 8, z: 15.5, y: 0, q: 2 }, tank: { x: -15.5, z: -10, y: 0, q: 1 }, munch: { x: 15.5, z: 10, y: 0, q: 3 } },
+  pads: [],
+  stash: [
+    { gun: 'viper', cost: 1000, x: 15.73, z: 3, y: 0, q: 3 },
+    { gun: 'striker', cost: 1300, x: -15.73, z: -3, y: 0, q: 1 },
+    { gun: 'breacher', cost: 1500, x: 3, z: -15.73, y: 0, q: 0 },
+    { gun: 'marc', cost: 2000, x: -3, z: 15.73, y: 0, q: 2 },
+  ],
+  windows: [],
+  story: { items: [], panel: { x: 0, z: -30, y: 0 }, cook: { x: 0, z: -30, y: 0, secs: 60, need: 9 }, chapters: [], scenes: [], tapes: [], intro: [], end: [], rounds: {}, say: {},
+    text: { title: 'ENDLESS', place: 'THE HOTBOX · ZOMBIES · ENDLESS', keyDone: 'ashfall.zstory.hotbox', keyTapes: 'ashfall.ztapes.hotbox' } },
+};
+ZMAP_LIST.push('hotbox');
+try { AUD_PROF.hotbox = { len: 2.0, pow: 2.4, wet: 0.4, echo: 0.22, dark: 0.4, amb: 'hall', surf: 'concrete' }; } catch (e) {}

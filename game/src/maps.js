@@ -285,7 +285,7 @@ function buildMapMaterials() {
 const ENV_DEFAULT = { top: 0x5f86b4, horizon: 0xb9c2c4, fog: 0.0105, sun: [-38, 52, 26], sunCol: 0xffe9c8, sunI: 2.2, skySun: 0xffe2a8, hemiSky: 0xbcd0e4, hemiGround: 0x4b4433, exposure: 1.05 };
 function applyEnv(env) {
   const e = Object.assign({}, ENV_DEFAULT, env || {});
-  skyMat.uniforms.top.value = C(e.top); skyMat.uniforms.horizon.value = C(e.horizon); skyMat.uniforms.sunCol.value = C(e.skySun);
+  skyMat.uniforms.top.value = C(e.top); { const t = new THREE.Color(e.top), h = new THREE.Color(e.horizon), L = 0.2126 * (t.r + h.r) + 0.7152 * (t.g + h.g) + 0.0722 * (t.b + h.b); skyMat.uniforms.cloudK.value = e.cloudK !== undefined ? e.cloudK : clamp(L * 1.6, 0.22, 1); } skyMat.uniforms.horizon.value = C(e.horizon); skyMat.uniforms.sunCol.value = C(e.skySun);
   SUN_POS.set(e.sun[0], e.sun[1], e.sun[2]); sun.position.copy(SUN_POS); skyMat.uniforms.sunDir.value.copy(SUN_POS).normalize();
   sun.color = C(e.sunCol); sun.intensity = e.sunI; vmSun.color = C(e.sunCol);
   hemi.color = C(e.hemiSky); hemi.groundColor = C(e.hemiGround);

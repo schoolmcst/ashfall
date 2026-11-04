@@ -102,6 +102,11 @@ function updatePlayer(dt) {
   const shk = G.shake * S.shake / 100, bobOn = S.bob ? 1 : 0;
   camera.position.set(P.x + rnd(-shk, shk), P.y + P.eye + Math.sin(P.bob * 2) * 0.025 * (hs / 5) * bobOn + rnd(-shk, shk), P.z + rnd(-shk, shk));
   camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn);
+  if (M && M.ph && phMeProp() && playerAlive()) {   // PROP HUNT: a prop sees itself from behind (pulled in when a wall is in the way)
+    const back = new THREE.Vector3(Math.sin(P.yaw) * Math.cos(P.pitch), -Math.sin(P.pitch) + 0.35, Math.cos(P.yaw) * Math.cos(P.pitch)).normalize(), eye = new THREE.Vector3(P.x, P.y + 1.3, P.z);
+    let dist = 3.4; try { _pr.set(eye, back); _pr.far = dist; const h = _pr.intersectObjects(wallMeshes, false)[0]; if (h) dist = Math.max(0.6, h.distance - 0.25); } catch (e) {}
+    camera.position.copy(eye).addScaledVector(back, dist);
+  }
   G.shake = Math.max(0, G.shake - dt * 0.05);
   G.ads = lerp(G.ads, G.adsOn && G.swapT <= 0 ? 1 : 0, clamp(dt * 11 * (perk('amped') ? 1.14 : 1) / Math.pow(w.adsTime || 1, 1.4), 0, 1));
   const fov = lerp(baseFov + (sprint ? 5 : 0), adsFovFor(w, baseFov), G.ads);
@@ -196,6 +201,7 @@ function animateViewmodel(dt, hs, sprint, bobOn) {
 const _fwd = new THREE.Vector3(), _right = new THREE.Vector3(), _muz = new THREE.Vector3(), _org = new THREE.Vector3(), _sdir = new THREE.Vector3();
 function shoot(moving) {
   if (M && M.infMe) { melee(); return; }
+  if (M && M.ph && (phMeProp() || phHiding())) return;   // PROP HUNT: props have no gun, hunters wait out the hiding
   const w = WEAPONS[G.cur], u = gunObjs[G.cur].userData;
   netShot(); w.ammo--; G.fireT = w.interval * (typeof zpHas === 'function' && zpHas('double') ? 0.75 : 1); G.shotT = 0; G.shots++; G.cycled = false;
   if (w.burst) { G.burstLeft = G.burstLeft > 0 ? G.burstLeft - 1 : w.burst - 1; if (G.burstLeft > 0 && w.ammo > 0) G.fireT = w.burstGap; else G.burstLeft = 0; }
@@ -233,9 +239,9 @@ function shoot(moving) {
     if (!w.stealth && (w.pellets === 1 ? (!w.auto || (G.shots & 1)) : p < 3)) addTracer(_muz, h.point, 0.045, w.pellets > 1 ? 0.01 : 0.014);
   }
   statShot(anyHit);
+  if (M && M.ph && !anyHit) phMissed();
   if (anyHit && S.hitMarkers) {
-    const hm = $('hit'); hm.className = anyKill ? 'kill' : ''; hm.style.opacity = 1;
-    clearTimeout(hm._t); hm._t = setTimeout(() => (hm.style.opacity = 0), 90);
+    fbMarker(true, anyKill, anyHead);
     sfx.hit(anyHead);
   }
   // holding the trigger climbs: each shot of a spray kicks a bit more (LMGs most), with a steady sideways pull per gun

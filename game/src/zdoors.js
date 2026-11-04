@@ -139,10 +139,10 @@ function zdAnim(dt) {
 function zdSpawnPts() {
   if (ZD.pts) return ZD.pts;
   if (!zmapIs(curMap)) return (ZD.pts = buildSpawns());
-  const pts = [];
+  const pts = [], rmin = (ZMAPCFG[curMap] && ZMAPCFG[curMap].spawnMin) || 0;   // endless maps: the dead only come from the outside ring
   for (let z = -40; z <= 40; z += 2.5) for (let x = -42; x <= 42; x += 2.5) {
     const c = cellOf(z) * NN + cellOf(x);
-    for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (lvS[c * NL + l] || h > 6) continue; pts.push({ x: cellPos(cellOf(x)), z: cellPos(cellOf(z)), y: h }); }
+    for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (lvS[c * NL + l] || h > 6 || Math.max(Math.abs(x), Math.abs(z)) < rmin) continue; pts.push({ x: cellPos(cellOf(x)), z: cellPos(cellOf(z)), y: h }); }
   }
   return (ZD.pts = pts);
 }
@@ -214,7 +214,7 @@ function zuApply() {
 }
 function zuNear() { const s = ZU_SPOT; return ZD.up && Math.hypot(P.x - s.x, P.z - s.z) < 2.4 && Math.abs((P.y || 0) - s.y) < 1.5; }
 function zdTick(dt) {
-  zdAnim(dt); try { zuCamoTick(dt); mcTick(); } catch (e) {} try { worksTick(dt); airpTick(dt); isleTick(dt); mjTick(dt); tideTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); zwwCloudTick(dt); } catch (e) { reportError(e); }
+  zdAnim(dt); try { zuCamoTick(dt); mcTick(); } catch (e) {} try { worksTick(dt); airpTick(dt); isleTick(dt); mjTick(dt); tideTick(dt); hotboxTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); zwwCloudTick(dt); } catch (e) { reportError(e); }
   if (ZD.up) { const u = ZD.up, busy = u.t > 0; u.g.userData.beam.material.opacity = 0.08 + Math.sin(NOW * 3) * 0.04; if (busy) u.t -= dt;
     u.ring.rotation.y += dt * (busy ? 9 : 0.8); u.core.material.emissiveIntensity = 1.3 + Math.sin(NOW * 4) * 0.4 + (busy ? 2 : 0); u.lt.intensity = 1.4 + Math.sin(NOW * 4) * 0.3 + (busy ? 2.5 : 0); }
   if (ZD.arrows) ZD.arrows.userData.mat.opacity = 0.85 + Math.sin(NOW * 3) * 0.15;

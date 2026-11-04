@@ -93,7 +93,9 @@ zsLoadTapes();
 const zsDoneEver = key => { try { return localStorage.getItem(key || ZS_TEXT.keyDone) === 'done'; } catch (e) { return false; } };
 const zsHas = id => ZS.flags.has(id);
 // story on or off for this game (the lobby's MODE row; in co-op the host's choice counts)
-const zsWanted = () => (typeof ZC !== 'undefined' && ZC.on && !zcHost() && ZC.hostStory !== undefined) ? ZC.hostStory : ZL.story !== false;
+const zsCoopGuest = () => typeof ZC !== 'undefined' && ZC.on && !zcHost();
+const zsWanted = () => { const m = zsCoopGuest() && ZC.hostLobbyMap ? ZC.hostLobbyMap : ZL.map; if (typeof ZMAPCFG !== 'undefined' && ZMAPCFG[m] && ZMAPCFG[m].classic) return false;   // endless maps have no story
+  return (zsCoopGuest() && ZC.hostStory !== undefined) ? ZC.hostStory : ZL.story !== false; };
 const zsFuses = () => ['f1', 'f2', 'f3'].filter(zsHas).length, zsStashes = () => ['st1', 'st2', 'st3'].filter(zsHas).length;
 // which chapter we are on, from what has happened
 function zsChapterNow() { if (ZS.done) return 6; if (!zsHas('power')) return 0; if (!zsHas('card')) return 1; if (zsStashes() < 3) return 2; if (!zsHas('blood')) return 3; if (!zsHas('jar')) return 4; return 5; }

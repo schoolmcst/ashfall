@@ -32,6 +32,10 @@
   #hit i:nth-child(3){left:0;bottom:3px;transform:rotate(-45deg)}
   #hit i:nth-child(4){right:0;bottom:3px;transform:rotate(45deg)}
   #hit.kill i{background:#f33}
+  #hit{transition:opacity .25s,transform .07s ease-out}
+  #hit.head i{background:#ffd23a;height:3px}
+  #hit.kill.head i{background:#f33;box-shadow:0 0 0 1px #fff}
+  #killGlow{position:fixed;inset:0;pointer-events:none;opacity:0;z-index:5}
   #health{position:absolute;left:28px;bottom:28px;width:260px}
   #health .lbl,#wname{font-size:12px;letter-spacing:3px;opacity:.7}
   #health .bar{height:8px;background:rgba(255,255,255,.15);margin-top:4px;border:1px solid rgba(255,255,255,.3)}
@@ -365,6 +369,7 @@
   <div id="dmgdir"><div></div></div>
   <div id="cross"><i></i><i></i><i></i><i></i><i></i></div>
   <div id="hit"><i></i><i></i><i></i><i></i></div>
+  <div id="killGlow"></div>
   <div id="stats">WAVE <span id="sWave">1</span><br>KILLS <span id="sKills">0</span><br>SCORE <span id="sScore">0</span><br>HOSTILES <span id="sLeft">0</span></div>
   <div id="fps">60 FPS</div>
   <canvas id="radar" width="140" height="140"></canvas>
@@ -396,6 +401,7 @@
       <button class="cod-tab" data-act="locker">LOCKER</button>
       <button class="cod-tab bp-tab" data-act="bpass">BATTLE PASS</button>
       <button class="cod-tab wk-tab" data-act="weekly">WEEKLY</button>
+      <button class="cod-tab gr-tab" data-act="growop">GROW OP</button>
       <button class="cod-tab" data-act="rewards">REWARDS</button>
       <button class="cod-tab" data-act="stats">CAREER</button>
       <button class="cod-tab" data-act="replay">REPLAY</button>
@@ -573,6 +579,7 @@
       <button class="cod-tab" data-act="locker">LOCKER</button>
       <button class="cod-tab bp-tab" data-act="bpass">BATTLE PASS</button>
       <button class="cod-tab wk-tab" data-act="weekly">WEEKLY</button>
+      <button class="cod-tab gr-tab" data-act="growop">GROW OP</button>
       <button class="cod-tab" data-act="rewards">REWARDS</button>
       <button class="cod-tab" data-act="stats">CAREER</button>
       <button class="cod-tab" data-act="settings">SETTINGS</button>

@@ -5,7 +5,11 @@
    speed and a camera that can follow you. */
 const RP_HZ = 5, RP_MAX = 15 * 60 * RP_HZ, RP_KEY = 'dz_replay', RP_EXT = 46;
 let REC = null, RPLAST = null;
-const RV = { on: false, t: 0, play: true, speed: 1, follow: false, img: null, lastT: 0, raf: 0 };
+const RV = { on: false, t: 0, play: true, speed: 1, follow: false, fid: -1, heat: false, heatPts: null, img: null, lastT: 0, raf: 0, in: -1, out: -1, latest: null };
+// REPLAY THEATRE (1.2.68): the last 10 matches and up to 20 saved clips live in IndexedDB next to the last match
+const RP_LIB = { matches: [], clips: [] };
+sbGet('replays').then(a => { if (Array.isArray(a)) RP_LIB.matches = a; }); sbGet('clips').then(a => { if (Array.isArray(a)) RP_LIB.clips = a; });
+function rpLibAdd(R) { RP_LIB.matches = [R].concat(RP_LIB.matches.filter(m => m.date !== R.date)).slice(0, 10); sbPut('replays', RP_LIB.matches); }
 // the last replay lives in IndexedDB (see savebak.js); older versions kept it in localStorage, moved over once
 sbGet('replay').then(r => { if (r && r.frames && !RPLAST) RPLAST = r; });
 try { const old = localStorage.getItem(RP_KEY); if (old) { const o = JSON.parse(old); localStorage.removeItem(RP_KEY); if (o && o.frames) sbGet('replay').then(r => { if (!r) { sbPut('replay', o); if (!RPLAST) RPLAST = o; } }); } } catch (e) {}
@@ -69,28 +73,35 @@ function rpFinish(won) {
   if (!REC || REC.frames.length < RP_HZ * 3) { REC = null; return; }
   if (!REC.plan) { try { REC.plan = rpPlanShot(); } catch (e) { REC.plan = null; } }
   RPLAST = rpPack(won, false); REC = null; RV.img = null;
-  sbPut('replay', RPLAST);
+  sbPut('replay', RPLAST); try { rpLibAdd(RPLAST); } catch (e) {}
 }
 
 /* ---------- viewer */
-function openReplay() {
+function openReplay(pick) {
   showScreen('replay');
+  if (!RV.latest || (RPLAST && RPLAST !== RV.view && RPLAST.date !== (RV.latest && RV.latest.date))) RV.latest = RPLAST;
+  if (pick) RPLAST = pick; else if (RV.latest) RPLAST = RV.latest;
+  RV.view = RPLAST; RV.in = RV.out = -1; RV.heatPts = null; RV.fid = -1; rpLibHide();
   const R = RPLAST, has = !!(R && R.frames && R.frames.length);
   $('rpEmpty').classList.toggle('hide', has); $('rpMain').classList.toggle('hide', !has);
   if (!has) return;
   const m = MAPS[R.map] || {}, d = new Date(R.date);
-  $('rpInfo').innerHTML = `<b>${R.name || 'MATCH'}</b><span>${m.name || R.map}</span><span>${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>${R.won ? `<span class="${R.won > 0 ? 'rp-w' : 'rp-l'}">${R.won > 0 ? 'VICTORY' : 'DEFEAT'}</span>` : ''}`;
+  try { $('rpTitle').textContent = R.clip ? 'REPLAY THEATRE · CLIP' : R === RV.latest ? 'REPLAY THEATRE · LAST MATCH' : 'REPLAY THEATRE'; } catch (e) {}
+  $('rpInfo').innerHTML = `<b>${R.clip ? R.clip : R.name || 'MATCH'}</b><span>${m.name || R.map}</span><span>${d.toLocaleDateString()} ${d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>${R.won ? `<span class="${R.won > 0 ? 'rp-w' : 'rp-l'}">${R.won > 0 ? 'VICTORY' : 'DEFEAT'}</span>` : ''}`;
   RV.img = null; if (R.plan) { const im = new Image(); im.onload = () => { RV.img = im; }; im.src = R.plan; }
   RV.t = 0; RV.play = true; RV.speed = 1; RV.follow = false; RV.on = true; RV.lastT = performance.now();
   $('rpSeek').max = Math.ceil(R.len * 10); rpButtons();
   cancelAnimationFrame(RV.raf); RV.raf = requestAnimationFrame(rpLoop);
   setTimeout(() => { try { $('rpPlay').focus(); } catch (e) {} }, 0);
 }
-function closeReplay() { RV.on = false; cancelAnimationFrame(RV.raf); showScreen('menu'); }
+function closeReplay() { RV.on = false; cancelAnimationFrame(RV.raf); if (RV.latest) RPLAST = RV.latest; showScreen('menu'); }
 function rpButtons() {
   $('rpPlay').textContent = RV.play ? '❚❚ PAUSE' : '▶ PLAY';
   $('rpSpeed').textContent = RV.speed + '×';
-  $('rpFollow').textContent = RV.follow ? 'FOLLOW YOU: ON' : 'FOLLOW YOU: OFF';
+  const R = RPLAST, en = R && RV.fid >= 0 ? R.ents[RV.fid] : null;
+  $('rpFollow').textContent = en ? 'FOLLOW: ' + (en.me ? 'YOU' : en.n) : 'FOLLOW: OFF';
+  if ($('rpHeat')) $('rpHeat').textContent = RV.heat ? 'HEAT MAP: ON' : 'HEAT MAP: OFF';
+  if ($('rpClip')) { const ok = RV.in >= 0 && RV.out > RV.in + 1; $('rpClip').disabled = !ok; $('rpClip').textContent = ok ? `SAVE CLIP ${rpFmt(RV.in)}-${rpFmt(RV.out)}` : RV.in >= 0 ? `IN ${rpFmt(RV.in)} · MARK OUT` : 'SAVE CLIP'; }
 }
 function rpSeekBy(s) { if (!RPLAST) return; RV.t = clamp(RV.t + s, 0, RPLAST.len); sfx.ui(); }
 function rpToggle() { if (RPLAST && RV.t >= RPLAST.len - 0.05) RV.t = 0; RV.play = !RV.play; rpButtons(); sfx.ui(); }
@@ -122,8 +133,8 @@ function rpDraw() {
   }
   // camera: whole map, or zoomed on you
   let zoom = 1, cx = 0, cz = 0;
-  const me = R.ents.findIndex(e => e.me);
-  if (RV.follow && pos.has(me)) { zoom = 2.2; cx = pos.get(me).x; cz = pos.get(me).z; const lim = RP_EXT - RP_EXT / zoom; cx = clamp(cx, -lim, lim); cz = clamp(cz, -lim, lim); }
+  const me = RV.fid;
+  if (me >= 0 && pos.has(me) && pos.get(me).alive) { zoom = 2.2; cx = pos.get(me).x; cz = pos.get(me).z; const lim = RP_EXT - RP_EXT / zoom; cx = clamp(cx, -lim, lim); cz = clamp(cz, -lim, lim); }
   const sc = W / (2 * RP_EXT) * zoom, X = x => (x - cx) * sc + W / 2, Z = z => (z - cz) * sc + W / 2;
   c.save();
   if (RV.img) { const s = 2 * RP_EXT * sc; c.globalAlpha = 0.9; c.drawImage(RV.img, X(-RP_EXT), Z(-RP_EXT), s, s); c.globalAlpha = 1; }
@@ -133,6 +144,9 @@ function rpDraw() {
   // objectives
   for (const o of R.obj || []) { c.beginPath(); c.arc(X(o[0]), Z(o[1]), 16 * u * zoom, 0, 7); c.fillStyle = o[3] === undefined ? 'rgba(224,180,74,.18)' : o[3] ? 'rgba(255,82,70,.2)' : 'rgba(78,166,255,.2)'; c.fill(); c.strokeStyle = 'rgba(224,180,74,.8)'; c.lineWidth = 2 * u; c.stroke();
     c.fillStyle = '#e0b44a'; c.font = `700 ${13 * u * Math.sqrt(zoom)}px system-ui,sans-serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(o[2], X(o[0]), Z(o[1])); }
+  // HEAT MAP: every death in the whole match as a soft red blob (where the fights were)
+  if (RV.heat) { if (!RV.heatPts) { RV.heatPts = []; for (let j = 1; j < F.length; j++) { const pm = new Map(); for (let n = 1; n < F[j - 1].length; n++) pm.set(F[j - 1][n][0], F[j - 1][n]); for (let n = 1; n < F[j].length; n++) { const e = F[j][n], p = pm.get(e[0]); if (p && p[4] && !e[4]) RV.heatPts.push([p[1] / 10, p[2] / 10]); } } }
+    c.globalCompositeOperation = 'lighter'; for (const [hx, hz] of RV.heatPts) { const x = X(hx), z = Z(hz), rr = 26 * u * Math.sqrt(zoom), gr = c.createRadialGradient(x, z, 0, x, z, rr); gr.addColorStop(0, 'rgba(255,70,40,.32)'); gr.addColorStop(1, 'rgba(255,70,40,0)'); c.fillStyle = gr; c.fillRect(x - rr, z - rr, rr * 2, rr * 2); } c.globalCompositeOperation = 'source-over'; }
   // trails (last 2 s)
   const back = Math.max(0, i - RP_HZ * 2);
   for (const [id, p] of pos) {
@@ -154,7 +168,7 @@ function rpDraw() {
     if (!p.alive) continue; const en = R.ents[id], x = X(p.x), z = Z(p.z), r = (en.me ? 7.5 : 6) * u * Math.sqrt(zoom);
     const dx = Math.sin(p.h), dz = Math.cos(p.h);
     c.beginPath(); c.moveTo(x, z); c.arc(x, z, r * 3.4, Math.atan2(dz, dx) - 0.42, Math.atan2(dz, dx) + 0.42); c.closePath(); c.fillStyle = en.r === 0 ? 'rgba(78,166,255,.22)' : 'rgba(255,82,70,.22)'; c.fill();
-    c.beginPath(); c.arc(x, z, r, 0, 7); c.fillStyle = col(en.r); c.fill(); c.lineWidth = (en.me ? 3 : 1.5) * u; c.strokeStyle = en.me ? '#fff' : 'rgba(0,0,0,.6)'; c.stroke();
+    c.beginPath(); c.arc(x, z, r, 0, 7); c.fillStyle = col(en.r); c.fill(); c.lineWidth = (en.me || id === RV.fid ? 3 : 1.5) * u; c.strokeStyle = en.me ? '#fff' : id === RV.fid ? '#ffd23a' : 'rgba(0,0,0,.6)'; c.stroke();
     c.font = `${en.me ? 700 : 600} ${11 * u * Math.sqrt(zoom)}px system-ui,sans-serif`; c.textAlign = 'center'; c.textBaseline = 'bottom';
     c.fillStyle = 'rgba(0,0,0,.65)'; c.fillText(en.me ? 'YOU' : en.n, x + 1, z - r - 3 * u + 1); c.fillStyle = en.me ? '#fff' : '#dfe3e6'; c.fillText(en.me ? 'YOU' : en.n, x, z - r - 3 * u);
   }
@@ -174,18 +188,24 @@ function rpSide() {
 (() => {
   // screen markup
   const d = document.createElement('div'); d.id = 'replay'; d.className = 'screen hide';
-  d.innerHTML = `<div class="rp-wrap"><div class="rp-top"><h2>REPLAY · LAST MATCH</h2><div class="rp-info" id="rpInfo"></div><div class="rp-score" id="rpScore"></div></div>
+  d.innerHTML = `<div class="rp-wrap"><div class="rp-top"><h2 id="rpTitle">REPLAY THEATRE · LAST MATCH</h2><button class="btn" id="rpLibBtn">LIBRARY</button><div class="rp-info" id="rpInfo"></div><div class="rp-score" id="rpScore"></div></div>
 <div id="rpEmpty" class="rp-empty">No replay yet. Play a match and it will be here to rewatch.<br><br><button class="btn primary" id="rpBack0">BACK</button></div>
 <div id="rpMain" class="rp-main"><div class="rp-stage"><canvas id="rpCanvas"></canvas></div>
 <div class="rp-side"><div class="rp-sh">KILL FEED</div><div id="rpFeed" class="rp-feed"></div>
 <div class="rp-keys">SPACE / X · PLAY<br>← → / LB RB · SKIP 5 s<br>ESC / B · BACK</div></div></div>
 <div class="rp-bar" id="rpBar"><button class="btn" id="rpPlay">PLAY</button><input type="range" id="rpSeek" min="0" max="100" step="1" value="0"><span id="rpTime" class="rp-time">0:00</span>
-<button class="btn" id="rpSpeed">1×</button><button class="btn" id="rpFollow">FOLLOW</button><button class="btn primary" id="rpBack">BACK</button></div></div>`;
+<button class="btn" id="rpSpeed">1×</button><button class="btn" id="rpFollow">FOLLOW</button><button class="btn" id="rpHeat">HEAT MAP</button><button class="btn" id="rpIn">MARK IN</button><button class="btn" id="rpOut">MARK OUT</button><button class="btn" id="rpClip" disabled>SAVE CLIP</button><button class="btn primary" id="rpBack">BACK</button></div>
+<div id="rpLib" class="rp-lib hide"></div></div>`;
   document.body.appendChild(d);
   $('rpBack0').onclick = $('rpBack').onclick = () => { sfx.ui(); closeReplay(); };
   $('rpPlay').onclick = rpToggle;
   $('rpSpeed').onclick = () => { const L = [0.5, 1, 2, 4]; RV.speed = L[(L.indexOf(RV.speed) + 1) % L.length]; rpButtons(); sfx.ui(); };
-  $('rpFollow').onclick = () => { RV.follow = !RV.follow; rpButtons(); sfx.ui(); };
+  $('rpFollow').onclick = () => { const R = RPLAST; if (!R) return; const n = R.ents.length, me = R.ents.findIndex(e => e.me); RV.fid = RV.fid < 0 ? (me >= 0 ? me : 0) : (RV.fid + 1) % (n + 1); if (RV.fid === n || (RV.fid === me && RV.fidLoop)) { RV.fid = -1; RV.fidLoop = false; } else if (RV.fid !== me) RV.fidLoop = true; RV.follow = RV.fid >= 0; rpButtons(); sfx.ui(); };
+  $('rpHeat').onclick = () => { RV.heat = !RV.heat; rpButtons(); sfx.ui(); };
+  $('rpIn').onclick = () => { RV.in = RV.t; if (RV.out <= RV.in) RV.out = -1; rpButtons(); sfx.ui(); };
+  $('rpOut').onclick = () => { if (RV.in < 0) RV.in = Math.max(0, RV.t - 10); RV.out = RV.t; rpButtons(); sfx.ui(); };
+  $('rpClip').onclick = () => { if (rpSaveClip()) { try { toast2('CLIP SAVED · OPEN IT FROM THE LIBRARY'); } catch (e) {} } rpButtons(); };
+  $('rpLibBtn').onclick = () => { sfx.ui(); const L = $('rpLib'); if (L.classList.contains('hide')) rpLibShow(); else rpLibHide(); };
   $('rpSeek').oninput = e => { RV.t = clamp(+e.target.value / 10, 0, RPLAST ? RPLAST.len : 0); };
   const s = document.createElement('style');
   s.textContent = `#replay{position:fixed;inset:0;z-index:30;background:radial-gradient(circle at 50% 30%,#14191b,#07090a);display:flex;pointer-events:auto}#replay.hide{display:none}
@@ -198,8 +218,30 @@ function rpSide() {
 .rp-side{width:300px;display:flex;flex-direction:column;gap:8px}.rp-sh{font-size:12px;letter-spacing:.35em;color:var(--accent)}
 .rp-feed{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:6px;font-size:13px}.rp-feed>div{background:rgba(0,0,0,.35);padding:6px 9px;border-left:2px solid var(--line)}.rp-feed i{font-style:normal;color:var(--dim);font-size:11px;margin-right:4px}.rp-feed .fw{color:var(--dim);margin:0 4px}.rp-feed .ft{color:var(--accent);font-size:11px}.rp-feed .fp{display:none}
 .rp-keys{font-size:11px;letter-spacing:.12em;color:var(--dim);line-height:1.8}
-.rp-bar{display:flex;align-items:center;gap:10px}.rp-bar .btn{min-width:0;padding:10px 16px}#rpSeek{flex:1;accent-color:var(--accent)}.rp-time{font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim);min-width:92px;text-align:center}
+.rp-bar{display:flex;align-items:center;gap:8px;flex-wrap:wrap}.rp-bar .btn{min-width:0;width:auto;flex:0 0 auto;padding:8px 12px;white-space:nowrap;font-size:11px}#rpSeek{flex:1 1 100%;order:-1;accent-color:var(--accent)}.rp-time{font-variant-numeric:tabular-nums;font-size:13px;color:var(--dim);min-width:92px;text-align:center}
 .rp-empty{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:var(--dim);letter-spacing:.12em;text-align:center}
+.rp-lib{position:absolute;top:64px;right:24px;width:420px;max-height:70vh;overflow:auto;background:rgba(8,10,11,.96);border:1px solid var(--line);padding:12px;z-index:2;display:flex;flex-direction:column;gap:6px}.rp-lib.hide{display:none}
+.rp-lib h3{margin:6px 0 2px;font-size:11px;letter-spacing:.3em;color:var(--accent)}.rp-li{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid var(--line);cursor:pointer;font-size:12px}.rp-li:hover,.rp-li:focus{border-color:#fff;outline:none}
+.rp-li b{flex:1;color:#fff;letter-spacing:.08em}.rp-li span{color:var(--dim);font-size:11px}.rp-li .x{border:0;background:none;color:#ff7a6a;cursor:pointer;font-size:14px}.rp-bar #rpClip[disabled]{opacity:.4}
 @media (max-width:800px){.rp-side{display:none}}`;
   document.head.appendChild(s);
 })();
+
+/* ---------- REPLAY THEATRE: clips and the library */
+function rpSaveClip() {
+  const R = RPLAST; if (!R || RV.in < 0 || RV.out <= RV.in + 1) return false;
+  const a = RV.in * 10, b = RV.out * 10, sh = f => [f[0] - a].concat(f.slice(1));
+  const frames = R.frames.filter(f => f[0] >= a && f[0] <= b).map(sh); if (frames.length < 3) return false;
+  const clip = Object.assign({}, R, { clip: `${R.name || 'MATCH'} · ${rpFmt(RV.in)}-${rpFmt(RV.out)}`, cdate: Date.now(), len: RV.out - RV.in, frames,
+    feed: R.feed.filter(f => f[0] >= a && f[0] <= b).map(f => [f[0] - a, f[1]]), score: (R.score || []).filter(s => s[0] >= a && s[0] <= b).map(sh) });
+  RP_LIB.clips = [clip].concat(RP_LIB.clips).slice(0, 20); sbPut('clips', RP_LIB.clips); RV.in = RV.out = -1; return true;
+}
+function rpLibHide() { const L = $('rpLib'); if (L) L.classList.add('hide'); }
+function rpLibShow() {
+  const L = $('rpLib'); if (!L) return; const when = d => { const x = new Date(d); return x.toLocaleDateString() + ' ' + x.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }); };
+  const row = (r, i, kind) => `<div class="rp-li" tabindex="0" data-rpk="${kind}" data-rpi="${i}"><b>${kind === 'c' ? r.clip : r.name || 'MATCH'}</b><span>${(MAPS[r.map] || {}).name || r.map} · ${rpFmt(r.len)} · ${when(kind === 'c' ? r.cdate : r.date)}</span>${kind === 'c' ? `<button class="x" data-rpdel="${i}" title="Delete clip">✕</button>` : ''}</div>`;
+  L.innerHTML = `<h3>MATCHES · THE LAST 10</h3>${RP_LIB.matches.length ? RP_LIB.matches.map((r, i) => row(r, i, 'm')).join('') : '<span class="dim">no matches yet</span>'}<h3>CLIPS · ${RP_LIB.clips.length} OF 20</h3>${RP_LIB.clips.length ? RP_LIB.clips.map((r, i) => row(r, i, 'c')).join('') : '<span class="dim">mark IN and OUT on the timeline, then SAVE CLIP</span>'}`;
+  L.classList.remove('hide');
+  for (const el of L.querySelectorAll('.rp-li')) el.onclick = ev => { if (ev.target.dataset.rpdel !== undefined) return; const r = (el.dataset.rpk === 'c' ? RP_LIB.clips : RP_LIB.matches)[+el.dataset.rpi]; if (r) { sfx.ui(); openReplay(r); } };
+  for (const b of L.querySelectorAll('[data-rpdel]')) b.onclick = () => { RP_LIB.clips.splice(+b.dataset.rpdel, 1); sbPut('clips', RP_LIB.clips); sfx.ui(); rpLibShow(); };
+}
