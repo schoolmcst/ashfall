@@ -52,6 +52,7 @@ const SCHEMA = {
     { k: 'sheen', t: 'range', name: 'SURFACE SHEEN', hint: 'Fresnel glint on metal and wet surfaces at grazing angles', min: 0, max: 150, step: 10, fmt: pct },
     { t: 'head', name: 'EFFECTS' },
     { k: 'post', t: 'seg', name: 'BLOOM & COLOUR', hint: 'Glow on lights, neon, fire and muzzle flashes, film colour grading, edge smoothing. LOW is lighter on the graphics card', opts: [['off', 'OFF'], ['low', 'LOW'], ['high', 'HIGH']] },
+    { k: 'shadowLift', t: 'range', name: 'SHADOW BRIGHTNESS', hint: 'Lifts the darkest parts of the picture so things in shadow stay easy to see (BLOOM & COLOUR on)', min: 0, max: 100, step: 10, fmt: pct },
     { k: 'bloom', t: 'range', name: 'GLOW', hint: 'How strong the glow is (BLOOM & COLOUR on)', min: 0, max: 200, step: 10, fmt: pct },
     { k: 'fxQ', t: 'seg', name: 'EFFECTS QUALITY', hint: 'Sparks, debris, dust and smoke from shots and explosions', opts: [['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
     { k: 'grass', t: 'range', name: 'GRASS DENSITY', min: 0, max: 100, step: 5, fmt: pct },
@@ -126,7 +127,7 @@ const SCHEMA = {
   ],
 };
 let curTab = 'VIDEO';
-const VIDEO_KEYS = new Set(['quality', 'post', 'bloom', 'renderScale', 'dynRes', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'fov', 'brightness', 'sheen', 'gunShader', 'grain', 'showFps', 'radar', 'crosshair', 'crosshairColor']);
+const VIDEO_KEYS = new Set(['quality', 'post', 'bloom', 'shadowLift', 'renderScale', 'dynRes', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'fov', 'brightness', 'sheen', 'gunShader', 'grain', 'showFps', 'radar', 'crosshair', 'crosshairColor']);
 // changing one of these by hand turns the preset into CUSTOM
 const DETAIL_KEYS = new Set(['renderScale', 'post', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'texQ', 'grain']);
 const gpuShort = () => { let n = String(GPU_NAME || 'UNKNOWN'); const m = /^ANGLE \((.*)\)$/.exec(n); if (m) { const p = m[1].split(/,\s*(?![^()]*\))/); n = p.length > 1 ? p[1] : p[0]; }

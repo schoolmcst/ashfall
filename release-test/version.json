@@ -1,14 +1,11 @@
 {
- "version": "1.2.64",
+ "version": "1.2.65",
  "notes": [
-  "NEW ZOMBIES MAP: THE HIGH TIDE - CHAPTER SIX: LAST CALL (BETA). The Mary Jane's sister ship is a 420 party cruise, still lit up and still playing music. The lido deck and its pool, the grand atrium, the Munchies Buffet, the High Rollers Casino, Club 420, the Kush Theatre and the VIP lounge at the bow.",
-  "7 chapters, 12 tapes and a new boss: THE CRUISE DIRECTOR (purple top hat, pink bow tie). Find the spark plugs and start the generator, take the purser's keycard, burn the Nightshade party favours, open the vault and fog the whole ship with the cure from the Club 420 fog machine.",
-  "NEW WONDER WEAPON: THE DISCO BONG. Fires a glowing disco ball that hangs in the air. Zombies around it dance and get zapped by its lasers.",
-  "A light-up dance floor, a disco ball and party beams once the power is back. LAUNCH PADS between the lido, the buffet, the casino and the bow. New AFTERPARTY camo for upgraded guns on this map.",
-  "Chapter five now leads into chapter six.",
-  "Still in from 1.2.63: BLOOM & COLOUR graphics (glow, colour grading, smoother edges; Settings > VIDEO > EFFECTS).",
-  "Still in from 1.2.62, 1.2.61 and 1.2.60: THE MARY JANE, DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS, Season 2 HARVEST, save codes, block, word filter, error reports."
+  "FIX: random frame drops with BLOOM & COLOUR on. Dynamic resolution was rebuilding the graphics buffers every few seconds; now they are made once.",
+  "FIX: shadows were too dark. The colour grading no longer darkens the dark tones, and the vignette is lighter.",
+  "NEW: Settings > VIDEO > EFFECTS > SHADOW BRIGHTNESS (0-100%, default 60%). Raise it if dark corners are still hard to see.",
+  "Still in from 1.2.64: THE HIGH TIDE (zombies chapter six), THE DISCO BONG, BLOOM & COLOUR graphics."
  ],
- "sha256": "53299159411d48d0b0ae7e72be7636ef3072965df1aa099f4d9b26d9e175e9b5",
+ "sha256": "299ce1b1b7ce08e2de92a4f30b62f0d35469cbe4ff9ac6545e750895642b662f",
  "minApp": "1.0.0"
 }
