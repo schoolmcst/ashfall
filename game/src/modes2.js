@@ -48,6 +48,7 @@ function m2Pack() {
   if (M.mode === 'ru' && M.ru) return ruPack();
   if (M.mode === 'pp' && M.pp) return ppPack();
   if (M.ph) return phPack();
+  if (M.br) return brPack();
   if (M.mode === 'kc' && M.kc) { const k = M.kc; return ['k', ts[0], ts[1], k.tags.length, ...k.tags.flatMap(t => [t.id, t.team, r2(t.x), r2(t.z), r2(t.y)]), ...k.ev.flatMap(v => v)]; }
   if (M.mode === 'dom' && M.dom) return ['d', ts[0], ts[1], ...M.dom.pts.flatMap(p => [p.own, p.capT, Math.round(p.prog * 100), p.status])];
 }
@@ -56,7 +57,8 @@ function m2Apply(o) {
   if (o[0] === 'd' && M.dom) domApply(o);
   if (o[0] === 'r' && M.ru) ruApply(o);
   if (o[0] === 'p' && M.pp) ppApply(o);
-  if (o[0] === 'h' && M.ph) phApply(o);
+  if (o[0] === 'q' && M.ph) phApply(o);
+  if (o[0] === 'b' && M.br) brApply(o);
 }
 function m2HudInfo() {
   if (M.mode === 'ru' && M.ru) return ruHud();

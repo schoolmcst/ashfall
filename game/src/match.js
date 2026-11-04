@@ -29,13 +29,14 @@ const MODES = {
   ph: { name: 'PROP HUNT', short: 'PROPS', icon: 'PRP', desc: 'Hunters against props, swapping every two minutes. Props become crates, barrels, jars and bongs and hide; hunters find them, but every missed shot hurts.', teams: true, respawn: 4, score: 999, time: 6, perTeam: 5, unit: 'POINTS' },
   pp: { name: 'PUFF PUFF PASS', short: 'PASS', icon: 'PPP', desc: 'Free-for-all where everyone holds the SAME gun. Every 40 seconds it gets passed on to a new one from the whole armory. Most kills wins.', teams: false, respawn: 2.5, score: 25, time: 10, players: 8, unit: 'KILLS' },
   oru: { name: 'ONLINE RE-UP', short: 'ONLINE RE-UP', icon: 'RUP', desc: 'Real people, grind: grab the stash bags that drop on every kill and bank them at a STASH HOUSE. Die carrying and you drop the lot.', teams: true, respawn: 3, score: 30, time: 0, perTeam: 6, unit: 'BAGS', online: true, base: 'ru' },
+  obr: { name: 'ONLINE LAST TOKE', short: 'ONLINE BR', icon: 'BR', desc: 'Real people, battle royale: one life, pistols, loot crates and the closing Nightshade cloud. Last one standing wins the round. Bots fill up to 16.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br' },
   oph: { name: 'ONLINE PROP HUNT', short: 'ONLINE PROPS', icon: 'PRP', desc: 'Real people, hunters against props, swapping every two minutes. Hide as a crate or a bong, or hunt them down.', teams: true, respawn: 4, score: 999, time: 6, perTeam: 6, unit: 'POINTS', online: true, base: 'ph' },
   opp: { name: 'ONLINE PUFF PUFF PASS', short: 'ONLINE PASS', icon: 'PPP', desc: 'Real people, every one for themselves, everyone on the same gun. It changes every 40 seconds.', teams: false, respawn: 2.5, score: 25, time: 0, players: 12, unit: 'KILLS', online: true, base: 'pp' },
   camp: { name: 'CAMPAIGN', short: 'STORY', icon: 'CMP', desc: 'FIRST HARVEST: the story missions.', teams: true, respawn: 0, score: 0, time: 0, perTeam: 1, unit: 'STEPS' },
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'inf', 'gf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'inf', 'gf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 // bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
@@ -239,7 +240,7 @@ const playerAlive = () => (G.state === 'playing' || pausedOnline()) && M.me && M
 function respawnPlayer() {
   if (NET.spec) { G.state = 'spectate'; G.specIdx = G.specIdx || 0; return; }   // WATCH: spectators never spawn
   const p = pickSpawnFor(M.myTeam, sideOf(M.myTeam)); placePlayer(p);
-  if (M.mode === 'gun') equipGunGame(M.me.level); else if (M.pp) ppEquipMe(); else if (M.br) { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; M.br.myTier = -1; } else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
+  if (M.mode === 'gun') equipGunGame(M.me.level); else if (M.pp) ppEquipMe(); else if (M.br) { if (M.online && M.br.phase >= 1 && !M.br.winTxt && M.t > 30) { G.state = 'spectate'; G.specIdx = 0; showBanner('ROUND IN PROGRESS', 'you join the next round · watch for now'); return; } equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; M.br.myTier = -1; } else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
   G.state = 'playing'; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide'); $('killcam').classList.remove('kcv'); try { kcYou(null); } catch (e) {} vig.style.opacity = 0;
   camera.fov = baseFov; camera.updateProjectionMatrix(); lockPointer(); hideCenter();
 }
@@ -589,7 +590,7 @@ function netObjPack() {
   const ts = M.teamScore || [0, 0];
   if (M.mode === 'hp' && M.hp) { const h = M.hp; return ['h', h.idx, Math.round(h.t), Math.ceil(h.wait || 0), h.status, ts[0], ts[1]]; }
   if (M.mode === 'ctf' && M.ctf) return ['c', ts[0], ts[1], ...M.ctf.flags.flatMap(f => [CTF_ST.indexOf(f.state), f.carrier === 'player' ? NET.me : f.carrier ? (f.carrier.net || (f.carrier.entry && f.carrier.entry.botLabel) || '') : '', r2(f.x), r2(f.z)])];
-  if (M.kc || M.dom || M.ru || M.pp) return m2Pack();
+  if (M.kc || M.dom || M.ru || M.pp || M.ph || M.br) return m2Pack();
   if (M.inf) return infPack();
   if (M.gf) return gfPack();
   if (M.mode === 'snd' && M.snd) { const sn = M.snd, b = sn.bomb; return ['s', sn.round, sn.wins[0], sn.wins[1], sn.att, ['wait', 'freeze', 'live', 'planted', 'post', 'done'].indexOf(sn.state), Math.round(sn.t), b ? r2(b.x) : 0, b ? r2(b.z) : 0, b ? +b.t.toFixed(1) : -1, b ? b.n : '', sn.bombN || 0, sn.lastWhy || '']; }
@@ -597,7 +598,7 @@ function netObjPack() {
 }
 function netObjApply() {
   const o = NET.ob; if (!Array.isArray(o)) return;
-  if (o[0] === 'k' || o[0] === 'd' || o[0] === 'r' || o[0] === 'p') { m2Apply(o); return; }
+  if (o[0] === 'k' || o[0] === 'd' || o[0] === 'r' || o[0] === 'p' || (o[0] === 'q' && M.ph) || (o[0] === 'b' && M.br)) { m2Apply(o); return; }
   if (o[0] === 'i') { infApply(o); return; }
   if (o[0] === 'g') { gfApply(o); return; }
   if (o[0] === 'h' && M.hp) {

@@ -6,7 +6,7 @@
    Props respawn as props, hunters as hunters. Highest score when the time runs out wins.
    Bots: props walk to a hiding spot and freeze (turning now and then); hunters wander and only shoot a prop they have
    watched long enough to suspect (moving props are spotted much faster).
-   Online: the host runs the clock and the scores and sends ['h', hunting team, time left, score A, score B]; everyone
+   Online: the host runs the clock and the scores and sends ['q', hunting team, time left, score A, score B]; everyone
    sends what they are disguised as in their presence (ph), so every machine draws the same props. */
 const PH_SWAP = 120, PH_HIDE = 20, PH_TICK = 10, PH_MISS = 4;
 const PH_KINDS = [
@@ -135,6 +135,6 @@ function phHud() {
   return me === 'prop' ? `YOU ARE A <b>${PH_KINDS[ph.kind].n}</b> · ${actName('use')} CHANGE · ${actName('reload')} TURN · ${hide ? 'HIDE NOW' : 'STAY STILL'} · SWAP IN ${left} s`
     : `${hide ? 'BLIND' : 'HUNTING'} · ${PH_MISS} HP A MISSED SHOT · SWAP IN ${left} s`;
 }
-function phPack() { const ph = M.ph; return ['h', ph.hunt, Math.round(ph.t * 10) / 10, M.teamScore[0], M.teamScore[1], ph.swaps]; }
+function phPack() { const ph = M.ph; return ['q', ph.hunt, Math.round(ph.t * 10) / 10, M.teamScore[0], M.teamScore[1], ph.swaps]; }
 function phApply(o) { const ph = M.ph; if (!ph) return; ph.hunt = o[1] | 0; ph.t = +o[2] || 0; M.teamScore[0] = o[3] | 0; M.teamScore[1] = o[4] | 0; ph.swaps = o[5] | 0; }
 function phClear() { if (M && M.ph && M.ph.me) scene.remove(M.ph.me); const bl = $('phBlind'); if (bl) bl.style.display = 'none'; }
