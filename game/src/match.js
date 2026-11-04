@@ -120,7 +120,10 @@ const sideOf = team => !M.def.teams ? -1 : M.mode === 'snd' ? (team === M.snd.at
 const MATCH_CFG_KEY = 'ashfall.match.v1';
 let LOBBY = { mode: 'tdm', map: 'random' };
 // 'random' picks any map except the one you just played
-function pickMapFor(sel, mode) { if (sel && MAPS[sel] && (mode === "camp" || !MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
+function pickMapFor(sel, mode) { const md = mode || (typeof NET !== 'undefined' && NET.on && NET.mode) || '', br = md === 'br' || (MODES[md] && MODES[md].base === 'br');
+  if (br && (!sel || sel === 'random' || sel === 'stashisle')) return 'stashisle';   // LAST TOKE plays its own island
+  if (sel && MAPS[sel] && MAPS[sel].brOnly && !br) sel = 'random';
+  if (sel && MAPS[sel] && (mode === "camp" || !MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
 try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || (MAPS[o.map] && !MAPS[o.map].hidden))) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; if (o && Array.isArray(o.playlist)) LOBBY.playlist = o.playlist.filter(k => MODES[k] && MODES[k].online); } catch (e) {}
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }

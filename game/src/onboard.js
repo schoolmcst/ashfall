@@ -26,8 +26,8 @@ function featApply() { const f = LOBBY.featNext; LOBBY.featNext = null; if (!M) 
 // every frame of a featured match: big heads on everyone
 function featTick() { if (!M || !M.feat || !M.feat.bighead) return; for (const e of enemies) if (e.rig && e.rig.head && !e.featBH) { e.featBH = true; e.rig.head.scale.multiplyScalar(2); } }
 /* ---------- the cards */
-function onbCard(html, acts) {
-  const o = document.createElement('div'); o.className = 'onb-ov'; o.innerHTML = `<div class="onb-box">${html}</div>`; document.body.appendChild(o);
+function onbCard(html, acts, menuOnly = true) {
+  const o = document.createElement('div'); o.className = 'onb-ov'; if (menuOnly) o.dataset.menu = '1'; o.innerHTML = `<div class="onb-box">${html}</div>`; document.body.appendChild(o);
   const close = () => { o.remove(); removeEventListener('keydown', key, true); };
   const key = e => { if (e.code === 'Escape') { e.preventDefault(); e.stopPropagation(); close(); } };
   addEventListener('keydown', key, true);
@@ -45,7 +45,7 @@ function onbReady() {
   onbCard(`<small>TRAINING DONE</small><b>YOU'RE READY</b><p>Everything ticked. Pick where to go next:</p>
 <div class="onb-tiles"><button class="onb-t" data-onb="mp"><b>MULTIPLAYER</b><span>quick play with real people</span></button><button class="onb-t" data-onb="z"><b>ZOMBIES</b><span>survive the dead, solo or co-op</span></button><button class="onb-t" data-onb="c"><b>CAMPAIGN</b><span>FIRST HARVEST · the story</span></button></div>
 <div class="onb-acts"><button class="btn" data-onb="stay">STAY IN THE STASH YARD</button></div>`,
-    { mp: () => { try { leaveGame(); } catch (e) {} actions('go-on'); }, z: () => { try { leaveGame(); } catch (e) {} actions('go-zombies'); }, c: () => { try { leaveGame(); } catch (e) {} actions('campaign'); }, stay: () => {} });
+    { mp: () => { try { leaveGame(); } catch (e) {} actions('go-on'); }, z: () => { try { leaveGame(); } catch (e) {} actions('go-zombies'); }, c: () => { try { leaveGame(); } catch (e) {} actions('campaign'); }, stay: () => {} }, false);
 }
 function onbNewModes() {
   onbCard(`<small>NEW IN THE BETA</small><b>FOUR NEW WAYS TO PLAY</b>
@@ -56,6 +56,7 @@ function onbNewModes() {
 }
 const ONBS = { training: false, readyShown: false };
 function onbCheck() {
+  if (typeof G !== 'undefined' && G.state !== 'menu') for (const o of document.querySelectorAll('.onb-ov[data-menu]')) o.remove();   // a match started (from a key or the party): the menu cards go
   if (typeof G === 'undefined' || G.state !== 'menu' || !$('menu') || $('menu').classList.contains('hide') || document.querySelector('.onb-ov,#hcSplash')) return;
   let onb = null, nm = null; try { onb = localStorage.getItem(ONB_KEY); nm = localStorage.getItem(NEWM_KEY); } catch (e) {}
   const fresh = !(typeof PROG !== 'undefined' && PROG.xp > 0);

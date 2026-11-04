@@ -1,11 +1,9 @@
 {
- "version": "1.2.72",
+ "version": "1.2.73",
  "notes": [
-  "NEW: first-time training + NEW MODES popup + menu tiles",
-  "FEATURED THIS WEEK mode (2x XP)",
-  "auto-saved best multi-kill clips",
-  "zombies drop Grow Op seeds (bosses, every 10 rounds)"
+  "NEW MAP: STASH ISLAND - LAST TOKE's own island, twice the size of any map (8 places to loot)",
+  "fix: the welcome card no longer stays up when a match starts"
  ],
- "sha256": "c3e53bfa5f469800390561c8a164089022653f89afa2374aa94ba67ea9649d29",
+ "sha256": "adadf325d0edea114a6dc6c2355c9fda9871ff01267f6530f9333740856ee271",
  "minApp": "1.0.0"
 }

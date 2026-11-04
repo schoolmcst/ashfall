@@ -389,7 +389,7 @@ function buildGrass(o = {}) {
   grassMesh = new THREE.InstancedMesh(mergeGeos(cards), mat, grassMax);
   const dummy = new THREE.Object3D(); let n = 0, guard = 0;
   while (n < grassMax && guard++ < grassMax * 6) {
-    const x = rnd(-RUIN_A + 1, RUIN_A - 1), z = rnd(-RUIN_A + 1, RUIN_A - 1);
+    const x = rnd(-ARENA + 1, ARENA - 1), z = rnd(-ARENA + 1, ARENA - 1);
     const gc = cellOf(z) * NN + cellOf(x);
     if (navBlocked[gc] || (lvN[gc] > 1) || (o.avoid && o.avoid(x, z))) continue;
     const s = 0.7 + Math.random() * 0.9;

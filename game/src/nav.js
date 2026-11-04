@@ -87,9 +87,11 @@ function nodeOf(x, z, y) {
   if (best >= 0) return best;
   return l >= 0 ? c * NL + l : -1;
 }
+const FLOWB = { t: -1, n: 0 };
 function flowField(x, z, y) {
   const node = nodeOf(x, z, y); if (node < 0) return null;
   let f = FLOW.get(node); if (f) { f.used = NOW; return f.d; }
+  if (ARENA > 44) { if (FLOWB.t !== NOW) { FLOWB.t = NOW; FLOWB.n = 0; } if (FLOWB.n++ >= 1) return null; }   // a big map: at most one new field a frame (the rest walk straight until next frame)
   let d = null;
   if (FLOW.size > 40) { let ok = null, ou = 1e9; FLOW.forEach((v, k) => { if (v.used < ou) { ou = v.used; ok = k; } }); d = FLOW.get(ok).d; FLOW.delete(ok); }   // reuse the oldest field's memory
   if (!d || d.length !== NN * NN * NL) d = new Int32Array(NN * NN * NL); d.fill(-1); const q = flowQ;
