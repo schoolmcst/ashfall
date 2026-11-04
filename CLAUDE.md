@@ -44,11 +44,19 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
 - Output JSON lands in `Documents\ashfall\hq\out\`; `hq/hqpack.py` packs them into `game/src/hqdata.js`.
 
 ## Where things stand (handoff, Nov 2026)
-- TEST APP has 1.2.62 (zombies chapter 5 THE MARY JANE), 1.2.61 (DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS) and
-  1.2.60 (Season 2 HARVEST, save codes, block, word filter, error reports). None of it is public yet: release with
-  `tools/release.sh public` only when the owner says "send it".
+- TEST APP has 1.2.64 (zombies chapter 6 THE HIGH TIDE: map_tide.js, ZMAPCFG.hightide, THE DISCO BONG, THE CRUISE DIRECTOR)
+  and 1.2.63 (BLOOM & COLOUR: post.js - bloom, grading, FXAA, sharpen; setting `post` off/low/high + `bloom`), on top of
+  1.2.62 (THE MARY JANE), 1.2.61 (DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS) and 1.2.60 (Season 2, save codes...).
+  None of it is public yet: release with `tools/release.sh public` only when the owner says "send it".
+- The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.
+- Before/after graphics pictures: `MAPS=a,b SHOTS=dir node game/test/run.js game/test/_postcmp.js`.
+- The owner asked for Unreal Engine once: not possible here (no editor; would be a full rewrite and break patching).
+  The visual upgrade path is post.js, better materials and the Blender models instead.
+- Cloud containers may lack the test paths: link /opt/node-tools/node_modules/playwright to
+  /home/claude/.npm-global/lib/node_modules/playwright and the newest /opt/pw-browsers/chromium-*/chrome-linux64/chrome to
+  /opt/pw-browsers/chromium-1194/chrome-linux/chrome. The mp_* tests could not reach the local signalling server there.
 - Open: the owner saw red error boxes once. The error box now has COPY REPORT; ask for the pasted report.
 - Owner's rules: everything stays BETA; weed/drug theme; built-in voices only; gold is only the weapon-grind reward;
   lots of pictures and time estimates in replies; never click or take focus on the owner's main monitor.
 - Leave secretvids.js and the SECRET_PACK block in progress.js untouched and never bring them up.
-- Tests that cover the newest work: s_season2.js, s_launch.js, s_modes3.js, mp_modes3.js, s_zship.js, s_zisle.js.
+- Tests that cover the newest work: s_ztide.js, s_season2.js, s_launch.js, s_modes3.js, mp_modes3.js, s_zship.js, s_zisle.js.

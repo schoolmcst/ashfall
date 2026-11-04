@@ -14,7 +14,7 @@ const POST_OK = () => !POST.failed && S.post && S.post !== 'off' && !G.bench;
 // the grade for a map: from how dark its sky is (night maps glow more), or the map's own env.grade
 function postEnv(e) {
   const c = new THREE.Color(e.top), h = new THREE.Color(e.horizon), L = 0.3 * (c.r + h.r) + 0.55 * (c.g + h.g) + 0.15 * (c.b + h.b), night = clamp((0.55 - L) / 0.4, 0, 1);
-  Object.assign(POST.grade, { bloom: 0.3 + 0.7 * night, th: 0.92 - 0.32 * night, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.16 + 0.04 * night }, e.grade || {});
+  Object.assign(POST.grade, { bloom: 0.3 + 0.3 * night, th: 0.92 - 0.14 * night, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.16 + 0.04 * night }, e.grade || {});
 }
 const POST_VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
 function postMats() {

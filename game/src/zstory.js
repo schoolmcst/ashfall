@@ -107,6 +107,7 @@ function zsMake(it) {
   else if (K === 'stash') { for (let i = 0; i < 3; i++) { add(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0x5a1a8a, transparent: true, opacity: 0.8, emissive: new THREE.Color(0x7a2cff), emissiveIntensity: 0.6 }), -0.08 + i * 0.08, 0.05, (i % 2) * 0.05); add(new THREE.CylinderGeometry(0.037, 0.037, 0.025, 12), new THREE.MeshStandardMaterial({ color: 0xe8e8e8 }), -0.08 + i * 0.08, 0.11, (i % 2) * 0.05); } for (let i = 0; i < 6; i++) add(new THREE.SphereGeometry(0.012, 6, 4), zsGlowMat(0xb06cff, 1.2), (Math.random() - 0.5) * 0.3, 0.01, 0.1 + Math.random() * 0.1); }
   else if (K === 'jar') { col = 0x4adf5a; add(new THREE.CylinderGeometry(0.09, 0.09, 0.22, 16), new THREE.MeshStandardMaterial({ color: 0x8adf8a, transparent: true, opacity: 0.5, roughness: 0.05 }), 0, 0.11, 0); add(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0x3e6a24, roughness: 1 }), 0, 0.08, 0); add(new THREE.CylinderGeometry(0.095, 0.095, 0.03, 16), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.235, 0); add(new THREE.BoxGeometry(0.12, 0.06, 0.005), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0, 0.12, 0.091); }
   else if (K === 'fuse') { col = 0xffa030; add(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 12), new THREE.MeshStandardMaterial({ color: 0xe8e2d0, transparent: true, opacity: 0.7, roughness: 0.1 }), 0, 0.03, 0).rotation.z = Math.PI / 2; for (const x of [-0.09, 0.09]) add(new THREE.CylinderGeometry(0.033, 0.033, 0.03, 12), new THREE.MeshStandardMaterial({ color: 0xc8a030, metalness: 0.9, roughness: 0.3 }), x, 0.03, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.005, 0.005, 0.15, 6), zsGlowMat(col, 1.5), 0, 0.03, 0).rotation.z = Math.PI / 2; }
+  else if (K === 'plug') { col = 0xff8a2a; add(new THREE.CylinderGeometry(0.022, 0.022, 0.07, 10), new THREE.MeshStandardMaterial({ color: 0xf0f0ea, roughness: 0.3 }), 0, 0.035, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.028, 0.028, 0.035, 6), new THREE.MeshStandardMaterial({ color: 0x9aa0a6, metalness: 0.9, roughness: 0.3 }), 0.05, 0.035, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.015, 0.015, 0.05, 8), new THREE.MeshStandardMaterial({ color: 0x8a8f94, metalness: 0.8 }), 0.09, 0.035, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.008, 0.008, 0.06, 6), zsGlowMat(col, 1.6), -0.06, 0.035, 0).rotation.z = Math.PI / 2; }
   else if (K === 'tape') { col = 0xffc24a; add(new THREE.BoxGeometry(0.1, 0.015, 0.065), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.01, 0); add(new THREE.BoxGeometry(0.07, 0.016, 0.03), zsGlowMat(col, 0.9), 0, 0.012, 0); }
   else if (K === 'blood') { col = 0xd02040; add(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 10), new THREE.MeshStandardMaterial({ color: 0x9a0a1a, transparent: true, opacity: 0.85, emissive: new THREE.Color(0x6a0010), emissiveIntensity: 0.6 }), 0, 0.06, 0); add(new THREE.CylinderGeometry(0.022, 0.022, 0.025, 10), new THREE.MeshStandardMaterial({ color: 0x9a3cff }), 0, 0.13, 0); }
   else if (K === 'valve') { col = 0xff5a3a; const red = new THREE.MeshStandardMaterial({ color: 0xb02a1a, roughness: 0.5, metalness: 0.4 }); const t = add(new THREE.TorusGeometry(0.16, 0.025, 8, 20), red, 0, 0.03, 0); t.rotation.x = Math.PI / 2; for (let i = 0; i < 4; i++) { const sp = add(new THREE.BoxGeometry(0.3, 0.02, 0.02), red, 0, 0.03, 0); sp.rotation.y = i * Math.PI / 4; } add(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 10), new THREE.MeshStandardMaterial({ color: 0x8a8f94, metalness: 0.8 }), 0, 0.05, 0); add(new THREE.TorusGeometry(0.17, 0.006, 6, 20), zsGlowMat(col, 1.2), 0, 0.06, 0).rotation.x = Math.PI / 2; }
@@ -116,7 +117,7 @@ function zsMake(it) {
   else if (K === 'ledger') { col = 0xd8b060; add(new THREE.BoxGeometry(0.26, 0.05, 0.34), new THREE.MeshStandardMaterial({ color: 0x5a1a1a, roughness: 0.8 }), 0, 0.025, 0); add(new THREE.BoxGeometry(0.24, 0.04, 0.32), new THREE.MeshStandardMaterial({ color: 0xe8dcc0 }), 0.006, 0.026, 0); add(new THREE.BoxGeometry(0.1, 0.004, 0.04), zsGlowMat(col, 1.0), 0, 0.053, -0.1); }
   else if (K === 'patch') { const soil = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 1 }), leaf = new THREE.MeshStandardMaterial({ color: 0x5a2a7a, emissive: new THREE.Color(0x7a2cff), emissiveIntensity: 0.7, roughness: 0.7, side: THREE.DoubleSide }); add(new THREE.CylinderGeometry(0.9, 1.0, 0.18, 14), soil, 0, 0.09, 0);
     for (let i = 0; i < 5; i++) { const a = i / 5 * TAU, x = Math.cos(a) * 0.5, z = Math.sin(a) * 0.5; add(new THREE.ConeGeometry(0.22, 1.1, 6), leaf, x, 0.7, z); for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(0.4, 0.01, 0.12), leaf, x + Math.cos(k * 1.6) * 0.2, 0.45 + k * 0.12, z + Math.sin(k * 1.6) * 0.2).rotation.y = k * 1.6; } }
-  if (K === 'fuse' || K === 'tape' || K === 'valve') for (const m of g.children) { m.scale.multiplyScalar(2); m.position.multiplyScalar(2); }
+  if (K === 'fuse' || K === 'tape' || K === 'valve' || K === 'plug') for (const m of g.children) { m.scale.multiplyScalar(2); m.position.multiplyScalar(2); }
   const beam = add(new THREE.CylinderGeometry(0.12, 0.25, 2.2, 10, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }), 0, 1.1, 0);
   const lt = new THREE.PointLight(col, 0.7, 3.5, 2); lt.position.y = 0.4; g.add(lt);
   g.position.set(s.x, s.y, s.z); scene.add(g); g.userData.beam = beam; return g;
@@ -200,7 +201,7 @@ function zsPower() { if (zsFuses() < 3) return; zsFlag('power'); try { tone(60, 
 // the power: the flickering lights steady and the fuse box goes green
 function zsApplyPower() {
   if (ZS.fusebox) for (const m of ZS.fusebox.slots) m.material.emissive.setHex(0x2adf4a);
-  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); if (curMap === 'mauiwowie') islePower(); if (curMap === 'maryjane') mjPower(); zmapPowerPads(); } catch (e) {}
+  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); if (curMap === 'mauiwowie') islePower(); if (curMap === 'maryjane') mjPower(); if (curMap === 'hightide') tidePower(); zmapPowerPads(); } catch (e) {}
   if (curMap === 'blackwell' && typeof HOSP !== 'undefined' && HOSP.flick) for (const f of HOSP.flick) { f.l.intensity = f.i * 1.15; f.t = 1e9; f.on = true; }
 }
 const ZS_SAY = {
@@ -233,6 +234,19 @@ function zsMakeBoss(e) {
   const purple = new Map(); e.group.traverse(o => { if (o.isMesh && !o.userData.hitbox) { const m = o.material; if (!purple.has(m)) { const c = (Array.isArray(m) ? m[0] : m).clone(); if (c.emissive) { c.emissive.setHex(0x5a10a0); c.emissiveIntensity = 0.7; } if (c.color) c.color.lerp(new THREE.Color(0x6a3a8a), 0.5); purple.set(m, c); } o.material = purple.get(m); } });
   const lt = new THREE.PointLight(0x9a3cff, 1.2, 6, 2); lt.position.y = 1.6; e.group.add(lt);
   if (curMap === 'maryjane') try { zsCaptainHat(e); } catch (err) {}
+  if (curMap === 'hightide') try { zsDirectorHat(e); } catch (err) {}
+}
+// the High Tide's cruise director: a tall purple velvet top hat with a green band, and a big pink bow tie
+function zsDirectorHat(e) {
+  const g = new THREE.Group(), std = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.6 }, o || {}));
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 20), std(0x2a1040)); brim.position.y = 0.01; g.add(brim);
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.12, 0.26, 18), std(0x4a1a7a, { roughness: 0.85 })); crown.position.y = 0.14; g.add(crown);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.125, 0.04, 18), std(0x2adf5a, { emissive: new THREE.Color(0x1a8a3a), emissiveIntensity: 0.6 })); band.position.y = 0.04; g.add(band);
+  const head = e.rig && e.rig.head; if (head) { g.position.set(0, 0.15, 0); g.rotation.z = 0.12; head.add(g); } else { g.position.y = 1.85; e.group.add(g); }
+  const bow = new THREE.Group(), pink = std(0xff3ab0, { emissive: new THREE.Color(0x8a1060), emissiveIntensity: 0.5 });
+  for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), pink); w.rotation.z = s * Math.PI / 2; w.position.x = s * 0.06; bow.add(w); }
+  bow.add(new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), pink));
+  const chest = e.rig && (e.rig.chest || e.rig.torso || e.rig.spine); if (chest) { bow.position.set(0, 0.22, -0.13); chest.add(bow); } else { bow.position.set(0, 1.45, -0.18); e.group.add(bow); }
 }
 // the Mary Jane's captain wears his cap: a white crown, a black peak, a gold band and a little green leaf badge
 function zsCaptainHat(e) {

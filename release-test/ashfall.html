@@ -6215,6 +6215,232 @@ function mjPower() {
   SHIP.on = true; for (const f of SHIP.flick) { f.steady = true; f.l.intensity = f.i * 1.15; }
   if (SHIP.beam) SHIP.beam.material.opacity = 0.14; if (SHIP.lamp) SHIP.lamp.material.emissiveIntensity = 2.6; if (SHIP.mastL) SHIP.mastL.intensity = 1.0;
 }
+/* ================================================================== ZOMBIES map: THE HIGH TIDE (chapter six of the story)
+   The Mary Jane's logbook named a sister ship on the same route: the HIGH TIDE, a party cruise liner. Its "420 cruise"
+   handed out free NIGHTSHADE pre-rolls to every passenger as a party favour. The survivors board it at night, still lit
+   up, still playing music to nobody. Built like the Mary Jane (one deck, the same zones), dressed as a cruise ship:
+     START   - the LIDO DECK (south): the pool, the hot tub, loungers, the pool bar, string lights.
+     MIDDLE  - the GRAND ATRIUM (the hub): reception (the purser's desk and vault), a leaf sculpture, sofas.
+     SIDES   - the MUNCHIES BUFFET (port) and the HIGH ROLLERS CASINO (starboard).
+     NORTH   - CLUB 420 (port house: the dance floor, the DJ booth, the FOG MACHINE - the cure goes in there), the
+               PROMENADE in the middle (tiki bar, planters, the slide tower), the KUSH THEATRE (starboard house: the stage,
+               rows of seats, backstage).
+     BOW     - the VIP LOUNGE (the gun upgrader), the windlasses, the party searchlights.
+   LAUNCH PADS (the trampolines on deck) throw you between the lido, the buffet, the casino and the bow once the power
+   is back. */
+const TIDE = { flick: [], disco: null, tiles: [], beams: [], on: false, t: 0, pool: null };
+function tideMaterials() {
+  if (MAT.tideHull) return;
+  const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.015, roughness: 0.8, metalness: 0.2 }, o));
+  MAT.tideHull = std(TEX.metal, { color: C(0xeceae4), roughness: 0.55, metalness: 0.25 });
+  MAT.tideStripe = std(TEX.metal, { color: C(0x1a3a8a), roughness: 0.5 });
+  MAT.tideTeak = std(TEX.wood || TEX.concrete, { color: C(0xb88a5a), roughness: 0.7, metalness: 0.0 });
+  MAT.tideCarpet = std(TEX.concrete, { color: C(0x6a1430), roughness: 0.95, metalness: 0.0 });
+  MAT.tideFelt = std(TEX.concrete, { color: C(0x1a6a3a), roughness: 0.95, metalness: 0.0 });
+  MAT.tideVelvet = std(TEX.concrete, { color: C(0x8a1a2a), roughness: 0.9, metalness: 0.0 });
+  MAT.tidePurple = std(TEX.metal, { color: C(0x4a2a7a), roughness: 0.5 });
+  MAT.tidePink = std(TEX.metal, { color: C(0xe04a9a), roughness: 0.5 });
+  MAT.tideTile = std(TEX.concrete, { color: C(0x8ad8e8), roughness: 0.3, metalness: 0.1 });
+  MAT.tideWater = new THREE.MeshStandardMaterial({ color: C(0x1a8ab8), emissive: C(0x0a6aa8), emissiveIntensity: 0.55, roughness: 0.05, metalness: 0.3, transparent: true, opacity: 0.88 });
+  MAT.tideBulb = new THREE.MeshStandardMaterial({ color: C(0x302a10), emissive: C(0xffd8a0), emissiveIntensity: 1.6 });
+  MAT.tideCabin = new THREE.MeshStandardMaterial({ color: C(0x1a2a30), emissive: C(0xffc880), emissiveIntensity: 0.6, roughness: 0.1 });
+  MAT.tideMirror = new THREE.MeshStandardMaterial({ color: C(0xe0e0f0), roughness: 0.15, metalness: 1.0, emissive: C(0x30304a), emissiveIntensity: 0.4 });
+  MAT.tideName = neonMat('HIGH TIDE', '#ff6ad0', '420 PARTY CRUISES', '#0a0a1a', 1024, 256);
+  MAT.tideSignLido = neonMat('LIDO DECK', '#5ae8ff', 'pool · hot tub · pool bar', '#081420', 512, 160);
+  MAT.tideSignAtrium = neonMat('GRAND ATRIUM', '#ffe0a0', 'reception · guest services', '#1a1410', 512, 160);
+  MAT.tideSignBuffet = neonMat('MUNCHIES BUFFET', '#ffb03a', 'all you can eat · 24 hrs', '#1a0f08', 512, 160);
+  MAT.tideSignCasino = neonMat('HIGH ROLLERS', '#ff4a6a', 'casino · cards · slots', '#1a060a', 512, 160);
+  MAT.tideSignClub = neonMat('CLUB 420', '#c070ff', 'dance till you drop', '#100818', 512, 160);
+  MAT.tideSignTheatre = neonMat('KUSH THEATRE', '#ffd890', 'tonight: the cloud nine revue', '#1a1008', 512, 160);
+  MAT.tideSignVip = neonMat('VIP LOUNGE', '#5dff7a', 'members only', '#081a0c', 512, 160);
+  MAT.tideSignTiki = neonMat('TIKI BAR', '#ff8a3a', 'mai tais · munchies', '#1a0c06', 512, 128);
+  for (const [k, c] of [['tideDanceA', 0xff3ab0], ['tideDanceB', 0x3ab8ff], ['tideDanceC', 0x7aff3a], ['tideDanceD', 0xffc83a]])
+    MAT[k] = new THREE.MeshStandardMaterial({ color: C(0x101010), emissive: C(c), emissiveIntensity: 0.25, roughness: 0.3 });
+  TILES.tideHull = 3; TILES.tideTeak = 3; TILES.tideCarpet = 3; TILES.tideTile = 2;
+}
+// a string of party bulbs between two points (scenery)
+function tideBulbs(ax, ay, az, bx, by, bz, n = 10) {
+  beam('dark', ax, ay, az, bx, by, bz, 0.02, 0.02, false);
+  for (let i = 0; i <= n; i++) { const f = i / n, sag = Math.sin(f * Math.PI) * 0.35; B('tideBulb', 0.09, 0.12, 0.09, ax + (bx - ax) * f, ay + (by - ay) * f - sag - 0.08, az + (bz - az) * f, 0, 0, 0, false); }
+}
+// a sun lounger (low, no collider except a small one so zombies walk round it)
+function tideLounger(x, z, q = 0) { const p = P2(x, z, 0, q); p.b('paintWhite', 0.7, 0.08, 1.9, 0, 0.35, 0); p.b('paintWhite', 0.7, 0.06, 0.7, 0, 0.6, -0.75, false); p.b('tideStripe', 0.62, 0.04, 1.2, 0, 0.42, 0.3, false); for (const dz of [-0.8, 0.8]) p.b('steel', 0.6, 0.3, 0.05, 0, 0.15, dz, false); p.col(0.7, 0.5, 1.9); }
+// a little round table with two stools
+function tideTable(x, z, key = 'paintWhite') { CYL('steel', 0.06, 0.08, 0.72, 8, x, 0.36, z); CYL(key, 0.6, 0.6, 0.05, 16, x, 0.74, z); PZ(x, 0, z, 1.1, 0.76, 1.1); for (const dx of [-0.85, 0.85]) CYL('tideVelvet', 0.22, 0.22, 0.45, 10, x + dx, 0.22, z, 0, 0, 0, false); }
+// a slot machine against a wall (q turns it)
+function tideSlot(x, z, q = 0) { const p = P2(x, z, 0, q); p.b('tidePurple', 0.7, 1.6, 0.6, 0, 0.8, 0); p.b('screen', 0.5, 0.45, 0.02, 0, 1.15, 0.31, false); p.b('tideBulb', 0.6, 0.08, 0.02, 0, 1.55, 0.31, false); p.b('steel', 0.05, 0.4, 0.05, 0.38, 1.1, 0.1, false); p.col(0.7, 1.6, 0.6); }
+// a card table: green felt, padded rim, stools
+function tideCards(x, z, alongX = true) { const w = alongX ? 2.4 : 1.3, d = alongX ? 1.3 : 2.4; blk(x, z, w, d, 0.8, 'tideVelvet', { walk: false }); B('tideFelt', w - 0.2, 0.03, d - 0.2, x, 0.81, z, 0, 0, 0, false); for (let i = 0; i < 3; i++) B('paintWhite', 0.08, 0.005, 0.12, x - 0.4 + i * 0.4, 0.83, z, 0, i * 0.4, 0, false); }
+function buildTide() {
+  buildMap2Materials(); worksMaterials(); airpMaterials(); isleMaterials(); shipMaterials(); tideMaterials();
+  TIDE.flick = []; TIDE.tiles = []; TIDE.beams = []; TIDE.on = false; TIDE.disco = null; TIDE.t = 0; TIDE.pool = null;
+  floorQuad(0, 0, 52, 86, 0, 'tideTeak', 6);
+  floorQuad(0, 0, 400, 400, -7, 'shipSea', 20);
+  // ---- outside: solid all round, the white hull with its blue stripe down to the water
+  for (const [x, z, w, d] of [[0, -43.4, 56, 2.5], [0, 43.2, 56, 2.5], [-27, 0, 3, 90], [27, 0, 3, 90]]) blk(x, z, w, d, 9, 'dark', { noDraw: true });
+  for (const s of [-1, 1]) { B('tideHull', 0.6, 7.5, 72, s * 25.5, -3.4, 5.5, 0, 0, 0, false); B('tideHull', 0.6, 7.5, 13, s * 16.4, -3.4, -36, 0, 0, 0, false); B('tideStripe', 0.62, 0.6, 72, s * 25.52, -1.0, 5.5, 0, 0, 0, false); for (let i = 0; i < 16; i++) B('shipGlass', 0.05, 0.5, 0.5, s * 25.82, -2.6, -26 + i * 4.2, 0, 0, 0, false); }
+  B('tideHull', 52, 7.5, 0.6, 0, -3.4, 41.6, 0, 0, 0, false); batchAdd('tideName', new THREE.PlaneGeometry(10, 2.5), mat4(0, -2.2, 41.95, 0, 0, 0), false);
+  for (const s of [-1, 1]) batchAdd('tideHull', new THREE.BoxGeometry(0.6, 7.5, 13.5), mat4(s * 20.7, -3.4, -36.2, 0, s * 0.62, 0), false);
+  B('tideHull', 33, 7.5, 0.6, 0, -3.4, -42.3, 0, 0, 0, false);
+  // ---- the bulwarks (low white walls with glass rails on top at the stern), the bow
+  const winH = [[19, 1.6, 1.0, 1.4], [-8, 1.6, 1.0, 1.4]];
+  wkZ(-25, -30, 41, 2.6, 'tideHull', winH); wkZ(25, -30, 41, 2.6, 'tideHull', winH);
+  wkX(41, -25, 25, 1.2, 'tideHull'); B('windowGlass', 50, 0.8, 0.04, 0, 1.6, 41, 0, 0, 0, false); B('steel', 50, 0.06, 0.08, 0, 2.03, 41, 0, 0, 0, false);
+  blk(0, 41.9, 52, 0.6, 5, 'dark', { noDraw: true });
+  wkZ(-16, -42, -30, 2.6, 'tideHull'); wkZ(16, -42, -30, 2.6, 'tideHull'); wkX(-30, -25, -16, 2.6, 'tideHull'); wkX(-30, 16, 25, 2.6, 'tideHull'); wkX(-42, -16, 16, 2.6, 'tideHull');
+
+  /* ================= THE LIDO DECK (start, z 26..41): the pool, the hot tub, loungers, the pool bar */
+  floorQuad(-9, 34, 13, 10, 0.011, 'tideTile', 2);
+  blk(-9, 34, 9.2, 6.2, 0.9, 'tideHull', { walk: false });                                   // the raised pool (rim)
+  TIDE.pool = new THREE.Mesh(new THREE.PlaneGeometry(8.6, 5.6), MAT.tideWater); TIDE.pool.rotation.x = -Math.PI / 2; TIDE.pool.position.set(-9, 0.915, 34); scene.add(TIDE.pool);
+  for (const s of [-1, 1]) { beam('steel', -9 + s * 4.3, 0.9, 30.9, -9 + s * 4.3, 1.9, 30.6, 0.05, 0.05, false); }
+  lampLight(-9, 0.4, 34, 0x3ad8ff, 0.9, 9);
+  // the hot tub
+  CYL('tideHull', 1.6, 1.7, 0.85, 20, 16, 0.42, 37.5); PZ(16, 0, 37.5, 3.2, 0.85, 3.2); CYL('tideWater', 1.45, 1.45, 0.02, 20, 16, 0.8, 37.5, 0, 0, 0, false);
+  // loungers in rows, the pool bar with stools, the slide (scenery, curling down the side of the superstructure)
+  for (const x of [-19, -16.5]) for (const z of [30, 33, 36]) tideLounger(x, z);
+  for (const x of [1, 3.5]) tideLounger(x, 39, 0);
+  blk(18.5, 29.5, 6, 1.0, 1.1, 'tideTeak', { walk: false }); B('dark', 6.2, 0.06, 1.2, 18.5, 1.13, 29.5, 0, 0, 0, false);
+  for (let i = 0; i < 4; i++) CYL('tideVelvet', 0.22, 0.22, 0.6, 10, 16.3 + i * 1.5, 0.3, 30.6, 0, 0, 0, false);
+  for (let i = 0; i < 6; i++) B(['paintGreen', 'paintOrange', 'paintRed', 'paintBlue'][i % 4], 0.12, 0.3, 0.12, 16.2 + i * 0.9, 1.3, 29.3, 0, 0, 0, false);
+  B('tideTeak', 6.4, 0.1, 2.0, 18.5, 2.9, 29.5, 0, 0, 0, false); for (const dx of [-3, 3]) CYL('tideTeak', 0.08, 0.08, 2.9, 6, 18.5 + dx, 1.45, 29.5 - 0.9, 0, 0, 0, false);
+  for (let i = 0; i < 10; i++) { const a = i * 0.55, r = 2.2; beam('tidePink', -17 + Math.cos(a) * r, 13 - i * 1.2, 27.6 + Math.sin(a) * r * 0.4, -17 + Math.cos(a + 0.55) * r, 13 - (i + 1) * 1.2, 27.6 + Math.sin(a + 0.55) * r * 0.4, 1.0, 0.25, false); }
+  // string lights over the lido, a flag pole, the survivors' boat tied up behind
+  for (const z of [30, 35, 40]) tideBulbs(-24.5, 3.4, z, 24.5, 3.4, z, 16);
+  CYL('steel', 0.05, 0.06, 7, 6, 0, 3.5, 40.4, 0, 0, 0, false); B('tidePink', 1.6, 1.0, 0.02, 0.85, 6.3, 40.4, 0, 0, 0, false);
+  { const p = P2(-6, 47, -6.4, 0); p.b('isleWhite', 3.0, 1.4, 7.0, 0, 0.7, 0, false); p.b('isleTeal', 3.1, 0.25, 7.1, 0, 1.4, 0, false); p.b('wood', 2.0, 0.1, 2.0, 0, 1.5, 1.5, false); }
+  for (const [x, z] of [[-21, 39], [21, 39]]) shipBollard(x, z);
+  shipLamp(-14, 27.4, 3.2, 0xffd0f0); shipLamp(14, 27.4, 3.2, 0xffd0f0); shipLamp(6, 38, 3.4, 0xfff0d0, 1.0, 14, false);
+  batchAdd('tideSignLido', new THREE.PlaneGeometry(2.4, 0.75), mat4(-5, 3.6, 26.27, 0, 0, 0), false);
+
+  /* ================= THE GRAND ATRIUM (the hub, x -10..10, z 12..26) */
+  const BH = 4.2;
+  wkX(26, -25, 25, 3.4, 'tideHull', [[0, 6, 0, 4]]);
+  wkZ(-10, 12, 26, BH, 'tideHull', [[19, 6, 0, 4]]); wkZ(10, 12, 26, BH, 'tideHull', [[19, 6, 0, 4]]);
+  wkX(12, -25, 25, BH, 'tideHull', [[-20, 4, 0, 4], [0, 6, 0, 4], [20, 4, 0, 4]]);
+  wkRoof(-10.3, 10.3, 11.7, 26.3, BH + 0.35, 'tideHull');
+  floorQuad(0, 19, 19.4, 13.4, 0.012, 'tideCarpet', 3);
+  // the superstructure above: four decks of lit cabins with balconies, the bridge, the funnel with the leaf
+  for (let k = 0; k < 4; k++) { const y = BH + 0.35 + k * 3, w = 22 - k * 1.2, d = 15 - k * 0.6; B('tideHull', w, 3, d, 0, y + 1.5, 19, 0, 0, 0, false);
+    for (let i = 0; i < 8; i++) for (const sd of [-1, 1]) { const x = -w / 2 + 1.6 + i * (w - 3.2) / 7; B('tideCabin', 1.3, 1.4, 0.05, x, y + 1.6, 19 + sd * (d / 2 + 0.03), 0, 0, 0, false); B('steel', 1.6, 0.05, 0.6, x, y + 0.9, 19 + sd * (d / 2 + 0.3), 0, 0, 0, false); } }
+  B('tideHull', 26, 3, 6, 0, BH + 13.85, 16, 0, 0, 0, false); B('shipGlass', 25, 1.2, 0.05, 0, BH + 14.2, 12.97, 0, 0, 0, false);
+  B('tideStripe', 4.2, 6, 4.2, 0, BH + 16.4, 22, 0, 0, 0, false); B('tidePink', 4.25, 0.8, 4.25, 0, BH + 18.8, 22, 0, 0, 0, false);
+  { const lf = new THREE.Mesh(new THREE.CircleGeometry(1.4, 7), MAT.neonGreen || MAT.tideBulb); lf.position.set(0, BH + 16.6, 24.13); scene.add(lf); }
+  CYL('steel', 0.08, 0.1, 5, 6, 4, BH + 17.5, 16, 0, 0, 0, false); B('redLight2', 0.25, 0.25, 0.25, 4, BH + 20.1, 16, 0, 0, 0, false);
+  batchAdd('tideSignAtrium', new THREE.PlaneGeometry(2.4, 0.75), mat4(0, 3.6, 26.27, 0, 0, 0), false);
+  // inside: reception (the purser's desk), the leaf sculpture, sofas, palms in pots, a chandelier
+  blk(6, 24.6, 4.4, 0.9, 1.05, 'tideTeak', { walk: false }); B('paintWhite', 4.6, 0.06, 1.1, 6, 1.08, 24.6, 0, 0, 0, false); B('screen', 0.5, 0.35, 0.03, 5, 1.3, 24.4, 0, 0, 0, false);
+  blk(-5, 19, 2.2, 2.2, 0.6, 'tidePurple', { walk: false }); islePlant(-5, 19, 0.6, 1.6, 'leafGreen'); lampLight(-5, 1.0, 19, 0x7aff7a, 0.7, 6);
+  for (const [x, z, q] of [[5, 16.5, 0], [5, 20.5, 2]]) { const p = P2(x, z, 0, q); p.b('tideVelvet', 3.0, 0.45, 0.9, 0, 0.23, 0); p.b('tideVelvet', 3.0, 0.5, 0.2, 0, 0.7, -0.35, false); p.col(3.0, 0.7, 0.9); }
+  blk(5, 18.5, 1.6, 0.8, 0.45, 'tideTeak', { walk: false });
+  for (const [x, z] of [[-9.2, 13], [9.2, 13], [-3, 25.2]]) { CYL('paintWhite', 0.35, 0.28, 0.6, 10, x, 0.3, z); PZ(x, 0, z, 0.7, 0.6, 0.7); islePlant(x, z, 0.6, 1.2); }
+  CYL('steel', 0.02, 0.02, 1.2, 4, 0, BH - 0.6, 19, 0, 0, 0, false); for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; B('tideBulb', 0.1, 0.25, 0.1, Math.cos(a) * 0.9, BH - 1.3, 19 + Math.sin(a) * 0.9, 0, 0, 0, false); }
+  shipCeil(-4, 15, BH, 0xffe0b0, 0.9, 11); shipCeil(4, 23, BH, 0xffe0b0, 0.9, 11); { const l = lampLight(0, BH - 1.4, 19, 0xffd8a0, 1.0, 12); TIDE.flick.push({ l, i: 1.0, t: 1, on: true }); }
+
+  /* ================= THE MUNCHIES BUFFET (port, x -25..-10, z 12..26) */
+  floorQuad(-17.5, 19, 14.6, 13.4, 0.011, 'tileFloor', 3);
+  blk(-21.5, 19.5, 1.2, 7, 0.95, 'steel', { walk: false }); B('windowGlass', 1.0, 0.5, 6.8, -21.5, 1.35, 19.5, 0, 0, 0, false);
+  for (let i = 0; i < 6; i++) B(['paintOrange', 'paintRed', 'paintGreen', 'paintYellow', 'paintWhite', 'paintBlue'][i], 0.7, 0.12, 0.8, -21.5, 1.0, 16.6 + i * 1.15, 0, 0, 0, false);
+  for (const [x, z] of [[-14, 14.5], [-14, 23.5], [-18.5, 14.5]]) tideTable(x, z);
+  batchAdd('tideSignBuffet', new THREE.PlaneGeometry(2.4, 0.75), mat4(-10.27, 3.2, 15, 0, -Math.PI / 2, 0), false);
+  shipCeil(-17, 15, BH, 0xffe0b0, 0.9, 12); shipCeil(-15, 23, BH, 0xffe0b0, 0.9, 12, false);
+
+  /* ================= THE HIGH ROLLERS CASINO (starboard, x 10..25, z 12..26) */
+  floorQuad(17.5, 19, 14.6, 13.4, 0.011, 'tideCarpet', 3);
+  tideCards(14, 15); tideCards(14, 22.6);
+  for (let i = 0; i < 4; i++) tideSlot(11.2 + i * 0.9, 12.75, 0);
+  CYL('tideTeak', 1.0, 1.1, 0.85, 20, 20.5, 0.42, 14.8); PZ(20.5, 0, 14.8, 2.0, 0.85, 2.0); CYL('tideFelt', 0.85, 0.85, 0.02, 20, 20.5, 0.86, 14.8, 0, 0, 0, false); CYL('tideMirror', 0.35, 0.4, 0.12, 16, 20.5, 0.93, 14.8, 0, 0, 0, false);
+  for (let i = 0; i < 3; i++) tideSlot(12.5 + i * 0.9, 25.4, 2);
+  batchAdd('tideSignCasino', new THREE.PlaneGeometry(2.4, 0.75), mat4(10.27, 3.2, 15, 0, Math.PI / 2, 0), false);
+  { const l = lampLight(14, 3.4, 18.5, 0xff3a6a, 0.9, 12); TIDE.flick.push({ l, i: 0.9, t: 0.5, on: true }); } shipCeil(20, 23, BH, 0xffd0a0, 0.9, 11);
+
+  /* ================= THE OPEN DECKS north of the block (z -2..12) */
+  shipLifeboat(-21.5, 5, true); shipLifeboat(21.5, 5, true);
+  for (const z of [8, 4]) tideLounger(-13.5, z, 1);
+  blk(16, 6.5, 2.4, 3.2, 2.2, 'tidePink', { walk: false }); B('tideStripe', 2.6, 0.3, 3.4, 16, 2.4, 6.5, 0, 0, 0, false); B('paintWhite', 0.1, 0.8, 1.4, 14.75, 1.3, 6.5, 0, 0, 0, false);   // the ice cream stand
+  shipLamp(-12, 10, 3.4, 0xffd0f0); shipLamp(12, 10, 3.4, 0xffd0f0); shipLamp(-17, 0, 3.4, 0xd8e0ff, 1.0, 13, false); shipLamp(17, 0, 3.4, 0xd8e0ff, 1.0, 13, false);
+
+  /* ================= CLUB 420 (port house, x -25..-8, z -26..-2): the dance floor, the DJ booth, the fog machine */
+  const EH = 4.0;
+  wkZ(-8, -26, -2, EH, 'tidePurple', [[-20, 2.4, 0, 2.6], [-8, 2.4, 0, 2.6]]);
+  wkX(-2, -25, -8, EH, 'tidePurple', [[-16, 2.4, 0, 2.6]]); wkX(-26, -25, -8, EH, 'tidePurple', [[-16, 2.4, 0, 2.6]]);
+  wkRoof(-25.3, -7.7, -26.3, -1.7, EH + 0.35, 'tidePurple'); blk(-24.6, -14, 0.3, 24, EH - 2.6 + 0.35, 'tidePurple', { y: 2.6 });   // closes the gap over the low hull wall
+  floorQuad(-16.5, -14, 16.5, 23.5, 0.011, 'dark', 4);
+  batchAdd('tideSignClub', new THREE.PlaneGeometry(2.0, 0.62), mat4(-7.73, 3.1, -14, 0, Math.PI / 2, 0), false);
+  // the dance floor: 6 x 6 light-up tiles (they chase once the power is back)
+  const DK = ['tideDanceA', 'tideDanceB', 'tideDanceC', 'tideDanceD'];
+  for (let i = 0; i < 6; i++) for (let j = 0; j < 6; j++) { const k = DK[(i + j) % 4]; B(k, 1.15, 0.04, 1.15, -19 + i * 1.2, 0.03, -17 + j * 1.2, 0, 0, 0, false); }
+  for (const k of DK) TIDE.tiles.push(MAT[k]);
+  blk(-23, -13, 1.4, 4, 1.1, 'dark', { walk: false }); B('tidePurple', 1.5, 0.1, 4.1, -23, 1.12, -13, 0, 0, 0, false); for (const dz of [-1, 1]) CYL('steel', 0.3, 0.3, 0.06, 16, -23, 1.2, -13 + dz, 0, 0, 0, false);   // the DJ booth
+  for (const dz of [-3.2, 3.2]) { B('dark', 0.9, 1.8, 0.9, -23.6, 0.9, -13 + dz); PZ(-23.6, 0, -13 + dz, 0.9, 1.8, 0.9); }        // speakers
+  blk(-11.5, -3.2, 4, 0.9, 1.05, 'dark', { walk: false }); B('tidePink', 4.1, 0.05, 1.0, -11.5, 1.07, -3.2, 0, 0, 0, false);   // the bar
+  for (let i = 0; i < 5; i++) B(['paintGreen', 'tidePink', 'paintBlue'][i % 3], 0.1, 0.28, 0.1, -13 + i * 0.7, 1.24, -3.2, 0, 0, 0, false);
+  for (const [x, z] of [[-11, -10], [-11, -20.5]]) tideTable(x, z, 'tidePurple');
+  TIDE.disco = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1), MAT.tideMirror); TIDE.disco.position.set(-16.6, 3.3, -14); scene.add(TIDE.disco);
+  for (const [c, x, z] of [[0xff3ab0, -19, -17], [0x3ab8ff, -14, -11], [0x7aff3a, -14, -17], [0xc070ff, -19, -11]]) { const l = lampLight(x, 3.2, z, c, 0.8, 9); TIDE.flick.push({ l, i: 0.8, t: rnd(0, 2), on: true, club: true }); }
+  for (let i = 0; i < 4; i++) { const m = new THREE.Mesh(new THREE.ConeGeometry(0.6, 4, 12, 1, true), new THREE.MeshBasicMaterial({ color: [0xff3ab0, 0x3ab8ff, 0x7aff3a, 0xc070ff][i], transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    m.geometry.translate(0, -2, 0); const g = new THREE.Group(); g.position.set(-16.6 + (i % 2 ? 4 : -4), 3.9, -14 + (i < 2 ? -4 : 4)); g.add(m); scene.add(g); TIDE.beams.push(g); }
+
+  /* ================= THE PROMENADE (middle, x -8..8, z -26..12): the tiki bar, planters with palms, the slide tower */
+  CYL('tideTeak', 1.2, 1.3, 1.1, 12, -4, 0.55, -6); PZ(-4, 0, -6, 2.4, 1.1, 2.4); B('thatch', 3.2, 0.2, 3.2, -4, 3.0, -6, 0, 0.4, 0, false); CYL('tideTeak', 0.1, 0.1, 3, 6, -4, 1.5, -6, 0, 0, 0, false);
+  batchAdd('tideSignTiki', new THREE.PlaneGeometry(1.6, 0.4), mat4(-4, 2.4, -4.68, 0, 0, 0), false);
+  for (const z of [5, -18]) for (const s of [-1, 1]) { blk(s * 3.8, z, 3.2, 5, 0.8, 'tideTeak', { walk: false }); B('soil', 3.0, 0.05, 4.8, s * 3.8, 0.81, z, 0, 0, 0, false); islePlant(s * 3.8, z - 1.2, 0.8, 1.6); islePlant(s * 3.8, z + 1.2, 0.8, 1.3); }
+  CYL('tideStripe', 0.9, 0.9, 9, 12, 5, 4.5, -12, 0, 0, 0, false); PZ(5, 0, -12, 1.8, 9, 1.8); for (let i = 0; i < 6; i++) beam('tidePink', 5, 9 - i * 1.4, -12, 5 + Math.cos(i * 1.1) * 2.2, 9 - (i + 1) * 1.4, -12 + Math.sin(i * 1.1) * 2.2, 1.0, 0.25, false);
+  tideBulbs(-7.5, 3.6, 10, -7.5, 3.6, -25, 20); tideBulbs(7.5, 3.6, 10, 7.5, 3.6, -25, 20);
+  shipLamp(-6, -26, 3.4, 0xfff0d0, 1.0, 13, false); shipLamp(6, -26, 3.4, 0xfff0d0, 1.0, 13);
+
+  /* ================= THE KUSH THEATRE (starboard house, x 8..25, z -26..-2): the stage, the seats, backstage */
+  wkZ(8, -26, -2, EH, 'tideHull', [[-20, 2.4, 0, 2.6], [-8, 2.4, 0, 2.6]]);
+  wkX(-2, 8, 25, EH, 'tideHull', [[16, 2.4, 0, 2.6]]); wkX(-26, 8, 25, EH, 'tideHull', [[16, 2.4, 0, 2.6]]);
+  wkRoof(7.7, 25.3, -26.3, -1.7, EH + 0.35, 'tideHull'); blk(24.6, -14, 0.3, 24, EH - 2.6 + 0.35, 'tideHull', { y: 2.6 });
+  floorQuad(16.5, -14, 16.5, 23.5, 0.011, 'tideCarpet', 4);
+  batchAdd('tideSignTheatre', new THREE.PlaneGeometry(2.0, 0.62), mat4(7.73, 3.1, -14, 0, -Math.PI / 2, 0), false);
+  blk(16.5, -24.25, 14, 3.5, 0.6, 'tideTeak', { walk: false });                                // the stage (cover; you shoot over it)
+  B('tideVelvet', 14, 3.3, 0.1, 16.5, 2.25, -25.9, 0, 0, 0, false); for (const dx of [-6.5, 6.5]) B('tideVelvet', 1.4, 3.6, 0.15, 16.5 + dx, 2.4, -23, 0, 0, 0, false);
+  for (const z of [-16, -13, -10, -6.4]) { blk(12.6, z, 4.8, 0.7, 0.55, 'tideVelvet', { walk: false }); blk(20.4, z, 4.8, 0.7, 0.55, 'tideVelvet', { walk: false }); B('tideVelvet', 4.8, 0.5, 0.15, 12.6, 0.8, z + 0.3, 0, 0, 0, false); B('tideVelvet', 4.8, 0.5, 0.15, 20.4, 0.8, z + 0.3, 0, 0, 0, false); }
+  for (const [c, x] of [[0xffd890, 12], [0xff6ad0, 16.5], [0x5ae8ff, 21]]) { const l = lampLight(x, 3.4, -21.5, c, 0.9, 9); TIDE.flick.push({ l, i: 0.9, t: rnd(0, 3), on: true }); }
+  shipCeil(13, -8, EH, 0xffe8b0, 0.7, 11); shipCeil(20, -12, EH, 0xffe8b0, 0.7, 11);
+
+  /* ================= THE BOW: the VIP lounge (gun upgrader), windlasses, party searchlights */
+  wkZ(-6, -42, -35, 3.4, 'tideHull'); wkZ(6, -42, -35, 3.4, 'tideHull'); wkX(-35, -6, 6, 3.4, 'tideHull', [[0, 2.4, 0, 2.6]]);
+  wkRoof(-6.3, 6.3, -42.3, -34.7, 3.75, 'tideHull'); floorQuad(0, -38.5, 11.4, 6.6, 0.012, 'tideCarpet', 3);
+  batchAdd('tideSignVip', new THREE.PlaneGeometry(2.0, 0.62), mat4(0, 3.0, -34.73, 0, 0, 0), false);
+  { const p = P2(3.6, -40.4, 0, 0); p.b('tideVelvet', 3.4, 0.45, 0.9, 0, 0.23, 0); p.b('tideVelvet', 3.4, 0.5, 0.2, 0, 0.7, -0.35, false); p.col(3.4, 0.7, 0.9); }
+  shipCeil(0, -38.5, 3.4, 0x7aff7a, 0.8, 9);
+  for (const s of [-1, 1]) { blk(s * 10.5, -37.5, 2.2, 2.2, 1.2, 'tideStripe'); CYL('dark', 0.6, 0.6, 2.4, 12, s * 10.5, 1.5, -37.5, 0, 0, Math.PI / 2, false); }
+  for (const s of [-1, 1]) { CYL('steel', 0.18, 0.22, 7, 8, s * 13, 3.5, -31); PZ(s * 13, 0, -31, 0.5, 7, 0.5); const m = new THREE.Mesh(new THREE.ConeGeometry(1.2, 30, 14, 1, true), new THREE.MeshBasicMaterial({ color: s < 0 ? 0xff6ad0 : 0x5ae8ff, transparent: true, opacity: 0.05, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending }));
+    m.geometry.translate(0, 15, 0); const g = new THREE.Group(); g.position.set(s * 13, 7.2, -31); g.add(m); m.rotation.x = 0.5; scene.add(g); TIDE.beams.push(g); }
+  tideBulbs(-13, 7, -31, 13, 7, -31, 18);
+  shipLamp(-13, -27, 3.2); shipLamp(9.5, -28, 3.4, 0xfff0d0, 1.0, 13, false); shipLamp(-9, -40.5, 3.0);
+  for (const [x, z] of [[-13, -40.5], [13, -40.5]]) shipBollard(x, z);
+}
+defineMap({
+  id: 'hightide', size: 'large', hidden: true, zombiesOnly: true, planCut: 3.0, name: 'THE HIGH TIDE', place: 'Party cruise liner at sea, night', desc: 'The Mary Jane\'s sister ship: a 420 party cruise. The lido deck and its pool, the grand atrium, the buffet and the casino, Club 420 and the Kush Theatre, the VIP lounge at the bow.',
+  play: [-25, 25, -42, 41], build: buildTide,
+  env: { top: 0x120a26, horizon: 0x3a2050, fog: 0.011, sun: [30, 40, -30], sunCol: 0xc0a8e0, sunI: 0.75, skySun: 0x8a6aaa, hemiSky: 0x8a7aa8, hemiGround: 0x2a2030, exposure: 1.5 },
+  grass: { count: 0 }, spawnMaxY: 0.5,
+  layout: { spawn: [{ x: 2, z: 34 }, { x: 0, z: -20 }], hp: [{ x: 0, z: 19 }, { x: 0, z: 0 }, { x: 4, z: 31 }], flags: [{ x: 2, z: 34 }, { x: 0, z: -20 }], sites: [{ x: -17, z: -10 }, { x: 16, z: -14 }] },
+  menu: { x: 2, z: 30, r: 9, y: 2.4 },
+  navPts: [{ x: 2, z: 34 }, { x: 0, z: 19 }, { x: -18, z: 18 }, { x: 18, z: 18 }, { x: -16, z: -14 }, { x: -17, z: 5 }, { x: 0, z: -10 }, { x: 16, z: -14 }, { x: 22.5, z: -14 }, { x: 0, z: -33 }, { x: 0, z: -39 }, { x: 10, z: -32 }],
+  views: [[2, 1.7, 39, -8, 1, 30], [-6, 1.7, 23, 4, 1.2, 15], [-12, 1.7, 13, -21, 1.2, 22], [12, 1.7, 13, 20, 1.2, 22], [-9.5, 1.7, -8, -18, 1.5, -15], [0, 1.7, 8, 2, 2, -12], [16, 1.7, -3.5, 16, 1.5, -22], [0, 1.7, -24, 0, 6, -38], [-1, 1.7, -36, -2.6, 1.2, -39], [6, 1.7, -28, 10, 1, -33]],
+});
+function tideTick(dt) {
+  if (curMap !== 'hightide') return;
+  TIDE.t += dt;
+  for (const f of TIDE.flick) { if (f.steady && !f.club) continue; f.t -= dt;
+    if (f.club && TIDE.on) { f.l.intensity = f.i * (0.6 + 0.6 * Math.max(0, Math.sin(TIDE.t * 4 + f.l.position.x))); continue; }
+    if (f.t <= 0) { f.on = !f.on; f.t = f.on ? rnd(0.4, 5) : rnd(0.03, 0.2); f.l.intensity = f.on ? f.i : f.i * 0.1; } }
+  if (TIDE.disco) TIDE.disco.rotation.y += dt * (TIDE.on ? 1.2 : 0.05);
+  if (TIDE.pool) TIDE.pool.material.emissiveIntensity = 0.5 + Math.sin(TIDE.t * 1.3) * 0.08;
+  if (TIDE.on) {
+    TIDE.tiles.forEach((m, i) => { m.emissiveIntensity = 0.3 + 1.6 * Math.max(0, Math.sin(TIDE.t * 3 + i * 1.57)); });
+    TIDE.beams.forEach((g, i) => { g.rotation.y += dt * (0.8 + i * 0.15) * (i % 2 ? 1 : -1); g.rotation.z = Math.sin(TIDE.t * 0.9 + i) * 0.45; g.children[0].material.opacity = i < 4 ? 0.1 : 0.07; });
+  }
+}
+function tidePower() {
+  TIDE.on = true; for (const f of TIDE.flick) { f.steady = true; f.l.intensity = f.i * 1.15; }
+  try { if (TIDE.pool) TIDE.pool.material.emissiveIntensity = 0.7; } catch (e) {}
+}
 /* ================================================================== CORE map: DISPENSARY ROW (a city block at night, neon)
    64 x 64 m. Spawns in the parking lots at the north and south ends. Three lanes run north-south:
      WEST - the laundromats: one in each half, washers and folding tables inside, a back alley behind them (x -32..-29)
@@ -8176,14 +8402,16 @@ function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
 {
-"v": "1.2.63",
+"v": "1.2.64",
 "d": "2026-11-04",
 "n": [
-"NEW GRAPHICS (BETA): BLOOM & COLOUR. Lamps, neon signs, fire, muzzle flashes, wonder weapons and the sun now glow. Night maps glow more, day maps stay clean.",
-"Film colour grading on every map: richer colour, cool shadows and warm highlights, a soft vignette. Dark rooms stay as easy to see as before.",
-"Smoother edges: FXAA when MSAA is off, and a light sharpen on HIGH so the picture stays crisp at lower render scales.",
-"Settings > VIDEO > EFFECTS: BLOOM & COLOUR (OFF / LOW / HIGH) and GLOW (0-200%). The presets pick it for you (LOW preset = OFF, MEDIUM = LOW, HIGH and ULTRA = HIGH). PERFORMANCE MODE turns it off.",
-"Still in from 1.2.62, 1.2.61 and 1.2.60: THE MARY JANE (zombies chapter five), DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS, Season 2 HARVEST, save codes, block, word filter, error reports."
+"NEW ZOMBIES MAP: THE HIGH TIDE - CHAPTER SIX: LAST CALL (BETA). The Mary Jane's sister ship is a 420 party cruise, still lit up and still playing music. The lido deck and its pool, the grand atrium, the Munchies Buffet, the High Rollers Casino, Club 420, the Kush Theatre and the VIP lounge at the bow.",
+"7 chapters, 12 tapes and a new boss: THE CRUISE DIRECTOR (purple top hat, pink bow tie). Find the spark plugs and start the generator, take the purser's keycard, burn the Nightshade party favours, open the vault and fog the whole ship with the cure from the Club 420 fog machine.",
+"NEW WONDER WEAPON: THE DISCO BONG. Fires a glowing disco ball that hangs in the air. Zombies around it dance and get zapped by its lasers.",
+"A light-up dance floor, a disco ball and party beams once the power is back. LAUNCH PADS between the lido, the buffet, the casino and the bow. New AFTERPARTY camo for upgraded guns on this map.",
+"Chapter five now leads into chapter six.",
+"Still in from 1.2.63: BLOOM & COLOUR graphics (glow, colour grading, smoother edges; Settings > VIDEO > EFFECTS).",
+"Still in from 1.2.62, 1.2.61 and 1.2.60: THE MARY JANE, DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS, Season 2 HARVEST, save codes, block, word filter, error reports."
 ]
 },
 {
@@ -11438,7 +11666,7 @@ const POST_OK = () => !POST.failed && S.post && S.post !== 'off' && !G.bench;
 // the grade for a map: from how dark its sky is (night maps glow more), or the map's own env.grade
 function postEnv(e) {
   const c = new THREE.Color(e.top), h = new THREE.Color(e.horizon), L = 0.3 * (c.r + h.r) + 0.55 * (c.g + h.g) + 0.15 * (c.b + h.b), night = clamp((0.55 - L) / 0.4, 0, 1);
-  Object.assign(POST.grade, { bloom: 0.3 + 0.7 * night, th: 0.92 - 0.32 * night, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.16 + 0.04 * night }, e.grade || {});
+  Object.assign(POST.grade, { bloom: 0.3 + 0.3 * night, th: 0.92 - 0.14 * night, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.16 + 0.04 * night }, e.grade || {});
 }
 const POST_VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
 function postMats() {
@@ -16057,7 +16285,7 @@ const hcWait = setInterval(() => { if (typeof G !== 'undefined' && G.state === '
 MODES.zomb = { name: 'ZOMBIES', short: 'ZOMBIES', icon: 'ZMB', desc: 'Survive round after round of the dead. Start with a pistol, earn points, and buy guns from the Mystery Crate.', teams: false, respawn: 0, score: 0, time: 0, unit: 'ROUNDS' };
 const ZL = { on: false, map: 'blackwell', net: 'solo', code: '' };
 ZL.story = true; try { ZL.story = localStorage.getItem('ashfall.zstoryon') !== 'off'; } catch (e) {}
-try { const zm = localStorage.getItem('ashfall.zmap'); if (['blackwell', 'works', 'terminal9', 'mauiwowie', 'maryjane'].includes(zm)) ZL.map = zm; } catch (e) {}
+try { const zm = localStorage.getItem('ashfall.zmap'); if (['blackwell', 'works', 'terminal9', 'mauiwowie', 'maryjane', 'hightide'].includes(zm)) ZL.map = zm; } catch (e) {}
 try { ZL.net = localStorage.getItem('ashfall.znet') === 'coop' ? 'coop' : 'solo'; ZL.code = localStorage.getItem('ashfall.zcode') || ''; } catch (e) {}
 const Z = { zid: 0, targets: [], round: 0, toSpawn: 0, spawnT: 0, breakT: 0, active: false, guns: [], crate: null, ammo: null, boxT: 0, best: { round: 0, pts: 0 } };
 try { Object.assign(Z.best, JSON.parse(localStorage.getItem('ashfall.zbest') || '{}')); } catch (e) {}
@@ -17091,7 +17319,7 @@ function zuApply() {
 }
 function zuNear() { const s = ZU_SPOT; return ZD.up && Math.hypot(P.x - s.x, P.z - s.z) < 2.4 && Math.abs((P.y || 0) - s.y) < 1.5; }
 function zdTick(dt) {
-  zdAnim(dt); try { zuCamoTick(dt); mcTick(); } catch (e) {} try { worksTick(dt); airpTick(dt); isleTick(dt); mjTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); zwwCloudTick(dt); } catch (e) { reportError(e); }
+  zdAnim(dt); try { zuCamoTick(dt); mcTick(); } catch (e) {} try { worksTick(dt); airpTick(dt); isleTick(dt); mjTick(dt); tideTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); zwwCloudTick(dt); } catch (e) { reportError(e); }
   if (ZD.up) { const u = ZD.up, busy = u.t > 0; u.g.userData.beam.material.opacity = 0.08 + Math.sin(NOW * 3) * 0.04; if (busy) u.t -= dt;
     u.ring.rotation.y += dt * (busy ? 9 : 0.8); u.core.material.emissiveIntensity = 1.3 + Math.sin(NOW * 4) * 0.4 + (busy ? 2 : 0); u.lt.intensity = 1.4 + Math.sin(NOW * 4) * 0.3 + (busy ? 2.5 : 0); }
   if (ZD.arrows) ZD.arrows.userData.mat.opacity = 0.85 + Math.sin(NOW * 3) * 0.15;
@@ -17664,6 +17892,7 @@ function zsMake(it) {
   else if (K === 'stash') { for (let i = 0; i < 3; i++) { add(new THREE.CylinderGeometry(0.035, 0.035, 0.1, 12), new THREE.MeshStandardMaterial({ color: 0x5a1a8a, transparent: true, opacity: 0.8, emissive: new THREE.Color(0x7a2cff), emissiveIntensity: 0.6 }), -0.08 + i * 0.08, 0.05, (i % 2) * 0.05); add(new THREE.CylinderGeometry(0.037, 0.037, 0.025, 12), new THREE.MeshStandardMaterial({ color: 0xe8e8e8 }), -0.08 + i * 0.08, 0.11, (i % 2) * 0.05); } for (let i = 0; i < 6; i++) add(new THREE.SphereGeometry(0.012, 6, 4), zsGlowMat(0xb06cff, 1.2), (Math.random() - 0.5) * 0.3, 0.01, 0.1 + Math.random() * 0.1); }
   else if (K === 'jar') { col = 0x4adf5a; add(new THREE.CylinderGeometry(0.09, 0.09, 0.22, 16), new THREE.MeshStandardMaterial({ color: 0x8adf8a, transparent: true, opacity: 0.5, roughness: 0.05 }), 0, 0.11, 0); add(new THREE.CylinderGeometry(0.07, 0.07, 0.14, 12), new THREE.MeshStandardMaterial({ color: 0x3e6a24, roughness: 1 }), 0, 0.08, 0); add(new THREE.CylinderGeometry(0.095, 0.095, 0.03, 16), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.235, 0); add(new THREE.BoxGeometry(0.12, 0.06, 0.005), new THREE.MeshStandardMaterial({ color: 0xffffff }), 0, 0.12, 0.091); }
   else if (K === 'fuse') { col = 0xffa030; add(new THREE.CylinderGeometry(0.03, 0.03, 0.16, 12), new THREE.MeshStandardMaterial({ color: 0xe8e2d0, transparent: true, opacity: 0.7, roughness: 0.1 }), 0, 0.03, 0).rotation.z = Math.PI / 2; for (const x of [-0.09, 0.09]) add(new THREE.CylinderGeometry(0.033, 0.033, 0.03, 12), new THREE.MeshStandardMaterial({ color: 0xc8a030, metalness: 0.9, roughness: 0.3 }), x, 0.03, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.005, 0.005, 0.15, 6), zsGlowMat(col, 1.5), 0, 0.03, 0).rotation.z = Math.PI / 2; }
+  else if (K === 'plug') { col = 0xff8a2a; add(new THREE.CylinderGeometry(0.022, 0.022, 0.07, 10), new THREE.MeshStandardMaterial({ color: 0xf0f0ea, roughness: 0.3 }), 0, 0.035, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.028, 0.028, 0.035, 6), new THREE.MeshStandardMaterial({ color: 0x9aa0a6, metalness: 0.9, roughness: 0.3 }), 0.05, 0.035, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.015, 0.015, 0.05, 8), new THREE.MeshStandardMaterial({ color: 0x8a8f94, metalness: 0.8 }), 0.09, 0.035, 0).rotation.z = Math.PI / 2; add(new THREE.CylinderGeometry(0.008, 0.008, 0.06, 6), zsGlowMat(col, 1.6), -0.06, 0.035, 0).rotation.z = Math.PI / 2; }
   else if (K === 'tape') { col = 0xffc24a; add(new THREE.BoxGeometry(0.1, 0.015, 0.065), new THREE.MeshStandardMaterial({ color: 0x1a1a1a }), 0, 0.01, 0); add(new THREE.BoxGeometry(0.07, 0.016, 0.03), zsGlowMat(col, 0.9), 0, 0.012, 0); }
   else if (K === 'blood') { col = 0xd02040; add(new THREE.CylinderGeometry(0.02, 0.02, 0.12, 10), new THREE.MeshStandardMaterial({ color: 0x9a0a1a, transparent: true, opacity: 0.85, emissive: new THREE.Color(0x6a0010), emissiveIntensity: 0.6 }), 0, 0.06, 0); add(new THREE.CylinderGeometry(0.022, 0.022, 0.025, 10), new THREE.MeshStandardMaterial({ color: 0x9a3cff }), 0, 0.13, 0); }
   else if (K === 'valve') { col = 0xff5a3a; const red = new THREE.MeshStandardMaterial({ color: 0xb02a1a, roughness: 0.5, metalness: 0.4 }); const t = add(new THREE.TorusGeometry(0.16, 0.025, 8, 20), red, 0, 0.03, 0); t.rotation.x = Math.PI / 2; for (let i = 0; i < 4; i++) { const sp = add(new THREE.BoxGeometry(0.3, 0.02, 0.02), red, 0, 0.03, 0); sp.rotation.y = i * Math.PI / 4; } add(new THREE.CylinderGeometry(0.035, 0.035, 0.08, 10), new THREE.MeshStandardMaterial({ color: 0x8a8f94, metalness: 0.8 }), 0, 0.05, 0); add(new THREE.TorusGeometry(0.17, 0.006, 6, 20), zsGlowMat(col, 1.2), 0, 0.06, 0).rotation.x = Math.PI / 2; }
@@ -17673,7 +17902,7 @@ function zsMake(it) {
   else if (K === 'ledger') { col = 0xd8b060; add(new THREE.BoxGeometry(0.26, 0.05, 0.34), new THREE.MeshStandardMaterial({ color: 0x5a1a1a, roughness: 0.8 }), 0, 0.025, 0); add(new THREE.BoxGeometry(0.24, 0.04, 0.32), new THREE.MeshStandardMaterial({ color: 0xe8dcc0 }), 0.006, 0.026, 0); add(new THREE.BoxGeometry(0.1, 0.004, 0.04), zsGlowMat(col, 1.0), 0, 0.053, -0.1); }
   else if (K === 'patch') { const soil = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, roughness: 1 }), leaf = new THREE.MeshStandardMaterial({ color: 0x5a2a7a, emissive: new THREE.Color(0x7a2cff), emissiveIntensity: 0.7, roughness: 0.7, side: THREE.DoubleSide }); add(new THREE.CylinderGeometry(0.9, 1.0, 0.18, 14), soil, 0, 0.09, 0);
     for (let i = 0; i < 5; i++) { const a = i / 5 * TAU, x = Math.cos(a) * 0.5, z = Math.sin(a) * 0.5; add(new THREE.ConeGeometry(0.22, 1.1, 6), leaf, x, 0.7, z); for (let k = 0; k < 4; k++) add(new THREE.BoxGeometry(0.4, 0.01, 0.12), leaf, x + Math.cos(k * 1.6) * 0.2, 0.45 + k * 0.12, z + Math.sin(k * 1.6) * 0.2).rotation.y = k * 1.6; } }
-  if (K === 'fuse' || K === 'tape' || K === 'valve') for (const m of g.children) { m.scale.multiplyScalar(2); m.position.multiplyScalar(2); }
+  if (K === 'fuse' || K === 'tape' || K === 'valve' || K === 'plug') for (const m of g.children) { m.scale.multiplyScalar(2); m.position.multiplyScalar(2); }
   const beam = add(new THREE.CylinderGeometry(0.12, 0.25, 2.2, 10, 1, true), new THREE.MeshBasicMaterial({ color: col, transparent: true, opacity: 0.12, depthWrite: false, side: THREE.DoubleSide }), 0, 1.1, 0);
   const lt = new THREE.PointLight(col, 0.7, 3.5, 2); lt.position.y = 0.4; g.add(lt);
   g.position.set(s.x, s.y, s.z); scene.add(g); g.userData.beam = beam; return g;
@@ -17757,7 +17986,7 @@ function zsPower() { if (zsFuses() < 3) return; zsFlag('power'); try { tone(60, 
 // the power: the flickering lights steady and the fuse box goes green
 function zsApplyPower() {
   if (ZS.fusebox) for (const m of ZS.fusebox.slots) m.material.emissive.setHex(0x2adf4a);
-  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); if (curMap === 'mauiwowie') islePower(); if (curMap === 'maryjane') mjPower(); zmapPowerPads(); } catch (e) {}
+  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); if (curMap === 'mauiwowie') islePower(); if (curMap === 'maryjane') mjPower(); if (curMap === 'hightide') tidePower(); zmapPowerPads(); } catch (e) {}
   if (curMap === 'blackwell' && typeof HOSP !== 'undefined' && HOSP.flick) for (const f of HOSP.flick) { f.l.intensity = f.i * 1.15; f.t = 1e9; f.on = true; }
 }
 const ZS_SAY = {
@@ -17790,6 +18019,19 @@ function zsMakeBoss(e) {
   const purple = new Map(); e.group.traverse(o => { if (o.isMesh && !o.userData.hitbox) { const m = o.material; if (!purple.has(m)) { const c = (Array.isArray(m) ? m[0] : m).clone(); if (c.emissive) { c.emissive.setHex(0x5a10a0); c.emissiveIntensity = 0.7; } if (c.color) c.color.lerp(new THREE.Color(0x6a3a8a), 0.5); purple.set(m, c); } o.material = purple.get(m); } });
   const lt = new THREE.PointLight(0x9a3cff, 1.2, 6, 2); lt.position.y = 1.6; e.group.add(lt);
   if (curMap === 'maryjane') try { zsCaptainHat(e); } catch (err) {}
+  if (curMap === 'hightide') try { zsDirectorHat(e); } catch (err) {}
+}
+// the High Tide's cruise director: a tall purple velvet top hat with a green band, and a big pink bow tie
+function zsDirectorHat(e) {
+  const g = new THREE.Group(), std = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.6 }, o || {}));
+  const brim = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.2, 0.02, 20), std(0x2a1040)); brim.position.y = 0.01; g.add(brim);
+  const crown = new THREE.Mesh(new THREE.CylinderGeometry(0.13, 0.12, 0.26, 18), std(0x4a1a7a, { roughness: 0.85 })); crown.position.y = 0.14; g.add(crown);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.125, 0.125, 0.04, 18), std(0x2adf5a, { emissive: new THREE.Color(0x1a8a3a), emissiveIntensity: 0.6 })); band.position.y = 0.04; g.add(band);
+  const head = e.rig && e.rig.head; if (head) { g.position.set(0, 0.15, 0); g.rotation.z = 0.12; head.add(g); } else { g.position.y = 1.85; e.group.add(g); }
+  const bow = new THREE.Group(), pink = std(0xff3ab0, { emissive: new THREE.Color(0x8a1060), emissiveIntensity: 0.5 });
+  for (const s of [-1, 1]) { const w = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.12, 4), pink); w.rotation.z = s * Math.PI / 2; w.position.x = s * 0.06; bow.add(w); }
+  bow.add(new THREE.Mesh(new THREE.SphereGeometry(0.025, 8, 6), pink));
+  const chest = e.rig && (e.rig.chest || e.rig.torso || e.rig.spine); if (chest) { bow.position.set(0, 0.22, -0.13); chest.add(bow); } else { bow.position.set(0, 1.45, -0.18); e.group.add(bow); }
 }
 // the Mary Jane's captain wears his cap: a white crown, a black peak, a gold band and a little green leaf badge
 function zsCaptainHat(e) {
@@ -18577,7 +18819,7 @@ ZMAPCFG.maryjane = {
       partSub: 'the fuse panel is in the crew block', stashSub: 'burned', jarSub: 'enough cure for every port', bloodSub: 'every port the ship ever touched',
       station: 'BALLAST VALVE', cooking: 'SEEDING THE BALLAST', cookDo: 'POUR THE CURE INTO THE BALLAST', cookStay: 'stay at the ballast valve', bar: 'SEEDING THE BALLAST',
       boss: 'THE CAPTAIN', bossSub: 'he shipped the nightshade to the world · kill him and take his logbook', bossDown: 'THE CAPTAIN IS DOWN', bossDownSub: 'take his logbook', drop: "THE CAPTAIN'S LOG", dropLook: 'ledger',
-      doneSub: 'chapter five complete · every perk · upgraded gun · 5000 points', cont: 'TO BE CONTINUED', contSub: 'the mary jane had a sister ship',
+      doneSub: 'chapter five complete · every perk · upgraded gun · 5000 points', cont: 'CHAPTER SIX', contSub: 'the mary jane had a sister ship · the HIGH TIDE',
       keyDone: 'ashfall.zstory.maryjane', keyTapes: 'ashfall.ztapes.maryjane', bossScale: 2.0, bossHp: 11000,
     },
   },
@@ -18585,6 +18827,122 @@ ZMAPCFG.maryjane = {
 ZMAP_LIST.push('maryjane');
 try { AUD_PROF.maryjane = { len: 1.6, pow: 2.2, wet: 0.3, echo: 0.15, dark: 0.3, amb: 'wind', surf: 'metal' }; } catch (e) {}
 
+
+/* ---------- THE HIGH TIDE (chapter six: LAST CALL) */
+ZMAPCFG.hightide = {
+  chapter: 'CHAPTER SIX', mapLine: 'start on the lido deck · the mary jane\'s sister ship',
+  info: 'The grand atrium in the middle opens every way. Loop the buffet, the casino, the promenade or the dance floor in Club 420, start the generator for the LAUNCH PADS, and find the GUN UPGRADER (5000) in the VIP lounge at the bow.',
+  doors: [
+    { name: 'GRAND ATRIUM', cost: 1000, ax: 'x', c: 26, a: -3, b: 3, y: 0, h: 4, wide: true, path: true },
+    { name: 'MUNCHIES BUFFET', cost: 1250, ax: 'z', c: -10, a: 16, b: 22, y: 0, h: 4, wide: true },
+    { name: 'HIGH ROLLERS CASINO', cost: 1250, ax: 'z', c: 10, a: 16, b: 22, y: 0, h: 4, wide: true },
+    { name: 'THE PROMENADE', cost: 2000, ax: 'x', c: 12, a: -3, b: 3, y: 0, h: 4, wide: true, path: true },
+    { name: 'BUFFET TERRACE', cost: 1500, ax: 'x', c: 12, a: -22, b: -18, y: 0, h: 4 },
+    { name: 'CASINO TERRACE', cost: 1500, ax: 'x', c: 12, a: 18, b: 22, y: 0, h: 4 },
+  ],
+  walls: [],
+  path: [[2, 34], [1.5, 30], [0, 27], [0, 24], [0, 19], [0, 15], [0, 12], [0, 9], [0, 4], [0, -1], [0, -6], [0, -11], [0, -16], [0, -21], [0, -26], [0, -31], [0, -35], [-1, -37.4]],
+  up: { x: -2.6, z: -39, y: 0 }, strips: [[-5.72, -38.5, 0.04, 6.4], [5.72, -38.5, 0.04, 6.4]],
+  perks: { revive: { x: -24.5, z: 28.5, y: 0, q: 1 }, double: { x: 9.5, z: 22.8, y: 0, q: 3 }, quick: { x: -24.5, z: 14, y: 0, q: 1 }, zoom: { x: 24.5, z: 16, y: 0, q: 3 }, tank: { x: -24.5, z: -20, y: 0, q: 1 }, munch: { x: 24.5, z: -20, y: 0, q: 3 } },
+  pads: [
+    { name: 'THE LIDO', x: 8, z: 34.5, y: 0, needs: null },
+    { name: 'THE BUFFET', x: -16.5, z: 18.5, y: 0, needs: [1] },
+    { name: 'THE BOW', x: -10, z: -33, y: 0, needs: [3, 4, 5] },
+    { name: 'THE CASINO', x: 17.5, z: 18.5, y: 0, needs: [2] },
+  ],
+  stash: [
+    { gun: 'viper', cost: 1000, x: -16, z: 26.27, y: 0, q: 0 },
+    { gun: 'striker', cost: 1300, x: -9.73, z: 14.5, y: 0, q: 1 },
+    { gun: 'breacher', cost: 1500, x: -24.73, z: 24, y: 0, q: 1 },
+    { gun: 'marc', cost: 2000, x: 24.73, z: 22, y: 0, q: 3 },
+    { gun: 'hailstorm', cost: 2500, x: 24.73, z: -10, y: 0, q: 3 },
+  ],
+  windows: [{ x: -25, z: 19, y: 0, q: 1 }, { x: -25, z: -8, y: 0, q: 1 }, { x: 25, z: 19, y: 0, q: 3 }, { x: 25, z: -8, y: 0, q: 3 }],
+  story: {
+    items: [
+      { id: 'f1', kind: 'fuse', look: 'plug', name: 'SPARK PLUG', at: { x: -12, z: 29, y: 0 } },
+      { id: 'f2', kind: 'fuse', look: 'plug', name: 'SPARK PLUG', at: { x: -18.5, z: 25.2, y: 0 } },
+      { id: 'f3', kind: 'fuse', look: 'plug', name: 'SPARK PLUG', at: { x: 21, z: 19.5, y: 0 } },
+      { id: 'card', kind: 'card', name: "THE PURSER'S KEYCARD", at: { x: 16, z: -20.8, y: 0 }, needs: 'power' },
+      { id: 'st1', kind: 'stash', look: 'pallet', name: 'NIGHTSHADE PARTY FAVOURS', at: { x: -2, z: -24, y: 0 } },
+      { id: 'st2', kind: 'stash', look: 'pallet', name: 'NIGHTSHADE PARTY FAVOURS', at: { x: 20, z: 24.6, y: 0 } },
+      { id: 'st3', kind: 'stash', look: 'pallet', name: 'NIGHTSHADE PARTY FAVOURS', at: { x: -11, z: -33, y: 0 } },
+      { id: 'jar', kind: 'jar', name: 'THE CURE STRAIN', at: { x: 7, z: 23.6, y: 0 }, needs: 'card' },
+    ],
+    panel: { x: -9.62, z: 24.2, y: 0 }, cook: { x: -21, z: -23.5, y: 0, secs: 60, need: 9 },
+    chapters: [
+      { id: 'power', name: 'PARTY\'S OVER', goal: 'find 3 spark plugs and start the emergency generator in the grand atrium' },
+      { id: 'card', name: "THE PURSER'S KEYCARD", goal: 'take the keycard off the purser, backstage in the Kush Theatre' },
+      { id: 'stash', name: 'NO MORE FAVOURS', goal: 'burn the 3 boxes of NIGHTSHADE party favours (the promenade, the casino, the bow)' },
+      { id: 'blood', name: 'THE CRUISE DIRECTOR', goal: 'kill the Cruise Director and take his guest list' },
+      { id: 'jar', name: 'THE PURSER\'S VAULT', goal: 'open the vault behind reception and take the cure strain' },
+      { id: 'cure', name: 'LAST CALL', goal: 'load the cure into the fog machine in Club 420 and hold them off' },
+      { id: 'end', name: 'EPILOGUE', goal: 'survive' },
+    ],
+    scenes: [
+      [['sparks', 'The generator in the atrium has no spark plugs! Somebody took them out! The same trick as the Mary Jane!'], ['doc', 'The chief on the Mary Jane stopped his ship. Somebody here tried the same thing.'], ['tank', 'Three plugs. The pool deck, the buffet, the casino. Go.']],
+      [['sparks', 'Power! The music is back! Oh no, the music is back! Why is it always this song!'], ['doc', 'The purser kept the ship\'s money and the ship\'s secrets. His keycard opens the vault.'], ['tank', 'He was running the theatre show. Last anyone saw, he was backstage.']],
+      [['doc', 'The purser\'s list. Every passenger got a gift bag at boarding. Inside: a Nightshade pre-roll. A party favour.'], ['smokes', 'Free weed on a party cruise. Nobody said no. Nobody ever says no, man.'], ['tank', 'Three boxes left on board. The promenade, the casino, the bow. Burn them.']],
+      [['smokes', 'That is the last of the favours. I never thought I would set fire to free weed. This ship has changed me.'], ['sparks', 'Somebody is on the theatre microphone! He is announcing us! Ladies and gentlemen, the survivors!'], ['doc', 'The Cruise Director. He handed out the bags himself. He has the guest list. Take it.']],
+      [['tank', 'Show is over. The Cruise Director has left the stage.'], ['doc', 'His guest list. Every name, every cabin, every port they got off at.'], ['sparks', 'And the purser\'s keycard opens the vault behind reception! Vaults! I love vaults!']],
+      [['smokes', 'The Grower\'s green. A whole vault of it. The owners knew, man. They kept the cure for themselves.'], ['doc', 'The fog machine in Club 420 is wired into every vent on the ship. Every deck, every cabin.'], ['tank', 'Then we throw one last party. Sixty seconds at the fog machine. Everybody to the club.']],
+    ],
+    tapes: [
+      { at: { x: 3, z: 36.5, y: 0 }, title: 'TIDE TAPE 1 · ALL ABOARD', lines: [['tank', 'Second ship in two nights. I used to get seasick on a pedal boat.'], ['smokes', 'This one has a pool, Marcus. Things are looking up.']] },
+      { at: { x: -2.5, z: 23, y: 0 }, title: 'TIDE TAPE 2 · RECEPTION', lines: [['doc', 'Welcome desk. Two thousand passengers checked in for the four twenty cruise.'], ['sparks', 'Two thousand! We are going to need more bullets!']] },
+      { at: { x: -6, z: 39.5, y: 0 }, title: 'TIDE TAPE 3 · THE POOL', lines: [['smokes', 'Somebody left a float shaped like a joint in the pool. That is a good float.'], ['doc', 'Do not get in the pool, Smokes.']] },
+      { at: { x: -12.5, z: 21, y: 0 }, title: 'TIDE TAPE 4 · THE BUFFET', lines: [['tank', 'Chocolate fountain. Nacho mountain. Fourteen kinds of brownie.'], ['smokes', 'The munchies buffet. People came on this cruise for this room, man. I would have.']] },
+      { at: { x: 14.5, z: 19, y: 0 }, title: 'TIDE TAPE 5 · THE CASINO', lines: [['sparks', 'A slot machine still running! Three leaves! I won! What did I win?'], ['doc', 'A free gift bag, Penny. Put it down.']] },
+      { at: { x: -17, z: -0.5, y: 0 }, title: 'TIDE TAPE 6 · THE GIFT BAGS', lines: [['doc', 'Gift bag. A t-shirt, a lighter, a sticker, and one purple pre-roll.'], ['smokes', 'Welcome aboard. Here is the end of the world. Enjoy your stay.']] },
+      { at: { x: -21, z: -5, y: 0 }, title: 'TIDE TAPE 7 · CLUB 420', lines: [['sparks', 'Light-up dance floor! A real disco ball! I always wanted to see one in real life!'], ['tank', 'Focus, Penny. The dancers are not dancing anymore.']] },
+      { at: { x: 9.5, z: -12, y: 0 }, title: 'TIDE TAPE 8 · THE PURSER', lines: [['tank', 'Purser\'s note. He found the favours were Nightshade on day two. He pulled the plugs to stop the ship.'], ['doc', 'Just like the chief on the Mary Jane. Two good men on two bad ships.']] },
+      { at: { x: 24, z: -23, y: 0 }, title: 'TIDE TAPE 9 · BACKSTAGE', lines: [['smokes', 'The Cloud Nine Revue. Twelve dancers, one magician, a guy who juggles lighters.'], ['sparks', 'The lighter guy! I would have bought a ticket for the lighter guy!']] },
+      { at: { x: 2.5, z: -9, y: 0 }, title: 'TIDE TAPE 10 · THE ITINERARY', lines: [['doc', 'Ports of call. The island, the Mary Jane\'s dock, and the mainland. Bayview harbour.'], ['tank', 'They already stopped at Bayview. Three days ago.']] },
+      { at: { x: 4, z: -37, y: 0 }, title: 'TIDE TAPE 11 · THE VIP LOUNGE', lines: [['sparks', 'Velvet sofas, free champagne, and the purple machine again! It has its own sofa now!'], ['smokes', 'VIP machine, man. Very important purple.']] },
+      { at: { x: 11, z: -41, y: 0 }, title: 'TIDE TAPE 12 · THE BOW', lines: [['doc', 'The owners of the line. The same names as the Mary Jane\'s papers. They knew what both ships carried.'], ['tank', 'Then after this, we pay them a visit.']] },
+    ],
+    intro: [
+      ['doc', 'The Mary Jane\'s log named her sister. Same owners, same route, same cargo. The HIGH TIDE.'],
+      ['sparks', 'A cruise ship! With a pool! And a casino! And the lights are still on!'],
+      ['tank', 'The music is still playing too. That means the party never stopped. Stay sharp.'],
+      ['smokes', 'A four twenty cruise, man. I had a ticket for one of these once. Glad I missed the boat.'],
+    ],
+    end: [
+      ['sparks', 'The fog is in the vents! Every deck is green! The dance floor is green! Even the pool is green!'],
+      ['doc', 'Listen. They are coughing. They are sitting down. It is working.'],
+      ['tank', 'Generator off, music off. Party is over. For real this time.'],
+      ['smokes', 'Two ships, man. Two ships of seeds and smoke, and we cleaned both of them.'],
+      ['doc', 'The guest list. Three hundred passengers got off at the last port. Bayview harbour. Three days ago.'],
+      ['tank', 'Then we go to Bayview.'],
+    ],
+    rounds: {
+      2: [['smokes', 'Two thousand passengers and they all look like they need a nap.'], ['sparks', 'A very long nap! Forever nap!']],
+      4: [['doc', 'The music is the same three songs on a loop. Over and over.'], ['tank', 'They follow the music. Use it.']],
+      6: [['sparks', 'Zombies in swimsuits! Zombies in bathrobes! Zombies in party hats!'], ['smokes', 'Some of them still have their wristbands on, man. All inclusive.']],
+      8: [['tank', 'The buffet is a good spot to hold. One way in, one way out.'], ['smokes', 'And snacks. Do not forget the snacks.']],
+      10: [['doc', 'Round ten. We are still standing.'], ['sparks', 'Standing and dancing! Mostly running! Running is like dancing!']],
+      15: [['smokes', 'Fifteen rounds on a party boat. Best cruise ever, man. Five stars.'], ['tank', 'Zero stars. I am writing a review.']],
+    },
+    say: {
+      doc: { fuse: 'A spark plug. The purser hid them well.', card: 'The purser\'s keycard. He tried to stop this.', stash: 'Burn the favours. Nobody else gets one.', jar: 'The cure strain. They kept it from everyone.', blood: 'The guest list. Every name, every port.', cook: 'The cure is in the fog. Sixty seconds. Hold the club!' },
+      tank: { fuse: 'Plug. Two more to go.', card: 'Keycard. Let us open their vault.', stash: 'Burn it.', jar: 'Cure in hand. To the club.', blood: 'Director is done. Got his list.', cook: 'Everybody in the club! Hold the fog machine!' },
+      smokes: { fuse: 'A spark plug, man. Spark it up.', card: 'A keycard with a little palm tree on it. Fancy.', stash: 'No more free samples. Party is over, man.', jar: 'Green, man. Pure green. The good stuff.', blood: 'His guest list. Laminated. Of course it is laminated.', cook: 'Fog it up! Best hotbox in history, man!' },
+      sparks: { fuse: 'A spark plug! Sparks and a spark plug! It is fate!', card: 'A keycard! It goes beep! I love beep!', stash: 'Party favours on fire! The most exciting party favour!', jar: 'The cure! It glows! It glows green!', blood: 'The guest list! My name is not on it! Rude!', cook: 'Fog machine on! Maximum fog! Shoot everything!' },
+    },
+    text: {
+      title: 'LAST CALL', place: 'THE HIGH TIDE · ZOMBIES · CHAPTER SIX', introSub: 'SEVEN CHAPTERS · TWELVE TAPES · LAUNCH PADS', introEm: 'the mary jane\'s sister ship · the party never stopped',
+      needPower: 'BACKSTAGE IN THE THEATRE · START THE GENERATOR FIRST', needCard: "LOCKED IN THE PURSER'S VAULT · YOU NEED THE PURSER'S KEYCARD", stashLocked: "NIGHTSHADE PARTY FAVOURS · YOU NEED THE PURSER'S KEYCARD FOR THE LIGHTER FLUID (CHAPTER 2)",
+      stashVerb: 'BURN IT', panel: 'THE EMERGENCY GENERATOR', parts: 'SPARK PLUGS', panelDo: 'PUT IN THE PLUGS AND START THE GENERATOR', powerOn: 'THE POWER IS BACK', powerSub: 'the party lights are on · the launch pads are live',
+      partSub: 'the generator is in the grand atrium', stashSub: 'burned', jarSub: 'enough cure for every deck', bloodSub: 'every passenger, every port',
+      station: 'FOG MACHINE', cooking: 'FOGGING THE SHIP', cookDo: 'LOAD THE CURE INTO THE FOG MACHINE', cookStay: 'stay in club 420', bar: 'FOGGING THE SHIP',
+      boss: 'THE CRUISE DIRECTOR', bossSub: 'he handed out the nightshade himself · kill him and take the guest list', bossDown: 'THE CRUISE DIRECTOR IS DOWN', bossDownSub: 'take his guest list', drop: 'THE GUEST LIST', dropLook: 'ledger',
+      doneSub: 'chapter six complete · every perk · upgraded gun · 5000 points', cont: 'TO BE CONTINUED', contSub: 'three hundred passengers got off at bayview',
+      keyDone: 'ashfall.zstory.hightide', keyTapes: 'ashfall.ztapes.hightide', bossScale: 2.0, bossHp: 13000,
+    },
+  },
+};
+ZMAP_LIST.push('hightide');
+try { AUD_PROF.hightide = { len: 1.8, pow: 2.2, wet: 0.32, echo: 0.16, dark: 0.25, amb: 'wind', surf: 'wood' }; } catch (e) {}
 /* ================================================================== ZOMBIES EXTRAS: power-ups and wall stashes
    POWER-UPS (themed): a zombie sometimes drops one, floating and glowing; walk through it. It blinks out after 25 s.
      RE-UP (max ammo) · HOTBOX (one hit kills, 30 s) · DOUBLE BAG (double points, 30 s) · KUSH BOMB (every zombie dies,
@@ -18775,9 +19133,10 @@ const ZWW = {
   works: { id: 'pressure', base: 'hellfire', name: 'THE PRESSURE GUN', desc: 'a blast of steam that throws back everything in front of you', mag: 8, reserve: 48, interval: 0.55, col: 0xffa040 },
   terminal9: { id: 'duster', base: 'hellfire', name: 'THE CROP DUSTER', desc: 'sprays a lingering cloud of green cure · zombies inside it melt', mag: 10, reserve: 60, interval: 0.45, col: 0x7adf3a },
   mauiwowie: { id: 'vape', base: 'thumper', name: 'THE DRAGON VAPE', desc: 'blows a huge smoke ring that rolls through every zombie in its way', mag: 6, reserve: 36, interval: 0.7, col: 0xff4ab8 },
+  hightide: { id: 'disco', base: 'thumper', name: 'THE DISCO BONG', desc: 'fires a glowing disco ball that hangs in the air · zombies around it dance and get zapped by its lasers', mag: 4, reserve: 24, interval: 0.9, col: 0xff3ab0 },
   maryjane: { id: 'harpoon', base: 'hellfire', name: 'THE HASH HARPOON', desc: 'fires a resin harpoon straight through every zombie in a line · it bursts into sticky smoke where it lands', mag: 5, reserve: 30, interval: 0.85, col: 0x2ad8c8 },
 };
-const ZWWP = [], ZWWC = [], ZWWR = [], ZWWH = [];   // ... and hash harpoons in flight / stuck in walls
+const ZWWP = [], ZWWC = [], ZWWR = [], ZWWH = [], ZWWD = [];   // ... and disco balls   // ... and hash harpoons in flight / stuck in walls
    // ... and dragon vape smoke rings   // bong balls in flight, crop duster clouds
 const zwwFor = map => ZWW[map] || null;
 function zwwGive(map) {
@@ -18808,6 +19167,14 @@ function zwwFire(w) {
     ring.position.copy(org); ring.lookAt(org.clone().add(dir)); scene.add(ring);
     ZWWR.push({ m: ring, v: dir.clone().multiplyScalar(14), t: 0, w, hit: new Set() });
     try { burst(0.7, 400, 0.25, 'lowpass'); tone(110, 0.5, 0.18, 'sine', 70); } catch (e) {}
+    return;
+  }
+  if (w.ww === 'disco') {   // a mirror ball: flies a short way, stops in the air, then pulls in and zaps the zombies round it
+    const m = new THREE.Group(), ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 1), new THREE.MeshStandardMaterial({ color: 0xe8e8f0, metalness: 1, roughness: 0.15, emissive: new THREE.Color(0xff3ab0), emissiveIntensity: 0.6, flatShading: true }));
+    m.add(ball); const glow = new THREE.PointLight(0xff3ab0, 1.6, 9, 2); m.add(glow);
+    m.position.copy(org); scene.add(m);
+    ZWWD.push({ m, ball, glow, v: dir.clone().multiplyScalar(18), t: 0, w, hang: -1, zapT: 0, lasers: [] });
+    try { burst(0.3, 1200, 0.3, 'bandpass'); tone(330, 0.2, 0.12, 'square', 660); } catch (e) {}
     return;
   }
   if (w.ww === 'harpoon') {   // a fast straight spear that goes through everything, then bursts where it stops
@@ -18860,6 +19227,40 @@ function zwwHarpoonTick(dt) {
     if (wall || h.t > 1.1) { if (wall) h.m.position.copy(wall).addScaledVector(h.v.clone().normalize(), -0.4); h.stuck = 0; zwwResin(h.m.position, h.w); }
   }
 }
+// disco balls: fly 0.7 s (or to a wall), hang there 6 s spinning, every 0.3 s a laser zaps up to 5 zombies within 8 m;
+// every zombie within 8 m is pulled in and dances (stunned, slowed); then it pops in a cloud of pink smoke
+const DISCO_COLS = [0xff3ab0, 0x3ab8ff, 0x7aff3a, 0xffc83a];
+function zwwDiscoTick(dt) {
+  for (let i = ZWWD.length - 1; i >= 0; i--) {
+    const d = ZWWD[i], p = d.m.position; d.t += dt;
+    for (let k = d.lasers.length - 1; k >= 0; k--) { const L = d.lasers[k]; L.t -= dt; L.m.material.opacity = Math.max(0, L.t / 0.18) * 0.9; if (L.t <= 0) { d.m.remove(L.m); L.m.geometry.dispose(); d.lasers.splice(k, 1); } }
+    if (d.hang < 0) {
+      const p0 = p.clone(); p.addScaledVector(d.v, dt); const seg = p.clone().sub(p0), L = seg.length();
+      if (L > 0) { _wwRay.set(p0, seg.clone().normalize()); _wwRay.far = L + 0.5; const hit = _wwRay.intersectObjects(wallMeshes, false)[0]; if (hit) { p.copy(hit.point).addScaledVector(seg.normalize(), -0.6); d.hang = 0; } }
+      if (d.t > 0.7) d.hang = 0;
+      if (d.hang === 0) { const fl = groundAt(p.x, p.z, p.y); p.y = Math.max(p.y, fl + 1.4); try { tone(220, 0.3, 0.12, 'triangle', 440); } catch (e) {} }
+      continue;
+    }
+    d.hang += dt; d.ball.rotation.y += dt * 4; d.ball.rotation.x += dt * 1.3;
+    const col = DISCO_COLS[Math.floor(d.hang * 4) % 4]; d.ball.material.emissive.setHex(col); d.glow.color.setHex(col); d.glow.intensity = 1.4 + Math.sin(d.hang * 12) * 0.5;
+    const near = []; for (const e of enemies) { if (!e.zombie) continue; const g = e.group.position, r = Math.hypot(g.x - p.x, g.z - p.z); if (r < 8 && Math.abs(g.y - p.y) < 4) near.push([r, e]); }
+    for (const [r, e] of near) { const g = e.group.position; if (!e.boss && r > 1.2) { const k = Math.min(1, dt * 1.6); g.x += (p.x - g.x) / r * k; g.z += (p.z - g.z) / r * k; } e.stunT = Math.max(e.stunT || 0, e.boss ? 0.15 : 0.35); e.slowT = Math.max(e.slowT || 0, 0.6); e.atkT = 0; if (!e.boss) e.group.rotation.y += dt * 6; }
+    if ((d.zapT -= dt) <= 0) {
+      d.zapT = 0.3; near.sort((a, b) => a[0] - b[0]);
+      for (const [, e] of near.slice(0, 5)) {
+        const g = e.group.position, tx = g.x - p.x, ty = g.y + 1.2 - p.y, tz = g.z - p.z, len = Math.hypot(tx, ty, tz) || 1;
+        const lm = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, len, 5), new THREE.MeshBasicMaterial({ color: DISCO_COLS[(Math.random() * 4) | 0], transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+        lm.geometry.translate(0, len / 2, 0); lm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(tx / len, ty / len, tz / len)); d.m.add(lm); d.lasers.push({ m: lm, t: 0.18 });
+        damageEnemy(e, e.boss ? e.maxHp * 0.004 / Math.max(1, zombGunMul(true)) : zwwDmg(d.w, 0.35), false, null, true, 'player');
+      }
+      if (near.length) try { tone(880 + Math.random() * 440, 0.06, 0.05, 'square'); } catch (e) {}
+    }
+    if (d.hang > 6) {
+      try { for (let k = 0; k < 18; k++) puff(p.x + rnd(-1.5, 1.5), p.y + rnd(-1, 1), p.z + rnd(-1.5, 1.5), { color: DISCO_COLS[k % 4], size: 0.6, grow: 1.6, life: 1.4, vy: 0.3, op: 0.45 }); burst(0.3, 700, 0.25, 'lowpass'); } catch (e) {}
+      scene.remove(d.m); ZWWD.splice(i, 1);
+    }
+  }
+}
 // where the harpoon lands: a burst of sticky resin smoke (zombies near it are hurt, held and slowed)
 function zwwResin(p, w) {
   for (const e of enemies.slice()) {
@@ -18869,7 +19270,7 @@ function zwwResin(p, w) {
   try { for (let i = 0; i < 16; i++) puff(p.x + rnd(-1.6, 1.6), p.y + rnd(-0.6, 0.8), p.z + rnd(-1.6, 1.6), { color: i % 2 ? 0x2ad8c8 : 0x9a7a3a, size: 0.7, grow: 1.8, life: 1.6, vy: 0.3, op: 0.45 }); tone(90, 0.5, 0.18, 'sine', 50); burst(0.35, 600, 0.25, 'lowpass'); } catch (e) {}
 }
 function zwwTick(dt) {
-  zwwHarpoonTick(dt);
+  zwwHarpoonTick(dt); zwwDiscoTick(dt);
   for (let i = ZWWR.length - 1; i >= 0; i--) {
     const r = ZWWR[i], p0 = r.m.position.clone(); r.t += dt; r.m.position.addScaledVector(r.v, dt);
     const k = 1 + r.t * 1.4; r.m.scale.set(k, k, k); r.m.material.opacity = Math.max(0, 0.6 * (1 - r.t / 2)); r.m.rotateZ(dt * 3);
@@ -18904,7 +19305,7 @@ function zwwBurst(p, w) {
   try { for (let i = 0; i < 26; i++) puff(p.x + rnd(-2.5, 2.5), p.y + rnd(0, 2), p.z + rnd(-2.5, 2.5), { color: i % 3 ? 0x5adf6a : 0xb0ffb0, size: 1, grow: 2.4, life: 2.2, vy: 0.5, op: 0.55 }); sfx.explode(at(p.x, p.z, 30, p.y)); tone(60, 0.8, 0.25, 'sine', 30); } catch (e) {}
   try { if (typeof zcEvent === 'function') zcEvent('b', p); } catch (e) {}
 }
-function zwwClear() { for (const b of ZWWP.concat(ZWWR, ZWWH)) scene.remove(b.m); ZWWP.length = 0; ZWWR.length = 0; ZWWC.length = 0; ZWWH.length = 0; }
+function zwwClear() { for (const b of ZWWP.concat(ZWWR, ZWWH, ZWWD)) scene.remove(b.m); ZWWP.length = 0; ZWWR.length = 0; ZWWC.length = 0; ZWWH.length = 0; ZWWD.length = 0; }
 // crop duster clouds: 4 seconds of cure that eats any zombie standing in it
 function zwwCloudTick(dt) {
   for (let i = ZWWC.length - 1; i >= 0; i--) {
@@ -19001,7 +19402,7 @@ function mcPicker() {
 }
 
 /* ---------- upgrade camos */
-const ZU_CAMO = { blackwell: ['NIGHTSHADE', 0x9a4aff, 'veins'], works: ['HELLFIRE', 0xff6a14, 'cracks'], terminal9: ['JET STREAM', 0x3ab8ff, 'streaks'], mauiwowie: ['TROPIC THUNDER', 0xff3ab0, 'veins'], maryjane: ['RIPTIDE', 0x2ad8c8, 'cracks'] };
+const ZU_CAMO = { blackwell: ['NIGHTSHADE', 0x9a4aff, 'veins'], works: ['HELLFIRE', 0xff6a14, 'cracks'], terminal9: ['JET STREAM', 0x3ab8ff, 'streaks'], mauiwowie: ['TROPIC THUNDER', 0xff3ab0, 'veins'], maryjane: ['RIPTIDE', 0x2ad8c8, 'cracks'], hightide: ['AFTERPARTY', 0x9aff2a, 'streaks'] };
 const ZUC = { tex: {} };
 function zuCamoTex(map) {
   if (ZUC.tex[map]) return ZUC.tex[map];
@@ -21328,7 +21729,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { ruDrop, POST, postEnv, ruKey, ZWWH, SHIP, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { lvN, lvH, NN, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { ruDrop, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { lvN, lvH, NN, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

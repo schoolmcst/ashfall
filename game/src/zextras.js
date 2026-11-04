@@ -188,9 +188,10 @@ const ZWW = {
   works: { id: 'pressure', base: 'hellfire', name: 'THE PRESSURE GUN', desc: 'a blast of steam that throws back everything in front of you', mag: 8, reserve: 48, interval: 0.55, col: 0xffa040 },
   terminal9: { id: 'duster', base: 'hellfire', name: 'THE CROP DUSTER', desc: 'sprays a lingering cloud of green cure · zombies inside it melt', mag: 10, reserve: 60, interval: 0.45, col: 0x7adf3a },
   mauiwowie: { id: 'vape', base: 'thumper', name: 'THE DRAGON VAPE', desc: 'blows a huge smoke ring that rolls through every zombie in its way', mag: 6, reserve: 36, interval: 0.7, col: 0xff4ab8 },
+  hightide: { id: 'disco', base: 'thumper', name: 'THE DISCO BONG', desc: 'fires a glowing disco ball that hangs in the air · zombies around it dance and get zapped by its lasers', mag: 4, reserve: 24, interval: 0.9, col: 0xff3ab0 },
   maryjane: { id: 'harpoon', base: 'hellfire', name: 'THE HASH HARPOON', desc: 'fires a resin harpoon straight through every zombie in a line · it bursts into sticky smoke where it lands', mag: 5, reserve: 30, interval: 0.85, col: 0x2ad8c8 },
 };
-const ZWWP = [], ZWWC = [], ZWWR = [], ZWWH = [];   // ... and hash harpoons in flight / stuck in walls
+const ZWWP = [], ZWWC = [], ZWWR = [], ZWWH = [], ZWWD = [];   // ... and disco balls   // ... and hash harpoons in flight / stuck in walls
    // ... and dragon vape smoke rings   // bong balls in flight, crop duster clouds
 const zwwFor = map => ZWW[map] || null;
 function zwwGive(map) {
@@ -221,6 +222,14 @@ function zwwFire(w) {
     ring.position.copy(org); ring.lookAt(org.clone().add(dir)); scene.add(ring);
     ZWWR.push({ m: ring, v: dir.clone().multiplyScalar(14), t: 0, w, hit: new Set() });
     try { burst(0.7, 400, 0.25, 'lowpass'); tone(110, 0.5, 0.18, 'sine', 70); } catch (e) {}
+    return;
+  }
+  if (w.ww === 'disco') {   // a mirror ball: flies a short way, stops in the air, then pulls in and zaps the zombies round it
+    const m = new THREE.Group(), ball = new THREE.Mesh(new THREE.IcosahedronGeometry(0.32, 1), new THREE.MeshStandardMaterial({ color: 0xe8e8f0, metalness: 1, roughness: 0.15, emissive: new THREE.Color(0xff3ab0), emissiveIntensity: 0.6, flatShading: true }));
+    m.add(ball); const glow = new THREE.PointLight(0xff3ab0, 1.6, 9, 2); m.add(glow);
+    m.position.copy(org); scene.add(m);
+    ZWWD.push({ m, ball, glow, v: dir.clone().multiplyScalar(18), t: 0, w, hang: -1, zapT: 0, lasers: [] });
+    try { burst(0.3, 1200, 0.3, 'bandpass'); tone(330, 0.2, 0.12, 'square', 660); } catch (e) {}
     return;
   }
   if (w.ww === 'harpoon') {   // a fast straight spear that goes through everything, then bursts where it stops
@@ -273,6 +282,40 @@ function zwwHarpoonTick(dt) {
     if (wall || h.t > 1.1) { if (wall) h.m.position.copy(wall).addScaledVector(h.v.clone().normalize(), -0.4); h.stuck = 0; zwwResin(h.m.position, h.w); }
   }
 }
+// disco balls: fly 0.7 s (or to a wall), hang there 6 s spinning, every 0.3 s a laser zaps up to 5 zombies within 8 m;
+// every zombie within 8 m is pulled in and dances (stunned, slowed); then it pops in a cloud of pink smoke
+const DISCO_COLS = [0xff3ab0, 0x3ab8ff, 0x7aff3a, 0xffc83a];
+function zwwDiscoTick(dt) {
+  for (let i = ZWWD.length - 1; i >= 0; i--) {
+    const d = ZWWD[i], p = d.m.position; d.t += dt;
+    for (let k = d.lasers.length - 1; k >= 0; k--) { const L = d.lasers[k]; L.t -= dt; L.m.material.opacity = Math.max(0, L.t / 0.18) * 0.9; if (L.t <= 0) { d.m.remove(L.m); L.m.geometry.dispose(); d.lasers.splice(k, 1); } }
+    if (d.hang < 0) {
+      const p0 = p.clone(); p.addScaledVector(d.v, dt); const seg = p.clone().sub(p0), L = seg.length();
+      if (L > 0) { _wwRay.set(p0, seg.clone().normalize()); _wwRay.far = L + 0.5; const hit = _wwRay.intersectObjects(wallMeshes, false)[0]; if (hit) { p.copy(hit.point).addScaledVector(seg.normalize(), -0.6); d.hang = 0; } }
+      if (d.t > 0.7) d.hang = 0;
+      if (d.hang === 0) { const fl = groundAt(p.x, p.z, p.y); p.y = Math.max(p.y, fl + 1.4); try { tone(220, 0.3, 0.12, 'triangle', 440); } catch (e) {} }
+      continue;
+    }
+    d.hang += dt; d.ball.rotation.y += dt * 4; d.ball.rotation.x += dt * 1.3;
+    const col = DISCO_COLS[Math.floor(d.hang * 4) % 4]; d.ball.material.emissive.setHex(col); d.glow.color.setHex(col); d.glow.intensity = 1.4 + Math.sin(d.hang * 12) * 0.5;
+    const near = []; for (const e of enemies) { if (!e.zombie) continue; const g = e.group.position, r = Math.hypot(g.x - p.x, g.z - p.z); if (r < 8 && Math.abs(g.y - p.y) < 4) near.push([r, e]); }
+    for (const [r, e] of near) { const g = e.group.position; if (!e.boss && r > 1.2) { const k = Math.min(1, dt * 1.6); g.x += (p.x - g.x) / r * k; g.z += (p.z - g.z) / r * k; } e.stunT = Math.max(e.stunT || 0, e.boss ? 0.15 : 0.35); e.slowT = Math.max(e.slowT || 0, 0.6); e.atkT = 0; if (!e.boss) e.group.rotation.y += dt * 6; }
+    if ((d.zapT -= dt) <= 0) {
+      d.zapT = 0.3; near.sort((a, b) => a[0] - b[0]);
+      for (const [, e] of near.slice(0, 5)) {
+        const g = e.group.position, tx = g.x - p.x, ty = g.y + 1.2 - p.y, tz = g.z - p.z, len = Math.hypot(tx, ty, tz) || 1;
+        const lm = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, len, 5), new THREE.MeshBasicMaterial({ color: DISCO_COLS[(Math.random() * 4) | 0], transparent: true, opacity: 0.9, depthWrite: false, blending: THREE.AdditiveBlending }));
+        lm.geometry.translate(0, len / 2, 0); lm.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), new THREE.Vector3(tx / len, ty / len, tz / len)); d.m.add(lm); d.lasers.push({ m: lm, t: 0.18 });
+        damageEnemy(e, e.boss ? e.maxHp * 0.004 / Math.max(1, zombGunMul(true)) : zwwDmg(d.w, 0.35), false, null, true, 'player');
+      }
+      if (near.length) try { tone(880 + Math.random() * 440, 0.06, 0.05, 'square'); } catch (e) {}
+    }
+    if (d.hang > 6) {
+      try { for (let k = 0; k < 18; k++) puff(p.x + rnd(-1.5, 1.5), p.y + rnd(-1, 1), p.z + rnd(-1.5, 1.5), { color: DISCO_COLS[k % 4], size: 0.6, grow: 1.6, life: 1.4, vy: 0.3, op: 0.45 }); burst(0.3, 700, 0.25, 'lowpass'); } catch (e) {}
+      scene.remove(d.m); ZWWD.splice(i, 1);
+    }
+  }
+}
 // where the harpoon lands: a burst of sticky resin smoke (zombies near it are hurt, held and slowed)
 function zwwResin(p, w) {
   for (const e of enemies.slice()) {
@@ -282,7 +325,7 @@ function zwwResin(p, w) {
   try { for (let i = 0; i < 16; i++) puff(p.x + rnd(-1.6, 1.6), p.y + rnd(-0.6, 0.8), p.z + rnd(-1.6, 1.6), { color: i % 2 ? 0x2ad8c8 : 0x9a7a3a, size: 0.7, grow: 1.8, life: 1.6, vy: 0.3, op: 0.45 }); tone(90, 0.5, 0.18, 'sine', 50); burst(0.35, 600, 0.25, 'lowpass'); } catch (e) {}
 }
 function zwwTick(dt) {
-  zwwHarpoonTick(dt);
+  zwwHarpoonTick(dt); zwwDiscoTick(dt);
   for (let i = ZWWR.length - 1; i >= 0; i--) {
     const r = ZWWR[i], p0 = r.m.position.clone(); r.t += dt; r.m.position.addScaledVector(r.v, dt);
     const k = 1 + r.t * 1.4; r.m.scale.set(k, k, k); r.m.material.opacity = Math.max(0, 0.6 * (1 - r.t / 2)); r.m.rotateZ(dt * 3);
@@ -317,7 +360,7 @@ function zwwBurst(p, w) {
   try { for (let i = 0; i < 26; i++) puff(p.x + rnd(-2.5, 2.5), p.y + rnd(0, 2), p.z + rnd(-2.5, 2.5), { color: i % 3 ? 0x5adf6a : 0xb0ffb0, size: 1, grow: 2.4, life: 2.2, vy: 0.5, op: 0.55 }); sfx.explode(at(p.x, p.z, 30, p.y)); tone(60, 0.8, 0.25, 'sine', 30); } catch (e) {}
   try { if (typeof zcEvent === 'function') zcEvent('b', p); } catch (e) {}
 }
-function zwwClear() { for (const b of ZWWP.concat(ZWWR, ZWWH)) scene.remove(b.m); ZWWP.length = 0; ZWWR.length = 0; ZWWC.length = 0; ZWWH.length = 0; }
+function zwwClear() { for (const b of ZWWP.concat(ZWWR, ZWWH, ZWWD)) scene.remove(b.m); ZWWP.length = 0; ZWWR.length = 0; ZWWC.length = 0; ZWWH.length = 0; ZWWD.length = 0; }
 // crop duster clouds: 4 seconds of cure that eats any zombie standing in it
 function zwwCloudTick(dt) {
   for (let i = ZWWC.length - 1; i >= 0; i--) {
