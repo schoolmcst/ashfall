@@ -47,7 +47,8 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
 - TEST APP has 1.2.64 (zombies chapter 6 THE HIGH TIDE: map_tide.js, ZMAPCFG.hightide, THE DISCO BONG, THE CRUISE DIRECTOR)
   and 1.2.63 (BLOOM & COLOUR: post.js - bloom, grading, FXAA, sharpen; setting `post` off/low/high + `bloom`), on top of
   1.2.62 (THE MARY JANE), 1.2.61 (DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS) and 1.2.60 (Season 2, save codes...).
-  None of it is public yet: release with `tools/release.sh public` only when the owner says "send it".
+  The owner said "send it": 1.2.64 (with everything since 1.2.59) is promoted to release/ on the claude branch; it
+  reaches players once that branch is merged into main.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.
 - Before/after graphics pictures: `MAPS=a,b SHOTS=dir node game/test/run.js game/test/_postcmp.js`.
 - The owner asked for Unreal Engine once: not possible here (no editor; would be a full rewrite and break patching).
