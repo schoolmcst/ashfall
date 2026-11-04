@@ -53,10 +53,11 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   (scanned surface families in realtex.js: paintm/steelp/plaster/tile/fabric/planks, greyscale + matched roughness) and
   1.2.67 (GUNSMITH 2.0: 7 attachments, drag/zoom INSPECT on the preview, 8 weed charms; test s_gunsmith.js). All of it
   is PUBLIC as 1.2.67 (owner said "send it").
-- 1.2.68 (TEST): growop.js (THE GROW OP), modes4.js (PROP HUNT ph/oph), map_hotbox.js (zombies ENDLESS, ZMAPCFG.hotbox.classic),
+- 1.2.68 + 1.2.69 are PUBLIC (owner said send it).
+- 1.2.68: growop.js (THE GROW OP), modes4.js (PROP HUNT ph/oph), map_hotbox.js (zombies ENDLESS, ZMAPCFG.hotbox.classic),
   map_night.js (4 night remasters in rotation), prestige 11-20 + PRES_CHARMS, replay theatre (RP_LIB in replay.js), feedback.js
   (hit markers, kill sounds, streak glow), accessibility (post.js COLOUR FILTER, subtitles, AIM ASSIST STRENGTH).
-- 1.2.69 (TEST): modes5.js LAST TOKE (battle royale 'br', offline only so far), crewhouse.js (CREW STASH HOUSE on the leaderboard
+- 1.2.69: modes5.js LAST TOKE (battle royale 'br', offline only so far), crewhouse.js (CREW STASH HOUSE on the leaderboard
   CREW tab; crew points travel on friend cards: cp/ck/ckw), WATCH a friend (specWatch in net.js; spectators publish spec:1 and
   are skipped by inRoom). Prop Hunt online and WATCH are untested here (mp tests cannot reach the signalling server).
   Tests: s_growop, s_prophunt, s_zhotbox, s_theatre, s_crewhouse, s_lasttoke.
