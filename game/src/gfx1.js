@@ -25,6 +25,7 @@ else if (CFG5) {   // saved before 1.2.11: keep what they had, and fill the new 
   if (k === 'ultra' && S.shadows === 'high') S.shadows = 'ultra';   // ULTRA already had 4096 shadows
   S.cfgVer = 5; saveSettings();
 }
+if ((S.postV | 0) < 1) { const q = QUALITY[qKey()]; S.post = q ? q.post : (S.shadows === 'off' ? 'off' : 'high'); if (S.perfMode) { S.post = 'off'; if (S.perfSaved) S.perfSaved.post = q ? q.post : 'high'; } S.postV = 1; saveSettings(); }
 const MAXANIS = renderer.capabilities && renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 4;
 // what this computer can do (shown in Settings > VIDEO > YOUR HARDWARE, and used to cap the settings)
 const HW = { maxTex: 4096, maxRB: 4096, cores: 0, mem: 0, hz: 60, hzN: 0 };

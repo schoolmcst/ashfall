@@ -291,6 +291,7 @@ function applyEnv(env) {
   hemi.color = C(e.hemiSky); hemi.groundColor = C(e.hemiGround);
   scene.fog.color.setHex(e.horizon); scene.fog.density = e.fog;
   ENV_EXPOSURE = e.exposure;
+  try { postEnv(e); } catch (err) {}
   try { buildEnvironment(); } catch (err) {}
   try { applyVideoSettings(); } catch (err) {}
 }

@@ -718,10 +718,10 @@ function setLoad(p, txt) { try { $('ldbar').style.width = Math.round(p * 100) + 
 
 /* ------------------------------------------------------------------ settings */
 const QUALITY = {
-  low:    { scale: 70,  shadows: 'off',    fx: 'low',    grass: 0,   anis: 1,  grain: false, tex: 256, prCap: 1.25 },
-  medium: { scale: 85,  shadows: 'low',    fx: 'medium', grass: 40,  anis: 4,  grain: false, tex: 256, prCap: 1.5 },
-  high:   { scale: 100, shadows: 'high',   fx: 'high',   grass: 65,  anis: 8,  grain: false, tex: 512, prCap: 1.5 },
-  ultra:  { scale: 100, shadows: 'ultra',  fx: 'ultra',  grass: 100, anis: 16, grain: false, tex: 512, prCap: 2 },
+  low:    { scale: 70,  shadows: 'off',    fx: 'low',    grass: 0,   anis: 1,  grain: false, tex: 256, prCap: 1.25, post: 'off' },
+  medium: { scale: 85,  shadows: 'low',    fx: 'medium', grass: 40,  anis: 4,  grain: false, tex: 256, prCap: 1.5, post: 'low' },
+  high:   { scale: 100, shadows: 'high',   fx: 'high',   grass: 65,  anis: 8,  grain: false, tex: 512, prCap: 1.5, post: 'high' },
+  ultra:  { scale: 100, shadows: 'ultra',  fx: 'ultra',  grass: 100, anis: 16, grain: false, tex: 512, prCap: 2, post: 'high' },
 };
 // shadow quality: map resolution, how far around you the sun's shadow box reaches (m), soldiers casting shadows within (m)
 const SHADOWQ = {
@@ -740,7 +740,7 @@ const dzFilterOn = () => typeof S === 'undefined' || S.chatFilter !== false;
 function dzFilter(t) { if (!dzFilterOn()) return t; const flat = s => s.toLowerCase().replace(/0/g, 'o').replace(/1/g, 'i').replace(/3/g, 'e').replace(/4|@/g, 'a').replace(/5|\$/g, 's').replace(/7/g, 't'); const f = flat(String(t)); if (!DZ_BAD_RE.test(f)) return t; DZ_BAD_RE.lastIndex = 0; let out = String(t).split(''), m; const re = new RegExp(DZ_BAD_RE.source, 'gi'); while ((m = re.exec(f))) for (let i = m.index; i < m.index + m[0].length; i++) out[i] = '*'; return out.join(''); }
 const FXQ = { low: 0.35, medium: 0.65, high: 1, ultra: 1.5 };
 const DEFAULTS = {
-  quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
+  quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', post: 'high', bloom: 100, postV: 0, fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
   master: 80, sfx: 100, ambience: 60, music: 50, chatFilter: true, perfMode: false, perfGraph: false, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
@@ -754,7 +754,7 @@ let NEED_AUTO_DERIVE = false;
 function qKey() { return S.quality === 'auto' ? (typeof AUTO_TIER !== 'undefined' ? AUTO_TIER : 'high') : S.quality === 'custom' ? 'custom' : S.quality; }
 const qPreset = () => QUALITY[qKey()] || QUALITY.high;
 // a preset sets every detail setting at once
-function applyPreset(k) { const q = QUALITY[k] || QUALITY.high; Object.assign(S, { renderScale: q.scale, shadows: q.shadows, grain: q.grain, anis: q.anis, grass: q.grass, fxQ: q.fx, texQ: q.tex >= 512 ? 'high' : 'low', shadowDist: 100 }); }
+function applyPreset(k) { const q = QUALITY[k] || QUALITY.high; Object.assign(S, { renderScale: q.scale, shadows: q.shadows, post: q.post || 'high', grain: q.grain, anis: q.anis, grass: q.grass, fxQ: q.fx, texQ: q.tex >= 512 ? 'high' : 'low', shadowDist: 100 }); }
 let CFG5 = false;   // settings saved before the detailed graphics menu: fill the new settings from the old preset (gfx1)
 function loadSettings() {
   try {
@@ -1199,6 +1199,7 @@ else if (CFG5) {   // saved before 1.2.11: keep what they had, and fill the new 
   if (k === 'ultra' && S.shadows === 'high') S.shadows = 'ultra';   // ULTRA already had 4096 shadows
   S.cfgVer = 5; saveSettings();
 }
+if ((S.postV | 0) < 1) { const q = QUALITY[qKey()]; S.post = q ? q.post : (S.shadows === 'off' ? 'off' : 'high'); if (S.perfMode) { S.post = 'off'; if (S.perfSaved) S.perfSaved.post = q ? q.post : 'high'; } S.postV = 1; saveSettings(); }
 const MAXANIS = renderer.capabilities && renderer.capabilities.getMaxAnisotropy ? renderer.capabilities.getMaxAnisotropy() : 4;
 // what this computer can do (shown in Settings > VIDEO > YOUR HARDWARE, and used to cap the settings)
 const HW = { maxTex: 4096, maxRB: 4096, cores: 0, mem: 0, hz: 60, hzN: 0 };
@@ -3011,6 +3012,7 @@ function applyEnv(env) {
   hemi.color = C(e.hemiSky); hemi.groundColor = C(e.hemiGround);
   scene.fog.color.setHex(e.horizon); scene.fog.density = e.fog;
   ENV_EXPOSURE = e.exposure;
+  try { postEnv(e); } catch (err) {}
   try { buildEnvironment(); } catch (err) {}
   try { applyVideoSettings(); } catch (err) {}
 }
@@ -8174,15 +8176,14 @@ function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
 {
-"v": "1.2.62",
-"d": "2026-10-28",
+"v": "1.2.63",
+"d": "2026-11-04",
 "n": [
-"NEW ZOMBIES MAP: THE MARY JANE - CHAPTER FIVE: DEAD CALM (BETA). The boat on the horizon was the freighter that carried the Nightshade seeds. Stern deck, crew block, grow containers, engine room and the forecastle at the bow.",
-"7 chapters, 12 tapes and a new boss: THE CAPTAIN (yes, he has the cap). Restart the ship's power, take the chief's key, burn the seed shipments, open the captain's safe and seed the ballast with the cure.",
-"NEW WONDER WEAPON: THE HASH HARPOON. Fires a resin harpoon straight through every zombie in a line, then bursts into sticky smoke where it lands.",
-"CARGO SLINGS swing you between the stern, both side decks and the bow once the power is back. New RIPTIDE camo for upgraded guns on this map.",
-"Chapter four now leads into chapter five. Co-op works on the new map, host migration included.",
-"Still in from 1.2.61 and 1.2.60: DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS, Season 2 HARVEST, save codes, block, word filter, error reports."
+"NEW GRAPHICS (BETA): BLOOM & COLOUR. Lamps, neon signs, fire, muzzle flashes, wonder weapons and the sun now glow. Night maps glow more, day maps stay clean.",
+"Film colour grading on every map: richer colour, cool shadows and warm highlights, a soft vignette. Dark rooms stay as easy to see as before.",
+"Smoother edges: FXAA when MSAA is off, and a light sharpen on HIGH so the picture stays crisp at lower render scales.",
+"Settings > VIDEO > EFFECTS: BLOOM & COLOUR (OFF / LOW / HIGH) and GLOW (0-200%). The presets pick it for you (LOW preset = OFF, MEDIUM = LOW, HIGH and ULTRA = HIGH). PERFORMANCE MODE turns it off.",
+"Still in from 1.2.62, 1.2.61 and 1.2.60: THE MARY JANE (zombies chapter five), DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS, Season 2 HARVEST, save codes, block, word filter, error reports."
 ]
 },
 {
@@ -8304,323 +8305,6 @@ const NEWS = [
 "Zombies have real voices now: moans, a screech when they swing and a gurgle when they die. The hospital hums, drips, creaks and has something screaming somewhere far off.",
 "CO-OP AMMO IS SHARED: ammo dropped by zombies shows up for everyone, and whoever grabs it picks it up for the whole squad. Buying the Ammo Crate refills the whole squad too.",
 "CO-OP SOUND: you now hear your teammates' gunshots (they were silent before), their footsteps, their grenade explosions and their punches."
-]
-},
-{
-"v": "1.2.34",
-"d": "2026-10-22",
-"n": [
-"FIXED: in co-op, a player who had been revived or respawned could never take damage again. Everyone takes damage now.",
-"DOORS SIMPLIFIED: 4 doors in a chain - MAIN CORRIDOR, NORTH WING, UPGRADE ROOM (the gun upgrader) and UPSTAIRS (the bridge). Every other way between the areas is boarded up, so no door can be walked or jumped around, including the bridge and the balcony rails.",
-"Buying is easier: you can buy a door or a perk from further away and from the side.",
-"PERK ANIMATIONS last longer, and you can sprint while they play.",
-"FIXED floating blood, mould and writing: decals now only go on real floors, walls and ceilings, and never hang over doorways, the atrium or the stairwells.",
-"FOUR SURVIVORS with their own voices: \"DOC\" REYES, TANYA \"TANK\" BRIGGS, LEROY \"SMOKES\" DAWSON and PENNY \"SPARKS\" HOLLOWAY. Pick yours in the Zombies lobby. They talk at the start, each round, doors, the box, the upgrader, going down, reviving and more - and react to every perk they smoke or eat. In co-op you hear your teammates too. Subtitles on screen; voice lines can be turned off in the lobby."
-]
-},
-{
-"v": "1.2.33",
-"d": "2026-10-21",
-"n": [
-"6 PERK MACHINES around the hospital. Pay and your survivor hits a bowl, smokes a joint or eats a gummy - with real hands, a lighter, smoke, a glowing cherry and a haze when it kicks in. SECOND WIND (1500, solo: get back up once / co-op: revive twice as fast), DOUBLE DAB (2000, shoot faster), QUICK RIP (3000, reload twice as fast), ZOOMIES (2000, move faster), KUSH TANK (2500, 250 health), MUNCHIES (2500, 50% more points). You lose your perks when you go down.",
-"ZOMBIES DAMAGE FIXED: every gun is tuned for zombies and keeps up as the rounds go on. The pistol drops round-1 zombies in two body shots; upgraded guns hit twice as hard. Zombie health grows more gently.",
-"PUNCHING a zombie now knocks it back and cancels its swing, so it can't hit you straight back.",
-"FOLLOW THE PURPLE ARROWS: the doors now lead to the gun upgrader, which has its own room (the north lobby, behind the new UPGRADE ROOM barricade). Every door has a price sign, and the doors on the way say TO THE GUN UPGRADER.",
-"The GUN UPGRADER has a new look: a glowing purple core with spinning rings that speed up while it upgrades your gun.",
-"Fixed: an upgraded gun's purple glow could stay on that gun in multiplayer."
-]
-},
-{
-"v": "1.2.31",
-"d": "2026-10-21",
-"n": [
-"ZOMBIES (new): a ZOMBIES tab on the main menu. Everyone starts with the Service 9 pistol, 2 frags and 500 points. Survive round after round - zombies walk, then jog, then run, and get tougher every round.",
-"Zombies points: 10 a hit, 60 a kill, 100 a headshot kill, 130 a melee kill. Mystery Crate (950) gives a random gun, Ammo Crate (250) refills your ammo. Your best round is saved.",
-"BUY DOORS: you start in the hospital's south lobby. 20 boarded doors and barricades (750 to 1500 points) open the hospital bit by bit. Zombies only come from the parts you have opened.",
-"GUN UPGRADER: find the glowing machine in the north wing. 5000 points upgrades the gun in your hands: double damage, a bigger magazine, twice the reserve ammo and a purple glow.",
-"ZOMBIES ONLINE CO-OP (up to 4): set PLAY to ONLINE CO-OP. QUICK PLAY drops you into a running game or starts one others can join; PRIVATE CODE gives a lobby where the host presses START.",
-"Co-op: everyone keeps their own points and guns, the round is shared and doors open for the whole squad. Hold USE next to a downed teammate for 3 seconds to revive them. Bleed out and you are back next round. Everyone down = game over. If the host leaves, someone else takes over.",
-"PARTY AND FRIENDS in Zombies, just like multiplayer: when the party leader presses QUICK PLAY the whole party follows into the same game.",
-"NEW MAP: BLACKWELL HOSPITAL - a huge two-storey hospital, almost all indoors, bloody and gross. Corridors, wards, the ER, surgery, x-ray, the morgue, labs and a bridge across the atrium. Plays in every multiplayer mode and in Zombies.",
-"GOLD AND DIAMOND ARE EARNED NOW: the only gold and diamond camos left are GOLD and DIAMOND from the camo grind (Locker > pick a gun > CHALLENGES).",
-"Removed from chance boxes: Rose Gold, Diamond, Honey Gold, Gold Scales, Camo Gold, Gold Circuit and Molten Gold. If you owned any, you got their full duplicate value back in DZ.",
-"Level 100 now gives DARKZONE ELITE (black with glowing orange facets) instead of Darkzone Gold - if you had Darkzone Gold, you now have Darkzone Elite.",
-"Battle pass: Quake Gold, Golden Ash and Tectonic Gold are now Quake Ember, White Ash and Tectonic Ember - anything you unlocked carries over."
-]
-},
-{
-"v": "1.2.26",
-"d": "2026-10-21",
-"n": [
-"CAMO GRIND: every gun now has its own camo challenges - open the LOCKER, pick a gun and go to CHALLENGES. 8 military camos per gun, then GOLD, DIAMOND (whole class) and NOVA (every gun)",
-"BOT LOADOUTS: bots carry real guns that fit their job, with random attachments and camos - you see them in their hands, the kill feed names the gun, and each gun fights like the real thing (suppressed bots show no tracers)",
-"PLAY-PROOFING: you can no longer jump onto the Stackyard container tops from the tower, walk the Killhouse wall tops from the platform, or jump from the Whiteout radar deck onto the lab roof",
-"FIXES: the main-menu NEWS now shows the latest patch notes; the top menu tabs all fit on smaller screens; private matches can't be set to a retired map; brand-new players no longer get an old update's splash screen; bots stutter less finding their way onto roofs and ridges"
-]
-},
-{
-"v": "1.2.23",
-"d": "2026-10-21",
-"n": [
-"SMARTER BOTS: every bot gets a job when it spawns and plays it like a real team player",
-"ENTRY pushes first, SUPPORT follows a teammate and trades their fights, ANCHOR plays the objective, OVERWATCH takes the high ground and holds long angles, LURK waits and flanks alone, SLAYER goes for kills over the objective",
-"Bots take their own lanes when they spawn, so a team spreads over the whole map instead of running in a line",
-"S&D: attackers gather and hit the site together while a lurker cuts the rotation; defenders split over both sites and wait for a teammate before retaking a planted bomb",
-"Free-for-all and Gun Game bots have personalities: rushers, campers, flankers and roamers. Bots slow down near danger to check corners, hear footsteps close by, and only chase what they actually saw or heard"
-]
-},
-{
-"v": "1.2.22",
-"d": "2026-10-21",
-"n": [
-"SMARTER BOTS: every bot gets a job when it spawns and plays it like a real team player",
-"ENTRY pushes first, SUPPORT follows a teammate and trades their fights, ANCHOR plays the objective, OVERWATCH takes the high ground and holds long angles, LURK waits and flanks alone, SLAYER goes for kills over the objective",
-"Bots take their own lanes when they spawn, so a team spreads over the whole map instead of running in a line",
-"S&D: attackers gather and hit the site together while a lurker cuts the rotation; defenders split over both sites and wait for a teammate before retaking a planted bomb",
-"Free-for-all and Gun Game bots have personalities: rushers, campers, flankers and roamers. Bots slow down near danger to check corners, hear footsteps close by, and only chase what they actually saw or heard"
-]
-},
-{
-"v": "1.2.21",
-"d": "2026-10-21",
-"n": [
-"8 BRAND NEW MAPS - the old maps are out of the rotation. Every map has three lanes, flank routes between them and one power position that can always be shot back at",
-"SMALL: STACKYARD and KILLHOUSE. MEDIUM: SKYPORT, SPIRE, DUSTWATER, WHITEOUT, BLACKWATER PIER. LARGE: RIDGELINE (built for FFA and long-range fights). The lobby map picker shows each map's size",
-"67 NEW PROPS across the maps: airport security and luggage, market stalls and pottery, snowmobiles and research tents, lobster traps and anchors, farm fences and woodpiles, street and industrial details",
-"FURNISHED ROOMS: every room is filled with furniture that fits it - kitchens and living rooms, bedrooms, offices, the lab, shops, workshops, the barn and the boathouse - with rugs, lights and pictures. Doorways, stairs and walkways stay clear"
-]
-},
-{
-"v": "1.2.18",
-"d": "2026-10-16",
-"n": [
-"THE FREE SPEECH UPDATE",
-"CONTROLLER: pick your class with the controller before the match starts; the mouse cursor hides while you use a controller and comes back as soon as you touch the mouse or keyboard; button prompts show controller buttons",
-"TEXT CHAT: Enter to chat in a match (Tab switches ALL / PARTY), party chat in the lobby, quick-chat buttons, mute players. Match chat clears when the next match starts",
-"VOICE CHAT (desktop app): push to talk (V / D-pad left) or open mic, with volume, mic sensitivity and muting in the new pause menu panel",
-"GRENADES: no longer pass through walls, floors and ceilings inside buildings; hold the grenade button to see a dotted path of where it will go, let go to throw",
-"DZ: every finished match now pays DZ (40, +2 a kill, +30 for a win, online +25%)"
-]
-},
-{
-"v": "1.2.17",
-"d": "2026-10-16",
-"n": [
-"BATTLE PASS · Season 1: AFTERSHOCK - 100 tiers. Free row: DZ, free chance boxes and cosmetics. Premium row: a pass-only cosmetic every tier (free during the beta)",
-"NEW: gun CHARMS that hang off your gun and swing as you move, and account BANNERS behind your name (lobby and the death cam). Both come from chance boxes and the battle pass",
-"LOCKER: tabs for Camos, Stickers and Charms on each gun, a Banners page, faster weapon pictures, the list no longer jumps to the top",
-"SCORESTREAKS: cost more (UAV 550 to Airstrike 1700), 15 s between call-ins and a cooldown before each can be earned again, streak kills don't earn streaks, strikes hit a little softer",
-"HUD: simpler, solid colours with an outline so every number and message is readable",
-"RECOIL: every gun kicks harder and climbs more on a spray (assault rifles and SMGs most); less of it recovers on its own"
-]
-},
-{
-"v": "1.2.16",
-"d": "2026-10-15",
-"n": [
-"THE EA UPDATE",
-"100 NEW CAMOS: fleck, multicam, zebra, waves, glitch, honeycomb, holographic foil, gems and more, from Common to Legendary",
-"Three chance boxes: STANDARD (500 DZ), ELITE (1,200 DZ) and PRESTIGE (2,500 DZ) with better odds, each with a VIEW CONTENTS list",
-"New LOCKER: pick a weapon (with pictures of every gun), then its camos; stickers are under OTHER COSMETICS. Only the things you own are shown",
-"Diamond is now a cut gem with sparkles, and the metal finishes have brushed and engraved detail",
-"Chance boxes and Locker: more improvements"
-]
-},
-{
-"v": "1.2.12",
-"d": "2026-10-15",
-"n": [
-"LEVELS: level 1 to 100 from XP for kills, headshots, objectives, finishing and winning matches (online +25%). XP and level ups show on the results screen",
-"Every level pays DZ, every 5 levels unlocks a gun STICKER, and level 100 unlocks the DARKZONE GOLD skin",
-"New LOCKER tab: 39 camos and skins in 4 rarities plus 19 stickers, a 3D preview, and equip on one gun or all weapons",
-"New REWARDS tab: daily DZ reward with a 7 day streak, the level reward track, and CHANCE BOXES (500 DZ, odds shown: Common 60%, Rare 27%, Epic 10%, Legendary 3%). Camos only come from boxes; duplicates pay DZ back",
-"Everyone starts with 500 DZ for a first box, and past matches count toward a starting level (up to 25)"
-]
-},
-{
-"v": "1.2.11",
-"d": "2026-10-15",
-"n": [
-"Graphics settings overhaul: YOUR HARDWARE panel (graphics card, display and refresh rate, limits) and a benchmark button",
-"Render scale up to 200% (supersampling) for a much sharper image on strong graphics cards",
-"Frame rate limit: DISPLAY, 30, 60, 90, 120, 144, 165 or 240; dynamic resolution now aims for your limit, so high refresh monitors stay smooth",
-"Shadow quality OFF to EXTREME (8K shadow maps on cards that support it) plus a shadow distance slider",
-"Texture filtering 1x to 16x, texture quality, effects quality, grass density, anti-aliasing and which graphics card to use",
-"Presets set everything at once; change any detail and the preset shows CUSTOM. Your current settings carry over"
-]
-},
-{
-"v": "1.2.10",
-"d": "2026-10-15",
-"n": [
-"MAPS: every map is less open, with buildings you can fight through - rooms, doorways, stairs to upper floors and windows to shoot from",
-"ASH RUINS: now a ruined village - 12 new houses and shells (five with two storeys) plus broken walls cutting up the open fields",
-"CASTELLMARE: the solid houses on the piazza and terrace are now enterable (one with two storeys), plus a bakery, a farmhouse and a road house at the edges, and an enterable garden shed",
-"KESSEL DOCKS: a two-storey harbour office on the quay, a customs shed by the crane, a two-storey dock office in the truck yard and more container cover",
-"VERNON SQUARE: a two-storey pharmacy and a pawn shop along the avenue and a two-storey bank on the square's corner",
-"ATTACHMENTS: every part re-balanced so each one is a real trade-off - muzzle brake, compensator, grips, bipod and heavy barrel kick less hard, the laser now slows aiming a little, iron sights are less inaccurate, Armour Piercing gives more range, Subsonic and Hollow Point hurt less, the Full Choke and Mini Reflex are toned down",
-"REPLAY FIXED: online matches now save a replay at the end of every round (before, only offline matches did, so the Replay tab said you hadn't played). Quitting mid-match or closing the game also keeps the replay, and it's still there after a restart",
-"BOTS THAT LEARN: bots learn from every gunfight - which tactics win on each map, the range real players fight at, where players hang out and where bots keep dying - and get smarter and more human the more they play. It carries over to every next game",
-"MORE HUMAN BOTS: real reaction times, aim that settles instead of snapping, short bursts at range, they stop to check corners, look around, peek from cover and have a harder time hitting you while you're on the move",
-"RECOIL: assault rifles kick 35% more, SMGs 30% more and LMGs 80% more, and every automatic climbs harder the longer you hold the trigger (LMGs most), with a sideways pull",
-"SMARTER BOTS: they remember where they last saw you and push there, hear gunshots (suppressors keep you quiet), call out your position to teammates, flank, turn on you the moment you shoot them, back off to heal when hurt, throw grenades at you behind cover, pre-aim corners and reload when it's safe",
-"BOTS: new ELITE skill, better aim and headshots at every skill, and the default bots are now Veteran (Hardened on the hard setting)",
-"DAMAGE RANGE: every gun has its own damage range, tuned by class (SMGs 14-22 m, assault rifles 30-60 m, LMGs 44-58 m, marksman 60-70 m, snipers never drop, shotguns 9-14 m, pistols 12-26 m)",
-"LOADOUT: new DAMAGE RANGE graph shows damage from 0 to 120 m and chest shots to kill at 10, 30, 60 and 100 m; compare guns before you pick (green/red line)",
-"GUN BALANCE: every gun re-tuned around shots to kill. Assault rifles and LMGs: 4 chest shots. SMGs: 5 chest shots up close (Bulwark 4, Wasp 6) and much weaker far away",
-"PISTOLS: Service 9 now needs 5 chest shots, Revolver 2 (3 to the stomach) and no one-shot headshots, Deadeye 3, Stinger 7. Shorter range and less accurate from the hip",
-"ATTACHMENTS: Hollow Point (+6%) and Long Barrel (+4%) add less damage, so parts can no longer turn a 4-shot gun into a 3-shot gun",
-"Chest shots do 10% extra (was 15%); marksman rifles take 3 body shots",
-"PERKS ONLINE: every perk now works against real players, not just bots",
-"SHADOW: hides you from enemy UAVs (other players' too); bots still take longer to lock on",
-"TACTICAL MASK and stuns: a stun grenade now blinds real players who are looking at it (it only hit bots before)",
-"BLAST VEST: now also cuts damage from other players' grenades and rockets",
-"DEAD SILENCE: fixed, it now turns on for other players as soon as you pick it",
-"SCAVENGER: kills (bots or players) now really top up a magazine of reserve ammo"
-]
-},
-{
-"v": "1.2.2",
-"d": "2026-10-14",
-"n": [
-"PERKS: every class now has 3 perk slots - one from each tier (blue, red, green), 5 perks per tier including the new Endurance, Prowler and Iron Skin. Every perk now really does what it says",
-"HITBOXES: headshots do the most damage, then chest, then stomach, then arms and legs (lower arms and legs least). Getting shot knocks your aim a little",
-"DAMAGE RANGE: every gun does full damage up to its MAX DAMAGE RANGE, then less further away (SMGs and pistols drop off the most, snipers not at all)",
-"BALANCE: SMGs do less damage, pistols toned down (only the revolver one-shots a head), short delay before you can shoot after sprinting",
-"CONTROLLER: every button in menus and the lobby can be reached, popups and friend requests too, an on-screen keyboard for typing, and a clear gold ring shows where you are",
-"SAVES: your stats, classes and settings now have a backup, so an update can never wipe them",
-"MATCH START: the wait when you first join a game is now 15 seconds instead of 30"
-]
-},
-{
-"v": "1.2.0",
-"d": "2026-10-14",
-"n": [
-"SOCIAL: send friend requests with a friend code (accept or decline), see which friends are online in the lobby and join them, and a friends leaderboard of online stats",
-"PARTIES: party members are always put on the same team",
-"MATCH START: a 5 second loading screen with a picture of the map, then 15 seconds to pick your class (no moving or shooting, last chance for players to join)",
-"SPAWNS: every map has two spawn areas per team - two or more enemies in yours moves your team to the other one. 1.5 s spawn protection. Nobody (bots too) can leave the map",
-"GUNS: every gun rebalanced, attachments now all do what they say, advanced stats shown in the loadout. Perfect first shot when aiming, then a little bloom",
-"FIXES: muzzle flash and kick on iron sights toned down, stuns only blind people looking at them, more realistic grenade throws, Survival no longer stays frozen at the start",
-"SETTINGS: ADS sensitivity for every scope zoom (mouse and controller), controller button remapping (Controller > Edit Controller Buttons), rename classes in the Weapons tab",
-"NEW: lobby music (Music volume in Audio), a Replay tab to rewatch your last match on a tactical map, and Career mode stats now cover every online mode"
-],
-"name": "PROJECT HOMECOMING · MAJOR UPDATE"
-},
-{
-"v": "1.1.9",
-"d": "2026-10-14",
-"n": [
-"PRIVATE MATCHES: the host can now pick any mode - Team Deathmatch, Free-for-All, Gun Game, Hardpoint, Capture the Flag or Search & Destroy - with the right limit for each"
-]
-},
-{
-"v": "1.1.8",
-"d": "2026-10-14",
-"n": [
-"ONLINE MODES: Gun Game, Hardpoint, Capture the Flag and Search & Destroy are now online (the host runs the objectives for everyone)",
-"PLAYLIST: press Y (controller) or Q (keyboard) in the lobby to pick which modes Quick Play can choose from",
-"PRE-GAME LOBBY: Quick Play searches your playlist, then everyone waits in a lobby with a 30 second countdown and starts together",
-"FRIENDS & PARTY: share your friend code (lobby or Settings > Account), add friends, JOIN their party; the party follows the leader into matches",
-"RED DOT: the M4A1 dot sits in the middle of the sight again"
-]
-},
-{
-"v": "1.1.6",
-"d": "2026-10-14",
-"n": [
-"NEW MENUS: new main menu (Multiplayer, Settings, News) and a new lobby with a team roster",
-"LOBBY: the big PLAY button picks the online mode - left/right or D-pad to change it, A or click to start",
-"CUSTOM: private code matches and solo games vs bots (any mode, map, bots, time limit) live under CUSTOM",
-"SCORESTREAKS: pick 3 of 6 (UAV, Supply Drop, Body Armor, Mortar Strike, Advanced UAV, Airstrike); earn them with kills, use them with X or D-pad up",
-"ACCOUNT: set your callsign in Settings > Account",
-"NEWS: every patch listed on the main menu",
-"KILL SOUND: punchier kill confirm, higher pitched on headshots",
-"SIGHTS: see-through rear apertures and slimmer front posts, open-frame reflex, one dot in red dots, clearer glass on every optic"
-]
-},
-{
-"v": "1.1.5",
-"d": "2026-10-14",
-"n": [
-"IRON SIGHTS: rebuilt on every gun - rifles, SMGs and snipers get a see-through rear ring and a guarded front post with a glowing tip; pistols get 3-dot sights; shotguns get a bright bead; all line up exactly with where you shoot",
-"NEW SCOPE: 4x Battle Scope (ACOG-style) with a lit chevron reticle and bullet-drop marks, for assault rifles, SMGs, LMGs and marksman rifles",
-"HOLO: rebuilt at real EOTech size (the Rainbow Six style holo) with a clear window and 68 MOA ring; red dots sit just above the front post",
-"STATS: separate ONLINE and OFFLINE career pages; online kills, deaths and rounds now count properly",
-"PRIVATE MATCHES: a lobby before the match - the host picks mode, map, number of bots, time limit and kill limit, friends join by code or on your Wi-Fi, host presses START",
-"END OF MATCH: full scoreboard after every game, then the next match starts by itself (45 s offline, 40 s online) with a full reset",
-"ONLINE: pausing no longer freezes the match for anyone, and a minimised host keeps the game running",
-"KEYBINDS: new Settings tab to rebind every key; new MELEE key (V by default)",
-"GUN GAME: bots play gun game too, and there is a short delay before you can fire each new gun",
-"SPAWNS: many more spawn points on every floor, randomised and spread out so bots no longer spawn clumped",
-"WINDOWS: glass you can see through but not shoot through",
-"Grenades throw much farther; soldiers hold their rifles properly in their hands",
-"ATTACHMENTS: pros and cons are stronger and actually change how the gun handles"
-]
-},
-{
-"v": "1.1.1",
-"d": "2026-10-14",
-"n": [
-"MAPS: rebuilt staircases (solid flights, steel stairs with stringers, proper handrails) and smoother ramps",
-"MAPS: lots more props - forklifts, pallets, floodlights, lamps, benches, bins, vending machines, signs, laundry lines, parasols, market produce, cones, puddles and more",
-"MAPS: lights in the warehouse, station and car park; office furniture; a better statue on Vernon Square",
-"BOTS: smarter about floors above and below them (no more trying to walk through ceilings), and they fit through gaps better"
-]
-},
-{
-"v": "1.1.0",
-"d": "2026-10-13",
-"n": [
-"NEW: three new maps - KESSEL DOCKS (container port), CASTELLMARE (hill town) and VERNON SQUARE (street over a metro station) - each with three lanes and several floors",
-"NEW: pick a map in the lobby or custom games (or RANDOM); online, the host's map is used and it changes every round",
-"NEW: bots can now climb stairs and ramps, use upper floors and drop off ledges",
-"NEW: the game is now called DARKZONE; weapons have new names; CREDITS screen added",
-"NEW: recorded gun sounds and photo-scanned textures (from the last test build)"
-]
-},
-{
-"v": "1.0.8",
-"d": "2026-10-13",
-"n": [
-"FIX: joining another player's match now works (the matchmaking service was rejecting join requests)",
-"ASHFALL is now in BETA: the title screen, version tag and patch notes show it",
-"New matches wait 30 seconds for players before bots join",
-"Lobby shows match service status and warns when a newer version is out"
-]
-},
-{
-"v": "1.0.6",
-"d": "2026-10-13",
-"n": [
-"New matches wait 30 seconds for players before bots join",
-"Real players always take priority: a bot leaves the moment a player joins",
-"The lobby warns you in red when a newer version is out"
-]
-},
-{
-"v": "1.0.5",
-"d": "2026-10-13",
-"n": [
-"Lobby shows whether the match service can be reached (green = online, red = blocked)",
-"In a match, the top of the screen shows which Quick Play match you are in, whether you are hosting, and how many real players are in it"
-]
-},
-{
-"v": "1.0.4",
-"d": "2026-10-13",
-"n": [
-"Quick Play: players always land in the same match",
-"Relay fallback when a network blocks direct connections",
-"Clear messages while finding or joining a match",
-"Quick Play button always visible at the bottom of the lobby"
-]
-},
-{
-"v": "1.0.0",
-"d": "2026-10-13",
-"n": [
-"First release of the ASHFALL app"
 ]
 }
 ];
@@ -11689,7 +11373,7 @@ function addWind(mat, amp) {
    no shadows, few effects, no grass, no ragdolls, a cheaper gun shader and fewer lamps in zombies. Turning it off puts
    back exactly what you had. FRAME GRAPH shows the last few seconds of frame times with FPS, the slowest frames and
    the draw calls, so a slow spot can be pointed at. After 20 s under 35 FPS in a match, the game suggests the mode once. */
-const PERF_SET = { quality: 'custom', renderScale: 65, shadows: 'off', fxQ: 'low', grass: 0, anis: 1, grain: false, gunShader: false, ragdoll: false, dynRes: true, shadowDist: 50 };
+const PERF_SET = { quality: 'custom', renderScale: 65, shadows: 'off', post: 'off', fxQ: 'low', grass: 0, anis: 1, grain: false, gunShader: false, ragdoll: false, dynRes: true, shadowDist: 50 };
 function perfModeSet(on) {
   if (!!S.perfMode === !!on) return;
   if (on) { S.perfSaved = {}; for (const k in PERF_SET) S.perfSaved[k] = S[k]; Object.assign(S, PERF_SET); S.perfMode = true; }
@@ -11738,6 +11422,133 @@ function perfFrame(raw) {
   setTimeout(() => { try { const p = $('pause'); if (p && !$('perfBtn')) { const b = document.createElement('button'); b.className = 'btn'; b.id = 'perfBtn'; b.dataset.act = 'perf-toggle'; const set = p.querySelector('[data-act="settings"]'); p.insertBefore(b, set ? set.nextSibling : null); perfBtn(); } } catch (e) {} }, 0);
 })();
 function perfAct(act) { if (act === 'perf-toggle') { perfModeSet(!S.perfMode); toast2('PERFORMANCE MODE ' + (S.perfMode ? 'ON' : 'OFF')); return true; } return false; }
+/* ================================================================== POST: bloom, colour grading, vignette, FXAA, sharpen
+   The world and the gun are drawn into an off-screen picture first (the same tone-mapped, sRGB picture as before), then
+   one pass finishes it for the screen:
+     BLOOM   - the bright parts (neon, lamps, muzzle flashes, fire, wonder weapons, the sun) leak a soft glow. A chain of
+               smaller and smaller copies is blurred (dual Kawase) and added back. Night maps glow more than day maps.
+     GRADE   - a little more contrast and colour, cool shadows and warm highlights (a film look), a soft vignette.
+     EDGES   - with ANTI-ALIASING on and WebGL2 the off-screen picture has 4x MSAA itself; otherwise FXAA smooths the edges.
+               HIGH adds a light sharpen (keeps the picture crisp at render scales under 100%).
+   Settings > VIDEO > EFFECTS: BLOOM & COLOUR (OFF / LOW / HIGH) and GLOW. OFF draws straight to the screen as before.
+   Presets: LOW = OFF, MEDIUM = LOW, HIGH and ULTRA = HIGH. PERFORMANCE MODE turns it off. */
+const POST = { rt: null, ms: false, w: 0, h: 0, lv: [], quad: null, cam: null, mats: null, half: false, failed: false,
+  grade: { bloom: 0.5, th: 0.78, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.18 } };
+const POST_OK = () => !POST.failed && S.post && S.post !== 'off' && !G.bench;
+// the grade for a map: from how dark its sky is (night maps glow more), or the map's own env.grade
+function postEnv(e) {
+  const c = new THREE.Color(e.top), h = new THREE.Color(e.horizon), L = 0.3 * (c.r + h.r) + 0.55 * (c.g + h.g) + 0.15 * (c.b + h.b), night = clamp((0.55 - L) / 0.4, 0, 1);
+  Object.assign(POST.grade, { bloom: 0.3 + 0.7 * night, th: 0.92 - 0.32 * night, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.16 + 0.04 * night }, e.grade || {});
+}
+const POST_VS = 'varying vec2 vUv; void main(){ vUv = uv; gl_Position = vec4(position.xy, 0.0, 1.0); }';
+function postMats() {
+  if (POST.mats) return POST.mats;
+  const mk = (fs, u) => new THREE.ShaderMaterial({ uniforms: u, vertexShader: POST_VS, fragmentShader: fs, depthTest: false, depthWrite: false, toneMapped: false });
+  // bright pass + first downsample: the picture is sRGB, the glow is summed in linear light
+  const bright = mk([
+    'uniform sampler2D src; uniform vec2 px; uniform float th; uniform float knee; varying vec2 vUv;',
+    'vec3 lin(vec3 c){ return c * c * (c * 0.305306 + 0.682171) + c * 0.012522; }',   // fast sRGB -> linear
+    'vec3 bp(vec2 uv){ vec3 c = texture2D(src, uv).rgb; float l = max(c.r, max(c.g, c.b)); float w = smoothstep(th, th + knee, l); return lin(c) * w; }',
+    'void main(){ vec3 s = bp(vUv) * 4.0; s += bp(vUv + vec2(-px.x, -px.y)); s += bp(vUv + vec2(px.x, -px.y)); s += bp(vUv + vec2(-px.x, px.y)); s += bp(vUv + px); gl_FragColor = vec4(s / 8.0, 1.0); }',
+  ].join('\n'), { src: { value: null }, px: { value: new THREE.Vector2() }, th: { value: 0.8 }, knee: { value: 0.2 } });
+  const down = mk([
+    'uniform sampler2D src; uniform vec2 px; varying vec2 vUv;',
+    'void main(){ vec3 s = texture2D(src, vUv).rgb * 4.0; s += texture2D(src, vUv - px).rgb; s += texture2D(src, vUv + px).rgb; s += texture2D(src, vUv + vec2(px.x, -px.y)).rgb; s += texture2D(src, vUv + vec2(-px.x, px.y)).rgb; gl_FragColor = vec4(s / 8.0, 1.0); }',
+  ].join('\n'), { src: { value: null }, px: { value: new THREE.Vector2() } });
+  // upsample (tent) and add onto the bigger level below
+  const up = mk([
+    'uniform sampler2D src; uniform sampler2D base; uniform vec2 px; uniform float k; varying vec2 vUv;',
+    'void main(){ vec3 s = texture2D(src, vUv + vec2(-px.x * 2.0, 0.0)).rgb + texture2D(src, vUv + vec2(px.x * 2.0, 0.0)).rgb + texture2D(src, vUv + vec2(0.0, -px.y * 2.0)).rgb + texture2D(src, vUv + vec2(0.0, px.y * 2.0)).rgb;',
+    '  s += (texture2D(src, vUv + vec2(-px.x, px.y)).rgb + texture2D(src, vUv + vec2(px.x, px.y)).rgb + texture2D(src, vUv + vec2(-px.x, -px.y)).rgb + texture2D(src, vUv + vec2(px.x, -px.y)).rgb) * 2.0;',
+    '  gl_FragColor = vec4(texture2D(base, vUv).rgb + s / 12.0 * k, 1.0); }',
+  ].join('\n'), { src: { value: null }, base: { value: null }, px: { value: new THREE.Vector2() }, k: { value: 1 } });
+  // the final picture: FXAA (when the picture has no MSAA), sharpen, bloom, grade, vignette
+  const fin = mk([
+    'uniform sampler2D src; uniform sampler2D bloom; uniform vec2 px; uniform float bk; uniform float sat; uniform float con; uniform float warm; uniform float vig; uniform float sharp; uniform float fxaa; uniform float useBloom; varying vec2 vUv;',
+    'vec3 lin(vec3 c){ return c * c * (c * 0.305306 + 0.682171) + c * 0.012522; }',
+    'vec3 srgb(vec3 c){ c = max(c, 0.0); vec3 s1 = sqrt(c), s2 = sqrt(s1), s3 = sqrt(s2); return 0.662002687 * s1 + 0.684122060 * s2 - 0.323583601 * s3 - 0.0225411470 * c; }',
+    'float luma(vec3 c){ return dot(c, vec3(0.299, 0.587, 0.114)); }',
+    'vec3 fxaaAt(vec2 uv){',
+    '  vec3 rgbNW = texture2D(src, uv + vec2(-1.0, -1.0) * px).rgb, rgbNE = texture2D(src, uv + vec2(1.0, -1.0) * px).rgb, rgbSW = texture2D(src, uv + vec2(-1.0, 1.0) * px).rgb, rgbSE = texture2D(src, uv + vec2(1.0, 1.0) * px).rgb, rgbM = texture2D(src, uv).rgb;',
+    '  float lNW = luma(rgbNW), lNE = luma(rgbNE), lSW = luma(rgbSW), lSE = luma(rgbSE), lM = luma(rgbM);',
+    '  float lMin = min(lM, min(min(lNW, lNE), min(lSW, lSE))), lMax = max(lM, max(max(lNW, lNE), max(lSW, lSE)));',
+    '  if (lMax - lMin < max(0.0312, lMax * 0.125)) return rgbM;',
+    '  vec2 dir = vec2(-((lNW + lNE) - (lSW + lSE)), ((lNW + lSW) - (lNE + lSE)));',
+    '  float red = max((lNW + lNE + lSW + lSE) * 0.03125, 0.0078125), rcp = 1.0 / (min(abs(dir.x), abs(dir.y)) + red);',
+    '  dir = clamp(dir * rcp, vec2(-8.0), vec2(8.0)) * px;',
+    '  vec3 a = 0.5 * (texture2D(src, uv + dir * (1.0 / 3.0 - 0.5)).rgb + texture2D(src, uv + dir * (2.0 / 3.0 - 0.5)).rgb);',
+    '  vec3 b = a * 0.5 + 0.25 * (texture2D(src, uv + dir * -0.5).rgb + texture2D(src, uv + dir * 0.5).rgb);',
+    '  float lB = luma(b); return (lB < lMin || lB > lMax) ? a : b; }',
+    'void main(){',
+    '  vec3 c = fxaa > 0.5 ? fxaaAt(vUv) : texture2D(src, vUv).rgb;',
+    '  if (sharp > 0.0) { vec3 n = texture2D(src, vUv + vec2(px.x, 0.0)).rgb + texture2D(src, vUv - vec2(px.x, 0.0)).rgb + texture2D(src, vUv + vec2(0.0, px.y)).rgb + texture2D(src, vUv - vec2(0.0, px.y)).rgb;',
+    '    vec3 d = c - n * 0.25; c = clamp(c + d * sharp, 0.0, 1.0); }',
+    '  vec3 l = lin(c);',
+    '  if (useBloom > 0.5) l += texture2D(bloom, vUv).rgb * bk;',
+    '  vec3 ex = max(l - 0.8, 0.0); l = min(l, vec3(0.8)) + ex / (1.0 + ex / 0.25);',   // a soft shoulder: glow never clips hard
+    '  c = srgb(l);',
+    '  float y = luma(c);',
+    '  c = mix(vec3(y), c, sat);',
+    '  c = mix(c, c * c * (3.0 - 2.0 * c), (con - 1.0) * 4.0) + (1.0 - c) * c * 0.06;',   // S-curve that keeps the blacks, a slight lift in the shadows
+    '  c *= mix(vec3(1.0 - warm * 0.5, 1.0, 1.0 + warm), vec3(1.0 + warm, 1.0, 1.0 - warm * 0.7), smoothstep(0.15, 0.85, y));',   // cool shadows, warm highlights
+    '  vec2 q = vUv - 0.5; c *= 1.0 - vig * smoothstep(0.25, 0.85, dot(q, q) * 2.2);',
+    '  gl_FragColor = vec4(clamp(c, 0.0, 1.0), 1.0);',
+    '}',
+  ].join('\n'), { src: { value: null }, bloom: { value: null }, px: { value: new THREE.Vector2() }, bk: { value: 0.5 }, sat: { value: 1 }, con: { value: 1 }, warm: { value: 0 }, vig: { value: 0 }, sharp: { value: 0 }, fxaa: { value: 0 }, useBloom: { value: 1 } });
+  const copy = mk('uniform sampler2D src; varying vec2 vUv; void main(){ gl_FragColor = vec4(texture2D(src, vUv).rgb, 1.0); }', { src: { value: null } });
+  POST.quad = new THREE.Mesh(new THREE.PlaneGeometry(2, 2), fin); POST.quad.frustumCulled = false;
+  POST.scene = new THREE.Scene(); POST.scene.add(POST.quad); POST.cam = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
+  return (POST.mats = { bright, down, up, fin, copy });
+}
+function postFree() { if (POST.rt) POST.rt.dispose(); for (const l of POST.lv) l.dispose(); POST.rt = null; POST.lv = []; POST.w = POST.h = 0; }
+// (re)make the targets when the drawing size, the setting or the anti-aliasing changes
+const _pSz = new THREE.Vector2();
+function postTargets() {
+  renderer.getDrawingBufferSize(_pSz); const w = Math.max(2, _pSz.x | 0), h = Math.max(2, _pSz.y | 0), q = S.post, ms = S.aa !== 'off' && !!renderer.capabilities.isWebGL2;
+  if (POST.rt && POST.w === w && POST.h === h && POST.q === q && POST.ms === ms) return;
+  postFree(); POST.w = w; POST.h = h; POST.q = q; POST.ms = ms;
+  const o = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, depthBuffer: true, stencilBuffer: false };
+  POST.rt = ms ? new THREE.WebGLMultisampleRenderTarget(w, h, o) : new THREE.WebGLRenderTarget(w, h, o);
+  if (ms) POST.rt.samples = 4;
+  POST.rt.texture.encoding = THREE.sRGBEncoding; POST.rt.texture.generateMipmaps = false;
+  // bloom levels: half float when the card can draw into it (no banding in dark glows), else 8 bit
+  const ext = renderer.extensions, half = renderer.capabilities.isWebGL2 ? !!(ext.get('EXT_color_buffer_float') || ext.get('EXT_color_buffer_half_float')) : false;
+  const lo = { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter, format: THREE.RGBAFormat, depthBuffer: false, stencilBuffer: false, type: half ? THREE.HalfFloatType : THREE.UnsignedByteType };
+  const first = q === 'low' ? 4 : 2, n = q === 'low' ? 3 : 5;
+  for (let i = 0; i < n; i++) { const d = first << i, lw = Math.max(1, Math.round(w / d)), lh = Math.max(1, Math.round(h / d)); if (lw < 4 || lh < 4) break; const t = new THREE.WebGLRenderTarget(lw, lh, lo); t.texture.generateMipmaps = false; POST.lv.push(t); }
+  // a second set for the way back up (each level adds the blurred smaller level onto itself)
+  POST.up = POST.lv.map(t => { const u = new THREE.WebGLRenderTarget(t.width, t.height, lo); u.texture.generateMipmaps = false; return u; });
+  for (const u of POST.up || []) POST.lv.push(u);   // freed together
+  POST.nl = n > POST.up.length ? POST.up.length : n; POST.half = half;
+}
+function postPass(mat, out) { POST.quad.material = mat; renderer.setRenderTarget(out); renderer.render(POST.scene, POST.cam); }
+// draw the frame: draw(rt) renders the world (and the gun) into the target; then the finishing passes go to the screen
+function postFrame(draw) {
+  const M = postMats(); postTargets();
+  renderer.setRenderTarget(POST.rt); renderer.clear(); draw();
+  const g = POST.grade, glow = clamp(S.bloom == null ? 100 : S.bloom, 0, 200) / 100, L = POST.nl, D = POST.lv.slice(0, L), U = POST.up, useB = glow > 0 && L > 0;
+  if (useB) {
+    // down: bright pass into the first level, then smaller and smaller
+    M.bright.uniforms.src.value = POST.rt.texture; M.bright.uniforms.px.value.set(1 / POST.w, 1 / POST.h).multiplyScalar(D[0].width < POST.w / 3 ? 1.5 : 1); M.bright.uniforms.th.value = g.th; M.bright.uniforms.knee.value = g.knee;
+    postPass(M.bright, D[0]);
+    for (let i = 1; i < L; i++) { M.down.uniforms.src.value = D[i - 1].texture; M.down.uniforms.px.value.set(0.5 / D[i - 1].width, 0.5 / D[i - 1].height); postPass(M.down, D[i]); }
+    // up: the smallest level, blurred, added onto the next bigger one (wide soft glow plus a tight core)
+    let prev = D[L - 1];
+    for (let i = L - 2; i >= 0; i--) { M.up.uniforms.src.value = prev.texture; M.up.uniforms.base.value = D[i].texture; M.up.uniforms.px.value.set(0.5 / prev.width, 0.5 / prev.height); M.up.uniforms.k.value = 1.0; postPass(M.up, U[i]); prev = U[i]; }
+    POST.bloomTex = prev.texture;
+  }
+  const f = M.fin.uniforms;
+  f.src.value = POST.rt.texture; f.bloom.value = useB ? POST.bloomTex : POST.rt.texture; f.useBloom.value = useB ? 1 : 0; f.px.value.set(1 / POST.w, 1 / POST.h);
+  f.bk.value = g.bloom * glow; f.sat.value = g.sat; f.con.value = g.con; f.warm.value = g.warm; f.vig.value = g.vig;
+  f.fxaa.value = POST.ms || S.aa === 'off' ? 0 : 1; f.sharp.value = S.post === 'high' ? 0.22 : 0;
+  postPass(M.fin, null);
+}
+// the frame through the finishing passes, or straight to the screen; a GPU that cannot do it falls back for good
+function postRender(drawScene) {
+  if (!POST_OK()) { if (POST.rt) postFree(); renderer.setRenderTarget(null); renderer.clear(); drawScene(); return; }
+  try { postFrame(drawScene); }
+  catch (e) { POST.failed = true; postFree(); renderer.setRenderTarget(null); try { reportError(e); } catch (er) {} renderer.clear(); drawScene(); }
+}
 /* ================================================================== benchmark: a scripted heavy fight that measures this machine */
 // Runs on its own (no input needed): 12+ soldiers, constant fire, ragdolls, explosions, a slow 360° pan.
 // Dynamic resolution is held off during the run so the numbers reflect the chosen settings.
@@ -20838,6 +20649,8 @@ const SCHEMA = {
     { k: 'gunShader', t: 'toggle', name: 'CUSTOM GUN SHADER', hint: 'Physically based GGX shader on weapon metal. Turn off if guns look wrong' },
     { k: 'sheen', t: 'range', name: 'SURFACE SHEEN', hint: 'Fresnel glint on metal and wet surfaces at grazing angles', min: 0, max: 150, step: 10, fmt: pct },
     { t: 'head', name: 'EFFECTS' },
+    { k: 'post', t: 'seg', name: 'BLOOM & COLOUR', hint: 'Glow on lights, neon, fire and muzzle flashes, film colour grading, edge smoothing. LOW is lighter on the graphics card', opts: [['off', 'OFF'], ['low', 'LOW'], ['high', 'HIGH']] },
+    { k: 'bloom', t: 'range', name: 'GLOW', hint: 'How strong the glow is (BLOOM & COLOUR on)', min: 0, max: 200, step: 10, fmt: pct },
     { k: 'fxQ', t: 'seg', name: 'EFFECTS QUALITY', hint: 'Sparks, debris, dust and smoke from shots and explosions', opts: [['low', 'LOW'], ['medium', 'MEDIUM'], ['high', 'HIGH'], ['ultra', 'ULTRA']] },
     { k: 'grass', t: 'range', name: 'GRASS DENSITY', min: 0, max: 100, step: 5, fmt: pct },
     { k: 'grain', t: 'toggle', name: 'FILM GRAIN' },
@@ -20911,9 +20724,9 @@ const SCHEMA = {
   ],
 };
 let curTab = 'VIDEO';
-const VIDEO_KEYS = new Set(['quality', 'renderScale', 'dynRes', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'fov', 'brightness', 'sheen', 'gunShader', 'grain', 'showFps', 'radar', 'crosshair', 'crosshairColor']);
+const VIDEO_KEYS = new Set(['quality', 'post', 'bloom', 'renderScale', 'dynRes', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'fov', 'brightness', 'sheen', 'gunShader', 'grain', 'showFps', 'radar', 'crosshair', 'crosshairColor']);
 // changing one of these by hand turns the preset into CUSTOM
-const DETAIL_KEYS = new Set(['renderScale', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'texQ', 'grain']);
+const DETAIL_KEYS = new Set(['renderScale', 'post', 'shadows', 'shadowDist', 'anis', 'grass', 'fxQ', 'texQ', 'grain']);
 const gpuShort = () => { let n = String(GPU_NAME || 'UNKNOWN'); const m = /^ANGLE \((.*)\)$/.exec(n); if (m) { const p = m[1].split(/,\s*(?![^()]*\))/); n = p.length > 1 ? p[1] : p[0]; }
   return n.replace(/^ANGLE Metal Renderer:\s*/i, '').replace(/\s*\(0x[0-9a-f]+\)/ig, '').replace(/\s*Direct3D.*$|\s*vs_\d.*$|\s*OpenGL.*$/i, '').trim().toUpperCase().slice(0, 48); };
 const dispInfo = () => { const d = window.devicePixelRatio || 1; return `${Math.round(screen.width * d)}×${Math.round(screen.height * d)} · ${HW.hz} HZ`; };
@@ -21451,9 +21264,11 @@ function renderFrame() {
   const showVm = viewmodel && (G.state === 'playing' || G.state === 'paused' || POTG.play) && !G.scoped && !(M && M.infMe);
   if (viewmodel) viewmodel.visible = !!showVm;
   const wob = typeof ZP !== 'undefined' && ZP.wobT > 0, crz = camera.rotation.z, cpy = camera.position.y; if (wob) zpWobble();
-  renderer.clear(); renderer.render(scene, camera);
-  if (wob) { camera.rotation.z = crz; camera.position.y = cpy; }
-  if (showVm) { updateGunShader(); renderer.clearDepth(); renderer.render(vmScene, vmCamera); }
+  postRender(() => {
+    renderer.render(scene, camera);
+    if (wob) { camera.rotation.z = crz; camera.position.y = cpy; }
+    if (showVm) { updateGunShader(); renderer.clearDepth(); renderer.render(vmScene, vmCamera); }
+  });
 }
 // FRAME RATE LIMIT: skip display refreshes until the next frame is due (the display's own rate is the ceiling)
 let lastRaf = 0, capDue = 0;
@@ -21513,7 +21328,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { ruDrop, ruKey, ZWWH, SHIP, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { lvN, lvH, NN, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { ruDrop, POST, postEnv, ruKey, ZWWH, SHIP, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { lvN, lvH, NN, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, NN, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, lvN, lvH, lvS, NL, NN, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

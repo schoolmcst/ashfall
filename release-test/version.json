@@ -1,13 +1,12 @@
 {
- "version": "1.2.62",
+ "version": "1.2.63",
  "notes": [
-  "NEW ZOMBIES MAP: THE MARY JANE - CHAPTER FIVE: DEAD CALM (BETA). The boat on the horizon was the freighter that carried the Nightshade seeds. Stern deck, crew block, grow containers, engine room and the forecastle at the bow.",
-  "7 chapters, 12 tapes and a new boss: THE CAPTAIN (yes, he has the cap). Restart the ship's power, take the chief's key, burn the seed shipments, open the captain's safe and seed the ballast with the cure.",
-  "NEW WONDER WEAPON: THE HASH HARPOON. Fires a resin harpoon straight through every zombie in a line, then bursts into sticky smoke where it lands.",
-  "CARGO SLINGS swing you between the stern, both side decks and the bow once the power is back. New RIPTIDE camo for upgraded guns on this map.",
-  "Chapter four now leads into chapter five. Co-op works on the new map, host migration included.",
-  "Still in from 1.2.61 and 1.2.60: DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS, Season 2 HARVEST, save codes, block, word filter, error reports."
+  "NEW GRAPHICS (BETA): BLOOM & COLOUR. Lamps, neon signs, fire, muzzle flashes, wonder weapons and the sun now glow. Night maps glow more, day maps stay clean.",
+  "Film colour grading on every map: richer colour, cool shadows and warm highlights, a soft vignette. Dark rooms stay as easy to see as before.",
+  "Smoother edges: FXAA when MSAA is off, and a light sharpen on HIGH so the picture stays crisp at lower render scales.",
+  "Settings > VIDEO > EFFECTS: BLOOM & COLOUR (OFF / LOW / HIGH) and GLOW (0-200%). The presets pick it for you (LOW preset = OFF, MEDIUM = LOW, HIGH and ULTRA = HIGH). PERFORMANCE MODE turns it off.",
+  "Still in from 1.2.62, 1.2.61 and 1.2.60: THE MARY JANE (zombies chapter five), DISPENSARY ROW, SMOKE OUT, RE-UP, PUFF PUFF PASS, Season 2 HARVEST, save codes, block, word filter, error reports."
  ],
- "sha256": "6f3ee26ab8e49b209bc0b750a5690416d6cb30a77ed550f69654dabdccd7ccdf",
+ "sha256": "654dfa52c5078961b4270dbfcbbe0bdb39b047c32ff3dc4f3a34ffde8aa0e352",
  "minApp": "1.0.0"
 }

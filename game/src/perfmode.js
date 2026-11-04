@@ -3,7 +3,7 @@
    no shadows, few effects, no grass, no ragdolls, a cheaper gun shader and fewer lamps in zombies. Turning it off puts
    back exactly what you had. FRAME GRAPH shows the last few seconds of frame times with FPS, the slowest frames and
    the draw calls, so a slow spot can be pointed at. After 20 s under 35 FPS in a match, the game suggests the mode once. */
-const PERF_SET = { quality: 'custom', renderScale: 65, shadows: 'off', fxQ: 'low', grass: 0, anis: 1, grain: false, gunShader: false, ragdoll: false, dynRes: true, shadowDist: 50 };
+const PERF_SET = { quality: 'custom', renderScale: 65, shadows: 'off', post: 'off', fxQ: 'low', grass: 0, anis: 1, grain: false, gunShader: false, ragdoll: false, dynRes: true, shadowDist: 50 };
 function perfModeSet(on) {
   if (!!S.perfMode === !!on) return;
   if (on) { S.perfSaved = {}; for (const k in PERF_SET) S.perfSaved[k] = S[k]; Object.assign(S, PERF_SET); S.perfMode = true; }
