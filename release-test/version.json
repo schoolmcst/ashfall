@@ -1,9 +1,9 @@
 {
- "version": "1.2.78",
+ "version": "1.2.79",
  "notes": [
-  "NEW MOVEMENT: SLIDE - sprint, then crouch (jump out of it to keep the speed)",
-  "NEW MOVEMENT: CLIMB - jump at a ledge, crate, wall or container to pull yourself up"
+  "NEW: LAST TOKE DUOS and SQUADS - team up with bots (pick SOLO, DUOS or SQUADS on the LAST TOKE tile)",
+  "get KNOCKED DOWN instead of killed while a squadmate stands - crawl, and hold USE to pick each other up"
  ],
- "sha256": "2c15c90f04daab272ece701e056bec266f9e20a6511507496765fdd972f84375",
+ "sha256": "1fa4d3230b0bef307aca3309fd300d455347da95e192ce955707a0671673e839",
  "minApp": "1.0.0"
 }

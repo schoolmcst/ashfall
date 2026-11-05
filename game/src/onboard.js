@@ -76,7 +76,7 @@ function featTiles() {
 }
 function featAct(act) {
   if (act === 'feat-play') { featPlay(); return true; }
-  if (act === 'br-play') { sfx.ui(); startMatch('br', { map: 'random' }); return true; }
+  if (act === 'br-play') { sfx.ui(); sqPicker(); return true; }
   return false;
 }
 (() => { const s = document.createElement('style'); s.textContent = `.onb-ov{position:fixed;inset:0;z-index:240;display:flex;align-items:center;justify-content:center;background:rgba(3,4,5,.82)}

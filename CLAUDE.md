@@ -91,6 +91,11 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
 - 1.2.78 TEST: movement.js SLIDE (sprint + crouch; mvSlide takes over P.vx/vz while P.slideT > 0; slide-jump keeps speed)
   and MANTLE (jump at a ledge 0.55-2.15 m above the feet, with room on top; mvLedge/mvMantle, P.mantle animates the climb,
   no firing). The state object is MOV (MV is map voting). Test s_slidemantle steps updatePlayer at a fixed 60 fps.
+- 1.2.79 TEST: squads.js LAST TOKE DUOS / SQUADS (offline vs bots; the LAST TOKE tile opens sqPicker). M.squad = 2|4;
+  squadmates share entry.team (floor(i / squad)), isFriend() counts M.squad. Downed instead of killed while a squadmate
+  stands (sqPlayerDown from hurtPlayer, sqBotDown from damageEnemy; e.sqFinal skips it for the bleed-out kill), 15 s bleed,
+  3.5 s revive (USE by me, sqBotGoal for bots), sqGroup lands squads together, last squad standing ends it in brUpdate.
+  Online LAST TOKE is still solo. Test: s_squads.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

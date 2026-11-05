@@ -49,7 +49,7 @@ const SKILL = {
 const TEAM_COL = ['#5aaeff', '#ff5a4a'], TEAM_NAME = ['BLUE', 'RED'];
 let M = { mode: 'surv', def: MODES.surv, entries: [] };
 const inMatch = () => M && M.mode !== 'surv' && M.mode !== 'zomb' && !G.bench;
-const isFriend = e => M.def.teams && e.team === M.myTeam;
+const isFriend = e => (M.def.teams || M.squad > 1) && e.team === M.myTeam;   // LAST TOKE squads count too
 
 /* ---------- map layout for the modes */
 const LAYOUT = {
@@ -150,7 +150,7 @@ function spawnBot(en, pos) {
   e.group.rotation.y = Math.atan2(-pos.x, -pos.z); e.group.position.y = pos.y || 0; e.spawnProt = 1.5;
   try { brainBoost(e); } catch (err) {}
   if (!G.noRoles) try { botRoleInit(e, pos); } catch (err) { reportError(err); }
-  if (pvp && en.team === M.myTeam) e.group.add(friendlyMarker());
+  if ((pvp || M.squad > 1) && en.team === M.myTeam) e.group.add(friendlyMarker());
   if (M.mode === 'inf') setTimeout(() => infDress(e), 0);
   en.bot = e; en.alive = true; enemies.push(e);
   if (M.mode === 'gun') botGunProfile(e, GUN_LADDER[Math.min(en.level || 0, GUN_LADDER.length - 1)]);
@@ -164,6 +164,7 @@ function startMatch(mode, custom) {
   if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel, mode); loadMap(cfg.map); }
   else if (!NET.app) loadMap(DEFAULT_MAP);   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
+  M.squad = mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false;   // LAST TOKE DUOS / SQUADS (squads.js)
   resetGame();
   if (mode === 'zomb') { zombStart(cfg); return; }
   if (mode === 'range') { rangeStart(cfg); return; }
@@ -186,7 +187,7 @@ function startMatch(mode, custom) {
     for (let t = 0; t < 2; t++) for (let i = 0; i < (t === 0 ? n - 1 : n); i++) M.entries.push({ name: names[ni++ % names.length], team: t, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: i % 2 ? 'obj' : 'hunt' });
   } else {
     const n = clamp(cfg.players, 2, M.mode === 'br' ? 16 : 12);   // LAST TOKE is sixteen
-    for (let i = 1; i < n; i++) M.entries.push({ name: names[ni++ % names.length], team: i, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: 'hunt' });
+    for (let i = 1; i < n; i++) M.entries.push({ name: names[ni++ % names.length], team: M.squad > 1 ? Math.floor(i / M.squad) : i, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: 'hunt' });
   }
   if (mode === 'snd') M.snd = { round: 0, wins: [0, 0], att: 0, state: 'freeze', t: 0, bomb: null, site: 0 };
   objSetup();
@@ -254,7 +255,7 @@ function weaponLabel(by) { if (by === 'player') return WEAPONS[G.cur] ? WEAPONS[
 function nameHtml(en) {
   if (!en) return '';
   if (en.isPlayer) return '<b>YOU</b>';
-  const col = !M.def.teams ? TEAM_COL[1] : TEAM_COL[en.team === M.myTeam ? 0 : 1];
+  const col = !M.def.teams && !(M.squad > 1) ? TEAM_COL[1] : TEAM_COL[en.team === M.myTeam ? 0 : 1];
   return `<span style="color:${col}">${en.tag ? '[' + en.tag + '] ' : ''}${en.name}</span>`;
 }
 // called for every bot death (killer: 'player', a bot, or a string for barrels/explosions)
@@ -440,6 +441,7 @@ function updateBots(dt) {
     if (!e.entry || e.net) continue;
     if ((e.think -= dt) <= 0) { e.think = 0.28 + Math.random() * 0.12; botThink(e); }
     if (e.tgt && !botValidTarget(e, e.tgt)) e.tgt = null;
+    if (e.downed && sqBotDowned(e, dt)) continue;   // LAST TOKE squads: downed, crawling
     if (e.veh && vhBotDrive(e, dt)) continue;   // driving a LAST TOKE vehicle
     const ex = g.position.x, ez = g.position.z;
     let face = null, holding = false, mx = 0, mz = 0;

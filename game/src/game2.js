@@ -156,6 +156,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (e.zombie && typeof zpuOn === 'function' && zpuOn('hotbox')) dmg = e.boss ? dmg * 3 : Math.max(dmg, e.hp + 1);   // HOTBOX: one hit kills (bosses take triple)
   e.hp -= dmg; e.flinch = 1; if (e.zombie && (by === 'player' ? G.meleeT > 0 : by && by.melee)) zombStagger(e, dir); if (e.zombie && by === 'player' && e.hp > 0) zombHit(e, head); if (typeof botWasHit === 'function' && M && M.def && inMatch()) botWasHit(e, by);
   if (e.hp > 0 && dir) { const pk = boom ? 0.5 : 0.07; e.group.position.x += dir.x * pk; e.group.position.z += dir.z * pk; e.slowT = boom ? 0.8 : 0.3; }
+  if (e.hp <= 0 && typeof sqBotDown === 'function' && sqBotDown(e)) return false;   // LAST TOKE squads: knocked down, not dead
   if (e.hp <= 0) {
     enemies.splice(enemies.indexOf(e), 1);
     const dd = { e, t: 0, boom: !!boom, dx: dir ? dir.x : 0, dz: dir ? dir.z : 0, head, a: [rnd(0.5, 1.4), rnd(0.5, 1.4), rnd(-0.4, 0.4), rnd(-0.4, 0.4)] };

@@ -101,13 +101,13 @@ function vhPhys(v, thr, steer, brake, dt, who) {
   if (Math.abs(v.spd) > 5) {   // running people over
     const hitK = Math.abs(v.spd) * (v.type === 'cart' ? 11 : 9);
     for (const e of enemies.slice()) {
-      if (e === who || !e.entry || e.entry.alive === false || (me && e.team !== undefined && M.def && M.def.teams && e.team === M.myTeam)) continue;
+      if (e === who || !e.entry || e.entry.alive === false || (me && isFriend(e)) || (!me && M.squad > 1 && e.team === who.team)) continue;
       const gp = e.group.position, d = Math.hypot(gp.x - v.x, gp.z - v.z); if (d > T.r + 0.55 || Math.abs(gp.y - v.y) > 1.4) continue;
       if (e.vhHitT && NOW - e.vhHitT < 0.6) continue; e.vhHitT = NOW;
       try { damageEnemy(e, hitK, false, { x: fx, z: fz }, false, me ? 'player' : who); sfx.thud(me ? { vol: 1 } : Object.assign({ vol: 1 }, at(v.x, v.z, 25))); } catch (er) {}
       v.spd *= 0.75;
     }
-    if (!me && playerAlive() && Math.hypot(P.x - v.x, P.z - v.z) < T.r + 0.55 && Math.abs(P.y - v.y) < 1.4 && (!G.vhHitT || NOW - G.vhHitT > 0.6)) { G.vhHitT = NOW; try { hurtPlayer(hitK, v.x, v.z, false); } catch (er) {} v.spd *= 0.75; }
+    if (!me && playerAlive() && !(M.squad > 1 && who.team === M.myTeam) && Math.hypot(P.x - v.x, P.z - v.z) < T.r + 0.55 && Math.abs(P.y - v.y) < 1.4 && (!G.vhHitT || NOW - G.vhHitT > 0.6)) { G.vhHitT = NOW; try { hurtPlayer(hitK, v.x, v.z, false); } catch (er) {} v.spd *= 0.75; }
   }
   return { fx, fz, crash };
 }

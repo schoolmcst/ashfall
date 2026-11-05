@@ -64,10 +64,10 @@ function hurtPlayer(dmg, fx, fz, boom) {
     dmgdir.style.opacity = 1; G.dmgDirT = 1.2;
   }
   sfx.hurt(); rumble(0.7, 0.4, 180);
-  if (G.health <= 0) { G.health = 0; die(); }
+  if (G.health <= 0) { if (typeof sqPlayerDown === 'function' && sqPlayerDown()) return; G.health = 0; die(); }
 }
 
-function isFiring() { return !VH.me && !P.mantle && (mouseDown || pad.fire); }
+function isFiring() { return !VH.me && !P.mantle && !G.downed && (mouseDown || pad.fire); }
 let wasSprint = false;
 function updatePlayer(dt) {
   if (VH.me && vhPlayer(dt)) return { moving: false, sprint: false };   // driving a LAST TOKE vehicle
@@ -77,10 +77,11 @@ function updatePlayer(dt) {
   const fwd = hold ? 0 : clamp((kb('fwd') ? 1 : 0) - (kb('back') ? 1 : 0) - pad.my, -1, 1);
   const str = hold ? 0 : clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
   const moving = fwd !== 0 || str !== 0;
-  const sprint = !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading) && !(typeof CAMP !== 'undefined' && CAMP.carry && M.mode === 'camp');
+  const sprint = !G.downed && !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading) && !(typeof CAMP !== 'undefined' && CAMP.carry && M.mode === 'camp');
   if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
   let speed = (typeof campCarrySlow === 'function' ? campCarrySlow() : 1) * (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof mcFizz === 'function' && M && M.mode === 'zomb' && mcFizz() ? 1.25 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
   if (G.reloading) speed *= 0.85;
+  if (G.downed) speed *= 0.22;   // LAST TOKE squads: crawling
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
   const tx = moving ? wx / wl * speed * mag : 0, tz = moving ? wz / wl * speed * mag : 0;
@@ -91,17 +92,17 @@ function updatePlayer(dt) {
   P.x += P.vx * dt; P.z += P.vz * dt;
   resolve(P, 0.4, P.y);
   P.x = clamp(P.x, PLAYRECT[0] + 0.45, PLAYRECT[1] - 0.45); P.z = clamp(P.z, PLAYRECT[2] + 0.45, PLAYRECT[3] - 0.45);
-  if ((kb('jump') || pad.jump) && P.onGround && !hold) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); if (P.slideT > 0) { P.slideT = 0; P.vx *= 1.05; P.vz *= 1.05; } }   // a slide-jump keeps the speed
+  if ((kb('jump') || pad.jump) && P.onGround && !hold && !G.downed) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); if (P.slideT > 0) { P.slideT = 0; P.vx *= 1.05; P.vz *= 1.05; } }   // a slide-jump keeps the speed
   P.vy -= 22 * (M && M.feat && M.feat.lowgrav ? 0.42 : 1) * dt; const py0 = P.y; P.y += P.vy * dt;
   if (P.vy > 0) { const ce = ceilingAt(P.x, P.z, py0); if (P.y + 1.8 > ce) { P.y = Math.max(py0, ce - 1.8); P.vy = 0; } }
   const gy = groundAt(P.x, P.z, P.y);
   if (P.y <= gy) { if (!P.onGround && P.vy < -2) G.landT = clamp(-P.vy / 11, 0.25, 1); if (!P.onGround && P.vy < -4 && !perk('light')) { G.shake = Math.max(G.shake, 0.01); sfx.thud({ vol: 0.8 }); } P.y = gy; P.vy = 0; P.onGround = true; } else if (P.y > gy + 0.05) P.onGround = false;
   }
-  P.eye = lerp(P.eye, sliding ? 0.85 : crouch ? 1.1 : 1.7, clamp((sliding ? 14 : 10) * dt, 0, 1));
+  P.eye = lerp(P.eye, G.downed ? 0.45 : sliding ? 0.85 : crouch ? 1.1 : 1.7, clamp((sliding ? 14 : 10) * dt, 0, 1));
   const hs = Math.hypot(P.vx, P.vz);
   if (P.onGround && hs > 0.5 && !sliding) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
   const rec = Math.min(P.recoilAcc, P.recoilAcc * dt * 4 + 0.0005); P.pitch -= rec; P.recoilAcc -= rec;
-  if (G.time - G.lastHit > (perk('tough') ? 3 : 5) && G.health < (G.maxHp || 100)) G.health = Math.min(G.maxHp || 100, G.health + 28 * (inMatch() ? 1 : diff().regen) * (G.maxHp || 100) / 100 * dt);
+  if (!G.downed && G.time - G.lastHit > (perk('tough') ? 3 : 5) && G.health < (G.maxHp || 100)) G.health = Math.min(G.maxHp || 100, G.health + 28 * (inMatch() ? 1 : diff().regen) * (G.maxHp || 100) / 100 * dt);
 
   const shk = G.shake * S.shake / 100, bobOn = S.bob ? 1 : 0;
   camera.position.set(P.x + rnd(-shk, shk), P.y + P.eye + Math.sin(P.bob * 2) * 0.025 * (hs / 5) * bobOn + rnd(-shk, shk), P.z + rnd(-shk, shk));
@@ -427,7 +428,7 @@ function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
     const d = Math.hypot(e.group.position.x - p.x, 1 - p.y, e.group.position.z - p.z);
     if (d < R && blastClear(p, e.group.position.x, 1, e.group.position.z)) (e.killedBy = src), damageEnemy(e, (170 * (1 - d / R) + 20) * dmgK, false, _v3.set(e.group.position.x - p.x, 0.3, e.group.position.z - p.z).normalize(), true, by === 'player' ? 'player' : by && by.group ? by : src);
   }
-  if (dp < R && blastClear(p, P.x, P.y + 1, P.z) && !(by && by.group && M.def && M.def.teams && by.team === M.myTeam)) G.killer = by && by.group ? by : src, hurtPlayer(Math.round((110 * (1 - dp / R) + 5) * Math.min(1, dmgK)), p.x, p.z, true);
+  if (dp < R && blastClear(p, P.x, P.y + 1, P.z) && !(by && by.group && M.def && (M.def.teams || M.squad > 1) && by.team === M.myTeam)) G.killer = by && by.group ? by : src, hurtPlayer(Math.round((110 * (1 - dp / R) + 5) * Math.min(1, dmgK)), p.x, p.z, true);
   for (const b of barrels) if (b.alive && Math.hypot(b.x - p.x, b.z - p.z) < R * 0.8) damageBarrel(b, 999, true);
   G.shake = Math.max(G.shake, 0.06 * clamp(1 - dp / 30, 0, 1) * (perk('mask') ? 0.3 : 1));
   const rk = clamp(1 - dp / 30, 0, 1); if (rk > 0.05) rumble(rk, rk * 0.8, 120 + 300 * rk);

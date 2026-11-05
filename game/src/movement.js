@@ -56,7 +56,7 @@ function mvMantle(dt, fwd, hold) {
     if (k >= 1) { P.mantle = null; P.onGround = true; P.y = groundAt(P.x, P.z, m.y1 + 0.05); }
     return true;
   }
-  if (!jump || fwd <= 0 || (typeof VH !== 'undefined' && VH.me)) return false;
+  if (!jump || fwd <= 0 || G.downed || (typeof VH !== 'undefined' && VH.me)) return false;
   if (!press && (P.onGround || P.vy > 3)) return false;   // a fresh press on the ground, or holding JUMP in the air (on the way down / at the top)
   const L = mvLedge(); if (!L) return false;
   P.mantle = { t: 0, dur: L.h > 1.3 ? 0.42 : 0.3, x0: P.x, y0: P.y, z0: P.z, x1: L.x, y1: L.y, z1: L.z }; P.slideT = 0; P.vy = 0;
