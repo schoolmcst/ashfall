@@ -96,6 +96,9 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   stands (sqPlayerDown from hurtPlayer, sqBotDown from damageEnemy; e.sqFinal skips it for the bleed-out kill), 15 s bleed,
   3.5 s revive (USE by me, sqBotGoal for bots), sqGroup lands squads together, last squad standing ends it in brUpdate.
   Online LAST TOKE is still solo. Test: s_squads.
+- 1.2.80 TEST: ping.js PINGS (bind 'ping' = Z, middle mouse, pad 14 D-PAD LEFT): pingPick aims at an enemy / loot crate /
+  vehicle / the spot; markers go through markerList (ping: 1); bot teammates answer (lkp / goal) and botCallout pings for
+  you; online in presence `pg` = [seq, kind, x, y, z], shown to team-mode teammates. Test: s_ping.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

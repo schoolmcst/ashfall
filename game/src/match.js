@@ -164,7 +164,7 @@ function startMatch(mode, custom) {
   if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel, mode); loadMap(cfg.map); }
   else if (!NET.app) loadMap(DEFAULT_MAP);   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
-  M.squad = mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false;   // LAST TOKE DUOS / SQUADS (squads.js)
+  M.squad = mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false; try { pingClear(); } catch (e) {}   // LAST TOKE DUOS / SQUADS (squads.js), pings (ping.js)
   resetGame();
   if (mode === 'zomb') { zombStart(cfg); return; }
   if (mode === 'range') { rangeStart(cfg); return; }
@@ -335,6 +335,7 @@ function botRemember(e, t) { const p = tpos(t); e.lkp = { x: p.x, z: p.z, y: p.y
 // tell teammates nearby where the enemy is
 function botCallout(e, t) {
   if (STK.jamT > 0 && !isFriend(e)) return;   // SMOKE OUT: no radio
+  try { pingFromBot(e, t); } catch (er) {}   // a bot teammate pings who it saw
   const p = tpos(t);
   for (const o of enemies) if (o !== e && o.entry && !o.net && o.team === e.team && !o.tgt && Math.hypot(o.group.position.x - e.group.position.x, o.group.position.z - e.group.position.z) < 35) { o.lkp = { x: p.x, z: p.z, y: p.y || 0 }; o.lkpT = M.t; o.lkpWho = t; }
 }
@@ -892,6 +893,7 @@ function markerList() {
   if (M.mode === 'ctf' && M.ctf) for (const f of M.ctf.flags) if (f.carrier !== 'player') out.push({ x: f.x, y: 2.8, z: f.z, t: f.team === M.myTeam ? (f.state === 'home' ? 'DEFEND' : 'RETURN') : (f.state === 'carried' ? 'ESCORT' : 'TAKE'), c: TEAM_COL[f.team === M.myTeam ? 0 : 1] });
   if (M.mode === 'ctf' && M.ctf && M.ctf.flags[1 - M.myTeam].carrier === 'player') { const h = M.ctf.flags[M.myTeam].home; out.push({ x: h.x, y: 2, z: h.z, t: 'CAPTURE', c: TEAM_COL[0] }); }
   m2Markers(out);
+  try { pingMarkers(out); } catch (e) {}
   if (M.mode === 'snd' && M.snd) { const sn = M.snd; if (sn.bomb) out.push({ x: sn.bomb.x, y: 0.8, z: sn.bomb.z, t: sn.att === M.myTeam ? 'DEFEND' : 'DEFUSE', c: '#ff5a4a' }); else for (const s of LAYOUT.sites) out.push({ x: s.x, y: 1.5, z: s.z, t: s.n, c: '#ffd24a' }); }
   return out;
 }

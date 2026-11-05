@@ -1,9 +1,9 @@
 {
- "version": "1.2.79",
+ "version": "1.2.80",
  "notes": [
-  "NEW: LAST TOKE DUOS and SQUADS - team up with bots (pick SOLO, DUOS or SQUADS on the LAST TOKE tile)",
-  "get KNOCKED DOWN instead of killed while a squadmate stands - crawl, and hold USE to pick each other up"
+  "NEW: PINGS - press Z, middle mouse or D-PAD LEFT to mark an enemy, loot, a vehicle or a spot for your team",
+  "bot squadmates follow your pings and ping the enemies they spot for you"
  ],
- "sha256": "1fa4d3230b0bef307aca3309fd300d455347da95e192ce955707a0671673e839",
+ "sha256": "551349d67de6aa643ab6cfd2e6c39c638398844473c1cb9e6fe9b15d9e293710",
  "minApp": "1.0.0"
 }
