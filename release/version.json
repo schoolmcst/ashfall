@@ -1,9 +1,9 @@
 {
- "version": "1.2.77",
+ "version": "1.2.80",
  "notes": [
-  "NEW LOOK: a cleaner, compact main menu - every tab on one slim bar, modes in a tidy grid, news tucked in the corner",
-  "compact lobby: slimmer rows, two-column roster, the zombies lobby fits on one screen"
+  "NEW: PINGS - press Z, middle mouse or D-PAD LEFT to mark an enemy, loot, a vehicle or a spot for your team",
+  "bot squadmates follow your pings and ping the enemies they spot for you"
  ],
- "sha256": "f9916aa7919864ab05aada43f552df5e22af799a3c975903649c1de60bab6bba",
+ "sha256": "551349d67de6aa643ab6cfd2e6c39c638398844473c1cb9e6fe9b15d9e293710",
  "minApp": "1.0.0"
 }

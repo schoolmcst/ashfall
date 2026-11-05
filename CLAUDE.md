@@ -88,15 +88,15 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   runtime-inserted tiles land right; NEWS is a small bottom-right panel. Lobby: slimmer rows, two-column roster (direct
   .ros-team children of .cod-roster only, not the party box), compact notes and chat; the zombies lobby (#lobby.zl, set in
   renderZLobby) lays its rows out in two columns, `.cod-row.wide` spans both. Pictures: _menushot.js, _applobshot.js.
-- 1.2.78 TEST: movement.js SLIDE (sprint + crouch; mvSlide takes over P.vx/vz while P.slideT > 0; slide-jump keeps speed)
+- 1.2.78 PUBLIC: movement.js SLIDE (sprint + crouch; mvSlide takes over P.vx/vz while P.slideT > 0; slide-jump keeps speed)
   and MANTLE (jump at a ledge 0.55-2.15 m above the feet, with room on top; mvLedge/mvMantle, P.mantle animates the climb,
   no firing). The state object is MOV (MV is map voting). Test s_slidemantle steps updatePlayer at a fixed 60 fps.
-- 1.2.79 TEST: squads.js LAST TOKE DUOS / SQUADS (offline vs bots; the LAST TOKE tile opens sqPicker). M.squad = 2|4;
+- 1.2.79 PUBLIC: squads.js LAST TOKE DUOS / SQUADS (offline vs bots; the LAST TOKE tile opens sqPicker). M.squad = 2|4;
   squadmates share entry.team (floor(i / squad)), isFriend() counts M.squad. Downed instead of killed while a squadmate
   stands (sqPlayerDown from hurtPlayer, sqBotDown from damageEnemy; e.sqFinal skips it for the bleed-out kill), 15 s bleed,
   3.5 s revive (USE by me, sqBotGoal for bots), sqGroup lands squads together, last squad standing ends it in brUpdate.
   Online LAST TOKE is still solo. Test: s_squads.
-- 1.2.80 TEST: ping.js PINGS (bind 'ping' = Z, middle mouse, pad 14 D-PAD LEFT): pingPick aims at an enemy / loot crate /
+- 1.2.80 PUBLIC: ping.js PINGS (bind 'ping' = Z, middle mouse, pad 14 D-PAD LEFT): pingPick aims at an enemy / loot crate /
   vehicle / the spot; markers go through markerList (ping: 1); bot teammates answer (lkp / goal) and botCallout pings for
   you; online in presence `pg` = [seq, kind, x, y, z], shown to team-mode teammates. Test: s_ping.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
