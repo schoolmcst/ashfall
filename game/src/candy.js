@@ -60,7 +60,7 @@ function mcHud(force) {
 function mcTick() { if (typeof M !== 'undefined' && M && M.mode === 'zomb') { if (typeof Z !== 'undefined' && Z.round > 0) mcRound(Z.round); mcHud(false); } else mcHud(false); }
 // the lobby row and the picker
 function mcRow() {
-  return `<div class="cod-row"><small>MUNCHIE CANDY · YOUR PACK OF 4</small><b>${MC.pack.map(k => `<span style="color:${CANDYD[k].col}">${CANDYD[k].name}</span>`).join(' · ')}</b><span>one candy in your pocket each round · ${actName('streak')} to eat it</span><div class="arw"><button class="mini" data-act="z-candy" aria-label="Change your candy pack">EDIT</button></div></div>`;
+  return `<div class="cod-row wide"><small>MUNCHIE CANDY · YOUR PACK OF 4</small><b>${MC.pack.map(k => `<span style="color:${CANDYD[k].col}">${CANDYD[k].name}</span>`).join(' · ')}</b><span>one candy in your pocket each round · ${actName('streak')} to eat it</span><div class="arw"><button class="mini" data-act="z-candy" aria-label="Change your candy pack">EDIT</button></div></div>`;
 }
 function mcPicker() {
   const ov = document.createElement('div'); ov.className = 'pr-ov'; ov.id = 'mcPick';

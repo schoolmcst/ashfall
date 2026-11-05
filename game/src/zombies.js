@@ -18,7 +18,7 @@ const Z_POOL = () => ARMORY.filter(d => ['ar', 'smg', 'lmg', 'mr', 'sr', 'sg'].i
 function openZLobby() { ZL.on = true; if (G.state !== 'menu') leaveGame(); renderZLobby('.cod-go'); showScreen('lobby'); }
 function renderZLobby(focusSel) {
   const mid = ZC.on && !zcHost() && zmapIs(ZC.hostLobbyMap) ? ZC.hostLobbyMap : ZL.map, st = careerOf(false), m = MAPS[mid], zc = zmapCfg(mid), sx = zc.story;
-  $('lobKind').textContent = 'ZOMBIES';
+  $('lobKind').textContent = 'ZOMBIES'; $('lobby').classList.add('zl');   // compact two-column zombies lobby (uicompact.js)
   $('lobPlayer').innerHTML = playerCard(st); cardBanner($('lobPlayer'));
   for (const b of document.querySelectorAll('#lobby .cod-nav [data-act="loadout"], #lobby .cod-nav [data-act="streaks"]')) b.style.display = 'none';
   const ph = document.querySelector('#lobby .cod-foot .padhint'); if (ph) ph.innerHTML = 'START  PLAY';

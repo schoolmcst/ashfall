@@ -45,7 +45,7 @@ function renderLobby(focusSel) {
   if (!MODES[LOBBY.mode].online || !playlist().includes(LOBBY.mode)) LOBBY.mode = playlist()[0];
   const sel = LOBBY.mode, d = MODES[sel], online = !!d.online, st = careerOf(online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   if (online) LOBBY.lastOn = sel; else LOBBY.lastOff = sel;
-  $('lobKind').textContent = 'MULTIPLAYER';
+  $('lobKind').textContent = 'MULTIPLAYER'; $('lobby').classList.remove('zl');
   $('lobPlayer').innerHTML = playerCard(st); cardBanner($('lobPlayer'));
   const gun = sel === 'gun', stk = sel !== 'surv' && !gun;
   const goTxt = online ? (NET.app ? 'QUICK PLAY' : 'JOIN ROOM') : 'START MATCH';
@@ -67,7 +67,7 @@ function rosterHtml(k) {
   const info = `<div class="ros-info"><b>${d.name}</b>${d.desc}</div>`;
   if (k === 'surv') return `<div class="ros-h"><span>SQUAD</span><b>SOLO</b></div><div class="ros-team"><div class="tn">YOU</div>${p(me, 'me', 'READY')}</div>` + info;
   if (d.online && NET.app) return `<div id="partyBox">${partyHtml()}</div>` + (typeof lobChatHtml === 'function' ? lobChatHtml() : '') + info;
-  if (d.online) return `<div class="ros-h"><span>${NET.app ? 'QUICK PLAY' : 'ROOM'}</span><b>${d.teams ? '6 V 6' : 'FREE-FOR-ALL'}</b></div><div class="ros-team"><div class="tn">YOUR PARTY</div>${p(me, 'me', 'READY')}<div class="ros-p"><span class="lv">+</span>real players join here &middot; bots fill empty spots</div></div>` + info;
+  if (d.online) return `<div class="ros-h"><span>${NET.app ? 'QUICK PLAY' : 'ROOM'}</span><b>${d.teams ? '6 V 6' : 'FREE-FOR-ALL'}</b></div><div class="ros-team"><div class="tn">YOUR PARTY</div>${p(me, 'me', 'READY')}<div class="ros-p wide"><span class="lv">+</span>real players join here &middot; bots fill empty spots</div></div>` + info;
   if (d.teams) { const n = clamp(cfg.perTeam, 1, 8);
     return `<div class="ros-h"><span>LOBBY</span><b>${n} V ${n}</b></div>` +
       `<div class="ros-team" style="--tc:${TEAM_COL[0]}"><div class="tn">YOUR TEAM</div>${p(me, 'me', 'READY')}${names.slice(0, n - 1).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` +
