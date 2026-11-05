@@ -82,7 +82,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
 - 1.2.76 PUBLIC (owner asked; said send it): the plain UAV shows enemies on the minimap only (stkMarks needs STK.vuav; the ADVANCED UAV
   still marks them on screen). LAST TOKE loot crates are not drawn on the minimap (drawRadar skips t === 'LOOT'); their
   on-screen LOOT tags stay. Test: s_uavradar.
-- 1.2.77 TEST (owner: menu and lobby too cluttered, keep everything): uicompact.js is a style sheet loaded last. Top bar has
+- 1.2.77 PUBLIC (owner said send it; menu and lobby too cluttered, keep everything): uicompact.js is a style sheet loaded last. Top bar has
   the logo + card on one line and every tab on a slim second line. Menu: MULTIPLAYER hero tile, CAMPAIGN/ZOMBIES/FEATURED/
   LAST TOKE 2x2, STASH YARD/REPLAY/SETTINGS(/EXIT in the app, class ex4) as small buttons; tile order is CSS `order`, so
   runtime-inserted tiles land right; NEWS is a small bottom-right panel. Lobby: slimmer rows, two-column roster (direct
