@@ -1,9 +1,11 @@
 {
- "version": "1.2.80",
+ "version": "1.2.81",
  "notes": [
-  "NEW: PINGS - press Z, middle mouse or D-PAD LEFT to mark an enemy, loot, a vehicle or a spot for your team",
-  "bot squadmates follow your pings and ping the enemies they spot for you"
+  "NEW: THE HOTBOX DUEL - your first death in LAST TOKE sends you to a 1v1 pit; win it and you drop back in",
+  "NEW: ONLINE LAST TOKE DUOS and SQUADS in Quick Play, with downs and revives",
+  "bots now climb over crates and low walls",
+  "LAST TOKE players now start all over STASH ISLAND, not just the middle"
  ],
- "sha256": "551349d67de6aa643ab6cfd2e6c39c638398844473c1cb9e6fe9b15d9e293710",
+ "sha256": "115c01456220197f04450aaa814809fb4f8bb1ba1ffae92c52d617d475c23f79",
  "minApp": "1.0.0"
 }

@@ -7,10 +7,12 @@
    standing next to you for 3.5 s picks you back up (with 40 HP). Bots come to revive their downed squadmates (and you)
    when they are not in a fight; you revive a downed bot by holding USE next to it. When a whole squad is down at once
    they all bleed out. Last squad with anyone standing wins.
-   Offline (against bots) only for now; online LAST TOKE stays solo. Saved: nothing (M.squad lives for the match). */
-const SQ = { revT: 0, revWho: null };
+   Online too (ONLINE LAST TOKE DUOS / SQUADS, 1.2.81): squads come from presence tm, the host fills them with bots; each
+   player runs their own down (dn in presence), a revive is sent as rv, the host's bots reviving a player as rb; the host's
+   bots go down only on the host. Saved: nothing (M.squad lives for the match). */
+const SQ = { revT: 0, revWho: null, rvOut: null, rvT: 0, rvSeq: 0, rbOut: null, rbT: 0, rbSeq: 0 };
 const SQ_BLEED = 15, SQ_REVIVE = 3.5;
-const sqOn = () => !!(M && M.squad > 1 && M.mode === 'br' && !M.online);
+const sqOn = () => !!(M && M.squad > 1 && M.mode === 'br');
 // someone in this team still standing (not downed, not dead), not counting `skip`
 function sqStanding(team, skip) {
   if (team === M.myTeam && skip !== 'player' && playerAlive() && !G.downed) return true;
@@ -27,7 +29,7 @@ function sqPlayerDown() {
 }
 // from damageEnemy when a bot would die: true = it's downed instead
 function sqBotDown(e) {
-  if (!sqOn() || e.downed || e.sqFinal || !e.entry || !sqStanding(e.team, e)) return false;
+  if (!sqOn() || e.net || e.downed || e.sqFinal || !e.entry || !sqStanding(e.team, e)) return false;
   e.downed = true; e.bleed = SQ_BLEED; e.hp = 100; e.tgt = null; e.goal = null; e.revBy = null;
   try { if (e.veh) vhBotExit(e); } catch (er) {}
   e.group.rotation.x = -1.25;   // lying down
@@ -51,7 +53,7 @@ function sqUpdate(dt) {
   }
   // downed bots: bleed out (or all at once when their squad is wiped)
   for (const e of enemies.slice()) {
-    if (!e.downed) continue;
+    if (!e.downed || e.net) continue;   // other players' downs (and the host's bots, online) are theirs to run
     e.bleed -= dt;
     if (e.bleed <= 0 || !sqStanding(e.team, e)) { e.downed = false; e.sqFinal = true; e.hp = 1; e.spawnProt = 0; const lb = e.entry && e.entry.lastBy; try { damageEnemy(e, 999, false, null, false, lb === 'player' || (lb && enemies.includes(lb)) ? lb : 'world'); } catch (er) {} continue; }
   }
@@ -59,10 +61,43 @@ function sqUpdate(dt) {
   const u = kb('use') || pad.use; let near = null;
   if (playerAlive() && !G.downed) for (const e of enemies) if (e.downed && e.team === M.myTeam && Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) < 1.8) { near = e; break; }
   if (near) {
-    if (u) { SQ.revT += dt; SQ.revWho = near; if (SQ.revT >= SQ_REVIVE) { SQ.revT = 0; sqBotUp(near, 'player'); } }
+    if (u) { SQ.revT += dt; SQ.revWho = near; if (SQ.revT >= SQ_REVIVE) { SQ.revT = 0; if (near.net) { SQ.rvOut = [near.net, 1, ++SQ.rvSeq]; SQ.rvT = NOW + 2.5; try { popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} } else sqBotUp(near, 'player'); } }
     else SQ.revT = 0;
     try { G.interactTxt = u ? `REVIVING ${near.entry.name} · ${Math.round(SQ.revT / SQ_REVIVE * 100)}%` : `${near.entry.name} IS DOWN · HOLD ${actName('use')} TO REVIVE`; showMsg(G.interactTxt); } catch (e) {}
   } else SQ.revT = 0;
+  if (SQ.rvOut && NOW > SQ.rvT) SQ.rvOut = null;
+  // online host: my bots pick up downed players of their squad
+  if (M.online && typeof netHostNow === 'function' && netHostNow()) for (const e of enemies) {
+    if (!e.net || !e.downed) continue;
+    const helper = enemies.find(o => !o.net && !o.downed && o.team === e.team && o.entry && o.entry.alive !== false && Math.hypot(o.group.position.x - e.group.position.x, o.group.position.z - e.group.position.z) < 1.8);
+    if (!helper) { e.revT = 0; continue; } e.revT = (e.revT || 0) + dt;
+    if (e.revT >= SQ_REVIVE) { e.revT = 0; SQ.rbSeq++; SQ.rbOut = [SQ.rbSeq, e.net]; SQ.rbT = NOW + 3; }
+  }
+  if (SQ.rbOut && NOW > SQ.rbT) SQ.rbOut = null;
+}
+/* ---------- online: downs and revives travel in presence (dn: I'm down, rv: I revived someone, rb: the host's bots revived someone) */
+function sqNetPres() { if (!sqOn()) return {}; return { dn: G.downed ? 1 : 0, rv: SQ.rvOut || undefined, rb: SQ.rbOut || undefined }; }
+function sqNetApply(R, pr) {
+  if (!sqOn() || !R) return;
+  const e = R.bot; if (e) { const dn = !!pr.dn; if (dn !== !!e.downed) { e.downed = dn; e.group.rotation.x = dn ? -1.25 : 0; } }
+  const seen = R.sqSeen || (R.sqSeen = { rv: 0, rb: 0 });
+  if (Array.isArray(pr.rv) && (pr.rv[2] | 0) > seen.rv) { seen.rv = pr.rv[2] | 0; const t = String(pr.rv[0]);
+    if (t === String(NET.me) && G.downed) sqPlayerUp();
+    else if (netHostNow()) { const b = enemies.find(o => !o.net && o.downed && o.entry && o.entry.botLabel === t); if (b) sqBotUp(b, null); } }
+  if (pr.ho && Array.isArray(pr.rb) && (pr.rb[0] | 0) > seen.rb) { seen.rb = pr.rb[0] | 0; if (pr.rb.slice(1).map(String).includes(String(NET.me)) && G.downed) sqPlayerUp(); }
+}
+// online: my squad (the squad with the most free spots, or a party member's squad), picked once when the room answers
+function sqNetPick(peers, inRoom) {
+  const n = Math.floor(16 / M.squad), c = new Array(n).fill(0);
+  for (const p of peers) if (!p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot) { const t = p.presence.tm | 0; if (t >= 0 && t < n) c[t]++; }
+  try { const names = new Set(partyMembers().filter(m => !m.me).map(m => m.name)); const mate = peers.find(p => !p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot && names.has(cleanNick(p.presence.n))); if (mate && c[mate.presence.tm | 0] < M.squad) return mate.presence.tm | 0; } catch (e) {}
+  let best = 0; for (let t = 1; t < n; t++) if (c[t] < c[best]) best = t; return best;
+}
+// online host: which squad the next bot joins (the one with the most room), or -1 when every squad is full
+function sqNetBotTeam() {
+  const n = Math.floor(16 / M.squad), c = new Array(n).fill(0); c[M.myTeam]++;
+  for (const en of M.entries) if (!en.isPlayer && en.team >= 0 && en.team < n) c[en.team]++;
+  let best = -1; for (let t = 0; t < n; t++) if (c[t] < M.squad && (best < 0 || c[t] < c[best])) best = t; return best;
 }
 // in the bots' loop: true while this bot is downed (it crawls toward a squadmate, no shooting)
 function sqBotDowned(e, dt) {
@@ -88,6 +123,7 @@ function sqBotGoal(e, set) {
 }
 // the first frame: each squad lands together (round its first member, or round me for mine)
 function sqGroup() {
+  if (M.online) { const mate = enemies.find(e => e.team === M.myTeam && e.entry && e.entry.alive !== false && (!netHostNow() || e.net)); if (mate && !netHostNow()) { const o = openNear(mate.group.position.x + 2, mate.group.position.z + 2); P.x = o.x; P.z = o.z; return; } }
   const lead = {}; lead[M.myTeam] = { x: P.x, z: P.z };
   for (const e of enemies) { if (!e.entry || e.team === undefined) continue; const L = lead[e.team]; if (!L) { lead[e.team] = { x: e.group.position.x, z: e.group.position.z }; continue; }
     const a = Math.random() * TAU, o = openNear(L.x + Math.cos(a) * 3, L.z + Math.sin(a) * 3); e.group.position.set(o.x, groundAt(o.x, o.z, 1), o.z); }

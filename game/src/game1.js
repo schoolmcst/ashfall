@@ -64,7 +64,7 @@ function hurtPlayer(dmg, fx, fz, boom) {
     dmgdir.style.opacity = 1; G.dmgDirT = 1.2;
   }
   sfx.hurt(); rumble(0.7, 0.4, 180);
-  if (G.health <= 0) { if (typeof sqPlayerDown === 'function' && sqPlayerDown()) return; G.health = 0; die(); }
+  if (G.health <= 0) { if (typeof sqPlayerDown === 'function' && sqPlayerDown()) return; if (typeof duelTake === 'function' && M && M.br && duelTake()) return; G.health = 0; die(); }   // squads: downed; LAST TOKE: THE HOTBOX DUEL
 }
 
 function isFiring() { return !VH.me && !P.mantle && !G.downed && (mouseDown || pad.fire); }

@@ -18,7 +18,7 @@ function brSetup() {
   // loot crates on open ground all over the map
   const used = [];
   for (let i = 0; i < 300 && M.br.crates.length < (ARENA > 44 ? 40 : 24) && netHostNow(); i++) {   // online, only the host makes the crates (everyone else gets them in the pack)
-    const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
+    const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (duelIn(o.x, o.z, 1)) continue; if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
     const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier); c.id = M.br.crates.length; M.br.crates.push(c);
   }
   try { vhSetup(); } catch (e) {}
@@ -43,7 +43,7 @@ function brOpen(c, who) {
 }
 const brAliveBots = () => enemies.filter(e => e.entry && e.entry.alive !== false);
 function brUpdate(dt) {
-  const B = M.br; if (!B) return; try { vhUpdate(dt); } catch (e) {}
+  const B = M.br; if (!B) return; try { vhUpdate(dt); } catch (e) {} try { duelUpdate(dt); } catch (e) {}
   if (!B.armed) { B.armed = true; brArmAll(); if (sqOn()) sqGroup(); }   // the first frame of the match: everyone down to a pistol (after the class was equipped)
   // the cloud: wait, then close on the next circle (a spot inside the current one)
   B.t -= dt; const host = netHostNow();
@@ -55,9 +55,9 @@ function brUpdate(dt) {
   B.wall.position.x = B.cx; B.wall.position.z = B.cz; B.wall.scale.set(Math.max(0.5, B.r), 1, Math.max(0.5, B.r)); B.wall.material.opacity = 0.14 + Math.sin(NOW * 2) * 0.04;
   const dmg = B.phase >= 0 && BR_PHASES[B.phase] ? BR_PHASES[B.phase][3] : 1.5, out = (x, z) => Math.hypot(x - B.cx, z - B.cz) > B.r;
   // choking outside the circle
-  const meOut = playerAlive() && out(P.x, P.z), cl = $('brCloud'); if (cl) cl.style.opacity = meOut ? 1 : 0;
+  const meOut = playerAlive() && !DUEL.on && out(P.x, P.z), cl = $('brCloud'); if (cl) cl.style.opacity = meOut ? 1 : 0;
   if (meOut) { G.lastHit = G.time; G.health -= dmg * dt; if (G.health <= 0) { G.health = 1; G.spawnProt = 0; try { hurtPlayer(999, P.x + 0.01, P.z); } catch (e) {} } }
-  if (host) for (const e of brAliveBots()) if (!e.net && out(e.group.position.x, e.group.position.z)) try { damageEnemy(e, dmg * dt, false, null, false, 'cloud'); } catch (er) {}
+  if (host) for (const e of brAliveBots()) if (!e.net && !e.duel && out(e.group.position.x, e.group.position.z)) try { damageEnemy(e, dmg * dt, false, null, false, 'cloud'); } catch (er) {}
   // crates: USE next to one opens it; bots open the one they reach
   const u = kb('use') || (typeof pad !== 'undefined' && pad.use);
   for (const c of B.crates) {
@@ -71,6 +71,7 @@ function brUpdate(dt) {
   if (sqOn()) {   // DUOS / SQUADS: last squad standing
     sqUpdate(dt); const T = sqTeamsLeft(); B.most = Math.max(B.most || 0, T.size);
     if (!B.place && !T.has(M.myTeam)) { B.place = T.size + 1; try { showBanner(`YOUR SQUAD PLACED #${B.place}`, `of ${Math.ceil(M.entries.length / M.squad)} · watch the rest or leave with ESC`); } catch (e) {} }
+    if (M.online) { if (host && !B.winTxt && T.size <= 1 && B.most >= 2) { const t = [...T][0]; B.winTxt = t === undefined ? '-' : 'SQ:' + t; B.winName = t === undefined ? 'NOBODY' : (t === M.myTeam ? NET.nick + "'S SQUAD" : 'SQUAD ' + (t + 1)); } return; }
     if (!M.over && T.size <= 1 && B.most >= 2) { const win = T.has(M.myTeam); if (win) { B.place = 1; try { showBanner('LAST TOKE', 'your squad is the last one standing'); } catch (e) {} } endMatch(win ? M.me : ((brAliveBots()[0] || {}).entry || null)); }
     return;
   }
@@ -85,6 +86,7 @@ function brUpdate(dt) {
 }
 // bots: run for the circle when they are outside (or it is closing on them), else go for a better crate nearby
 function brGoal(e, keep, near, set) {
+  { const dg = duelGoal(e, set); if (dg) return dg; }   // the duel bot goes for me
   { const sg = sqBotGoal(e, set); if (sg) return sg; }   // squads: pick up a downed squadmate first
   const B = M.br, g = e.group.position, d = Math.hypot(g.x - B.cx, g.z - B.cz);
   if (d > B.r * 0.85 || (B.closing && B.to && Math.hypot(g.x - B.to.x, g.z - B.to.z) > B.to.r * 0.8)) { const tx = B.to && B.closing ? B.to.x : B.cx, tz = B.to && B.closing ? B.to.z : B.cz; const car = vhBotWant(e, tx, tz); if (car) return set(car, 1.2); return set(near({ x: tx + rnd(-3, 3), z: tz + rnd(-3, 3), y: 0 }, 3), 1.5); }
@@ -94,7 +96,7 @@ function brGoal(e, keep, near, set) {
 }
 function brHud() {
   const B = M.br; if (!B) return ''; const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
-  return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}`;
+  return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
 function brMarkers(out) { const B = M.br; if (!B) return; for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
 function brClear() { try { vhClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }

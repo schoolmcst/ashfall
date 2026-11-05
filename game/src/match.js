@@ -30,13 +30,15 @@ const MODES = {
   pp: { name: 'PUFF PUFF PASS', short: 'PASS', icon: 'PPP', desc: 'Free-for-all where everyone holds the SAME gun. Every 40 seconds it gets passed on to a new one from the whole armory. Most kills wins.', teams: false, respawn: 2.5, score: 25, time: 10, players: 8, unit: 'KILLS' },
   oru: { name: 'ONLINE RE-UP', short: 'ONLINE RE-UP', icon: 'RUP', desc: 'Real people, grind: grab the stash bags that drop on every kill and bank them at a STASH HOUSE. Die carrying and you drop the lot.', teams: true, respawn: 3, score: 30, time: 0, perTeam: 6, unit: 'BAGS', online: true, base: 'ru' },
   obr: { name: 'ONLINE LAST TOKE', short: 'ONLINE BR', icon: 'BR', desc: 'Real people, battle royale: one life, pistols, loot crates and the closing Nightshade cloud. Last one standing wins the round. Bots fill up to 16.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br' },
+  obr2: { name: 'ONLINE LAST TOKE DUOS', short: 'ONLINE BR DUOS', icon: 'BR2', desc: 'Real people in teams of 2: battle royale with the closing Nightshade cloud. Get knocked down instead of killed while your partner stands, and pick each other up. Bots fill the empty spots.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', squad: 2 },
+  obr4: { name: 'ONLINE LAST TOKE SQUADS', short: 'ONLINE BR SQUADS', icon: 'BR4', desc: 'Real people in squads of 4: battle royale with downs and revives. Last squad standing wins. Bots fill the empty spots.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', squad: 4 },
   oph: { name: 'ONLINE PROP HUNT', short: 'ONLINE PROPS', icon: 'PRP', desc: 'Real people, hunters against props, swapping every two minutes. Hide as a crate or a bong, or hunt them down.', teams: true, respawn: 4, score: 999, time: 6, perTeam: 6, unit: 'POINTS', online: true, base: 'ph' },
   opp: { name: 'ONLINE PUFF PUFF PASS', short: 'ONLINE PASS', icon: 'PPP', desc: 'Real people, every one for themselves, everyone on the same gun. It changes every 40 seconds.', teams: false, respawn: 2.5, score: 25, time: 0, players: 12, unit: 'KILLS', online: true, base: 'pp' },
   camp: { name: 'CAMPAIGN', short: 'STORY', icon: 'CMP', desc: 'FIRST HARVEST: the story missions.', teams: true, respawn: 0, score: 0, time: 0, perTeam: 1, unit: 'STEPS' },
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'inf', 'gf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'obr2', 'obr4', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'inf', 'gf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 // bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
@@ -64,7 +66,8 @@ function buildSpawns() {
   if (SPAWNS) return SPAWNS;
   SPAWNS = [];
   const maxY = (MAPS[curMap] && MAPS[curMap].spawnMaxY) || 0.5, ok = MAPS[curMap] && MAPS[curMap].spawnOk;
-  for (let z = -41; z <= 41; z += 3.5) for (let x = -41; x <= 41; x += 3.5) {
+  const SP = Math.max(41, Math.min(PLAYRECT[1], -PLAYRECT[0], PLAYRECT[3], -PLAYRECT[2]) - 3);   // the whole play area (STASH ISLAND is 120 m)
+  for (let z = -SP; z <= SP; z += 3.5) for (let x = -SP; x <= SP; x += 3.5) {
     const cx = cellOf(x + rnd(-1.2, 1.2)), cz = cellOf(z + rnd(-1.2, 1.2)), c = cz * NN + cx, opts = [];
     for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h > maxY || lvS[c * NL + l]) continue; let room = 0; for (const [ox, oz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const c2 = (cz + oz) * NN + cx + ox; if (c2 >= 0 && c2 < NN * NN) for (let m = 0; m < lvN[c2]; m++) if (Math.abs(lvH[c2 * NL + m] - h) < 0.3) { room++; break; } } if (room >= 3) opts.push(h); }
     if (!opts.length) continue;
@@ -164,7 +167,7 @@ function startMatch(mode, custom) {
   if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel, mode); loadMap(cfg.map); }
   else if (!NET.app) loadMap(DEFAULT_MAP);   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
-  M.squad = mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false; try { pingClear(); } catch (e) {}   // LAST TOKE DUOS / SQUADS (squads.js), pings (ping.js)
+  M.squad = (def.squad | 0) > 1 ? def.squad | 0 : mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false; try { pingClear(); duelClear(); } catch (e) {}   // LAST TOKE DUOS / SQUADS (squads.js), pings (ping.js)
   resetGame();
   if (mode === 'zomb') { zombStart(cfg); return; }
   if (mode === 'range') { rangeStart(cfg); return; }
@@ -286,6 +289,7 @@ function creditKill(ke, victim) {
 function matchPlayerKilled(killer) {
   if (!inMatch()) return;
   M.me.deaths++; M.me.alive = false;
+  try { if (DUEL.on) { const D = DUEL.on; DUEL.on = null; if (D.bot && enemies.includes(D.bot) && M.br) duelSendBack(D.bot); } } catch (err) {}   // lost THE HOTBOX DUEL: the bot goes back in
   try { if (killer && killer.entry) brainHumanKilled(killer, P.x, P.z); } catch (err) {}
   const ke = killer && killer.entry ? killer.entry : null;
   if (ke) { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> <b>YOU</b>`); }
@@ -442,6 +446,7 @@ function updateBots(dt) {
     if (!e.entry || e.net) continue;
     if ((e.think -= dt) <= 0) { e.think = 0.28 + Math.random() * 0.12; botThink(e); }
     if (e.tgt && !botValidTarget(e, e.tgt)) e.tgt = null;
+    if (e.climb && mvBotClimb(e, dt)) continue;   // climbing a ledge (movement.js)
     if (e.downed && sqBotDowned(e, dt)) continue;   // LAST TOKE squads: downed, crawling
     if (e.veh && vhBotDrive(e, dt)) continue;   // driving a LAST TOKE vehicle
     const ex = g.position.x, ez = g.position.z;
@@ -500,7 +505,7 @@ function updateBots(dt) {
     g.position.x = clamp(g.position.x, -ARENA + 0.6, ARENA - 0.6); g.position.z = clamp(g.position.z, -ARENA + 0.6, ARENA - 0.6);
     if (face !== null) { let dy = face - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 8); }
     e.chk -= dt;
-    if (e.chk <= 0) { e.chk = 0.8; if (Math.hypot(g.position.x - e.lastX, g.position.z - e.lastZ) < 0.5 && !holding && goal) { e.avoidT = 1.0; e.avoidDir = Math.random() < 0.5 ? 1 : -1; } e.lastX = g.position.x; e.lastZ = g.position.z; }
+    if (e.chk <= 0) { e.chk = 0.8; if (Math.hypot(g.position.x - e.lastX, g.position.z - e.lastZ) < 0.5 && !holding && goal && !mvBotTryClimb(e, goal)) { e.avoidT = 1.0; e.avoidDir = Math.random() < 0.5 ? 1 : -1; } e.lastX = g.position.x; e.lastZ = g.position.z; }
     if (e.reactT > 0) e.reactT -= dt;
     else e.aim += ((e.tgt && dist < 60 ? 1 : 0) - e.aim) * Math.min(1, dt * e.aimRate * 0.6 * (e.tgt === 'P' ? (WEAPONS[G.cur] ? WEAPONS[G.cur].spot || 1 : 1) * (perk('ghost') ? 0.7 : 1) : 1));
     e.holding = holding && !!tp;

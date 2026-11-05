@@ -110,15 +110,16 @@ function buildStash() {
   stashHouse(-50, 10, 5, 4, 'brick', 'e', 2.8, 'sheet');
   // ---- scatter: palms on the beach, trees and rocks inland (away from the places and the roads)
   const busy = (x, z) => Math.abs(x) < 5 || Math.abs(z) < 5 || (Math.abs(Math.abs(x) - 30) < 4 && Math.abs(z) < 34) || (Math.abs(Math.abs(z) - 30) < 4 && Math.abs(x) < 34) || Math.hypot(x, z) < 24 ||
-    [[-38, -34, 16], [42, -42, 13], [46, 0, 14], [38, 38, 15], [0, 50, 15], [-38, 38, 15], [-46, 2, 11]].some(([px, pz, r]) => Math.hypot(x - px, z - pz) < r);
+    [[-38, -34, 16], [42, -42, 13], [46, 0, 14], [38, 38, 15], [0, 50, 15], [-38, 38, 15], [-46, 2, 11], [54, -20, 9]].some(([px, pz, r]) => Math.hypot(x - px, z - pz) < r);
   for (let i = 0; i < 40; i++) { const side = i % 4, t = -H + 6 + sr() * (H * 2 - 12), o = H - 3 - sr() * 3; const x = side === 0 ? t : side === 1 ? t : side === 2 ? -o : o, z = side === 0 ? -o : side === 1 ? o : t; if (!busy(x, z)) palm(x, z, 5.5 + sr() * 2.5, (sr() - 0.5) * 0.4); }
+  try { duelBuild(DUEL_PEN.stashisle); } catch (e) {}   // THE HOTBOX DUEL pit (duel.js)
   for (let i = 0, n = 0; i < 300 && n < 44; i++) { const x = (sr() - 0.5) * (H * 2 - 18), z = (sr() - 0.5) * (H * 2 - 18); if (busy(x, z)) continue; n++; if (sr() < 0.7) tree(x, z, sr() < 0.1, 0.9 + sr() * 0.4); else stashRock(x, z, 1 + sr() * 1.2, 0.8 + sr() * 1.2); }
 }
 defineMap({
   id: 'stashisle', size: 'huge', hidden: true, brOnly: true, arena: STASH_A, planCut: 3.6, name: 'STASH ISLAND', place: 'Grow island, sunny afternoon', desc: 'LAST TOKE\'s own island, twice the size of any other map: a village in the middle, a grow farm, a lighthouse, a quarry, a bunker, the docks, a trailer park and a water tower, all joined up by roads.',
   play: [-STASH_H, STASH_H, -STASH_H, STASH_H], build: buildStash,
   env: { top: 0x3f7ac8, horizon: 0xe8e0c8, fog: 0.004, sun: [-40, 60, 30], sunCol: 0xfff0d0, sunI: 2.4, skySun: 0xfff0c8, hemiSky: 0xd0e0f0, hemiGround: 0x6a6a3a, exposure: 1.02 },
-  grass: { count: 9000, avoid: (x, z) => Math.abs(x) < 4 || Math.abs(z) < 4 || Math.hypot(x, z) < 12 || Math.abs(x) > STASH_H - 7 || Math.abs(z) > STASH_H - 7 }, spawnMaxY: 0.5,
+  grass: { count: 9000, avoid: (x, z) => duelIn(x, z, 0.5) || Math.abs(x) < 4 || Math.abs(z) < 4 || Math.hypot(x, z) < 12 || Math.abs(x) > STASH_H - 7 || Math.abs(z) > STASH_H - 7 }, spawnMaxY: 0.5, spawnOk: p => !duelIn(p.x, p.z, 1.5),
   layout: {
     spawn: [{ x: 0, z: 40 }, { x: 0, z: -40 }],
     hp: [{ x: 0, z: 0 }, { x: -38, z: -30 }, { x: 42, z: -40 }, { x: 38, z: 38 }, { x: -38, z: 38 }],

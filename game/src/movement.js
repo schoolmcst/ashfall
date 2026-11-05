@@ -7,25 +7,43 @@
    Both are the player's (the camera tilts a little with them); everyone else sees you move like any other position. */
 const MOV = { slideCd: 0, crouchH: false, sprintPrev: false, jumpH: false };
 // is there a ledge in front of me to climb? returns where to end up, or null
-function mvLedge() {
-  const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), maxTop = P.y + 2.15, minTop = P.y + 0.55;
+function mvLedge() { return mvLedgeAt(P.x, P.z, P.y, -Math.sin(P.yaw), -Math.cos(P.yaw)); }
+// the same check from any spot and direction (the player, and bots)
+function mvLedgeAt(x0, z0, y0, fx, fz) {
+  const maxTop = y0 + 2.15, minTop = y0 + 0.55;
   for (const d of [0.6, 0.85]) {
-    const px = P.x + fx * d, pz = P.z + fz * d; let top = -1, blocked = false;
+    const px = x0 + fx * d, pz = z0 + fz * d; let top = -1, blocked = false;
     for (const b of boxesNear(px, pz)) {
       if (px < b.minx || px > b.maxx || pz < b.minz || pz > b.maxz) continue;
       if (b.top <= maxTop && b.top > top) top = b.top;
     }
     if (top < minTop) continue;
     // nothing above the ledge where I'd stand (or on the way there)
-    for (const [qx, qz] of [[px, pz], [P.x + fx * d * 0.5, P.z + fz * d * 0.5], [px + fx * 0.35, pz + fz * 0.35]]) {
+    for (const [qx, qz] of [[px, pz], [x0 + fx * d * 0.5, z0 + fz * d * 0.5], [px + fx * 0.35, pz + fz * 0.35]]) {
       for (const b of boxesNear(qx, qz)) { if (qx < b.minx - 0.25 || qx > b.maxx + 0.25 || qz < b.minz - 0.25 || qz > b.maxz + 0.25) continue; if (b.top > top + 0.05 && b.bot < top + 1.8) { blocked = true; break; } }
       if (blocked) break;
     }
     if (blocked) continue;
     if (Math.abs(groundAt(px, pz, top) - top) > 0.05) continue;   // a real floor up there, not the side of something
-    return { x: px + fx * 0.25, y: top, z: pz + fz * 0.25, h: top - P.y };
+    return { x: px + fx * 0.25, y: top, z: pz + fz * 0.25, h: top - y0 };
   }
   return null;
+}
+/* ---------- BOTS climb too: a bot that gets stuck against something it could climb (on its way to its goal) climbs it */
+function mvBotTryClimb(e, goal) {
+  if (!goal || e.zombie || e.dog || e.veh || e.downed || e.net) return false;
+  const g = e.group.position, dx = goal.x - g.x, dz = goal.z - g.z, l = Math.hypot(dx, dz); if (l < 1) return false;
+  const L = mvLedgeAt(g.x, g.z, g.y, dx / l, dz / l); if (!L || L.h > 1.7) return false;   // bots don't do the jump-climbs (they'd look like they're flying)
+  e.climb = { t: 0, dur: L.h > 1.2 ? 0.5 : 0.36, x0: g.x, y0: g.y, z0: g.z, x1: L.x, y1: L.y, z1: L.z };
+  return true;
+}
+// in the bots' loop: true while climbing
+function mvBotClimb(e, dt) {
+  const c = e.climb; if (!c) return false; c.t += dt; const k = clamp(c.t / c.dur, 0, 1), up = smooth(0, 0.65, k), fw = smooth(0.35, 1, k), g = e.group.position;
+  g.x = c.x0 + (c.x1 - c.x0) * fw; g.z = c.z0 + (c.z1 - c.z0) * fw; g.y = c.y0 + (c.y1 - c.y0) * up; e.moveSp = 2;
+  e.group.rotation.y = Math.atan2(c.x1 - c.x0, c.z1 - c.z0);
+  if (k >= 1) { e.climb = null; e.vy = 0; e.lastX = g.x; e.lastZ = g.z; }
+  return true;
 }
 // called from updatePlayer after the walking velocity is worked out; may take over the velocity (slide)
 function mvSlide(dt, fwd, crouch, sprint) {

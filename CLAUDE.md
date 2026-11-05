@@ -99,6 +99,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
 - 1.2.80 PUBLIC: ping.js PINGS (bind 'ping' = Z, middle mouse, pad 14 D-PAD LEFT): pingPick aims at an enemy / loot crate /
   vehicle / the spot; markers go through markerList (ping: 1); bot teammates answer (lkp / goal) and botCallout pings for
   you; online in presence `pg` = [seq, kind, x, y, z], shown to team-mode teammates. Test: s_ping.
+- 1.2.81 TEST: duel.js THE HOTBOX DUEL (offline LAST TOKE on stashisle: first death before phase 2 -> a 1v1 in the walled
+  pit DUEL_PEN at (54,-20) vs a dead bot, winner back to the island; duelTake from hurtPlayer; crates/spawns/grass skip
+  the pit). Bots climb (mvBotTryClimb in the stuck check, mvBotClimb in the bots' loop, mvLedgeAt shared). buildSpawns
+  covers the whole PLAYRECT now (was +-41). ONLINE LAST TOKE DUOS / SQUADS: modes obr2/obr4 (def.squad); squad from
+  sqNetPick (presence tm), host bots via sqNetBotTeam; presence dn/rv/rb (sqNetPres/sqNetApply); host names the winner
+  as winTxt 'SQ:<team>'. Online parts are untested against a real server. Tests: s_duel, s_botclimb, s_sqnet.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.
