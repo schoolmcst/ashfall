@@ -88,6 +88,9 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   runtime-inserted tiles land right; NEWS is a small bottom-right panel. Lobby: slimmer rows, two-column roster (direct
   .ros-team children of .cod-roster only, not the party box), compact notes and chat; the zombies lobby (#lobby.zl, set in
   renderZLobby) lays its rows out in two columns, `.cod-row.wide` spans both. Pictures: _menushot.js, _applobshot.js.
+- 1.2.78 TEST: movement.js SLIDE (sprint + crouch; mvSlide takes over P.vx/vz while P.slideT > 0; slide-jump keeps speed)
+  and MANTLE (jump at a ledge 0.55-2.15 m above the feet, with room on top; mvLedge/mvMantle, P.mantle animates the climb,
+  no firing). The state object is MOV (MV is map voting). Test s_slidemantle steps updatePlayer at a fixed 60 fps.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

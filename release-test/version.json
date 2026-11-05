@@ -1,9 +1,9 @@
 {
- "version": "1.2.77",
+ "version": "1.2.78",
  "notes": [
-  "NEW LOOK: a cleaner, compact main menu - every tab on one slim bar, modes in a tidy grid, news tucked in the corner",
-  "compact lobby: slimmer rows, two-column roster, the zombies lobby fits on one screen"
+  "NEW MOVEMENT: SLIDE - sprint, then crouch (jump out of it to keep the speed)",
+  "NEW MOVEMENT: CLIMB - jump at a ledge, crate, wall or container to pull yourself up"
  ],
- "sha256": "f9916aa7919864ab05aada43f552df5e22af799a3c975903649c1de60bab6bba",
+ "sha256": "2c15c90f04daab272ece701e056bec266f9e20a6511507496765fdd972f84375",
  "minApp": "1.0.0"
 }

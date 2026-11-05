@@ -462,6 +462,8 @@
         <tr><td>W A S D</td><td>Move</td></tr>
         <tr><td>SHIFT</td><td>Sprint</td></tr>
         <tr><td>SPACE / C</td><td>Jump / Crouch</td></tr>
+        <tr><td>SPRINT + C</td><td>Slide (jump out of it to keep the speed)</td></tr>
+        <tr><td>SPACE AT A LEDGE</td><td>Climb up onto it (waist to just over head high)</td></tr>
         <tr><td>MOUSE / RMB</td><td>Look / Aim down sights</td></tr>
         <tr><td>LMB</td><td>Fire</td></tr>
         <tr><td>R</td><td>Reload</td></tr>
@@ -7777,7 +7779,7 @@ function hurtPlayer(dmg, fx, fz, boom) {
   if (G.health <= 0) { G.health = 0; die(); }
 }
 
-function isFiring() { return !VH.me && (mouseDown || pad.fire); }
+function isFiring() { return !VH.me && !P.mantle && (mouseDown || pad.fire); }
 let wasSprint = false;
 function updatePlayer(dt) {
   if (VH.me && vhPlayer(dt)) return { moving: false, sprint: false };   // driving a LAST TOKE vehicle
@@ -7796,23 +7798,26 @@ function updatePlayer(dt) {
   const tx = moving ? wx / wl * speed * mag : 0, tz = moving ? wz / wl * speed * mag : 0;
   const acc = P.onGround ? 14 : 3;
   P.vx = lerp(P.vx, tx, clamp(acc * dt, 0, 1)); P.vz = lerp(P.vz, tz, clamp(acc * dt, 0, 1));
+  const sliding = mvSlide(dt, fwd, crouch, sprint);   // SLIDE / MANTLE (movement.js)
+  if (!mvMantle(dt, fwd, hold)) {
   P.x += P.vx * dt; P.z += P.vz * dt;
   resolve(P, 0.4, P.y);
   P.x = clamp(P.x, PLAYRECT[0] + 0.45, PLAYRECT[1] - 0.45); P.z = clamp(P.z, PLAYRECT[2] + 0.45, PLAYRECT[3] - 0.45);
-  if ((kb('jump') || pad.jump) && P.onGround && !hold) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); }
+  if ((kb('jump') || pad.jump) && P.onGround && !hold) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); if (P.slideT > 0) { P.slideT = 0; P.vx *= 1.05; P.vz *= 1.05; } }   // a slide-jump keeps the speed
   P.vy -= 22 * (M && M.feat && M.feat.lowgrav ? 0.42 : 1) * dt; const py0 = P.y; P.y += P.vy * dt;
   if (P.vy > 0) { const ce = ceilingAt(P.x, P.z, py0); if (P.y + 1.8 > ce) { P.y = Math.max(py0, ce - 1.8); P.vy = 0; } }
   const gy = groundAt(P.x, P.z, P.y);
   if (P.y <= gy) { if (!P.onGround && P.vy < -2) G.landT = clamp(-P.vy / 11, 0.25, 1); if (!P.onGround && P.vy < -4 && !perk('light')) { G.shake = Math.max(G.shake, 0.01); sfx.thud({ vol: 0.8 }); } P.y = gy; P.vy = 0; P.onGround = true; } else if (P.y > gy + 0.05) P.onGround = false;
-  P.eye = lerp(P.eye, crouch ? 1.1 : 1.7, clamp(10 * dt, 0, 1));
+  }
+  P.eye = lerp(P.eye, sliding ? 0.85 : crouch ? 1.1 : 1.7, clamp((sliding ? 14 : 10) * dt, 0, 1));
   const hs = Math.hypot(P.vx, P.vz);
-  if (P.onGround && hs > 0.5) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
+  if (P.onGround && hs > 0.5 && !sliding) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
   const rec = Math.min(P.recoilAcc, P.recoilAcc * dt * 4 + 0.0005); P.pitch -= rec; P.recoilAcc -= rec;
   if (G.time - G.lastHit > (perk('tough') ? 3 : 5) && G.health < (G.maxHp || 100)) G.health = Math.min(G.maxHp || 100, G.health + 28 * (inMatch() ? 1 : diff().regen) * (G.maxHp || 100) / 100 * dt);
 
   const shk = G.shake * S.shake / 100, bobOn = S.bob ? 1 : 0;
   camera.position.set(P.x + rnd(-shk, shk), P.y + P.eye + Math.sin(P.bob * 2) * 0.025 * (hs / 5) * bobOn + rnd(-shk, shk), P.z + rnd(-shk, shk));
-  camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn);
+  camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn * (sliding ? 0 : 1) + mvTilt(dt));
   if (M && M.ph && phMeProp() && playerAlive()) {   // PROP HUNT: a prop sees itself from behind (pulled in when a wall is in the way)
     const back = (G._phB || (G._phB = new THREE.Vector3())).set(Math.sin(P.yaw) * Math.cos(P.pitch), -Math.sin(P.pitch) + 0.35, Math.cos(P.yaw) * Math.cos(P.pitch)).normalize(), eye = (G._phE || (G._phE = new THREE.Vector3())).set(P.x, P.y + 1.3, P.z);
     let dist = 3.4; try { _pr.set(eye, back); _pr.far = dist; const h = _pr.intersectObjects(wallMeshes, false)[0]; if (h) dist = Math.max(0.6, h.distance - 0.25); } catch (e) {}
@@ -8226,6 +8231,73 @@ function finTick(dt) {
   }
   if (G.finT <= 0) G.finE = null;
 }
+/* ================================================================== SLIDE and MANTLE (1.2.78)
+   SLIDE: sprinting, press CROUCH: you drop low and shoot forward (a burst of speed that fades over 0.7 s), steering a
+   little. JUMP out of a slide to keep the speed. Can't slide again for half a second.
+   MANTLE: JUMP at a ledge from waist high up to a bit over head height (a wall, a crate, a container, a window sill
+   you can stand on) and you climb up onto it, as long as there is room to stand on top. It works from a standing
+   jump, mid-air (jump into a ledge and keep holding JUMP) and out of a slide. No shooting while you climb.
+   Both are the player's (the camera tilts a little with them); everyone else sees you move like any other position. */
+const MOV = { slideCd: 0, crouchH: false, sprintPrev: false, jumpH: false };
+// is there a ledge in front of me to climb? returns where to end up, or null
+function mvLedge() {
+  const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), maxTop = P.y + 2.15, minTop = P.y + 0.55;
+  for (const d of [0.6, 0.85]) {
+    const px = P.x + fx * d, pz = P.z + fz * d; let top = -1, blocked = false;
+    for (const b of boxesNear(px, pz)) {
+      if (px < b.minx || px > b.maxx || pz < b.minz || pz > b.maxz) continue;
+      if (b.top <= maxTop && b.top > top) top = b.top;
+    }
+    if (top < minTop) continue;
+    // nothing above the ledge where I'd stand (or on the way there)
+    for (const [qx, qz] of [[px, pz], [P.x + fx * d * 0.5, P.z + fz * d * 0.5], [px + fx * 0.35, pz + fz * 0.35]]) {
+      for (const b of boxesNear(qx, qz)) { if (qx < b.minx - 0.25 || qx > b.maxx + 0.25 || qz < b.minz - 0.25 || qz > b.maxz + 0.25) continue; if (b.top > top + 0.05 && b.bot < top + 1.8) { blocked = true; break; } }
+      if (blocked) break;
+    }
+    if (blocked) continue;
+    if (Math.abs(groundAt(px, pz, top) - top) > 0.05) continue;   // a real floor up there, not the side of something
+    return { x: px + fx * 0.25, y: top, z: pz + fz * 0.25, h: top - P.y };
+  }
+  return null;
+}
+// called from updatePlayer after the walking velocity is worked out; may take over the velocity (slide)
+function mvSlide(dt, fwd, crouch, sprint) {
+  MOV.slideCd = Math.max(0, MOV.slideCd - dt);
+  const press = crouch && !MOV.crouchH; MOV.crouchH = crouch;
+  const hs = Math.hypot(P.vx, P.vz);
+  if (press && MOV.sprintPrev && P.onGround && hs > 5.5 && MOV.slideCd <= 0 && !P.mantle) {
+    P.slideT = 0.7; P.slideDx = P.vx / hs; P.slideDz = P.vz / hs; P.slideV = Math.max(hs, 8) * 1.32; MOV.slideCd = 1.2;
+    try { sfx.thud({ vol: 0.45 }); sfx.step(0.9); } catch (e) {}
+  }
+  MOV.sprintPrev = sprint;
+  if (!(P.slideT > 0)) return false;
+  P.slideT -= dt;
+  if (!crouch || P.slideT <= 0) { P.slideT = 0; return false; }
+  // steer a little toward where I look
+  const lx = -Math.sin(P.yaw), lz = -Math.cos(P.yaw), k = clamp(dt * 1.6, 0, 1);
+  P.slideDx = lerp(P.slideDx, lx, k * 0.35); P.slideDz = lerp(P.slideDz, lz, k * 0.35); const l = Math.hypot(P.slideDx, P.slideDz) || 1; P.slideDx /= l; P.slideDz /= l;
+  const sp = lerp(2.8, P.slideV, clamp(P.slideT / 0.7, 0, 1));
+  if (P.onGround) { P.vx = P.slideDx * sp; P.vz = P.slideDz * sp; }
+  return true;
+}
+// called before the position update: true while climbing (the climb moves me instead of physics)
+function mvMantle(dt, fwd, hold) {
+  const jump = !hold && (kb('jump') || pad.jump), press = jump && !MOV.jumpH; MOV.jumpH = jump;
+  if (P.mantle) {
+    const m = P.mantle; m.t += dt; const k = clamp(m.t / m.dur, 0, 1), up = smooth(0, 0.65, k), fw = smooth(0.35, 1, k);
+    P.x = m.x0 + (m.x1 - m.x0) * fw; P.z = m.z0 + (m.z1 - m.z0) * fw; P.y = m.y0 + (m.y1 - m.y0) * up; P.vx = P.vz = P.vy = 0;
+    if (k >= 1) { P.mantle = null; P.onGround = true; P.y = groundAt(P.x, P.z, m.y1 + 0.05); }
+    return true;
+  }
+  if (!jump || fwd <= 0 || (typeof VH !== 'undefined' && VH.me)) return false;
+  if (!press && (P.onGround || P.vy > 3)) return false;   // a fresh press on the ground, or holding JUMP in the air (on the way down / at the top)
+  const L = mvLedge(); if (!L) return false;
+  P.mantle = { t: 0, dur: L.h > 1.3 ? 0.42 : 0.3, x0: P.x, y0: P.y, z0: P.z, x1: L.x, y1: L.y, z1: L.z }; P.slideT = 0; P.vy = 0;
+  try { sfx.thud({ vol: 0.35 }); } catch (e) {}
+  return true;
+}
+// the camera's extra roll / dip for both
+function mvTilt(dt) { P.tilt = lerp(P.tilt || 0, P.slideT > 0 ? 0.06 : 0, clamp(dt * 10, 0, 1)); return P.tilt; }
 /* ================================================================== gameplay: enemies, waves, pickups, HUD, flow */
 const TYPES = {
   rifleman: { hp: 90, speed: 2.8, dmg: 6, hold: [12, 24], acc: 0.42 },
@@ -8701,6 +8773,14 @@ function renderStats() {
 function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(t.indexOf(statTab) + d + 3) % 3]; sfx.ui(); renderStats(); }
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
+{
+"v": "1.2.78",
+"d": "2026-11-05",
+"n": [
+"NEW MOVEMENT: SLIDE - sprint, then crouch (jump out of it to keep the speed)",
+"NEW MOVEMENT: CLIMB - jump at a ledge, crate, wall or container to pull yourself up"
+]
+},
 {
 "v": "1.2.77",
 "d": "2026-11-05",
@@ -23190,7 +23270,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

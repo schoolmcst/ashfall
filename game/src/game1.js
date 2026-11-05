@@ -67,7 +67,7 @@ function hurtPlayer(dmg, fx, fz, boom) {
   if (G.health <= 0) { G.health = 0; die(); }
 }
 
-function isFiring() { return !VH.me && (mouseDown || pad.fire); }
+function isFiring() { return !VH.me && !P.mantle && (mouseDown || pad.fire); }
 let wasSprint = false;
 function updatePlayer(dt) {
   if (VH.me && vhPlayer(dt)) return { moving: false, sprint: false };   // driving a LAST TOKE vehicle
@@ -86,23 +86,26 @@ function updatePlayer(dt) {
   const tx = moving ? wx / wl * speed * mag : 0, tz = moving ? wz / wl * speed * mag : 0;
   const acc = P.onGround ? 14 : 3;
   P.vx = lerp(P.vx, tx, clamp(acc * dt, 0, 1)); P.vz = lerp(P.vz, tz, clamp(acc * dt, 0, 1));
+  const sliding = mvSlide(dt, fwd, crouch, sprint);   // SLIDE / MANTLE (movement.js)
+  if (!mvMantle(dt, fwd, hold)) {
   P.x += P.vx * dt; P.z += P.vz * dt;
   resolve(P, 0.4, P.y);
   P.x = clamp(P.x, PLAYRECT[0] + 0.45, PLAYRECT[1] - 0.45); P.z = clamp(P.z, PLAYRECT[2] + 0.45, PLAYRECT[3] - 0.45);
-  if ((kb('jump') || pad.jump) && P.onGround && !hold) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); }
+  if ((kb('jump') || pad.jump) && P.onGround && !hold) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); if (P.slideT > 0) { P.slideT = 0; P.vx *= 1.05; P.vz *= 1.05; } }   // a slide-jump keeps the speed
   P.vy -= 22 * (M && M.feat && M.feat.lowgrav ? 0.42 : 1) * dt; const py0 = P.y; P.y += P.vy * dt;
   if (P.vy > 0) { const ce = ceilingAt(P.x, P.z, py0); if (P.y + 1.8 > ce) { P.y = Math.max(py0, ce - 1.8); P.vy = 0; } }
   const gy = groundAt(P.x, P.z, P.y);
   if (P.y <= gy) { if (!P.onGround && P.vy < -2) G.landT = clamp(-P.vy / 11, 0.25, 1); if (!P.onGround && P.vy < -4 && !perk('light')) { G.shake = Math.max(G.shake, 0.01); sfx.thud({ vol: 0.8 }); } P.y = gy; P.vy = 0; P.onGround = true; } else if (P.y > gy + 0.05) P.onGround = false;
-  P.eye = lerp(P.eye, crouch ? 1.1 : 1.7, clamp(10 * dt, 0, 1));
+  }
+  P.eye = lerp(P.eye, sliding ? 0.85 : crouch ? 1.1 : 1.7, clamp((sliding ? 14 : 10) * dt, 0, 1));
   const hs = Math.hypot(P.vx, P.vz);
-  if (P.onGround && hs > 0.5) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
+  if (P.onGround && hs > 0.5 && !sliding) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
   const rec = Math.min(P.recoilAcc, P.recoilAcc * dt * 4 + 0.0005); P.pitch -= rec; P.recoilAcc -= rec;
   if (G.time - G.lastHit > (perk('tough') ? 3 : 5) && G.health < (G.maxHp || 100)) G.health = Math.min(G.maxHp || 100, G.health + 28 * (inMatch() ? 1 : diff().regen) * (G.maxHp || 100) / 100 * dt);
 
   const shk = G.shake * S.shake / 100, bobOn = S.bob ? 1 : 0;
   camera.position.set(P.x + rnd(-shk, shk), P.y + P.eye + Math.sin(P.bob * 2) * 0.025 * (hs / 5) * bobOn + rnd(-shk, shk), P.z + rnd(-shk, shk));
-  camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn);
+  camera.rotation.set(P.pitch, P.yaw, Math.cos(P.bob) * 0.004 * (hs / 5) * bobOn * (sliding ? 0 : 1) + mvTilt(dt));
   if (M && M.ph && phMeProp() && playerAlive()) {   // PROP HUNT: a prop sees itself from behind (pulled in when a wall is in the way)
     const back = (G._phB || (G._phB = new THREE.Vector3())).set(Math.sin(P.yaw) * Math.cos(P.pitch), -Math.sin(P.pitch) + 0.35, Math.cos(P.yaw) * Math.cos(P.pitch)).normalize(), eye = (G._phE || (G._phE = new THREE.Vector3())).set(P.x, P.y + 1.3, P.z);
     let dist = 3.4; try { _pr.set(eye, back); _pr.far = dist; const h = _pr.intersectObjects(wallMeshes, false)[0]; if (h) dist = Math.max(0.6, h.distance - 0.25); } catch (e) {}
