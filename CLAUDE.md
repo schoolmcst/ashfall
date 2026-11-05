@@ -99,7 +99,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
 - 1.2.80 PUBLIC: ping.js PINGS (bind 'ping' = Z, middle mouse, pad 14 D-PAD LEFT): pingPick aims at an enemy / loot crate /
   vehicle / the spot; markers go through markerList (ping: 1); bot teammates answer (lkp / goal) and botCallout pings for
   you; online in presence `pg` = [seq, kind, x, y, z], shown to team-mode teammates. Test: s_ping.
-- 1.2.81 TEST: duel.js THE HOTBOX DUEL (offline LAST TOKE on stashisle: first death before phase 2 -> a 1v1 in the walled
+- 1.2.81 PUBLIC (owner said send it): duel.js THE HOTBOX DUEL (offline LAST TOKE on stashisle: first death before phase 2 -> a 1v1 in the walled
   pit DUEL_PEN at (54,-20) vs a dead bot, winner back to the island; duelTake from hurtPlayer; crates/spawns/grass skip
   the pit). Bots climb (mvBotTryClimb in the stuck check, mvBotClimb in the bots' loop, mvLedgeAt shared). buildSpawns
   covers the whole PLAYRECT now (was +-41). ONLINE LAST TOKE DUOS / SQUADS: modes obr2/obr4 (def.squad); squad from

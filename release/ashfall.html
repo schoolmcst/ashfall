@@ -7027,15 +7027,16 @@ function buildStash() {
   stashHouse(-50, 10, 5, 4, 'brick', 'e', 2.8, 'sheet');
   // ---- scatter: palms on the beach, trees and rocks inland (away from the places and the roads)
   const busy = (x, z) => Math.abs(x) < 5 || Math.abs(z) < 5 || (Math.abs(Math.abs(x) - 30) < 4 && Math.abs(z) < 34) || (Math.abs(Math.abs(z) - 30) < 4 && Math.abs(x) < 34) || Math.hypot(x, z) < 24 ||
-    [[-38, -34, 16], [42, -42, 13], [46, 0, 14], [38, 38, 15], [0, 50, 15], [-38, 38, 15], [-46, 2, 11]].some(([px, pz, r]) => Math.hypot(x - px, z - pz) < r);
+    [[-38, -34, 16], [42, -42, 13], [46, 0, 14], [38, 38, 15], [0, 50, 15], [-38, 38, 15], [-46, 2, 11], [54, -20, 9]].some(([px, pz, r]) => Math.hypot(x - px, z - pz) < r);
   for (let i = 0; i < 40; i++) { const side = i % 4, t = -H + 6 + sr() * (H * 2 - 12), o = H - 3 - sr() * 3; const x = side === 0 ? t : side === 1 ? t : side === 2 ? -o : o, z = side === 0 ? -o : side === 1 ? o : t; if (!busy(x, z)) palm(x, z, 5.5 + sr() * 2.5, (sr() - 0.5) * 0.4); }
+  try { duelBuild(DUEL_PEN.stashisle); } catch (e) {}   // THE HOTBOX DUEL pit (duel.js)
   for (let i = 0, n = 0; i < 300 && n < 44; i++) { const x = (sr() - 0.5) * (H * 2 - 18), z = (sr() - 0.5) * (H * 2 - 18); if (busy(x, z)) continue; n++; if (sr() < 0.7) tree(x, z, sr() < 0.1, 0.9 + sr() * 0.4); else stashRock(x, z, 1 + sr() * 1.2, 0.8 + sr() * 1.2); }
 }
 defineMap({
   id: 'stashisle', size: 'huge', hidden: true, brOnly: true, arena: STASH_A, planCut: 3.6, name: 'STASH ISLAND', place: 'Grow island, sunny afternoon', desc: 'LAST TOKE\'s own island, twice the size of any other map: a village in the middle, a grow farm, a lighthouse, a quarry, a bunker, the docks, a trailer park and a water tower, all joined up by roads.',
   play: [-STASH_H, STASH_H, -STASH_H, STASH_H], build: buildStash,
   env: { top: 0x3f7ac8, horizon: 0xe8e0c8, fog: 0.004, sun: [-40, 60, 30], sunCol: 0xfff0d0, sunI: 2.4, skySun: 0xfff0c8, hemiSky: 0xd0e0f0, hemiGround: 0x6a6a3a, exposure: 1.02 },
-  grass: { count: 9000, avoid: (x, z) => Math.abs(x) < 4 || Math.abs(z) < 4 || Math.hypot(x, z) < 12 || Math.abs(x) > STASH_H - 7 || Math.abs(z) > STASH_H - 7 }, spawnMaxY: 0.5,
+  grass: { count: 9000, avoid: (x, z) => duelIn(x, z, 0.5) || Math.abs(x) < 4 || Math.abs(z) < 4 || Math.hypot(x, z) < 12 || Math.abs(x) > STASH_H - 7 || Math.abs(z) > STASH_H - 7 }, spawnMaxY: 0.5, spawnOk: p => !duelIn(p.x, p.z, 1.5),
   layout: {
     spawn: [{ x: 0, z: 40 }, { x: 0, z: -40 }],
     hp: [{ x: 0, z: 0 }, { x: -38, z: -30 }, { x: 42, z: -40 }, { x: 38, z: 38 }, { x: -38, z: 38 }],
@@ -7777,7 +7778,7 @@ function hurtPlayer(dmg, fx, fz, boom) {
     dmgdir.style.opacity = 1; G.dmgDirT = 1.2;
   }
   sfx.hurt(); rumble(0.7, 0.4, 180);
-  if (G.health <= 0) { if (typeof sqPlayerDown === 'function' && sqPlayerDown()) return; G.health = 0; die(); }
+  if (G.health <= 0) { if (typeof sqPlayerDown === 'function' && sqPlayerDown()) return; if (typeof duelTake === 'function' && M && M.br && duelTake()) return; G.health = 0; die(); }   // squads: downed; LAST TOKE: THE HOTBOX DUEL
 }
 
 function isFiring() { return !VH.me && !P.mantle && !G.downed && (mouseDown || pad.fire); }
@@ -8242,25 +8243,43 @@ function finTick(dt) {
    Both are the player's (the camera tilts a little with them); everyone else sees you move like any other position. */
 const MOV = { slideCd: 0, crouchH: false, sprintPrev: false, jumpH: false };
 // is there a ledge in front of me to climb? returns where to end up, or null
-function mvLedge() {
-  const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), maxTop = P.y + 2.15, minTop = P.y + 0.55;
+function mvLedge() { return mvLedgeAt(P.x, P.z, P.y, -Math.sin(P.yaw), -Math.cos(P.yaw)); }
+// the same check from any spot and direction (the player, and bots)
+function mvLedgeAt(x0, z0, y0, fx, fz) {
+  const maxTop = y0 + 2.15, minTop = y0 + 0.55;
   for (const d of [0.6, 0.85]) {
-    const px = P.x + fx * d, pz = P.z + fz * d; let top = -1, blocked = false;
+    const px = x0 + fx * d, pz = z0 + fz * d; let top = -1, blocked = false;
     for (const b of boxesNear(px, pz)) {
       if (px < b.minx || px > b.maxx || pz < b.minz || pz > b.maxz) continue;
       if (b.top <= maxTop && b.top > top) top = b.top;
     }
     if (top < minTop) continue;
     // nothing above the ledge where I'd stand (or on the way there)
-    for (const [qx, qz] of [[px, pz], [P.x + fx * d * 0.5, P.z + fz * d * 0.5], [px + fx * 0.35, pz + fz * 0.35]]) {
+    for (const [qx, qz] of [[px, pz], [x0 + fx * d * 0.5, z0 + fz * d * 0.5], [px + fx * 0.35, pz + fz * 0.35]]) {
       for (const b of boxesNear(qx, qz)) { if (qx < b.minx - 0.25 || qx > b.maxx + 0.25 || qz < b.minz - 0.25 || qz > b.maxz + 0.25) continue; if (b.top > top + 0.05 && b.bot < top + 1.8) { blocked = true; break; } }
       if (blocked) break;
     }
     if (blocked) continue;
     if (Math.abs(groundAt(px, pz, top) - top) > 0.05) continue;   // a real floor up there, not the side of something
-    return { x: px + fx * 0.25, y: top, z: pz + fz * 0.25, h: top - P.y };
+    return { x: px + fx * 0.25, y: top, z: pz + fz * 0.25, h: top - y0 };
   }
   return null;
+}
+/* ---------- BOTS climb too: a bot that gets stuck against something it could climb (on its way to its goal) climbs it */
+function mvBotTryClimb(e, goal) {
+  if (!goal || e.zombie || e.dog || e.veh || e.downed || e.net) return false;
+  const g = e.group.position, dx = goal.x - g.x, dz = goal.z - g.z, l = Math.hypot(dx, dz); if (l < 1) return false;
+  const L = mvLedgeAt(g.x, g.z, g.y, dx / l, dz / l); if (!L || L.h > 1.7) return false;   // bots don't do the jump-climbs (they'd look like they're flying)
+  e.climb = { t: 0, dur: L.h > 1.2 ? 0.5 : 0.36, x0: g.x, y0: g.y, z0: g.z, x1: L.x, y1: L.y, z1: L.z };
+  return true;
+}
+// in the bots' loop: true while climbing
+function mvBotClimb(e, dt) {
+  const c = e.climb; if (!c) return false; c.t += dt; const k = clamp(c.t / c.dur, 0, 1), up = smooth(0, 0.65, k), fw = smooth(0.35, 1, k), g = e.group.position;
+  g.x = c.x0 + (c.x1 - c.x0) * fw; g.z = c.z0 + (c.z1 - c.z0) * fw; g.y = c.y0 + (c.y1 - c.y0) * up; e.moveSp = 2;
+  e.group.rotation.y = Math.atan2(c.x1 - c.x0, c.z1 - c.z0);
+  if (k >= 1) { e.climb = null; e.vy = 0; e.lastX = g.x; e.lastZ = g.z; }
+  return true;
 }
 // called from updatePlayer after the walking velocity is worked out; may take over the velocity (slide)
 function mvSlide(dt, fwd, crouch, sprint) {
@@ -8777,6 +8796,16 @@ function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
 {
+"v": "1.2.81",
+"d": "2026-11-05",
+"n": [
+"NEW: THE HOTBOX DUEL - your first death in LAST TOKE sends you to a 1v1 pit; win it and you drop back in",
+"NEW: ONLINE LAST TOKE DUOS and SQUADS in Quick Play, with downs and revives",
+"bots now climb over crates and low walls",
+"LAST TOKE players now start all over STASH ISLAND, not just the middle"
+]
+},
+{
 "v": "1.2.80",
 "d": "2026-11-05",
 "n": [
@@ -9007,13 +9036,15 @@ const MODES = {
   pp: { name: 'PUFF PUFF PASS', short: 'PASS', icon: 'PPP', desc: 'Free-for-all where everyone holds the SAME gun. Every 40 seconds it gets passed on to a new one from the whole armory. Most kills wins.', teams: false, respawn: 2.5, score: 25, time: 10, players: 8, unit: 'KILLS' },
   oru: { name: 'ONLINE RE-UP', short: 'ONLINE RE-UP', icon: 'RUP', desc: 'Real people, grind: grab the stash bags that drop on every kill and bank them at a STASH HOUSE. Die carrying and you drop the lot.', teams: true, respawn: 3, score: 30, time: 0, perTeam: 6, unit: 'BAGS', online: true, base: 'ru' },
   obr: { name: 'ONLINE LAST TOKE', short: 'ONLINE BR', icon: 'BR', desc: 'Real people, battle royale: one life, pistols, loot crates and the closing Nightshade cloud. Last one standing wins the round. Bots fill up to 16.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br' },
+  obr2: { name: 'ONLINE LAST TOKE DUOS', short: 'ONLINE BR DUOS', icon: 'BR2', desc: 'Real people in teams of 2: battle royale with the closing Nightshade cloud. Get knocked down instead of killed while your partner stands, and pick each other up. Bots fill the empty spots.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', squad: 2 },
+  obr4: { name: 'ONLINE LAST TOKE SQUADS', short: 'ONLINE BR SQUADS', icon: 'BR4', desc: 'Real people in squads of 4: battle royale with downs and revives. Last squad standing wins. Bots fill the empty spots.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', squad: 4 },
   oph: { name: 'ONLINE PROP HUNT', short: 'ONLINE PROPS', icon: 'PRP', desc: 'Real people, hunters against props, swapping every two minutes. Hide as a crate or a bong, or hunt them down.', teams: true, respawn: 4, score: 999, time: 6, perTeam: 6, unit: 'POINTS', online: true, base: 'ph' },
   opp: { name: 'ONLINE PUFF PUFF PASS', short: 'ONLINE PASS', icon: 'PPP', desc: 'Real people, every one for themselves, everyone on the same gun. It changes every 40 seconds.', teams: false, respawn: 2.5, score: 25, time: 0, players: 12, unit: 'KILLS', online: true, base: 'pp' },
   camp: { name: 'CAMPAIGN', short: 'STORY', icon: 'CMP', desc: 'FIRST HARVEST: the story missions.', teams: true, respawn: 0, score: 0, time: 0, perTeam: 1, unit: 'STEPS' },
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'inf', 'gf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'obr2', 'obr4', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'inf', 'gf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 // bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
@@ -9041,7 +9072,8 @@ function buildSpawns() {
   if (SPAWNS) return SPAWNS;
   SPAWNS = [];
   const maxY = (MAPS[curMap] && MAPS[curMap].spawnMaxY) || 0.5, ok = MAPS[curMap] && MAPS[curMap].spawnOk;
-  for (let z = -41; z <= 41; z += 3.5) for (let x = -41; x <= 41; x += 3.5) {
+  const SP = Math.max(41, Math.min(PLAYRECT[1], -PLAYRECT[0], PLAYRECT[3], -PLAYRECT[2]) - 3);   // the whole play area (STASH ISLAND is 120 m)
+  for (let z = -SP; z <= SP; z += 3.5) for (let x = -SP; x <= SP; x += 3.5) {
     const cx = cellOf(x + rnd(-1.2, 1.2)), cz = cellOf(z + rnd(-1.2, 1.2)), c = cz * NN + cx, opts = [];
     for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h > maxY || lvS[c * NL + l]) continue; let room = 0; for (const [ox, oz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const c2 = (cz + oz) * NN + cx + ox; if (c2 >= 0 && c2 < NN * NN) for (let m = 0; m < lvN[c2]; m++) if (Math.abs(lvH[c2 * NL + m] - h) < 0.3) { room++; break; } } if (room >= 3) opts.push(h); }
     if (!opts.length) continue;
@@ -9141,7 +9173,7 @@ function startMatch(mode, custom) {
   if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel, mode); loadMap(cfg.map); }
   else if (!NET.app) loadMap(DEFAULT_MAP);   // claude.ai rooms have no host to pick a map
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
-  M.squad = mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false; try { pingClear(); } catch (e) {}   // LAST TOKE DUOS / SQUADS (squads.js), pings (ping.js)
+  M.squad = (def.squad | 0) > 1 ? def.squad | 0 : mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false; try { pingClear(); duelClear(); } catch (e) {}   // LAST TOKE DUOS / SQUADS (squads.js), pings (ping.js)
   resetGame();
   if (mode === 'zomb') { zombStart(cfg); return; }
   if (mode === 'range') { rangeStart(cfg); return; }
@@ -9263,6 +9295,7 @@ function creditKill(ke, victim) {
 function matchPlayerKilled(killer) {
   if (!inMatch()) return;
   M.me.deaths++; M.me.alive = false;
+  try { if (DUEL.on) { const D = DUEL.on; DUEL.on = null; if (D.bot && enemies.includes(D.bot) && M.br) duelSendBack(D.bot); } } catch (err) {}   // lost THE HOTBOX DUEL: the bot goes back in
   try { if (killer && killer.entry) brainHumanKilled(killer, P.x, P.z); } catch (err) {}
   const ke = killer && killer.entry ? killer.entry : null;
   if (ke) { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> <b>YOU</b>`); }
@@ -9419,6 +9452,7 @@ function updateBots(dt) {
     if (!e.entry || e.net) continue;
     if ((e.think -= dt) <= 0) { e.think = 0.28 + Math.random() * 0.12; botThink(e); }
     if (e.tgt && !botValidTarget(e, e.tgt)) e.tgt = null;
+    if (e.climb && mvBotClimb(e, dt)) continue;   // climbing a ledge (movement.js)
     if (e.downed && sqBotDowned(e, dt)) continue;   // LAST TOKE squads: downed, crawling
     if (e.veh && vhBotDrive(e, dt)) continue;   // driving a LAST TOKE vehicle
     const ex = g.position.x, ez = g.position.z;
@@ -9477,7 +9511,7 @@ function updateBots(dt) {
     g.position.x = clamp(g.position.x, -ARENA + 0.6, ARENA - 0.6); g.position.z = clamp(g.position.z, -ARENA + 0.6, ARENA - 0.6);
     if (face !== null) { let dy = face - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 8); }
     e.chk -= dt;
-    if (e.chk <= 0) { e.chk = 0.8; if (Math.hypot(g.position.x - e.lastX, g.position.z - e.lastZ) < 0.5 && !holding && goal) { e.avoidT = 1.0; e.avoidDir = Math.random() < 0.5 ? 1 : -1; } e.lastX = g.position.x; e.lastZ = g.position.z; }
+    if (e.chk <= 0) { e.chk = 0.8; if (Math.hypot(g.position.x - e.lastX, g.position.z - e.lastZ) < 0.5 && !holding && goal && !mvBotTryClimb(e, goal)) { e.avoidT = 1.0; e.avoidDir = Math.random() < 0.5 ? 1 : -1; } e.lastX = g.position.x; e.lastZ = g.position.z; }
     if (e.reactT > 0) e.reactT -= dt;
     else e.aim += ((e.tgt && dist < 60 ? 1 : 0) - e.aim) * Math.min(1, dt * e.aimRate * 0.6 * (e.tgt === 'P' ? (WEAPONS[G.cur] ? WEAPONS[G.cur].spot || 1 : 1) * (perk('ghost') ? 0.7 : 1) : 1));
     e.holding = holding && !!tp;
@@ -10521,7 +10555,7 @@ function brSetup() {
   // loot crates on open ground all over the map
   const used = [];
   for (let i = 0; i < 300 && M.br.crates.length < (ARENA > 44 ? 40 : 24) && netHostNow(); i++) {   // online, only the host makes the crates (everyone else gets them in the pack)
-    const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
+    const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (duelIn(o.x, o.z, 1)) continue; if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
     const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier); c.id = M.br.crates.length; M.br.crates.push(c);
   }
   try { vhSetup(); } catch (e) {}
@@ -10546,7 +10580,7 @@ function brOpen(c, who) {
 }
 const brAliveBots = () => enemies.filter(e => e.entry && e.entry.alive !== false);
 function brUpdate(dt) {
-  const B = M.br; if (!B) return; try { vhUpdate(dt); } catch (e) {}
+  const B = M.br; if (!B) return; try { vhUpdate(dt); } catch (e) {} try { duelUpdate(dt); } catch (e) {}
   if (!B.armed) { B.armed = true; brArmAll(); if (sqOn()) sqGroup(); }   // the first frame of the match: everyone down to a pistol (after the class was equipped)
   // the cloud: wait, then close on the next circle (a spot inside the current one)
   B.t -= dt; const host = netHostNow();
@@ -10558,9 +10592,9 @@ function brUpdate(dt) {
   B.wall.position.x = B.cx; B.wall.position.z = B.cz; B.wall.scale.set(Math.max(0.5, B.r), 1, Math.max(0.5, B.r)); B.wall.material.opacity = 0.14 + Math.sin(NOW * 2) * 0.04;
   const dmg = B.phase >= 0 && BR_PHASES[B.phase] ? BR_PHASES[B.phase][3] : 1.5, out = (x, z) => Math.hypot(x - B.cx, z - B.cz) > B.r;
   // choking outside the circle
-  const meOut = playerAlive() && out(P.x, P.z), cl = $('brCloud'); if (cl) cl.style.opacity = meOut ? 1 : 0;
+  const meOut = playerAlive() && !DUEL.on && out(P.x, P.z), cl = $('brCloud'); if (cl) cl.style.opacity = meOut ? 1 : 0;
   if (meOut) { G.lastHit = G.time; G.health -= dmg * dt; if (G.health <= 0) { G.health = 1; G.spawnProt = 0; try { hurtPlayer(999, P.x + 0.01, P.z); } catch (e) {} } }
-  if (host) for (const e of brAliveBots()) if (!e.net && out(e.group.position.x, e.group.position.z)) try { damageEnemy(e, dmg * dt, false, null, false, 'cloud'); } catch (er) {}
+  if (host) for (const e of brAliveBots()) if (!e.net && !e.duel && out(e.group.position.x, e.group.position.z)) try { damageEnemy(e, dmg * dt, false, null, false, 'cloud'); } catch (er) {}
   // crates: USE next to one opens it; bots open the one they reach
   const u = kb('use') || (typeof pad !== 'undefined' && pad.use);
   for (const c of B.crates) {
@@ -10574,6 +10608,7 @@ function brUpdate(dt) {
   if (sqOn()) {   // DUOS / SQUADS: last squad standing
     sqUpdate(dt); const T = sqTeamsLeft(); B.most = Math.max(B.most || 0, T.size);
     if (!B.place && !T.has(M.myTeam)) { B.place = T.size + 1; try { showBanner(`YOUR SQUAD PLACED #${B.place}`, `of ${Math.ceil(M.entries.length / M.squad)} · watch the rest or leave with ESC`); } catch (e) {} }
+    if (M.online) { if (host && !B.winTxt && T.size <= 1 && B.most >= 2) { const t = [...T][0]; B.winTxt = t === undefined ? '-' : 'SQ:' + t; B.winName = t === undefined ? 'NOBODY' : (t === M.myTeam ? NET.nick + "'S SQUAD" : 'SQUAD ' + (t + 1)); } return; }
     if (!M.over && T.size <= 1 && B.most >= 2) { const win = T.has(M.myTeam); if (win) { B.place = 1; try { showBanner('LAST TOKE', 'your squad is the last one standing'); } catch (e) {} } endMatch(win ? M.me : ((brAliveBots()[0] || {}).entry || null)); }
     return;
   }
@@ -10588,6 +10623,7 @@ function brUpdate(dt) {
 }
 // bots: run for the circle when they are outside (or it is closing on them), else go for a better crate nearby
 function brGoal(e, keep, near, set) {
+  { const dg = duelGoal(e, set); if (dg) return dg; }   // the duel bot goes for me
   { const sg = sqBotGoal(e, set); if (sg) return sg; }   // squads: pick up a downed squadmate first
   const B = M.br, g = e.group.position, d = Math.hypot(g.x - B.cx, g.z - B.cz);
   if (d > B.r * 0.85 || (B.closing && B.to && Math.hypot(g.x - B.to.x, g.z - B.to.z) > B.to.r * 0.8)) { const tx = B.to && B.closing ? B.to.x : B.cx, tz = B.to && B.closing ? B.to.z : B.cz; const car = vhBotWant(e, tx, tz); if (car) return set(car, 1.2); return set(near({ x: tx + rnd(-3, 3), z: tz + rnd(-3, 3), y: 0 }, 3), 1.5); }
@@ -10597,7 +10633,7 @@ function brGoal(e, keep, near, set) {
 }
 function brHud() {
   const B = M.br; if (!B) return ''; const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
-  return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}`;
+  return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
 function brMarkers(out) { const B = M.br; if (!B) return; for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
 function brClear() { try { vhClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
@@ -10828,10 +10864,12 @@ function vhRemoteBots(list) { if (!Array.isArray(list)) return; for (const a of 
    standing next to you for 3.5 s picks you back up (with 40 HP). Bots come to revive their downed squadmates (and you)
    when they are not in a fight; you revive a downed bot by holding USE next to it. When a whole squad is down at once
    they all bleed out. Last squad with anyone standing wins.
-   Offline (against bots) only for now; online LAST TOKE stays solo. Saved: nothing (M.squad lives for the match). */
-const SQ = { revT: 0, revWho: null };
+   Online too (ONLINE LAST TOKE DUOS / SQUADS, 1.2.81): squads come from presence tm, the host fills them with bots; each
+   player runs their own down (dn in presence), a revive is sent as rv, the host's bots reviving a player as rb; the host's
+   bots go down only on the host. Saved: nothing (M.squad lives for the match). */
+const SQ = { revT: 0, revWho: null, rvOut: null, rvT: 0, rvSeq: 0, rbOut: null, rbT: 0, rbSeq: 0 };
 const SQ_BLEED = 15, SQ_REVIVE = 3.5;
-const sqOn = () => !!(M && M.squad > 1 && M.mode === 'br' && !M.online);
+const sqOn = () => !!(M && M.squad > 1 && M.mode === 'br');
 // someone in this team still standing (not downed, not dead), not counting `skip`
 function sqStanding(team, skip) {
   if (team === M.myTeam && skip !== 'player' && playerAlive() && !G.downed) return true;
@@ -10848,7 +10886,7 @@ function sqPlayerDown() {
 }
 // from damageEnemy when a bot would die: true = it's downed instead
 function sqBotDown(e) {
-  if (!sqOn() || e.downed || e.sqFinal || !e.entry || !sqStanding(e.team, e)) return false;
+  if (!sqOn() || e.net || e.downed || e.sqFinal || !e.entry || !sqStanding(e.team, e)) return false;
   e.downed = true; e.bleed = SQ_BLEED; e.hp = 100; e.tgt = null; e.goal = null; e.revBy = null;
   try { if (e.veh) vhBotExit(e); } catch (er) {}
   e.group.rotation.x = -1.25;   // lying down
@@ -10872,7 +10910,7 @@ function sqUpdate(dt) {
   }
   // downed bots: bleed out (or all at once when their squad is wiped)
   for (const e of enemies.slice()) {
-    if (!e.downed) continue;
+    if (!e.downed || e.net) continue;   // other players' downs (and the host's bots, online) are theirs to run
     e.bleed -= dt;
     if (e.bleed <= 0 || !sqStanding(e.team, e)) { e.downed = false; e.sqFinal = true; e.hp = 1; e.spawnProt = 0; const lb = e.entry && e.entry.lastBy; try { damageEnemy(e, 999, false, null, false, lb === 'player' || (lb && enemies.includes(lb)) ? lb : 'world'); } catch (er) {} continue; }
   }
@@ -10880,10 +10918,43 @@ function sqUpdate(dt) {
   const u = kb('use') || pad.use; let near = null;
   if (playerAlive() && !G.downed) for (const e of enemies) if (e.downed && e.team === M.myTeam && Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) < 1.8) { near = e; break; }
   if (near) {
-    if (u) { SQ.revT += dt; SQ.revWho = near; if (SQ.revT >= SQ_REVIVE) { SQ.revT = 0; sqBotUp(near, 'player'); } }
+    if (u) { SQ.revT += dt; SQ.revWho = near; if (SQ.revT >= SQ_REVIVE) { SQ.revT = 0; if (near.net) { SQ.rvOut = [near.net, 1, ++SQ.rvSeq]; SQ.rvT = NOW + 2.5; try { popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} } else sqBotUp(near, 'player'); } }
     else SQ.revT = 0;
     try { G.interactTxt = u ? `REVIVING ${near.entry.name} · ${Math.round(SQ.revT / SQ_REVIVE * 100)}%` : `${near.entry.name} IS DOWN · HOLD ${actName('use')} TO REVIVE`; showMsg(G.interactTxt); } catch (e) {}
   } else SQ.revT = 0;
+  if (SQ.rvOut && NOW > SQ.rvT) SQ.rvOut = null;
+  // online host: my bots pick up downed players of their squad
+  if (M.online && typeof netHostNow === 'function' && netHostNow()) for (const e of enemies) {
+    if (!e.net || !e.downed) continue;
+    const helper = enemies.find(o => !o.net && !o.downed && o.team === e.team && o.entry && o.entry.alive !== false && Math.hypot(o.group.position.x - e.group.position.x, o.group.position.z - e.group.position.z) < 1.8);
+    if (!helper) { e.revT = 0; continue; } e.revT = (e.revT || 0) + dt;
+    if (e.revT >= SQ_REVIVE) { e.revT = 0; SQ.rbSeq++; SQ.rbOut = [SQ.rbSeq, e.net]; SQ.rbT = NOW + 3; }
+  }
+  if (SQ.rbOut && NOW > SQ.rbT) SQ.rbOut = null;
+}
+/* ---------- online: downs and revives travel in presence (dn: I'm down, rv: I revived someone, rb: the host's bots revived someone) */
+function sqNetPres() { if (!sqOn()) return {}; return { dn: G.downed ? 1 : 0, rv: SQ.rvOut || undefined, rb: SQ.rbOut || undefined }; }
+function sqNetApply(R, pr) {
+  if (!sqOn() || !R) return;
+  const e = R.bot; if (e) { const dn = !!pr.dn; if (dn !== !!e.downed) { e.downed = dn; e.group.rotation.x = dn ? -1.25 : 0; } }
+  const seen = R.sqSeen || (R.sqSeen = { rv: 0, rb: 0 });
+  if (Array.isArray(pr.rv) && (pr.rv[2] | 0) > seen.rv) { seen.rv = pr.rv[2] | 0; const t = String(pr.rv[0]);
+    if (t === String(NET.me) && G.downed) sqPlayerUp();
+    else if (netHostNow()) { const b = enemies.find(o => !o.net && o.downed && o.entry && o.entry.botLabel === t); if (b) sqBotUp(b, null); } }
+  if (pr.ho && Array.isArray(pr.rb) && (pr.rb[0] | 0) > seen.rb) { seen.rb = pr.rb[0] | 0; if (pr.rb.slice(1).map(String).includes(String(NET.me)) && G.downed) sqPlayerUp(); }
+}
+// online: my squad (the squad with the most free spots, or a party member's squad), picked once when the room answers
+function sqNetPick(peers, inRoom) {
+  const n = Math.floor(16 / M.squad), c = new Array(n).fill(0);
+  for (const p of peers) if (!p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot) { const t = p.presence.tm | 0; if (t >= 0 && t < n) c[t]++; }
+  try { const names = new Set(partyMembers().filter(m => !m.me).map(m => m.name)); const mate = peers.find(p => !p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot && names.has(cleanNick(p.presence.n))); if (mate && c[mate.presence.tm | 0] < M.squad) return mate.presence.tm | 0; } catch (e) {}
+  let best = 0; for (let t = 1; t < n; t++) if (c[t] < c[best]) best = t; return best;
+}
+// online host: which squad the next bot joins (the one with the most room), or -1 when every squad is full
+function sqNetBotTeam() {
+  const n = Math.floor(16 / M.squad), c = new Array(n).fill(0); c[M.myTeam]++;
+  for (const en of M.entries) if (!en.isPlayer && en.team >= 0 && en.team < n) c[en.team]++;
+  let best = -1; for (let t = 0; t < n; t++) if (c[t] < M.squad && (best < 0 || c[t] < c[best])) best = t; return best;
 }
 // in the bots' loop: true while this bot is downed (it crawls toward a squadmate, no shooting)
 function sqBotDowned(e, dt) {
@@ -10909,6 +10980,7 @@ function sqBotGoal(e, set) {
 }
 // the first frame: each squad lands together (round its first member, or round me for mine)
 function sqGroup() {
+  if (M.online) { const mate = enemies.find(e => e.team === M.myTeam && e.entry && e.entry.alive !== false && (!netHostNow() || e.net)); if (mate && !netHostNow()) { const o = openNear(mate.group.position.x + 2, mate.group.position.z + 2); P.x = o.x; P.z = o.z; return; } }
   const lead = {}; lead[M.myTeam] = { x: P.x, z: P.z };
   for (const e of enemies) { if (!e.entry || e.team === undefined) continue; const L = lead[e.team]; if (!L) { lead[e.team] = { x: e.group.position.x, z: e.group.position.z }; continue; }
     const a = Math.random() * TAU, o = openNear(L.x + Math.cos(a) * 3, L.z + Math.sin(a) * 3); e.group.position.set(o.x, groundAt(o.x, o.z, 1), o.z); }
@@ -11024,6 +11096,67 @@ function pingRemote(R, a) {
   const kind = PING_ORDER[a[1] | 0]; if (!kind) return;
   pingAdd({ kind, x: netNum(a[2], -ARENA, ARENA), y: netNum(a[3], -5, 40), z: netNum(a[4], -ARENA, ARENA) }, R.entry.name || 'mate', true); pingTone(kind);
 }
+/* ================================================================== THE HOTBOX DUEL (1.2.81)
+   LAST TOKE's second chance (offline, on STASH ISLAND). The first time you die before the last two circles, you don't
+   go out: you wake up in THE HOTBOX, a closed concrete pit on the east beach, facing someone else who already went out.
+   Pistols only, 3 seconds to get ready, no cloud in there. Win and you drop back onto the island near the circle with
+   60 HP and a pistol; lose and you're out for good. Once a match. The bot can win too: then it drops back in instead.
+   The pit's walls are 4 m high (too high to climb), so nobody on the island gets in or shoots in. */
+const DUEL_PEN = { stashisle: { x: 54, z: -20, w: 8, d: 12 } };
+const DUEL = { on: null };
+const duelPen = () => DUEL_PEN[curMap] || null;
+const duelIn = (x, z, pad = 0) => { const p = duelPen(); return !!p && Math.abs(x - p.x) < p.w / 2 + pad && Math.abs(z - p.z) < p.d / 2 + pad; };
+// the pit itself (built with the map)
+function duelBuild(pen) {
+  const { x, z, w, d } = pen, x0 = x - w / 2, x1 = x + w / 2, z0 = z - d / 2, z1 = z + d / 2, h = 4;
+  for (const [ax, az, bx, bz] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) wall(ax, az, bx, bz, h, 'concrete', { t: 0.4 });
+  floorQuad(x, z, w - 0.4, d - 0.4, 0.02, 'concrete', 3);
+  blk(x - 1.6, z - 1.2, 1.4, 0.8, 1.0, 'wood', { walk: true }); blk(x + 1.6, z + 1.2, 1.4, 0.8, 1.0, 'wood', { walk: true });   // two crates of cover
+  try { MAT.duelSign = MAT.duelSign || neonMat('THE HOTBOX', '#ff6a3a', 'win and you go back in', '#140806', 512, 160); B('duelSign', 0.05, 1.1, 3.4, x0 - 0.23, 3.1, z, 0, 0, 0, false); } catch (e) {}
+}
+// from hurtPlayer when the hit would kill me (after the squads check): true = off to the duel instead
+function duelTake() {
+  const B = M && M.br, pen = duelPen();
+  if (!B || !pen || M.online || B.duelUsed || B.phase >= 2 || DUEL.on) return false;
+  const pool = M.entries.filter(en => !en.isPlayer && en.alive === false && !en.duelDone && !(M.squad > 1 && en.team === M.myTeam)); if (!pool.length) return false;
+  B.duelUsed = true; const en = pool[pool.length - 1]; en.duelDone = true; en.alive = true;
+  const ke = G.killer && G.killer.entry; if (ke) try { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> <b>YOU</b> <span class="fw">· TO THE HOTBOX</span>`); } catch (e) {}
+  try { if (VH.me) vhExit(true); } catch (e) {}
+  G.downed = false; P.slideT = 0; P.mantle = null;
+  Object.assign(P, { x: pen.x, z: pen.z + pen.d / 2 - 1.2, y: 0, vx: 0, vz: 0, vy: 0, onGround: true }); P.yaw = 0; P.pitch = 0;
+  G.health = G.maxHp || 100; G.spawnProt = 0;
+  try { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } catch (e) {}
+  let bot = null; try { bot = spawnBot(en, { x: pen.x, z: pen.z - pen.d / 2 + 1.2, y: 0 }); } catch (e) {}
+  if (!bot) bot = enemies.find(e => e.entry === en) || null;
+  if (bot) { bot.duel = true; bot.hp = bot.maxHp; bot.brTier = 99; bot.reactT = 3.2; bot.spawnProt = 0; bot.group.rotation.y = 0; try { botGunProfile(bot, 'sidearm'); } catch (e) {} }
+  DUEL.on = { bot, en, wait: 3, t: 0 };
+  try { showBanner('THE HOTBOX DUEL', `win it and you go back in · ${en.name} is in here with you`); sfx.streak(); } catch (e) {}
+  return true;
+}
+// every frame of LAST TOKE (from brUpdate)
+function duelUpdate(dt) {
+  const D = DUEL.on; if (!D) return;
+  D.t += dt; if (D.wait > 0) { D.wait -= dt; if (D.bot) D.bot.reactT = Math.max(D.bot.reactT || 0, D.wait); try { showMsg(D.wait > 0 ? `GET READY · ${Math.ceil(D.wait)}` : 'FIGHT!'); } catch (e) {} }
+  const B = M.br; if (!B) { DUEL.on = null; return; }
+  const botAlive = D.bot && enemies.includes(D.bot) && D.en.alive !== false;
+  if (!playerAlive()) {   // I lost: the bot goes back in
+    DUEL.on = null; if (botAlive) duelSendBack(D.bot); return;
+  }
+  if (!botAlive) {   // I won: back onto the island
+    DUEL.on = null;
+    const a = Math.random() * TAU, r = Math.max(0, B.r * 0.55), o = openNear(B.cx + Math.cos(a) * r * Math.random(), B.cz + Math.sin(a) * r * Math.random());
+    Object.assign(P, { x: o.x, z: o.z, y: groundAt(o.x, o.z, 2), vx: 0, vz: 0, vy: 0 }); G.health = Math.min(G.maxHp || 100, 60); G.spawnProt = 1.5;
+    try { showBanner('YOU WON THE DUEL', 'back on the island · find a better gun'); sfx.streak(); } catch (e) {}
+  }
+}
+function duelSendBack(e) {
+  const B = M.br; e.duel = false; e.brTier = -1;
+  const a = Math.random() * TAU, o = openNear(B.cx + Math.cos(a) * B.r * 0.4, B.cz + Math.sin(a) * B.r * 0.4); e.group.position.set(o.x, groundAt(o.x, o.z, 2), o.z); e.goal = null;
+}
+// bots: the duel bot only goes for me; nobody's goal is inside the pit
+function duelGoal(e, set) { if (!e.duel) return null; return set({ x: P.x, z: P.z, y: 0 }, 0.4); }
+const duelHud = () => DUEL.on ? ' · <b style="color:#ff8a4a">THE HOTBOX DUEL</b>' : '';
+function duelClear() { DUEL.on = null; }
 /* ================================================================== CONTACT HIGH (infected)
    Everyone starts as a SURVIVOR (team 0) with their own class. After a few seconds one player turns: the INFECTED
    (team 1) have no guns, run faster and kill with one hit up close; anyone they kill joins them. The infected win
@@ -14059,7 +14192,7 @@ function netPublish() {
   if (NET.spec) { NET.room.presence({ v: 1, on: 1, spec: 1, rm: netRoomName(), n: NET.nick, a: 0, ep: NET.ep }); return; }   // WATCH: a spectator only says it is there
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, cm: typeof CHAT !== 'undefined' && CHAT.mine.all.length ? CHAT.mine.all.slice() : undefined, bn: typeof bannerFor === 'function' ? bannerFor() : '', lv: typeof lvlInfo === 'function' ? lvlInfo(PROG.xp).l : 1, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
-    ph: M.ph && phMeProp() ? M.ph.kind : -1, bo: M.br && M.br.mine && M.br.mine.length ? M.br.mine.slice(-24) : undefined, vh: M.br ? vhPack() : undefined, pg: pingPack(), vb: M.br && NET.room && NET.room.host ? vhPackBots() : undefined, a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, ct: crewTag() || undefined, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
+    ph: M.ph && phMeProp() ? M.ph.kind : -1, bo: M.br && M.br.mine && M.br.mine.length ? M.br.mine.slice(-24) : undefined, vh: M.br ? vhPack() : undefined, pg: pingPack(), ...(M.squad > 1 ? sqNetPres() : {}), vb: M.br && NET.room && NET.room.host ? vhPackBots() : undefined, a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, sa: NET.sa, ct: crewTag() || undefined, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { try { potgShot(); } catch (e) {} if (NET.on) NET.sh++; if (typeof ZC !== 'undefined' && ZC.on) ZC.sh++; }
@@ -14068,7 +14201,7 @@ function netShot() { try { potgShot(); } catch (e) {} if (NET.on) NET.sh++; if (
 function netHit(e, dmg, head, by, boom) {
   if (!NET.on || !e.net) return;
   if (by === 'player') { if (isFriend(e)) return; NET.hseq++; NET.hs.push([e.net, Math.round(dmg), head ? 1 : 0, NET.hseq, boom ? 1 : 0]); if (NET.hs.length > 8) NET.hs.shift(); }
-  else if (by && by.entry && by.entry.botLabel) { const en = by.entry; if (M.def.teams && en.team === e.team) return; en.hseq++; en.hs.push([e.net, Math.round(dmg), head ? 1 : 0, en.hseq, boom ? 1 : 0]); if (en.hs.length > 8) en.hs.shift(); }
+  else if (by && by.entry && by.entry.botLabel) { const en = by.entry; if ((M.def.teams || M.squad > 1) && en.team === e.team) return; en.hseq++; en.hs.push([e.net, Math.round(dmg), head ? 1 : 0, en.hseq, boom ? 1 : 0]); if (en.hs.length > 8) en.hs.shift(); }
   else return;
   e.flinch = 1;
 }
@@ -14085,7 +14218,7 @@ function netMakeBot(R, pr) {
   const e = makeEnemy('rifleman', R.x, R.z);
   Object.assign(e, { team: R.entry.team, entry: R.entry, name: R.entry.name, pvp: true, net: R.peer, hp: 1e9, maxHp: 100, aim: 1, crouchy: false, los: true, holding: true, lastShotT: -9 });
   e.silent = !!R.sl; e.ghost = !!R.gh; e.group.position.set(R.x, R.y, R.z); e.group.rotation.y = R.yw + Math.PI;
-  if (M.def.teams && R.entry.team === M.myTeam) e.group.add(friendlyMarker());
+  if ((M.def.teams || M.squad > 1) && R.entry.team === M.myTeam) e.group.add(friendlyMarker());
   enemies.push(e); R.bot = e; R.entry.alive = true; R.entry.bot = e;
 }
 function netDropBot(R, dead, head) {
@@ -14125,7 +14258,7 @@ function netTick(dt) {
       // in a party: join the team a party member is already on
       try { const names = new Set(partyMembers().filter(m => !m.me).map(m => m.name)); const mate = peers.find(p => !p.sameTab && p.presence && inRoom(p.presence) && !p.presence.bot && names.has(cleanNick(p.presence.n))); if (mate) M.myTeam = M.me.team = mate.presence.tm === 1 ? 1 : 0; } catch (e) {}
     }
-    else M.myTeam = M.me.team = 0;
+    else M.myTeam = M.me.team = M.squad > 1 ? sqNetPick(peers, inRoom) : 0;   // LAST TOKE DUOS / SQUADS: a squad
     for (const [, R] of NET.rem) netDropBot(R, false);   // redraw with the right friend markers
   }
   // my death: who did it
@@ -14142,7 +14275,7 @@ function netTick(dt) {
     if (!inRoom(pr)) continue;
     seenNow.add(p.peer);
     let R = NET.rem.get(p.peer);
-    const team = M.def.teams ? (pr.tm === 1 ? 1 : 0) : R ? R.entry.team : 100 + (++NET.ffaN);   // free-for-all: everyone on their own team
+    const team = M.def.teams ? (pr.tm === 1 ? 1 : 0) : M.squad > 1 ? clamp(pr.tm | 0, 0, 7) : R ? R.entry.team : 100 + (++NET.ffaN);   // free-for-all: everyone on their own team
     if (!R) {
       const hs = Array.isArray(pr.hs) ? pr.hs : [];
       R = { peer: p.peer, entry: { name: cleanNick(pr.n), team, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: false, netPeer: p.peer }, bot: null,
@@ -14156,7 +14289,7 @@ function netTick(dt) {
     if (!pr.bot) chatIngest('all', p.peer, R.entry.name, pr.cm);
     R.bn = typeof pr.bn === 'string' && COS[pr.bn] && COS[pr.bn].kind === 'banner' ? pr.bn : ''; R.lv = netNum(pr.lv, 1, 100, 1);
     R.cj = pr.cj ? 1 : 0; R.entry.tag = typeof pr.ct === 'string' ? pr.ct.replace(/[^A-Z0-9]/g, '').slice(0, 4) : ''; R.mv = typeof pr.mv === 'string' ? pr.mv : ''; if (pr.ho && !pr.bot && !isHost) NET.voHost = Array.isArray(pr.vo) && pr.vo.every(id => MAPS[id]) ? pr.vo.slice(0, 3) : null; try { smkFromNet(R, pr.sk); } catch (e) {} R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, 0, 12); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
-    R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep; if (isHost && M.br && Array.isArray(pr.bo) && R.ep === NET.ep) brRemoteOpened(pr.bo); if (M.br && pr.vh && R.ep === NET.ep) try { vhRemote(R, pr.vh); } catch (e) {} if (pr.pg && !pr.bot) try { pingRemote(R, pr.pg); } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost && pr.vb && R.ep === NET.ep) try { vhRemoteBots(pr.vb); } catch (e) {} R.ph = Number.isInteger(pr.ph) && pr.ph >= 0 && pr.ph < PH_KINDS.length ? pr.ph : -1;
+    R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep; if (isHost && M.br && Array.isArray(pr.bo) && R.ep === NET.ep) brRemoteOpened(pr.bo); if (M.br && pr.vh && R.ep === NET.ep) try { vhRemote(R, pr.vh); } catch (e) {} if (pr.pg && !pr.bot) try { pingRemote(R, pr.pg); } catch (e) {} if (M.squad > 1) try { sqNetApply(R, pr); } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost && pr.vb && R.ep === NET.ep) try { vhRemoteBots(pr.vb); } catch (e) {} R.ph = Number.isInteger(pr.ph) && pr.ph >= 0 && pr.ph < PH_KINDS.length ? pr.ph : -1;
     R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;
     // a death since last time: drop them, credit the killer
     const ds = +pr.ds | 0;
@@ -14230,7 +14363,7 @@ function netTick(dt) {
     const lim = M.cfg.score; let win = null;
     if (M.def.teams) { for (let t = 0; t < 2; t++) if (M.teamScore[t] >= lim) win = t === M.myTeam ? 'YOUR TEAM WINS' : 'ENEMY TEAM WINS'; }
     else for (const en of M.entries) if (en.kills >= lim) win = en.isPlayer ? 'YOU WIN' : en.name + ' WINS';
-    if (M.br) win = M.br.winTxt ? (M.br.winTxt === NET.me ? 'YOU WIN' : M.br.winName + ' WINS') : null;   // LAST TOKE: the host names the last one standing
+    if (M.br) win = M.br.winTxt ? (M.br.winTxt === NET.me || M.br.winTxt === 'SQ:' + M.myTeam ? (M.squad > 1 ? 'YOUR SQUAD WINS' : 'YOU WIN') : M.br.winName + ' WINS') : null;   // LAST TOKE: the host names the last one standing
     if (NET.priv && !NET.priv.started) win = null;
     else if (!win && M.cfg.time && M.t >= M.cfg.time * 60) {   // time limit (private matches): the leader wins
       if (M.def.teams) { const a = M.teamScore[M.myTeam], b = M.teamScore[1 - M.myTeam]; win = a === b ? 'TIME · DRAW' : a > b ? 'TIME · YOUR TEAM WINS' : 'TIME · ENEMY TEAM WINS'; NET.timeWon = a === b ? 0 : a > b ? 1 : -1; }
@@ -14239,7 +14372,7 @@ function netTick(dt) {
     if (win) {
       NET.endT = INTERMISSION_ON; sfx.streak();
       // a round to the score limit counts as a match in your career stats
-      const won = M.br ? (M.br.winTxt === NET.me ? 1 : -1) : NET.timeWon !== undefined ? NET.timeWon : M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1); NET.timeWon = undefined;
+      const won = M.br ? (M.br.winTxt === NET.me || M.br.winTxt === 'SQ:' + M.myTeam ? 1 : -1) : NET.timeWon !== undefined ? NET.timeWon : M.def.teams ? (M.teamScore[M.myTeam] >= lim ? 1 : -1) : (M.me.kills >= lim ? 1 : -1); NET.timeWon = undefined;
       finishMatchStats(won); netIntermission(won, win); startMatchStats();
     }
   }
@@ -14308,12 +14441,12 @@ function netBots(dt) {
     } else {
       const want = pw !== null ? pw : wl > 0 ? 0 : Math.max(0, (M.br ? 16 : BOT_FILL.ffa) - hum);
       for (let i = bots.length - 1; i >= want; i--) netRemoveBot(bots[i]);
-      if (bots.length < want && add) { netNewBot(1000 + NET.botN); NET.addT = NET.priv ? 0.3 : 1.5; }
+      if (bots.length < want && add) { const st = M.squad > 1 ? sqNetBotTeam() : 1000 + NET.botN; if (st >= 0 && st !== undefined) netNewBot(st); NET.addT = NET.priv ? 0.3 : 1.5; }
     }
   }
   NET.botPres = M.entries.filter(en => en.botLabel).map(en => {
     const e = en.bot, g = e && e.group;
-    return [en.botLabel, { v: 1, on: 1, bot: 1, n: en.name, tm: M.def.teams ? en.team : 0, x: g ? r2(g.position.x) : 0, y: g ? r2(g.position.y) : 0, z: g ? r2(g.position.z) : 0, yw: g ? r3(g.rotation.y - Math.PI) : 0, pt: 0,
+    return [en.botLabel, { v: 1, on: 1, bot: 1, n: en.name, tm: M.def.teams || M.squad > 1 ? en.team : 0, dn: e && e.downed ? 1 : 0, x: g ? r2(g.position.x) : 0, y: g ? r2(g.position.y) : 0, z: g ? r2(g.position.z) : 0, yw: g ? r3(g.rotation.y - Math.PI) : 0, pt: 0,
       cr: e && e.crouchK > 0.5 ? 1 : 0, ph: e && e.phK !== null && e.phK !== undefined ? e.phK : -1, a: e && en.alive ? 1 : 0, wn: botGunName(e), k: en.kills, d: en.deaths, ds: en.ds, kb: en.kb, kh: en.kh, sh: en.sh, hs: en.hs, ep: NET.ep }];
   });
 }
@@ -23492,7 +23625,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
