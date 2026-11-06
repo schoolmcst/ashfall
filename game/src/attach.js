@@ -520,6 +520,7 @@ const miniBar = (v, lo, hi) => `<i style="width:${(clamp((v - lo) / (hi - lo), 0
 function renderLoadout(focusSel) {
   const c = activeClass();
   $('loTabs').innerHTML = CLASSES.map((k, i) => (loRename && i === ACTIVE_CLASS ? `<input class="lo-rename" id="loRenameIn" maxlength="16" value="${k.name.replace(/"/g, '')}">` : `<button class="tab${i === ACTIVE_CLASS ? ' on' : ''}" data-lo-c="${i}">${k.name}</button><button class="tab lo-pen1" data-lo-ren1="${i}" title="Rename ${k.name.replace(/"/g, '')}" aria-label="Rename ${k.name.replace(/"/g, '')}">&#9998;</button>`)).join('') + (loRename ? `<button class="tab lo-pen" data-lo-ren="1">SAVE NAME</button>` : '');
+  $('loTabs').insertAdjacentHTML('beforeend', '<span class="lo-lc"><button class="mini" data-lcb="share" title="Copy this class as a code">SHARE CODE</button><button class="mini" data-lcb="paste" title="Use a friend\'s build code">PASTE CODE</button></span>');   // LOADOUT CODES (lcodes.js)
   $('loSlots').innerHTML = LO_ROWS.map(([r, label]) => `<button class="lo-slot${r === loRow ? ' on' : ''}${r === 'pa' || r === 'sa' ? ' sub' : ''}" data-lo-r="${r}"><span>${label}</span><b>${loRowValue(r)}</b></button>`).join('');
   const note = $('loNote'); if (note) note.textContent = inGame() && G.equipped && (G.equipped.p !== c.p || G.equipped.s !== c.s || G.equipped.e !== c.e || PERK_KEYS.some(k => G.equipped[k] !== c[k])) ? 'CLASS CHANGES APPLY WHEN YOU NEXT SPAWN' : '';
   const help = $('loHelp'); if (help) help.textContent = LO_HELP[loRow];

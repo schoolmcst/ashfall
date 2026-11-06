@@ -51,6 +51,7 @@ function rumble(strong, weak, ms) {
 const vig = $('vignette'), dmgdir = $('dmgdir');
 function hurtPlayer(dmg, fx, fz, boom) {
   if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0 || G.holdT > 0) return;
+  if (M && M.hso && inMatch()) { if (boom) return; dmg = 999; }   // HEADSHOTS ONLY: what reaches me was a head hit
   if (boom && perk('flak')) dmg *= 0.65;
   if (!boom && G.state === 'playing') { const kn = perk('iron') ? 0.3 : 1; P.pitch += rnd(0.004, 0.012) * kn; P.yaw += rnd(-0.008, 0.008) * kn; }   // getting shot knocks your aim
   if (typeof mcRock === 'function' && M && M.mode === 'zomb' && mcRock()) dmg *= 0.5;

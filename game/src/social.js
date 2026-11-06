@@ -3,7 +3,7 @@
    moment, read what you publish, leave) to see that you are online, what you are doing and your online stats.
    A friend request is a visitor that stays in your inbox with a request flag until you accept or decline; the
    answer travels back the same way. With no server, both players have to have the game open. */
-const SOC = { inbox: null, busy: false, retryT: 0, peekT: 0, peeking: false, incoming: new Map(), answered: {}, sending: new Map(), lbSort: 'kd', key: '' };
+const SOC = { inbox: null, busy: false, retryT: 0, peekT: 0, peeking: false, incoming: new Map(), answered: {}, sending: new Map(), lbSort: 'kd', key: '', inviting: new Map(), invSeen: {} };
 const PENDING_KEY = 'ashfall.frpending.v1';
 let FR_PENDING = []; try { const a = JSON.parse(localStorage.getItem(PENDING_KEY) || '[]'); if (Array.isArray(a)) FR_PENDING = a.filter(c => /^[A-Z2-9]{6}$/.test(c)).slice(0, 20); } catch (e) {}
 const pendingSave = () => { try { localStorage.setItem(PENDING_KEY, JSON.stringify(FR_PENDING)); } catch (e) {} };
@@ -61,6 +61,21 @@ async function socSendRequest(code, quiet) {
   }
   r.room.leave(); SOC.sending.delete(code); socRender();
 }
+// INVITE (1.2.83): sit in a friend's inbox for up to 30 s with an invite; they get a JOIN toast that joins my party
+async function socInvite(code) {
+  code = cleanFcode(code); if (code.length !== 6 || SOC.inviting.has(code)) return;
+  SOC.inviting.set(code, 1); const f = FRIENDS.find(x => x.c === code); PARTY.status = 'party invite sent to ' + (f ? f.n : code); socRender();
+  const r = await socPeek(code, { inv: 1 });
+  if (!r) { SOC.inviting.delete(code); PARTY.status = (f ? f.n : code) + ' is not online'; socRender(); return; }
+  for (let i = 0; i < 250; i++) { await new Promise(res => setTimeout(res, 100)); if (r.room.closed) break; }
+  r.room.leave(); SOC.inviting.delete(code); socRender();
+}
+function showInviteToast(code, n) {
+  const t = document.createElement('div'); t.className = 'fr-toast';
+  t.innerHTML = `<b>PARTY INVITE</b><span>${n} invited you to their party</span><div><button class="mini" data-iv="1">JOIN</button><button class="mini" data-iv="0">NO THANKS</button></div>`;
+  for (const b of t.querySelectorAll('[data-iv]')) b.onclick = () => { if (b.dataset.iv === '1') { partyJoin(code); sfx.streak(); } t.remove(); };
+  document.body.appendChild(t); sfx.ui(); setTimeout(() => t.remove(), 30000);
+}
 function socAnswer(code, yes) {
   const q = SOC.incoming.get(code); SOC.incoming.delete(code); SOC.answered[code] = yes ? 1 : 0;
   if (yes && q && !FRIENDS.some(f => f.c === code)) { FRIENDS.push({ c: code, n: q.n, on: true }); friendsSave(); sfx.streak(); }
@@ -74,6 +89,7 @@ function socTick() {
   SOC.inbox.presence({ card: socMyCard(), ans: SOC.answered });
   // visitors asking to be friends
   for (const p of SOC.inbox.peers()) {
+    const pi = p.presence; if (!p.sameTab && pi && pi.inv) { const ic = cleanFcode(pi.c); if (ic.length === 6 && FRIENDS.some(f => f.c === ic) && !(Date.now() - (SOC.invSeen[ic] || 0) < 40000) && !(typeof lnBlocked === 'function' && lnBlocked(cleanNick(pi.n), ic))) { SOC.invSeen[ic] = Date.now(); showInviteToast(ic, cleanNick(pi.n)); } }
     const pr = p.presence; if (p.sameTab || !pr || !pr.req) continue;
     const c = cleanFcode(pr.c); if (c.length !== 6 || SOC.answered[c] !== undefined || FRIENDS.some(f => f.c === c) || (typeof lnBlocked === 'function' && lnBlocked(cleanNick(pr.n), c))) continue;
     if (!SOC.incoming.has(c)) { SOC.incoming.set(c, { n: cleanNick(pr.n), t: Date.now() }); showFriendToast(c); socRender(); }
@@ -93,7 +109,7 @@ function socRender() { if (typeof partyRender === 'function') partyRender(); if 
 function socialHtml() {
   const inc = [...SOC.incoming.entries()], fr = FRIENDS.slice().sort((a, b) => (b.on ? 1 : 0) - (a.on ? 1 : 0) || a.n.localeCompare(b.n));
   return (inc.length ? inc.map(([c, q]) => `<div class="ros-p fr-in"><span class="lv">✉</span>${q.n}<em>WANTS TO BE FRIENDS</em><button class="mini fr-join" data-acc="${c}">ACCEPT</button><button class="mini" data-dec="${c}">✕</button></div>`).join('') : '') +
-    (fr.length ? fr.map(f => `<div class="ros-p"><span class="dot ${f.on ? 'on' : ''}"></span><div class="fr-nm"><b>${f.n}</b><small>${f.on ? (f.d || 'ONLINE') : 'OFFLINE'}</small></div><button class="mini fr-join" data-fj="${FRIENDS.indexOf(f)}" ${f.on ? '' : 'disabled'} title="Join their party">JOIN</button>${f.on && f.sp ? `<button class="mini fr-join" data-fw="${FRIENDS.indexOf(f)}" title="Watch their match without playing">WATCH</button>` : ''}<button class="mini fr-del" data-fd="${FRIENDS.indexOf(f)}" title="Remove friend">✕</button></div>`).join('')
+    (fr.length ? fr.map(f => `<div class="ros-p"><span class="dot ${f.on ? 'on' : ''}"></span><div class="fr-nm"><b>${f.n}</b><small>${f.on ? (f.d || 'ONLINE') : 'OFFLINE'}</small></div><button class="mini fr-join" data-fj="${FRIENDS.indexOf(f)}" ${f.on ? '' : 'disabled'} title="Join their party">JOIN</button><button class="mini fr-inv" data-fi="${FRIENDS.indexOf(f)}" ${f.on ? '' : 'disabled'} title="Invite them to your party">${SOC.inviting.has(f.c) ? 'INVITED' : 'INVITE'}</button>${f.on && f.sp ? `<button class="mini fr-join" data-fw="${FRIENDS.indexOf(f)}" title="Watch their match without playing">WATCH</button>` : ''}<button class="mini fr-del" data-fd="${FRIENDS.indexOf(f)}" title="Remove friend">✕</button></div>`).join('')
       : `<div class="ros-p" style="color:var(--dim)">No friends yet. Send a request with their friend code below.</div>`) +
     FR_PENDING.map(c => `<div class="ros-p" style="color:var(--dim)"><span class="lv">…</span>${c}<em>${SOC.sending.get(c) === 'waiting' ? 'WAITING FOR THEM TO ACCEPT' : 'REQUEST PENDING'}</em><button class="mini" data-pc="${c}" title="Cancel">✕</button></div>`).join('');
 }

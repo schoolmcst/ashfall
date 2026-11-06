@@ -42,7 +42,7 @@ function m2Goal(e, keep, near, set) {
   }
   return null;
 }
-function m2Update(dt) { if (M.mode === 'kc' && M.kc) kcUpdate(dt); if (M.mode === 'dom' && M.dom) domUpdate(dt); if (M.mode === 'ru' && M.ru) ruUpdate(dt); if (M.mode === 'pp' && M.pp) ppUpdate(dt); if (M.ph) phUpdate(dt); if (M.br) brUpdate(dt); }
+function m2Update(dt) { if (M.oic || M.hso) m6Update(dt); if (M.mode === 'kc' && M.kc) kcUpdate(dt); if (M.mode === 'dom' && M.dom) domUpdate(dt); if (M.mode === 'ru' && M.ru) ruUpdate(dt); if (M.mode === 'pp' && M.pp) ppUpdate(dt); if (M.ph) phUpdate(dt); if (M.br) brUpdate(dt); }
 function m2Pack() {
   const ts = M.teamScore || [0, 0];
   if (M.mode === 'ru' && M.ru) return ruPack();
@@ -65,6 +65,7 @@ function m2HudInfo() {
   if (M.mode === 'pp' && M.pp) return ppHud();
   if (M.ph) return phHud();
   if (M.br) return brHud();
+  if (M.oic || M.hso) return m6Hud();
   if (M.mode === 'kc' && M.kc) { const near = M.kc.tags.filter(t => Math.hypot(t.x - P.x, t.z - P.z) < 25), e = near.filter(t => t.team !== M.myTeam).length, f = near.length - e; return `${e} ENEMY BAG${e === 1 ? '' : 'S'} NEARBY${f ? ` · ${f} OF YOUR TEAM'S TO SAVE` : ''}`; }
   if (M.mode === 'dom' && M.dom) return M.dom.pts.map(p => { const c = p.own === -1 ? '#ddd' : TEAM_COL[p.own === M.myTeam ? 0 : 1]; return `<span class="dom-l" style="--c:${c}${p.status ? ';--b:#ffd24a' : ''}">${p.n}</span>`; }).join('') + ` ${domHeld(M.myTeam)} HELD`;
   return '';

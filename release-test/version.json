@@ -1,11 +1,13 @@
 {
- "version": "1.2.82",
+ "version": "1.2.83",
  "notes": [
-  "FIX: online PROP HUNT - the hide countdown froze for players who joined (stuck on a black screen)",
-  "FIX: online LAST TOKE - joining players now see the cloud close and the loot crates",
-  "PARTY: when the leader starts a mode from the menu, the whole party goes in together online",
-  "every online mode checked with two real players"
+  "NEW MODES: ONE IN THE CHAMBER and HEADSHOTS ONLY (offline and online)",
+  "REJOIN: dropped out of an online match? rejoin it from the main menu",
+  "a bot stands in for a player who leaves (keeps their score) until they come back",
+  "INVITE friends to your party from the friends list",
+  "share builds: SHARE CODE / PASTE CODE in Create a Class",
+  "PHOTO MODE in the pause menu (free camera, filters, save a picture)"
  ],
- "sha256": "cbb59de52389cfc89df0431f9d40a6e76765a05f4f6b1d037bf4a21ec91cc00b",
+ "sha256": "1d9459cb70b249ccfecd7ac67fee5df9b80841a78db47233066e390ce98f8dc7",
  "minApp": "1.0.0"
 }

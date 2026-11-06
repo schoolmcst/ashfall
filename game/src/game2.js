@@ -59,7 +59,8 @@ function enemyShoot(e, dist) {
   e.rig.flash.visible = !e.stealth; e.flashT = 0.06; e.rig.flash.material.rotation = rnd(0, 6.28);
   enemyFlashLight.position.copy(from); enemyFlashLight.intensity = e.stealth ? 0 : 3.2; enemyFlashLight.userData.t = 0.05;
   const o = at(e.group.position.x, e.group.position.z, 20); sfx.enemy(o);
-  if (hit) { G.killer = e; hurtPlayer(e.dmg * (inMatch() && Math.random() < (e.hs || 0) ? 1.7 : 1) * (typeof botFall === 'function' ? botFall(e, dist) : 1), e.group.position.x, e.group.position.z); }
+  if (hit && M && M.hso && !(Math.random() < Math.max(e.hs || 0.12, 0.3))) { /* HEADSHOTS ONLY: only a head hit counts */ }
+  else if (hit) { G.killer = e; hurtPlayer(e.dmg * (inMatch() && Math.random() < (e.hs || 0) ? 1.7 : 1) * (typeof botFall === 'function' ? botFall(e, dist) : 1), e.group.position.x, e.group.position.z); }
   else if (dist > 4) { const f = at(to.x, to.z, 8); f.vol *= 0.8; sfx.flyby(f); }
 }
 
@@ -151,6 +152,7 @@ function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (e.zombie && by === 'player' && typeof zombGunMul === 'function') dmg *= zombGunMul(boom);
   if (e.proxy) { if (by === 'player') zcProxyHit(e, dmg, head, boom); return false; }
   if (e.entry) { e.entry.lastBy = by; e.entry.lastHead = head ? 1 : 0; }
+  if (M && (M.hso || M.oic) && by !== 'world' && by !== 'cloud') { if (M.hso) { dmg = hsoDmg(dmg, head, boom); if (!dmg) return false; } dmg = oicDmg(dmg, by, boom); }   // modes6.js
   if (e.net) { netHit(e, dmg, head, by, boom); return false; }
   if ((e.spawnProt > 0 || G.holdT > 0) && inMatch() && by !== 'world') return false;   // spawn protection / pre-match hold
   if (e.zombie && typeof zpuOn === 'function' && zpuOn('hotbox')) dmg = e.boss ? dmg * 3 : Math.max(dmg, e.hp + 1);   // HOTBOX: one hit kills (bosses take triple)

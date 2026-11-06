@@ -30,6 +30,10 @@ const MODES = {
   pp: { name: 'PUFF PUFF PASS', short: 'PASS', icon: 'PPP', desc: 'Free-for-all where everyone holds the SAME gun. Every 40 seconds it gets passed on to a new one from the whole armory. Most kills wins.', teams: false, respawn: 2.5, score: 25, time: 10, players: 8, unit: 'KILLS' },
   oru: { name: 'ONLINE RE-UP', short: 'ONLINE RE-UP', icon: 'RUP', desc: 'Real people, grind: grab the stash bags that drop on every kill and bank them at a STASH HOUSE. Die carrying and you drop the lot.', teams: true, respawn: 3, score: 30, time: 0, perTeam: 6, unit: 'BAGS', online: true, base: 'ru' },
   obr: { name: 'ONLINE LAST TOKE', short: 'ONLINE BR', icon: 'BR', desc: 'Real people, battle royale: one life, pistols, loot crates and the closing Nightshade cloud. Last one standing wins the round. Bots fill up to 16.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br' },
+  oic: { name: 'ONE IN THE CHAMBER', short: 'OITC', icon: '1IC', desc: 'One bullet in a pistol and every shot kills. A kill gives you another bullet; a miss is gone for good. Three lives each, last one standing wins.', teams: false, respawn: 2, score: 999, time: 8, players: 8, unit: 'KILLS' },
+  hso: { name: 'HEADSHOTS ONLY', short: 'HEADS', icon: 'HSO', desc: 'Any gun, but only hits to the head count, and one headshot kills. Bodies, grenades and melee do nothing. First to 20 kills.', teams: false, respawn: 2.5, score: 20, time: 8, players: 8, unit: 'KILLS' },
+  ooic: { name: 'ONLINE ONE IN THE CHAMBER', short: 'ONLINE OITC', icon: '1IC', desc: 'Real people, one bullet each, every shot kills, a kill gives you another bullet. First to 15 kills wins the round.', teams: false, respawn: 2, score: 15, time: 0, players: 12, unit: 'KILLS', online: true, base: 'oic' },
+  ohso: { name: 'ONLINE HEADSHOTS ONLY', short: 'ONLINE HEADS', icon: 'HSO', desc: 'Real people, only headshots count and one headshot kills. First to 20 kills wins the round.', teams: false, respawn: 2.5, score: 20, time: 0, players: 12, unit: 'KILLS', online: true, base: 'hso' },
   obr2: { name: 'ONLINE LAST TOKE DUOS', short: 'ONLINE BR DUOS', icon: 'BR2', desc: 'Real people in teams of 2: battle royale with the closing Nightshade cloud. Get knocked down instead of killed while your partner stands, and pick each other up. Bots fill the empty spots.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', squad: 2 },
   obr4: { name: 'ONLINE LAST TOKE SQUADS', short: 'ONLINE BR SQUADS', icon: 'BR4', desc: 'Real people in squads of 4: battle royale with downs and revives. Last squad standing wins. Bots fill the empty spots.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', squad: 4 },
   oph: { name: 'ONLINE PROP HUNT', short: 'ONLINE PROPS', icon: 'PRP', desc: 'Real people, hunters against props, swapping every two minutes. Hide as a crate or a bong, or hunt them down.', teams: true, respawn: 4, score: 999, time: 6, perTeam: 6, unit: 'POINTS', online: true, base: 'ph' },
@@ -38,7 +42,7 @@ const MODES = {
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'obr2', 'obr4', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'inf', 'gf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'obr2', 'obr4', 'ooic', 'ohso', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'oic', 'hso', 'inf', 'gf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 // bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
@@ -252,7 +256,7 @@ function respawnPlayer() {
   G.state = 'playing'; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide'); $('killcam').classList.remove('kcv'); try { kcYou(null); } catch (e) {} vig.style.opacity = 0;
   camera.fov = baseFov; camera.updateProjectionMatrix(); lockPointer(); hideCenter();
 }
-function queueRespawn(en) { if (M.def.respawn) M.respawnQ.push({ en, t: M.def.respawn }); }
+function queueRespawn(en) { if (M.def.respawn && !oicOut(en)) M.respawnQ.push({ en, t: M.def.respawn }); }
 
 /* ---------- kills, scoring */
 function weaponLabel(by) { if (by === 'player') return WEAPONS[G.cur] ? WEAPONS[G.cur].name : ''; if (by && by.entry) return botGunName(by); return '✹'; }
@@ -266,7 +270,7 @@ function nameHtml(en) {
 function matchBotKilled(e, by, head, boom) {
   if (!inMatch() || !e.entry) return;
   try { brainBotKilled(e, by); } catch (err) {}
-  const en = e.entry; en.deaths++; en.alive = false; en.bot = null;
+  const en = e.entry; en.deaths++; en.alive = false; en.bot = null; oicBotKill(by);
   const ke = by === 'player' ? M.me : by && by.entry ? by.entry : null;
   if (ke && ke !== en) creditKill(ke, en);
   if (by !== 'player') feedLine(`${ke ? nameHtml(ke) : ''} <span class="fw">${boom ? '✹' : weaponLabel(by)}</span> ${nameHtml(en)}${head ? ' <span class="ft">HEADSHOT</span>' : ''}`);
@@ -515,7 +519,7 @@ function updateBots(dt) {
     if (e.inf) infBotMelee(e, dt, tp, dist);
     else if (e.tgt && e.aim > 0.6 && !(e.reloadT > 0) && !busy && !(e.stunT > 0)) {
       e.cd -= dt;
-      if (e.cd <= 0) { botShoot(e, e.tgt, dist); if (--e.mag <= 0) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; } e.shots--; if (e.shots <= 0) { e.shots = e.burstMin ? Math.floor(rnd(e.burstMin, e.burstMax || 7)) : dist > 25 ? Math.floor(rnd(2, 5)) : Math.floor(rnd(4, 9)); e.cd = rnd(0.35, 0.9) + (e.gap > 0.3 ? e.gap : 0); } else e.cd = e.gap || 0.11; }
+      if (e.cd <= 0 && oicCanFire(e)) { oicBotFired(e); botShoot(e, e.tgt, dist); if (--e.mag <= 0) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; } e.shots--; if (e.shots <= 0) { e.shots = e.burstMin ? Math.floor(rnd(e.burstMin, e.burstMax || 7)) : dist > 25 ? Math.floor(rnd(2, 5)) : Math.floor(rnd(4, 9)); e.cd = rnd(0.35, 0.9) + (e.gap > 0.3 ? e.gap : 0); } else e.cd = e.gap || 0.11; }
     }
   }
 }
@@ -787,11 +791,11 @@ function timeUp() {
 // after the death cam in a match: respawn, or spectate a team-mate in S&D
 function afterDeathInMatch() {
   $('killcam').classList.add('hide');
-  if (M.mode === 'snd' || M.mode === 'gf' || M.br) { G.state = 'spectate'; G.specIdx = 0; G.dc = null; return; }
+  if (M.mode === 'snd' || M.mode === 'gf' || M.br || oicOut(M.me)) { G.state = 'spectate'; G.specIdx = 0; G.dc = null; return; }
   G.state = 'respawning'; G.respT = 1.2; G.dcHold = !!G.dc;
 }
 function updateSpectate(dt) {
-  const mates = M.br ? enemies.filter(e => e.entry && e.entry.alive !== false) : NET.spec ? (enemies.filter(e => e.net === NET.specPeer).length ? enemies.filter(e => e.net === NET.specPeer) : enemies.filter(e => e.net)) : enemies.filter(e => e.team === M.myTeam), sn = M.snd;
+  const mates = M.br || M.oic ? enemies.filter(e => e.entry && e.entry.alive !== false) : NET.spec ? (enemies.filter(e => e.net === NET.specPeer).length ? enemies.filter(e => e.net === NET.specPeer) : enemies.filter(e => e.net)) : enemies.filter(e => e.team === M.myTeam), sn = M.snd;
   if (G.specNext) { G.specIdx++; G.specNext = false; }
   const m = mates.length ? mates[G.specIdx % mates.length] : null;
   if (m) {

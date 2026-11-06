@@ -114,6 +114,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   as http://localhost:39990. mp_allmodes.js runs every online mode with 2 players (join, see, state sync, a kill);
   mp_ph.js (Prop Hunt timers through a swap), mp_partyfollow.js (party follows into quick play, out, and from a tile).
   The old mp_*.js / app_*.js tests still use game.test and fail to connect until moved onto mp_lib.js.
+- 1.2.83 TEST (batch 1 of the owner's 60-item list): modes6.js ONE IN THE CHAMBER (oic/ooic) and HEADSHOTS ONLY (hso/ohso);
+  rejoin.js (REJOIN tile from a saved slot when you drop out; stand-in bots take a leaver's name/team/score, rjJoined gives
+  it back; own counts are NET.k/NET.d); social.js INVITE (socInvite sits in a friend's inbox with inv:1 -> JOIN toast);
+  lcodes.js loadout codes (DZ1-…); photo.js PHOTO MODE from the pause menu (G.state 'photo'). Tests: s_m6, s_batch1,
+  mp_rejoin, mp_invite. The owner asked for all 60 ideas ("do it all"): batches 2-7 follow (fights, LAST TOKE, weapons,
+  modes, progress, the rest).
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

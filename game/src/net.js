@@ -119,6 +119,7 @@ function netSwitchMap(id) {
   showBanner(mapName(id), MAPS[id].place.toLowerCase());
 }
 function netLeave() {
+  try { rjLeave(); } catch (e) {}
   if (NET.spec && !NET.specKeep) { NET.spec = false; NET.specPeer = ''; }
   const r = NET.room; NET.room = null; NET.on = false; NET.priv = null;
   if (r) { try { if (r !== NET.ns && r.leave) r.leave().catch(() => {}); else r.presence({ on: null, rm: null }).catch(() => {}); } catch (e) {} }
@@ -187,6 +188,7 @@ function netRemoteShot(R) {
 }
 function netFeedName(R) { return R ? nameHtml(R.entry) : '?'; }
 function netTick(dt) {
+  try { rjTick(dt); } catch (e) {}   // REJOIN (rejoin.js)
   if (!NET.on || !NET.room || !inMatch() || !M.online) return;
   NET.me = NET.me || netSelf();
   const peers = netPeers(), seenNow = new Set(), rn = netRoomName(), inRoom = pr => (NET.app || pr.rm === rn) && pr.on && !pr.spec;
@@ -224,6 +226,7 @@ function netTick(dt) {
         seen: hs.reduce((m, h) => Math.max(m, +(h && h[3]) || 0), 0), ds: +pr.ds || 0, sh: +pr.sh || 0, ep: 0, x: 0, y: 0, z: 0, yw: 0, pt: 0, kb: '' };
       NET.rem.set(p.peer, R); M.entries.push(R.entry); R.isBot = !!pr.bot;
       if (!pr.bot && !(performance.now() < (NET.quietT || 0))) feedLine(`${nameHtml(R.entry)} <span class="fw">JOINED</span>`);
+      if (isHost && !pr.bot) try { rjJoined(R); } catch (e) {}   // back after dropping out: their score back, the stand-in bot goes
     }
     R.entry.name = cleanNick(pr.n); R.host = !!pr.ho; R.sa = pr.sa; if (pr.ho && !pr.bot && !isHost && Array.isArray(pr.ob)) NET.ob = pr.ob; if (pr.ho && !pr.bot && NET.priv) privFromHost(pr.pc); if (!pr.bot && pr.wu > 0) NET.hostWarm = { left: +pr.wu, t: performance.now() };
     if (pr.ho && !pr.bot && !isHost && typeof pr.mp === 'string' && MAPS[pr.mp] && pr.mp !== curMap && !NET.mapBusy) { NET.mapBusy = true; setTimeout(() => { NET.mapBusy = false; if (NET.on) netSwitchMap(pr.mp); }, 0); }
@@ -257,7 +260,7 @@ function netTick(dt) {
         NET.lastAtk = p.peer; NET.lastAtkT = NOW; NET.lastHead = h[2] ? 1 : 0;
         G.killer = R.bot || null;
         if (+h[4] === 2) stunPlayerAt({ x: netNum(h[5], -ARENA, ARENA), y: netNum(h[6], -5, 20), z: netNum(h[7], -ARENA, ARENA) });
-        else hurtPlayer(netNum(h[1], 0, 250), R.x, R.z, +h[4] === 1);
+        else if (!(M.hso && !h[2])) hurtPlayer(netNum(h[1], 0, 250), R.x, R.z, +h[4] === 1);
       } else if (isHost && R.ep === NET.ep) {   // a hit on one of my bots
         const be = botBy(h[0]);
         if (be && be.bot && !(M.def.teams && be.team === team) && +h[4] === 2) be.bot.stunT = 3;
@@ -280,6 +283,7 @@ function netTick(dt) {
   }
   // people who left
   for (const [peer, R] of NET.rem) if (!seenNow.has(peer)) {
+    if (isHost) try { rjLeft(R); } catch (e) {}   // a bot will stand in for them
     netDropBot(R, false); NET.rem.delete(peer); const i = M.entries.indexOf(R.entry); if (i >= 0) M.entries.splice(i, 1);
     if (!R.isBot) feedLine(`${nameHtml(R.entry)} <span class="fw">LEFT</span>`);
   }
@@ -351,6 +355,7 @@ function netNewBot(team) {
   const names = BOT_NAMES.filter(n => !M.entries.some(e => e.name === n.toUpperCase() + ' BOT'));
   const en = { name: (names[(Math.random() * names.length) | 0] || 'BOT').toUpperCase() + ' BOT', team, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, role: Math.random() < 0.5 ? 'obj' : 'hunt',
     botLabel: 'bot-' + (++NET.botN) + '-' + ((Math.random() * 1e6) | 0), ds: 0, sh: 0, hs: [], hseq: 0, kb: '', kh: 0, wasAlive: true };
+  try { rjStandIn(en); } catch (e) {}
   M.entries.push(en); spawnBot(en, pickSpawnFor(team, sideOf(team)));
 }
 function netRemoveBot(en) {
