@@ -10,7 +10,7 @@ const PRIV_SC = { tdm: [10, 150, 5], ffa: [5, 60, 5], gun: [20, 20, 1], hp: [50,
 const PRIV_MODE = { tdm: 'otdm', ffa: 'offa', gun: 'ogun', hp: 'ohp', ctf: 'octf', kc: 'okc', dom: 'odom', inf: 'oinf', gf: 'ogf', snd: 'osnd', ru: 'oru', pp: 'opp' };
 function privClean(c) {
   const md = PRIV_SC[c.md] ? c.md : 'tdm', L = PRIV_SC[md];
-  return { md, mp: c.mp === 'random' || (MAPS[c.mp] && !MAPS[c.mp].hidden) ? c.mp : 'random', b: clamp(+c.b | 0, 0, 11), tl: clamp(+c.tl | 0, 0, 30), sc: md === 'gun' ? GUN_LADDER.length : clamp(+c.sc | 0 || L[0], L[0], L[1]) };
+  return { md, mp: c.mp === 'random' || c.mp === 'edit_map' || (MAPS[c.mp] && !MAPS[c.mp].hidden) ? c.mp : 'random', b: clamp(+c.b | 0, 0, 11), tl: clamp(+c.tl | 0, 0, 30), sc: md === 'gun' ? GUN_LADDER.length : clamp(+c.sc | 0 || L[0], L[0], L[1]) };
 }
 PRIVCFG = privClean(PRIVCFG);
 const privSave = () => { try { localStorage.setItem(PRIV_KEY, JSON.stringify(PRIVCFG)); } catch (e) {} };
@@ -101,7 +101,7 @@ function renderPlobby(full) {
   const box = $('plSet'); box.innerHTML = '';
   const rows = [
     { name: 'MODE', t: 'seg', opts: [['tdm', 'TDM'], ['ffa', 'FFA'], ['gun', 'GUN GAME'], ['hp', 'HARDPOINT'], ['ctf', 'CTF'], ['kc', 'BAGGED UP'], ['dom', 'TURF WAR'], ['ru', 'RE-UP'], ['pp', 'PUFF PASS'], ['ph', 'PROP HUNT'], ['inf', 'CONTACT HIGH'], ['gf', 'BACK ALLEY'], ['snd', 'S&D']], get: () => c.md, set: v => { c.md = v; c.sc = clamp(MODES[PRIV_MODE[v]].score, PRIV_SC[v][0], PRIV_SC[v][1]); } },
-    { name: 'MAP', t: 'seg', opts: MAP_CHOICES().map(id => [id, id === 'random' ? 'RANDOM' : MAPS[id].name]), get: () => c.mp, set: v => { c.mp = v; } },
+    { name: 'MAP', t: 'seg', opts: MAP_CHOICES().filter(id => id !== 'edit_map').map(id => [id, id === 'random' ? 'RANDOM' : MAPS[id].name]).concat((() => { try { const o = edPrivOpt(); return o ? [o] : []; } catch (e) { return []; } })()), get: () => c.mp, set: v => { if (v === 'edit_map') try { edPrivPick(); } catch (e) {} c.mp = v; } },
     { name: 'BOTS', hint: 'On top of the real players', t: 'range', min: 0, max: 11, step: 1, get: () => c.b, set: v => { c.b = v; }, fmt: v => v || 'NONE' },
     ...(c.md === 'snd' || c.md === 'gf' ? [] : [{ name: 'TIME LIMIT', hint: 'The leader wins when time runs out', t: 'range', min: 0, max: 30, step: 1, get: () => c.tl, set: v => { c.tl = v; }, fmt: v => v ? v + ' MIN' : 'NONE' }]),
     ...(c.md === 'gun' || c.md === 'inf' ? [] : [{ name: c.md === 'snd' || c.md === 'gf' ? 'ROUNDS TO WIN' : c.md === 'hp' || c.md === 'dom' ? 'POINTS TO WIN' : c.md === 'ctf' ? 'CAPTURES TO WIN' : c.md === 'kc' || c.md === 'ru' ? 'BAGS TO WIN' : 'KILL LIMIT', hint: c.md === 'tdm' ? 'Team kills to win' : c.md === 'ffa' ? 'Kills to win' : '', t: 'range', min: PRIV_SC[c.md][0], max: PRIV_SC[c.md][1], step: PRIV_SC[c.md][2], get: () => c.sc, set: v => { c.sc = v; }, fmt: v => v }]),

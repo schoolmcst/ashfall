@@ -152,6 +152,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.87 TEST (the follow-ups): campaign co-op friend can finish action steps (CC_ACT go/use/multi/pick/carry/search/
+  photo: the client's suppressed campStepDone sends rq [step, seq]; the host finishes it). MAP EDITOR online: pick MY MAP
+  in a private match (plobby MAP list, edPrivPick); the host sends its code as presence ec every 10th update (edNetCode);
+  clients edNetGot -> edDefine -> netSwitchMap. zww_bay.js THE GREEN LIGHTNING (BAYVIEW wonder weapon, chains up to 7 /
+  12 upgraded; wraps zwwFire/zwwTick/zwwClear). Tests: mp_campcoop (GO by the friend), mp_editmap, mp_zcoop2 (zombies
+  co-op on mp_lib; the old mp_zomb.js predates the Chromium network flags and can't connect), s_zwwbay.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

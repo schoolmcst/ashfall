@@ -6,8 +6,8 @@
      SPAWN A / SPAWN B - click: where each team starts   POINT - click: the hardpoint / the middle
      ERASE  - click anything to remove it
    SIZE 40 / 48 / 60 m, a LOOK (day, night, snow, dusk), five save slots, PLAY (TDM, FFA, KILL CONFIRMED, HARDPOINT,
-   DOMINATION) and SHARE / PASTE CODE (DZM1-...) to swap maps with friends. Offline only for now (the other players
-   would need your map). Saved in ashfall.maps.v1. */
+   DOMINATION) and SHARE / PASTE CODE (DZM1-...) to swap maps with friends. Also
+   ... online: pick MY MAP in a private match (the host sends the map code to everyone). Saved in ashfall.maps.v1. */
 const ED_KEY = 'ashfall.maps.v1', ED_TOOLS = [['wall', 'WALL'], ['low', 'LOW'], ['tall', 'TALL'], ['crate', 'CRATE'], ['ramp', 'RAMP'], ['spawnA', 'SPAWN A'], ['spawnB', 'SPAWN B'], ['point', 'POINT'], ['erase', 'ERASE']];
 const ED_LOOKS = {
   day: { n: 'DAY', floor: 'concrete', wall: 'brick', env: { top: 0x4a7ac8, horizon: 0xd8e0e8, fog: 0.006, sun: [30, 60, 20], sunCol: 0xfff0d8, sunI: 1.3, skySun: 0xffe8c0, hemiSky: 0xb8d0e8, hemiGround: 0x5a5a40, exposure: 1.1 } },
@@ -44,12 +44,22 @@ function edDefine(m) {
     env: Object.assign({}, (ED_LOOKS[m.look] || ED_LOOKS.day).env), grass: { count: 0 }, spawnMaxY: 2.5,
     layout: { spawn: [{ x: A.x, z: A.z }, { x: B.x, z: B.z }], hp: [{ x: P.x, z: P.z }, side(H * 0.5), side(-H * 0.5)], flags: [{ x: A.x, z: A.z }, { x: B.x, z: B.z }], sites: [Object.assign(side(H * 0.45), { n: 'A' }), Object.assign(side(-H * 0.45), { n: 'B' })] },
     menu: { x: P.x, z: P.z, r: 10, y: 2.2 }, navPts: [A, B, P, mid(A, P, 0.5), mid(B, P, 0.5)], views: [[A.x, 1.7, A.z, P.x, 1.2, P.z]] };
-  MAPS.edit_map = map; if (!MAP_ORDER.includes('edit_map')) MAP_ORDER.push('edit_map'); return map;
+  map._code = edCode(m); MAPS.edit_map = map; if (!MAP_ORDER.includes('edit_map')) MAP_ORDER.push('edit_map'); return map;
 }
 function edPlay() {
   edSave(); edDefine(ED.map); if (curMap === 'edit_map') curMap = null; const o = $('edOv'); if (o) o.remove();
   const d = MODES[ED.mode]; startMatch(ED.mode, { map: 'edit_map', custom: true, perTeam: d && d.teams ? 4 : 0, players: 6 });
 }
+// ---------- ONLINE: a private match can be played on your map. The host sends the map's code with its state (every
+// tenth update, it is a few hundred letters); everyone else builds the same map from it before they load it.
+function edNetCode() { if (!MAPS.edit_map || curMap !== 'edit_map' || !MAPS.edit_map._code) return undefined; ED.netN = ((ED.netN | 0) + 1) % 10; return ED.netN === 0 ? MAPS.edit_map._code : undefined; }
+function edNetGot(code) {
+  if (!code || code === ED.netCode || code.length > 30000) return; const m = edUncode(code); if (!m) return; ED.netCode = code; edDefine(m);
+  if (curMap === 'edit_map') curMap = null; setTimeout(() => { try { if (NET.on) netSwitchMap('edit_map'); } catch (e) {} }, 0);
+}
+// the private match MAP list gets your map (the one in the editor's current slot)
+function edPrivOpt() { const a = edAll(), m = a[ED.slot] || a.find(Boolean); return m ? ['edit_map', 'MY MAP · ' + String(m.name || 'MY MAP').toUpperCase().slice(0, 18)] : null; }
+function edPrivPick() { const a = edAll(), m = a[ED.slot] || a.find(Boolean); if (m) edDefine(Object.assign(edBlank(), m)); }
 // ---------- share codes: DZM1- + base64 of the JSON, made compact
 function edCode(m) { const c = { n: m.name, s: m.size, l: m.look, a: [m.A.x, m.A.z], b: [m.B.x, m.B.z], p: [m.P.x, m.P.z], i: m.items.map(it => it.t === 'wall' ? ['w', it.x0, it.z0, it.x1, it.z1] : [it.t[0] + (it.t === 'tall' ? 'a' : ''), it.x, it.z, it.r ? 1 : 0]) }; return 'DZM1-' + btoa(unescape(encodeURIComponent(JSON.stringify(c)))); }
 function edUncode(s) {

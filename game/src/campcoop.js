@@ -4,10 +4,13 @@
    checkpoints); the friend sees copies of the host's enemies and crew ("proxies"), hears the same lines, sees the same
    goals, and their hits go to the host as records, which the host applies. Enemies that are hunting shoot at the friend
    too. If the friend goes down they get back up next to the host after 6 seconds. When the host finishes the mission,
-   it is finished for both, and both get the rewards. Up to 2 players for now.
+   it is finished for both, and both get the rewards. The friend can finish the action steps too (reach a place, USE
+   something, pick up or carry something): their game tells the host, and the host moves both of you on. Up to 2 players for now.
    Presence: cc 1, n, g (game id), x y z yw, a (alive), hs hits [id, dmg, head, seq]
    Host adds: ho, st 'wait'|'play'|'done', mi (mission), df (difficulty), si (step), en [id, x, z, y, yaw*100, team, alert, boss, hp%] */
 const CC_MAX = 2;
+// steps the friend can finish for both (the ones that are about where you are and what you do, not about the host's enemies)
+const CC_ACT = new Set(['go', 'use', 'multi', 'pick', 'carry', 'search', 'photo']);
 const CC = { on: false, room: null, conn: 'off', err: '', me: '', code: '', gid: 0, st: 'wait', inGame: false, rem: new Map(), prox: new Map(), pend: new Map(), hs: [], hseq: 0, eid: 0, timer: null, deadT: 0, fireT: 0 };
 const ccHost = () => !!(CC.room && CC.room.host);
 const ccClient = () => CC.on && CC.inGame && !ccHost() && typeof M !== 'undefined' && M && M.mode === 'camp';
@@ -46,6 +49,8 @@ function ccRead() {
     R.pr = pr; R.n = cleanNick(pr.n); R.ho = !!pr.ho; R.inGame = CC.inGame && pr.g === CC.gid && CC.gid;
     R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, -5, 30); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.a = !!pr.a;
     if (R.ho) H = pr;
+    // the friend finished an action step: the host finishes it for both
+    if (host && R.inGame && Array.isArray(pr.rq) && (pr.rq[1] | 0) > (R.seenRq | 0)) { R.seenRq = pr.rq[1] | 0; if ((pr.rq[0] | 0) === CAMP.i && CAMP.st && CC_ACT.has(CAMP.st.type) && !CAMP.dead) { try { showMsg(`${R.n || 'YOUR FRIEND'} DID IT`); campStepDone(); } catch (e) { reportError(e); } } }
     // the host applies the friend's hits
     if (host && R.inGame && Array.isArray(pr.hs)) for (const h of pr.hs) { const seq = +h[3] | 0; if (seq <= R.seenHit) continue; R.seenHit = seq; const e = enemies.find(q => q.ccId === (h[0] | 0)); if (e && enemies.includes(e)) try { damageEnemy(e, clamp(+h[1] || 0, 0, 400), !!h[2], null, false, ccBy(R)); } catch (er) {} }
   }
@@ -58,7 +63,7 @@ function ccBy(R) { if (!R.av) return 'world'; R.av.entry = R.av.entry || { name:
 function ccPublish() {
   const inG = CC.inGame && M && M.mode === 'camp';
   for (const [id, h] of CC.pend) { CC.hseq++; CC.hs.push([id, Math.round(h.d), h.h ? 1 : 0, CC.hseq]); } CC.pend.clear(); while (CC.hs.length > 24) CC.hs.shift();
-  const o = { cc: 1, n: NET.nick, g: inG ? CC.gid : 0, x: r2(P.x), y: r2(P.y || 0), z: r2(P.z), yw: r3(P.yaw), a: inG && G.state === 'playing' ? 1 : 0, hs: CC.hs };
+  const o = { cc: 1, n: NET.nick, g: inG ? CC.gid : 0, x: r2(P.x), y: r2(P.y || 0), z: r2(P.z), yw: r3(P.yaw), a: inG && G.state === 'playing' ? 1 : 0, hs: CC.hs, rq: inG ? CC.rq : undefined };
   if (ccHost()) {
     Object.assign(o, { ho: 1, st: CC.st, gid: CC.gid, mi: CC.mi || '', df: CC.df || 'regular', si: inG ? CAMP.i : -1 });
     if (inG) { o.en = []; for (const e of enemies) { if (e.ccProx || !e.group || !e.entry) continue; if (!e.ccId) e.ccId = ++CC.eid; const g = e.group.position, ally = e.camp && e.camp.ally;
@@ -72,7 +77,7 @@ function ccHostPlay(id, diff) { CC.mi = id; CC.df = diff; CC.st = 'play'; CC.gid
 function ccFollowHost(H) {
   if (H.st === 'play' && H.gid && H.gid !== CC.gid && H.mi && campMission(H.mi)) { CC.gid = H.gid; CC.inGame = true; ccClearProx(); CAMP.sel = H.mi; campPlay(H.mi, CAMP_DIFF[H.df] ? H.df : 'regular'); return; }
   if (!ccClient()) return;
-  const si = H.si | 0; if (si >= 0 && si !== CAMP.i && CAMP.m && si < CAMP.m.steps.length) { try { campBegin(si); } catch (e) { reportError(e); } }
+  const si = H.si | 0; if (si >= 0 && si !== CAMP.i && CAMP.m && si < CAMP.m.steps.length) { CC.rqFor = -1; try { campBegin(si); } catch (e) { reportError(e); } }
   if (H.st === 'done' && !CAMP.done) { CC.inGame = false; try { CAMP.done = false; ccDone = true; campComplete(); } catch (e) {} }
   // the host's enemies and crew as proxies
   const live = new Set();
@@ -126,7 +131,9 @@ function ccDropAvatar(R) { if (R.av) { scene.remove(R.av.group); R.av = null; } 
 (() => {
   const sq0 = campSpawnSquad; campSpawnSquad = function () { if (ccClient()) return []; return sq0.apply(this, arguments); };
   const al0 = campAlly; campAlly = function () { if (ccClient()) return null; return al0.apply(this, arguments); };
-  const sd0 = campStepDone; campStepDone = function () { if (ccClient()) return; return sd0.apply(this, arguments); };
+  const sd0 = campStepDone; campStepDone = function () {
+    if (ccClient()) { const st = CAMP.st; if (st && CC_ACT.has(st.type) && CC.rqFor !== CAMP.i) { CC.rqFor = CAMP.i; CC.rqSeq = (CC.rqSeq | 0) + 1; CC.rq = [CAMP.i, CC.rqSeq]; try { showMsg('DONE · TELLING THE HOST'); } catch (e) {} } return; }
+    return sd0.apply(this, arguments); };
   const fa0 = campFail; campFail = function (why, died) { if (ccClient() && !died) return; return fa0.apply(this, arguments); };
   const rs0 = campRestart; campRestart = function () { if (ccClient()) { ccRespawn(); return; } return rs0.apply(this, arguments); };
   const cm0 = campComplete; campComplete = function () { if (ccClient() && !ccDone) return; ccDone = false; if (ccHosting()) { CC.st = 'done'; try { ccPublish(); } catch (e) {} } return cm0.apply(this, arguments); };

@@ -12,10 +12,12 @@ const { mpPages } = require('./mp_lib.js');
   await A.waitForTimeout(20000);
   log.inA = await ev(A, () => { const A_ = window.__A; return { mode: A_.M && A_.M.mode, map: A_.curMap, step: A_.CAMP.i, enemies: A_.enemies.filter(e => e.entry).length }; });
   log.inB = await ev(B, () => { const A_ = window.__A; return { mode: A_.M && A_.M.mode, map: A_.curMap, step: A_.CAMP.i, client: A_.ccClient(), prox: A_.CC_GET().prox.size }; });
-  // the host moves on two steps (talk, go): B follows
+  // the host moves on past the talk; then B walks into the greenhouse (the GO step) and that moves both on
   await ev(A, () => { window.__A.ccStepL(); });
-  await A.waitForTimeout(4000); await ev(A, () => { window.__A.ccStepL(); });
-  await A.waitForTimeout(6000);
+  await A.waitForTimeout(5000);
+  log.goStep = { A: await ev(A, () => [window.__A.CAMP.i, window.__A.ccCampSt() && window.__A.ccCampSt().type]), B: await ev(B, () => window.__A.CAMP.i) };
+  for (let k = 0; k < 6; k++) { await ev(B, () => { const A_ = window.__A; Object.assign(A_.P, { x: 0, z: 0.5, y: 0 }); if (A_.G.state === 'paused') A_.G.state = 'playing'; }); await A.waitForTimeout(1000); }
+  await A.waitForTimeout(4000);
   log.steps = { A: await ev(A, () => window.__A.CAMP.i), B: await ev(B, () => window.__A.CAMP.i) };
   // fast forward the host to the hold step: enemies spawn, B sees them and shoots one
   await ev(A, () => { window.__A.ccSpawnL('n1'); });
