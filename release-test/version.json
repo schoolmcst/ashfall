@@ -1,10 +1,9 @@
 {
- "version": "1.2.87",
+ "version": "1.2.88",
  "notes": [
-  "CAMPAIGN CO-OP: your friend can now finish objectives too (reach a place, USE things, pick up and carry)",
-  "MAP EDITOR ONLINE: pick MY MAP in a private match and everyone plays your map",
-  "BAYVIEW WONDER WEAPON: THE GREEN LIGHTNING, a bolt of cure that jumps through up to 7 zombies"
+  "FIX: EDIT HUD in Settings > Gameplay now opens the HUD editor (and it's in the pause menu too)",
+  "HUD editor: every part gets a box you can grab, even ones that are empty in the menu"
  ],
- "sha256": "1562697f7304fddf9d5af71249988f46dd9c98f608dd02a4de9c08c8c22de04c",
+ "sha256": "f07a42fca5ce9520116781b4ced77e56c63011b92edbe94541eef4adb8083ba7",
  "minApp": "1.0.0"
 }

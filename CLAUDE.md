@@ -152,6 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.88 TEST: EDIT HUD button fixed (settings actions only reach lnAct for sv-/bk-/er-; hud-edit is now a ui.js case), also in the pause menu.
 - 1.2.87 PUBLIC (the follow-ups): campaign co-op friend can finish action steps (CC_ACT go/use/multi/pick/carry/search/
   photo: the client's suppressed campStepDone sends rq [step, seq]; the host finishes it). MAP EDITOR online: pick MY MAP
   in a private match (plobby MAP list, edPrivPick); the host sends its code as presence ec every 10th update (edNetCode);

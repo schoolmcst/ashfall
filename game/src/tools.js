@@ -71,12 +71,12 @@ function hudApply() {
   for (const [id] of HUD_PARTS) { const el = $(id); if (!el) continue; const o = H[id]; el.style.translate = o ? `${o[0]}px ${o[1]}px` : ''; el.style.scale = o && o[2] && o[2] !== 1 ? String(o[2]) : ''; }
 }
 function hudEdit() {
-  if ($('hudEd')) return; const hud = $('hud'); if (!hud) return; const wasHide = hud.classList.contains('hide'); hud.classList.remove('hide');
+  if ($('hudEd')) return; const hud = $('hud'); if (!hud) return; const wasHide = hud.classList.contains('hide'), backTo = curScreen; if (backTo) showScreen(null); hud.classList.remove('hide');
   S.hud = S.hud || {}; const o = document.createElement('div'); o.id = 'hudEd';
   o.innerHTML = `<div class="hud-ed-bar"><b>EDIT HUD</b><span>drag a box to move it · mouse wheel to resize</span><button class="btn" data-he="reset">RESET</button><button class="btn primary" data-he="done">DONE</button></div>`;
   document.body.appendChild(o);
   const boxes = [];
-  const place = () => { for (const b of boxes) { const r = b.el.getBoundingClientRect(); Object.assign(b.d.style, { left: r.left + 'px', top: r.top + 'px', width: Math.max(40, r.width) + 'px', height: Math.max(24, r.height) + 'px' }); } };
+  const place = () => { const used = []; for (const b of boxes) { const r = b.el.getBoundingClientRect(), w = Math.max(130, r.width), h = Math.max(36, r.height); let x = clamp(r.left, 4, innerWidth - w - 4), y = clamp(r.top, 4, innerHeight - h - 4); while (used.some(u => Math.abs(u[0] - x) < 60 && Math.abs(u[1] - y) < 30)) y += 40; used.push([x, y]); Object.assign(b.d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); } };
   for (const [id, n] of HUD_PARTS) { const el = $(id); if (!el) continue; const prevD = el.style.display; if (getComputedStyle(el).display === 'none') { el.style.display = 'block'; el.dataset.heShown = '1'; el.dataset.heDisp = prevD; }
     const d = document.createElement('div'); d.className = 'hud-ed-box'; d.textContent = n; o.appendChild(d); boxes.push({ id, el, d });
     d.onpointerdown = ev => { ev.preventDefault(); d.setPointerCapture(ev.pointerId); const c = S.hud[id] || [0, 0, 1], sx = ev.clientX, sy = ev.clientY, ox = c[0], oy = c[1];
@@ -86,13 +86,13 @@ function hudEdit() {
   }
   place();
   o.querySelector('[data-he="reset"]').onclick = () => { S.hud = {}; saveSettings(); hudApply(); place(); try { sfx.ui(); } catch (e) {} };
-  o.querySelector('[data-he="done"]').onclick = () => { for (const b of boxes) if (b.el.dataset.heShown) { b.el.style.display = b.el.dataset.heDisp || ''; delete b.el.dataset.heShown; } o.remove(); if (wasHide) hud.classList.add('hide'); saveSettings(); try { sfx.ui(); } catch (e) {} };
+  o.querySelector('[data-he="done"]').onclick = () => { for (const b of boxes) if (b.el.dataset.heShown) { b.el.style.display = b.el.dataset.heDisp || ''; delete b.el.dataset.heShown; } o.remove(); if (wasHide) hud.classList.add('hide'); saveSettings(); if (backTo) showScreen(backTo); try { sfx.ui(); } catch (e) {} };
 }
 setTimeout(() => { try { hudApply(); } catch (e) {} }, 0);
 (() => {
   const s = document.createElement('style'); s.textContent = `#aimHud{position:fixed;left:50%;top:120px;transform:translateX(-50%);z-index:40;padding:6px 14px;background:rgba(8,12,10,.8);border:1px solid #5dff7a;text-align:center;pointer-events:none}#aimHud b{display:block;font-size:12px;letter-spacing:.3em;color:#5dff7a}#aimHud span{font-size:16px;color:#fff;letter-spacing:.1em}#aimHud small{display:block;font-size:9px;color:var(--dim);letter-spacing:.2em}
 #aimPz{display:flex;flex-direction:column;gap:6px;margin-top:10px}.aim-pz-h{font-size:10px;letter-spacing:.3em;color:var(--accent)}#aimPz small{font-size:9px;color:var(--dim)}
-#hudEd{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.35);pointer-events:auto}.hud-ed-bar{position:absolute;left:50%;top:40%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;padding:10px 16px;background:rgba(8,12,10,.95);border:1px solid var(--accent)}.hud-ed-bar b{letter-spacing:.3em;color:var(--accent)}.hud-ed-bar span{font-size:11px;color:var(--dim)}
+#hudEd{position:fixed;inset:0;z-index:95;background:rgba(0,0,0,.35);pointer-events:auto}.hud-ed-bar{position:absolute;left:50%;top:44%;transform:translateX(-50%);display:flex;gap:12px;align-items:center;padding:10px 16px;background:rgba(8,12,10,.95);border:1px solid var(--accent)}.hud-ed-bar b{letter-spacing:.3em;color:var(--accent)}.hud-ed-bar span{font-size:11px;color:var(--dim)}
 .hud-ed-box{position:fixed;border:2px dashed #5dff7a;background:rgba(93,255,122,.12);color:#5dff7a;font-size:10px;letter-spacing:.2em;display:flex;align-items:flex-start;justify-content:flex-start;padding:2px 4px;box-sizing:border-box;cursor:move;user-select:none}`;
   document.head.appendChild(s);
 })();

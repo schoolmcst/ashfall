@@ -251,6 +251,7 @@ function actions(act) {
     case 'custom': cusReturn = curScreen === 'lobby' ? 'lobby' : 'menu'; renderCustom(); showScreen('custom'); break;
     case 'cus-back': if (cusReturn === 'lobby') renderLobby(); showScreen(cusReturn); break;
     case 'cus-start': startCustom(); break;
+    case 'hud-edit': hudEdit(); break;
     case 'tour': openTour(); break;
     case 'editor': edOpen(); break;
     case 'trophies': TRO.ret = curScreen || 'menu'; openTrophies(); break;
