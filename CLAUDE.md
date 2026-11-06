@@ -105,7 +105,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   covers the whole PLAYRECT now (was +-41). ONLINE LAST TOKE DUOS / SQUADS: modes obr2/obr4 (def.squad); squad from
   sqNetPick (presence tm), host bots via sqNetBotTeam; presence dn/rv/rb (sqNetPres/sqNetApply); host names the winner
   as winTxt 'SQ:<team>'. Online parts are untested against a real server. Tests: s_duel, s_botclimb, s_sqnet.
-- 1.2.82 TEST: online Prop Hunt and online LAST TOKE never applied the host's state on joiners (phUpdate / brUpdate did not
+- 1.2.82 PUBLIC (owner said send it): online Prop Hunt and online LAST TOKE never applied the host's state on joiners (phUpdate / brUpdate did not
   call netObjApply): a joining hunter sat on a frozen 20 s blindfold, BR joiners never saw the cloud or crates. Fixed.
   partyRedirect (party.js): a party leader starting an offline mode with friends in the party takes everyone into the
   online version (quickPlay(only)). Squad hits from squadmates are ignored on the receiving side too.
