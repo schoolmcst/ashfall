@@ -152,6 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.91 TEST: pickMapFor sends every LAST TOKE match to stashisle (except edit_map); a lobby map from another mode used to carry over and the owner never saw the island.
 - 1.2.90 PUBLIC (owner said send it; includes 1.2.88 + 1.2.89): island v3 + map + controller + LAST TOKE intro.
   terrain.js: a height field (TERR, TH(x,z)) on maps that want one (only stashisle); groundAt starts from TH, buildNav uses
   it as the floor, terrSlope (in resolve(.., slope) and vehicles) stops climbs steeper than ~42 degrees, the ground mesh is
