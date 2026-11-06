@@ -1,11 +1,15 @@
 {
- "version": "1.2.82",
+ "version": "1.2.85",
  "notes": [
-  "FIX: online PROP HUNT - the hide countdown froze for players who joined (stuck on a black screen)",
-  "FIX: online LAST TOKE - joining players now see the cloud close and the loot crates",
-  "PARTY: when the leader starts a mode from the menu, the whole party goes in together online",
-  "every online mode checked with two real players"
+  "NEW WEAPONS: CROSSBOW, THE BONG launcher, THROWING KNIVES \u00b7 NEW STREAKS: WATCHER DRONE, HOTBOX STRIKE \u00b7 BLUEPRINTS",
+  "NEW MODES: KNIFE FIGHT, ESCORT THE PLUG, THE HEIST, GROW WARS (offline and online)",
+  "TROPHIES: 49 achievements with calling cards, bullet tracers, kill effects, emotes (J), the podium, PRESTIGE SHOP, HEATMAPS",
+  "SEASON 3 HIGH TIMES battle pass \u00b7 CREW WARS \u00b7 FROSTY NUGS winter event \u00b7 EVENTS CALENDAR",
+  "NEW MAPS: THE TRIM HOUSE and SKATE PARK \u00b7 living maps (rain, mist, leaves, snow, birds)",
+  "AIM TRAINER \u00b7 HUD EDITOR \u00b7 CUSTOM MATCH RULES \u00b7 THE CUP tournaments \u00b7 TOUCH CONTROLS \u00b7 4 new languages",
+  "STASH HOUSE RADIO \u00b7 SQUAD VOICE LINES \u00b7 SHARE CLIPS (files and video)",
+  "ZOMBIES: SCREAMERS, SPITTERS, BRUTES \u00b7 TRIALS \u00b7 CUSTOM GAMES \u00b7 GROW OP BREEDING (6 hybrids)"
  ],
- "sha256": "cbb59de52389cfc89df0431f9d40a6e76765a05f4f6b1d037bf4a21ec91cc00b",
+ "sha256": "e21c47fda713d4fa4cba0aa66348e418f9b3268c3853afd524478b3730603351",
  "minApp": "1.0.0"
 }

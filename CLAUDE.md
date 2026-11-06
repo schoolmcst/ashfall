@@ -126,7 +126,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   ZIPLINES (stashisle only). lasttoke2.js: armor plates (bind plate = 4, G.armor), cash + BUY STATIONS (G.menuOpen stops the
   pause-on-unlock), contracts (bounty/scavenger), the storm (host presence wx), supply drops (BR tier 3), RANKED LAST TOKE
   'rbr' (rankMatch uses placement). Tests: s_wallbang, s_breakable, s_prone, s_fieldup, s_tactical, s_movers, s_lasttoke2.
-- 1.2.85 TEST (batches 4-7a): weapons2.js (CROSSBOW, THE BONG launcher, throwing knife EQUIP.knife, WATCHER and HOTBOX
+- 1.2.85 PUBLIC (batches 4-7a): weapons2.js (CROSSBOW, THE BONG launcher, throwing knife EQUIP.knife, WATCHER and HOTBOX
   STRIKE streaks, BLUEPRINTS); modes7.js KNIFE FIGHT / ESCORT THE PLUG ('X') / THE HEIST ('Y') / GROW WARS (+ online o*).
   progress2.js TROPHIES screen (TRO state; 49 achievements in PROG.cnt/PROG.ach with 'ach_*' banners, tracers PROG.trc,
   kill effects PROG.kfx, emotes on J with presence em, podium on results, prestige tokens shop, heatmaps PROG.heat);
