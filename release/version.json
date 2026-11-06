@@ -1,13 +1,10 @@
 {
- "version": "1.2.86",
+ "version": "1.2.87",
  "notes": [
-  "ZOMBIES CHAPTER 7 \u00b7 BAYVIEW: the story finale (the Greenline tower, THE CHAIRMAN, 12 tapes, launch pads)",
-  "CAMPAIGN CHAPTER 2 \u00b7 SECOND HARVEST: 3 new missions (NEW ROOTS, THE MEETUP, LAST BUS OUT)",
-  "CAMPAIGN CO-OP: play the story with a friend (desktop app, host a code)",
-  "MAP EDITOR: draw your own map, play it vs bots, share it with a code (CUSTOM > MAP EDITOR)",
-  "WINTER STASH ISLAND: snowed in from December to February",
-  "WALK-IN CREW STASH HOUSE: walk around your crew's hideout (radio, arcade, crew wars board)"
+  "CAMPAIGN CO-OP: your friend can now finish objectives too (reach a place, USE things, pick up and carry)",
+  "MAP EDITOR ONLINE: pick MY MAP in a private match and everyone plays your map",
+  "BAYVIEW WONDER WEAPON: THE GREEN LIGHTNING, a bolt of cure that jumps through up to 7 zombies"
  ],
- "sha256": "5ef8e0a0a5777d3464fb84fbda46f29e7686a2b41985a321c0d50f223b492a24",
+ "sha256": "1562697f7304fddf9d5af71249988f46dd9c98f608dd02a4de9c08c8c22de04c",
  "minApp": "1.0.0"
 }
