@@ -27,9 +27,9 @@ function renderPlaylist() {
 
 /* ---------- searching -> pre-game lobby */
 const QP = { busy: false, status: '' };
-async function quickPlay() {
+async function quickPlay(only) {
   if (QP.busy) return; QP.busy = true;
-  const L = playlist().slice().sort(() => Math.random() - 0.5);
+  const L = (Array.isArray(only) && only.length ? only : playlist()).slice().sort(() => Math.random() - 0.5);
   NET.kind = 'quick'; NET.priv = { pub: true, searching: true, started: false, key: '', lt: 15 };
   QP.status = 'SEARCHING FOR A MATCH'; renderPubLobby(); showScreen('plobby'); G.state = 'plobby';
   let room = null, mode = null;

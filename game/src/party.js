@@ -71,6 +71,20 @@ function partyFollow(go) {
   LOBBY.mode = go.m; NET.kind = 'slot'; NET.slot = go.s; NET.pubNext = !/-priv-c-/.test(go.s);
   startMatch(go.m); NET.kind = 'quick';
 }
+/* the leader starts an offline match (a menu tile: LAST TOKE, a mode against bots) while friends are in the party: the
+   whole party goes into the online version of that mode together instead (they follow the leader's slot as usual).
+   Solo-only things (the campaign, the Stash Yard, zombies solo, the featured mode's twists, CUSTOM vs bots) stay solo. */
+const PARTY_ONLINE = { tdm: 'otdm', ffa: 'offa', gun: 'ogun', hp: 'ohp', ctf: 'octf', kc: 'okc', dom: 'odom', ru: 'oru', pp: 'opp', ph: 'oph', inf: 'oinf', gf: 'ogf', snd: 'osnd' };
+function partyRedirect(mode, custom) {
+  if (!NET.app || !PARTY.room || !PARTY.room.host || partyMembers().length < 2) return false;
+  if (custom && (custom.custom || custom.priv)) return false;
+  if (typeof LOBBY !== 'undefined' && LOBBY.featNext) return false;
+  let k = PARTY_ONLINE[mode];
+  if (mode === 'br') { const sq = custom && custom.squad | 0; k = sq >= 4 ? 'obr4' : sq === 2 ? 'obr2' : 'obr'; }
+  if (!k || !MODES[k]) return false;
+  try { showBanner('PLAYING WITH YOUR PARTY', `${MODES[k].name.replace(/^ONLINE /, '')} · online, everyone in your party comes too`); } catch (e) {}
+  LOBBY.mode = k; quickPlay([k]); return true;
+}
 function partyTick() {
   if (!NET.app) return;
   if (!PARTY.room) { partyHostOwn(); return; }

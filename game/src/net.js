@@ -253,7 +253,7 @@ function netTick(dt) {
     if (Array.isArray(pr.hs)) for (const h of pr.hs) {
       if (!Array.isArray(h) || (+h[3] || 0) <= R.seen) continue;
       R.seen = +h[3] || 0;
-      if (h[0] === NET.me && alive && R.ep === NET.ep && !(M.def.teams && team === M.myTeam)) {
+      if (h[0] === NET.me && alive && R.ep === NET.ep && !((M.def.teams || M.squad > 1) && team === M.myTeam)) {
         NET.lastAtk = p.peer; NET.lastAtkT = NOW; NET.lastHead = h[2] ? 1 : 0;
         G.killer = R.bot || null;
         if (+h[4] === 2) stunPlayerAt({ x: netNum(h[5], -ARENA, ARENA), y: netNum(h[6], -5, 20), z: netNum(h[7], -ARENA, ARENA) });

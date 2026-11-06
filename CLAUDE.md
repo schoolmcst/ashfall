@@ -105,6 +105,15 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   covers the whole PLAYRECT now (was +-41). ONLINE LAST TOKE DUOS / SQUADS: modes obr2/obr4 (def.squad); squad from
   sqNetPick (presence tm), host bots via sqNetBotTeam; presence dn/rv/rb (sqNetPres/sqNetApply); host names the winner
   as winTxt 'SQ:<team>'. Online parts are untested against a real server. Tests: s_duel, s_botclimb, s_sqnet.
+- 1.2.82 TEST: online Prop Hunt and online LAST TOKE never applied the host's state on joiners (phUpdate / brUpdate did not
+  call netObjApply): a joining hunter sat on a frozen 20 s blindfold, BR joiners never saw the cloud or crates. Fixed.
+  partyRedirect (party.js): a party leader starting an offline mode with friends in the party takes everyone into the
+  online version (quickPlay(only)). Squad hits from squadmates are ignored on the receiving side too.
+- REAL MULTIPLAYER TESTS WORK HERE NOW: test/mp_lib.js (N browsers, WebRTC, the local sigserver). Chromium needs
+  --disable-features=LocalNetworkAccessChecks (else ws://127.0.0.1 is blocked) and --no-proxy-server; the page is served
+  as http://localhost:39990. mp_allmodes.js runs every online mode with 2 players (join, see, state sync, a kill);
+  mp_ph.js (Prop Hunt timers through a swap), mp_partyfollow.js (party follows into quick play, out, and from a tile).
+  The old mp_*.js / app_*.js tests still use game.test and fail to connect until moved onto mp_lib.js.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

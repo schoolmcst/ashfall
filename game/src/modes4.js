@@ -66,6 +66,7 @@ function phMeDress(k) {
 }
 function phUpdate(dt) {
   const ph = M.ph; if (!ph) return; const host = !M.online || (NET.room && NET.room.host);
+  if (!host) netObjApply();   // the host's clock, roles and scores (1.2.82: this was missing, so a joiner's hide countdown never moved)
   if (host) {
     ph.t -= dt;
     if (ph.t <= 0) { ph.t = PH_SWAP; ph.hunt = 1 - ph.hunt; ph.swaps++; phSwapRespawn(); }

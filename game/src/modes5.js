@@ -43,7 +43,8 @@ function brOpen(c, who) {
 }
 const brAliveBots = () => enemies.filter(e => e.entry && e.entry.alive !== false);
 function brUpdate(dt) {
-  const B = M.br; if (!B) return; try { vhUpdate(dt); } catch (e) {} try { duelUpdate(dt); } catch (e) {}
+  const B = M.br; if (!B) return; if (M.online && !netHostNow()) netObjApply();   // the host's cloud and crates (1.2.82: was never applied on joiners)
+  try { vhUpdate(dt); } catch (e) {} try { duelUpdate(dt); } catch (e) {}
   if (!B.armed) { B.armed = true; brArmAll(); if (sqOn()) sqGroup(); }   // the first frame of the match: everyone down to a pistol (after the class was equipped)
   // the cloud: wait, then close on the next circle (a spot inside the current one)
   B.t -= dt; const host = netHostNow();

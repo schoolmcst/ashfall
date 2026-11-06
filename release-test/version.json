@@ -1,11 +1,11 @@
 {
- "version": "1.2.81",
+ "version": "1.2.82",
  "notes": [
-  "NEW: THE HOTBOX DUEL - your first death in LAST TOKE sends you to a 1v1 pit; win it and you drop back in",
-  "NEW: ONLINE LAST TOKE DUOS and SQUADS in Quick Play, with downs and revives",
-  "bots now climb over crates and low walls",
-  "LAST TOKE players now start all over STASH ISLAND, not just the middle"
+  "FIX: online PROP HUNT - the hide countdown froze for players who joined (stuck on a black screen)",
+  "FIX: online LAST TOKE - joining players now see the cloud close and the loot crates",
+  "PARTY: when the leader starts a mode from the menu, the whole party goes in together online",
+  "every online mode checked with two real players"
  ],
- "sha256": "115c01456220197f04450aaa814809fb4f8bb1ba1ffae92c52d617d475c23f79",
+ "sha256": "cbb59de52389cfc89df0431f9d40a6e76765a05f4f6b1d037bf4a21ec91cc00b",
  "minApp": "1.0.0"
 }

@@ -162,6 +162,7 @@ function spawnBot(en, pos) {
   return e;
 }
 function startMatch(mode, custom) {
+  if (!MODES[mode].online && typeof partyRedirect === 'function' && partyRedirect(mode, custom)) return;   // the party leader takes the party along (party.js)
   const cfg = matchCfg(mode, custom), def = MODES[mode];
   initAudio(); clearMenuSoldiers(); try { chatNewMatch(); } catch (e) {}
   if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel, mode); loadMap(cfg.map); }
