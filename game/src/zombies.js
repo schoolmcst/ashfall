@@ -262,7 +262,7 @@ function zombThink(e, i, dt) {
   const ml = Math.hypot(mx, mz), slow = (e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.45 : 1;
   const sp = ml > 0.01 ? e.speed * slow * (e.stunT > 0 ? 0.3 : 1) : 0;
   if (ml > 0.01) { g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt; }
-  resolve(g.position, 0.42, g.position.y); botGround(g, dt);
+  resolve(g.position, 0.42, g.position.y, true); botGround(g, dt);
   for (let j = 0; j < enemies.length; j++) { if (j === i) continue; const o = enemies[j].group.position, sx = g.position.x - o.x, sz = g.position.z - o.z, sd = Math.hypot(sx, sz); if (sd < 0.8 && sd > 0.001) { const pu = (0.8 - sd) * 0.5; g.position.x += sx / sd * pu; g.position.z += sz / sd * pu; } }
   if (dist < 0.95) { g.position.x -= nx * (0.95 - dist); g.position.z -= nz * (0.95 - dist); }
   g.position.x = clamp(g.position.x, PLAYRECT[0] + 0.5, PLAYRECT[1] - 0.5); g.position.z = clamp(g.position.z, PLAYRECT[2] + 0.5, PLAYRECT[3] - 0.5);

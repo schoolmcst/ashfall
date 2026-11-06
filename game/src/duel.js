@@ -25,10 +25,10 @@ function duelTake() {
   const ke = G.killer && G.killer.entry; if (ke) try { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> <b>YOU</b> <span class="fw">· TO THE HOTBOX</span>`); } catch (e) {}
   try { if (VH.me) vhExit(true); } catch (e) {}
   G.downed = false; P.slideT = 0; P.mantle = null;
-  Object.assign(P, { x: pen.x, z: pen.z + pen.d / 2 - 1.2, y: 0, vx: 0, vz: 0, vy: 0, onGround: true }); P.yaw = 0; P.pitch = 0;
+  Object.assign(P, { x: pen.x, z: pen.z + pen.d / 2 - 1.2, y: groundAt(pen.x, pen.z + pen.d / 2 - 1.2, 1e3), vx: 0, vz: 0, vy: 0, onGround: true }); P.yaw = 0; P.pitch = 0;
   G.health = G.maxHp || 100; G.spawnProt = 0;
   try { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } catch (e) {}
-  let bot = null; try { bot = spawnBot(en, { x: pen.x, z: pen.z - pen.d / 2 + 1.2, y: 0 }); } catch (e) {}
+  let bot = null; try { bot = spawnBot(en, { x: pen.x, z: pen.z - pen.d / 2 + 1.2, y: groundAt(pen.x, pen.z - pen.d / 2 + 1.2, 1e3) }); } catch (e) {}
   if (!bot) bot = enemies.find(e => e.entry === en) || null;
   if (bot) { bot.duel = true; bot.hp = bot.maxHp; bot.brTier = 99; bot.reactT = 3.2; bot.spawnProt = 0; bot.group.rotation.y = 0; try { botGunProfile(bot, 'sidearm'); } catch (e) {} }
   DUEL.on = { bot, en, wait: 3, t: 0 };

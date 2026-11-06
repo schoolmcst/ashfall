@@ -102,14 +102,14 @@ function updateFx(dt) {
   for (const k in chunkPools) for (const c of chunkPools[k].list) {
     if (!c.on) continue; c.life -= dt; if (c.life <= 0) { c.on = false; c.m.visible = false; continue; }
     c.vy -= 14 * dt; c.m.position.x += c.vx * dt; c.m.position.y += c.vy * dt; c.m.position.z += c.vz * dt;
-    if (c.m.position.y < 0.02) { c.m.position.y = 0.02; c.vy *= -0.3; c.vx *= 0.6; c.vz *= 0.6; }
+    const cfl = TERR.on ? TH(c.m.position.x, c.m.position.z) + 0.02 : 0.02; if (c.m.position.y < cfl) { c.m.position.y = cfl; c.vy *= -0.3; c.vx *= 0.6; c.vz *= 0.6; }
     c.m.rotation.x += dt * 8; c.m.rotation.z += dt * 6;
   }
   for (const c of casings) {
     if (!c.on) continue; c.life -= dt; if (c.life <= 0) { c.on = false; c.m.visible = false; continue; }
     c.vy -= 12 * dt; const pos = c.m.position; pos.x += c.vx * dt; pos.y += c.vy * dt; pos.z += c.vz * dt;
     c.m.rotation.x += c.rx * dt; c.m.rotation.z += c.rz * dt;
-    if (pos.y < 0.02) { pos.y = 0.02; if (Math.abs(c.vy) > 1.2) sfx.casing(at(pos.x, pos.z, 6)); c.vy *= -0.35; c.vx *= 0.5; c.vz *= 0.5; c.rx *= 0.4; c.rz *= 0.4; }
+    const pfl = TERR.on ? TH(pos.x, pos.z) + 0.02 : 0.02; if (pos.y < pfl) { pos.y = pfl; if (Math.abs(c.vy) > 1.2) sfx.casing(at(pos.x, pos.z, 6)); c.vy *= -0.35; c.vx *= 0.5; c.vz *= 0.5; c.rx *= 0.4; c.rz *= 0.4; }
   }
   for (const t of tracers) { if (!t.on) continue; t.life -= dt; if (t.life <= 0) { t.on = false; t.m.visible = false; } else t.m.material.opacity = 0.9 * (t.life / t.max); }
   if (lightFx.t > 0) { lightFx.t -= dt; muzzleLight.intensity = lightFx.i * Math.max(0, lightFx.t / lightFx.max); } else muzzleLight.intensity = 0;

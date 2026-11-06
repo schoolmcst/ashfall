@@ -126,7 +126,7 @@ function updateEnemies(dt) {
     } else { mx = -nz * e.strafe + (dist < e.hold * 0.55 ? -nx : 0); mz = nx * e.strafe + (dist < e.hold * 0.55 ? -nz : 0); }
     const ml = Math.hypot(mx, mz) || 1, sp = e.speed * (holding ? 0.55 : 1) * ((e.slowT = Math.max(0, (e.slowT || 0) - 1 / 60)) > 0 ? 0.35 : 1);
     g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt;
-    resolve(g.position, 0.45, g.position.y); botGround(g, dt);
+    resolve(g.position, 0.45, g.position.y, true); botGround(g, dt);
     for (let j = 0; j < enemies.length; j++) {
       if (j === i) continue;
       const o = enemies[j].group.position, sx = g.position.x - o.x, sz = g.position.z - o.z, sd = Math.hypot(sx, sz);

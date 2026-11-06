@@ -82,14 +82,14 @@ function buildSpawns() {
   const SP = Math.max(41, Math.min(PLAYRECT[1], -PLAYRECT[0], PLAYRECT[3], -PLAYRECT[2]) - 3);   // the whole play area (STASH ISLAND is 120 m)
   for (let z = -SP; z <= SP; z += 3.5) for (let x = -SP; x <= SP; x += 3.5) {
     const cx = cellOf(x + rnd(-1.2, 1.2)), cz = cellOf(z + rnd(-1.2, 1.2)), c = cz * NN + cx, opts = [];
-    for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h > maxY || lvS[c * NL + l]) continue; let room = 0; for (const [ox, oz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const c2 = (cz + oz) * NN + cx + ox; if (c2 >= 0 && c2 < NN * NN) for (let m = 0; m < lvN[c2]; m++) if (Math.abs(lvH[c2 * NL + m] - h) < 0.3) { room++; break; } } if (room >= 3) opts.push(h); }
+    for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h - (TERR.on ? TH(cellPos(cx), cellPos(cz)) : 0) > maxY || lvS[c * NL + l]) continue; let room = 0; for (const [ox, oz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const c2 = (cz + oz) * NN + cx + ox; if (c2 >= 0 && c2 < NN * NN) for (let m = 0; m < lvN[c2]; m++) if (Math.abs(lvH[c2 * NL + m] - h) < 0.3) { room++; break; } } if (room >= 3) opts.push(h); }
     if (!opts.length) continue;
     const p = { x: cellPos(cx), z: cellPos(cz), y: opts[(Math.random() * opts.length) | 0] };
     if (ok && !ok(p)) continue;
     if (p.x < PLAYRECT[0] + 1.5 || p.x > PLAYRECT[1] - 1.5 || p.z < PLAYRECT[2] + 1.5 || p.z > PLAYRECT[3] - 1.5) continue;   // inside the play area (small maps)
     SPAWNS.push(p);
   }
-  for (const k of ['spawn', 'hp', 'flags', 'sites']) LAYOUT[k] = LAYOUT[k].map(p => p.y !== undefined ? Object.assign({}, p) : Object.assign({}, p, openNear(p.x, p.z), { y: 0 }));
+  for (const k of ['spawn', 'hp', 'flags', 'sites']) LAYOUT[k] = LAYOUT[k].map(p => p.y !== undefined ? Object.assign({}, p) : Object.assign({}, p, openNear(p.x, p.z), { y: TERR.on ? TH(p.x, p.z) : 0 }));
   return SPAWNS;
 }
 // the alive positions of everyone hostile to `team`
@@ -514,7 +514,7 @@ function updateBots(dt) {
     if (ml > 0.01) { g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt; if (!face) face = Math.atan2(mx, mz); }
     if (e.stunT > 0) { e.stunT -= dt; e.aim = 0; }
     if (e.spawnProt > 0) e.spawnProt -= dt;
-    resolve(g.position, 0.45, g.position.y); botGround(g, dt);
+    resolve(g.position, 0.45, g.position.y, true); botGround(g, dt);
     for (let j = 0; j < enemies.length; j++) { if (j === i) continue; const o = enemies[j].group.position, sx = g.position.x - o.x, sz = g.position.z - o.z, sd = Math.hypot(sx, sz); if (sd < 0.85 && sd > 0.001) { const pu = (0.85 - sd) * 0.5; g.position.x += sx / sd * pu; g.position.z += sz / sd * pu; } }
     if (!e.net) { g.position.x = clamp(g.position.x, PLAYRECT[0] + 0.5, PLAYRECT[1] - 0.5); g.position.z = clamp(g.position.z, PLAYRECT[2] + 0.5, PLAYRECT[3] - 0.5); }
     const pd = Math.hypot(P.x - g.position.x, P.z - g.position.z); if (pd < 0.9 && pd > 0.001 && G.state === 'playing') { g.position.x -= (P.x - g.position.x) / pd * (0.9 - pd); g.position.z -= (P.z - g.position.z) / pd * (0.9 - pd); }

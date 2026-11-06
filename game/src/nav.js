@@ -12,7 +12,7 @@ const cellPos = i => -ARENA + (i + 0.5) * NCELL;   // centre of cell column/row 
 function buildNav() {
   for (let cz = 0; cz < NN; cz++) for (let cx = 0; cx < NN; cx++) {
     const c = cz * NN + cx, x = cellPos(cx), z = cellPos(cz), near = boxesNear(x, z);
-    const cand = [[0, 0]];
+    const tg = TERR.on ? TH(x, z) : 0, cand = [[tg, 0]];
     for (const b of near) if (b.walk && x > b.minx - 0.05 && x < b.maxx + 0.05 && z > b.minz - 0.05 && z < b.maxz + 0.05) cand.push([b.top, b.stair]);
     cand.sort((a, b) => a[0] - b[0]);
     let n = 0, last = -9;
@@ -32,7 +32,7 @@ function buildNav() {
       lvH[c * NL + n] = h; lvS[c * NL + n] = st; n++; last = h;
     }
     lvN[c] = n;
-    navBlocked[c] = n && lvH[c * NL] < 0.5 ? 0 : 1;
+    navBlocked[c] = n && lvH[c * NL] < tg + 0.5 ? 0 : 1;
   }
   FLOW.clear(); navTarget = -1;
 }

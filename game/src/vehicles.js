@@ -38,8 +38,8 @@ function vhModel(type) {
   return g;
 }
 function vhMake(id, type, x, z, yaw) {
-  const T = VH_TYPES[type], o = openNear(x, z), v = { id, type, T, x: o.x, z: o.z, y: 0, yaw, spd: 0, hp: T.hp, driver: null, g: vhModel(type), lean: 0, pitch: 0, net: null, netT: 0, hitT: 0, dead: false };
-  v.g.position.set(v.x, 0, v.z); v.g.rotation.y = yaw; (M.br && M.br.group || scene).add(v.g); return v;
+  const T = VH_TYPES[type], o = openNear(x, z), v = { id, type, T, x: o.x, z: o.z, y: TERR.on ? TH(o.x, o.z) : 0, yaw, spd: 0, hp: T.hp, driver: null, g: vhModel(type), lean: 0, pitch: 0, net: null, netT: 0, hitT: 0, dead: false };
+  v.g.position.set(v.x, v.y, v.z); v.g.rotation.y = yaw; (M.br && M.br.group || scene).add(v.g); return v;
 }
 // at the start of a LAST TOKE match: the same vehicles in the same places on every machine
 function vhSetup() {
@@ -89,7 +89,7 @@ function vhPhys(v, thr, steer, brake, dt, who) {
   v.spd = clamp(v.spd, -5, T.max * (me ? 1 : 0.8) * (M && M.feat && M.feat.lowgrav ? 1.1 : 1)); if (Math.abs(v.spd) < 0.05 && !thr) v.spd = 0;
   const grip = clamp(Math.abs(v.spd) / 4, 0, 1) * (brake ? 1.35 : 1); v.yaw += -steer * T.turn * grip * Math.sign(v.spd || 1) * dt; v.steer = steer;
   const fx = -Math.sin(v.yaw), fz = -Math.cos(v.yaw), nx = v.x + fx * v.spd * dt, nz = v.z + fz * v.spd * dt;
-  const q = { x: nx, z: nz }; resolve(q, T.r, v.y);
+  const q = { x: nx, z: nz }; terrSlope(q, v.x, v.z, v.y); resolve(q, T.r, v.y);
   q.x = clamp(q.x, PLAYRECT[0] + T.r, PLAYRECT[1] - T.r); q.z = clamp(q.z, PLAYRECT[2] + T.r, PLAYRECT[3] - T.r);
   let crash = false;
   if (Math.hypot(q.x - nx, q.z - nz) > 0.02 && Math.abs(v.spd) > 3) {   // crashed into something
@@ -138,7 +138,8 @@ function vhUpdate(dt) {
     if (v.net && NOW - v.netT > 1.5) { v.net = null; v.driver = null; v.spd = 0; }   // the remote driver stopped sending: it stays parked there
     if (v.net) { v.x = lerp(v.x, v.nx, clamp(dt * 10, 0, 1)); v.z = lerp(v.z, v.nz, clamp(dt * 10, 0, 1)); let dyw = v.nyaw - v.yaw; dyw = Math.atan2(Math.sin(dyw), Math.cos(dyw)); v.yaw += dyw * clamp(dt * 10, 0, 1); v.y = groundAt(v.x, v.z, v.y + 0.3); }
     const k = v.spd / v.T.max; const st = v.driver ? v.steer || 0 : 0; v.lean = lerp(v.lean, v.type === 'bike' ? clamp(-st * k * 0.5, -0.4, 0.4) : 0, clamp(dt * 6, 0, 1));
-    v.pitch = lerp(v.pitch, v.type === 'bike' && v.driver === 'me' && kb('fwd') && kb('sprint') && v.spd > 4 ? -0.35 : 0, clamp(dt * 4, 0, 1));   // SPRINT + forward on the bike: a wheelie
+    const hillP = TERR.on && v.y - TH(v.x, v.z) < 0.4 ? -Math.atan2(TH(v.x - Math.sin(v.yaw) * 1.3, v.z - Math.cos(v.yaw) * 1.3) - TH(v.x + Math.sin(v.yaw) * 1.3, v.z + Math.cos(v.yaw) * 1.3), 2.6) : 0;   // nose up a hill
+    v.pitch = lerp(v.pitch, (v.type === 'bike' && v.driver === 'me' && kb('fwd') && kb('sprint') && v.spd > 4 ? -0.35 : 0) + hillP, clamp(dt * 4, 0, 1));   // SPRINT + forward on the bike: a wheelie
     v.g.position.set(v.x, v.y, v.z); v.g.rotation.set(v.pitch, v.yaw, v.lean, 'YXZ');
     for (const w of v.g.userData.wheels) w.rotation.x += v.spd * dt / 0.3;
     if (v.g.userData.wheel && v.driver === 'me') v.g.userData.wheel.rotation.z = -((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx) * 0.6;

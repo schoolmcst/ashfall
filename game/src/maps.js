@@ -9,6 +9,7 @@ const mapName = id => (MAPS[id] || MAPS.ruins).name;
 /* ---------- invisible merged meshes for bullets and line of sight (chunked so rays can skip far chunks) */
 const RAYC = new Map(), RAY_CHUNK = 16;
 function rayAdd(geo, matrix) {
+  if (BUILD_YOFF) { matrix = matrix.clone(); matrix.elements[13] += BUILD_YOFF; }
   const e = new THREE.Vector3().setFromMatrixPosition(matrix), k = Math.floor(e.x / RAY_CHUNK) + ',' + Math.floor(e.z / RAY_CHUNK);
   if (!RAYC.has(k)) RAYC.set(k, []);
   RAYC.get(k).push({ g: geo, m: matrix });
@@ -245,7 +246,7 @@ function skyline(n, rMin, rMax, hMin, hMax, key = 'facade') {
     batchAdd(key, g, mat4(Math.cos(a) * r, h / 2 - 1, Math.sin(a) * r, 0, -a + (Math.random() - 0.5) * 0.4, 0), false);
   }
 }
-function lampLight(x, y, z, col = 0xffc27a, i = 1.0, dist = 14) { const l = new THREE.PointLight(C(col), i, dist, 2); l.position.set(x, y, z); scene.add(l); return l; }
+function lampLight(x, y, z, col = 0xffc27a, i = 1.0, dist = 14) { const l = new THREE.PointLight(C(col), i, dist, 2); l.position.set(x, y + BUILD_YOFF, z); scene.add(l); return l; }
 
 /* ---------- extra materials the new maps use */
 function buildMapMaterials() {
@@ -298,6 +299,7 @@ function applyEnv(env) {
 
 /* ---------- loading and clearing */
 function clearWorld() {
+  try { terrOff(); } catch (e) {} BUILD_YOFF = 0;
   const shared = new Set(); for (const id in MGEO) for (const mk in MGEO[id]) shared.add(MGEO[id][mk]);
   for (const o of worldObjs) {
     scene.remove(o);

@@ -6,7 +6,7 @@ const wallMeshes = []; // raycast targets (bullets, line of sight, blasts)
 const MAT = {};
 // static scenery is merged per material so the whole map costs a few dozen draw calls instead of hundreds
 const batches = {}, IDENT = new THREE.Matrix4();
-function batchAdd(key, geo, matrix, shadow = true) { const id = key + (shadow ? '+s' : ''); (batches[id] || (batches[id] = { key, shadow, list: [] })).list.push({ g: geo, m: matrix || IDENT }); }
+function batchAdd(key, geo, matrix, shadow = true) { if (BUILD_YOFF) { matrix = matrix ? matrix.clone() : new THREE.Matrix4(); matrix.elements[13] += BUILD_YOFF; } const id = key + (shadow ? '+s' : ''); (batches[id] || (batches[id] = { key, shadow, list: [] })).list.push({ g: geo, m: matrix || IDENT }); }
 function flushBatches() {
   for (const id in batches) { const b = batches[id]; const m = new THREE.Mesh(mergeGeos(b.list), MAT[b.key]); m.castShadow = b.shadow; m.receiveShadow = true; scene.add(m); delete batches[id]; }
 }
@@ -98,7 +98,7 @@ function deco(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, shadow = true) {
 // o: { y: bottom height (boxes you can walk under), walk: top counts as floor for bots, stair: part of a stair/ramp }
 const STAIR_CODE = { n: 1, s: 2, e: 3, w: 4 };   // which way a stair climbs (0 = not a stair)
 function mkBox(cx, cz, w, d, h, o = {}) {
-  const y = o.y || 0;
+  const y = (o.y || 0) + BUILD_YOFF;
   return { minx: cx - w / 2, maxx: cx + w / 2, minz: cz - d / 2, maxz: cz + d / 2, top: y + h, bot: y, walk: o.walk !== undefined ? o.walk : Math.min(w, d) >= 0.9, stair: o.stair ? (STAIR_CODE[o.stair] || 1) : 0, rail: !!o.rail };
 }
 function addCollider(cx, cz, w, d, h, mesh, o) {
@@ -127,7 +127,8 @@ function boxesNear(x, z) {
   if (gx < 0 || gz < 0 || gx >= GN || gz >= GN) return EMPTY;
   return boxGrid[gx * GN + gz] || EMPTY;
 }
-function resolve(pos, r, feetY) {
+function resolve(pos, r, feetY, slope) {
+  if (slope && TERR.on) { if (pos._ox !== undefined) terrSlope(pos, pos._ox, pos._oz, feetY); }
   for (const b of boxesNear(pos.x, pos.z)) {
     if (b.top <= feetY + STEP || b.bot >= feetY + HEAD) continue;
     const cx = clamp(pos.x, b.minx, b.maxx), cz = clamp(pos.z, b.minz, b.maxz);
@@ -139,6 +140,7 @@ function resolve(pos, r, feetY) {
       if (m === l) pos.x = b.minx - r; else if (m === rr) pos.x = b.maxx + r; else if (m === t) pos.z = b.minz - r; else pos.z = b.maxz + r;
     }
   }
+  if (slope) { pos._ox = pos.x; pos._oz = pos.z; }
 }
 // lowest overhead surface above someone standing at feetY (for jumping into floors above)
 function ceilingAt(x, z, feetY, r = 0.3) {
@@ -147,7 +149,7 @@ function ceilingAt(x, z, feetY, r = 0.3) {
   return c;
 }
 function groundAt(x, z, feetY) {
-  let g = 0;
+  let g = TERR.on ? TH(x, z) : 0;
   for (const b of boxesNear(x, z)) if (x > b.minx - 0.25 && x < b.maxx + 0.25 && z > b.minz - 0.25 && z < b.maxz + 0.25 && b.top <= feetY + STEP) g = Math.max(g, b.top);
   return g;
 }
@@ -393,7 +395,7 @@ function buildGrass(o = {}) {
     const gc = cellOf(z) * NN + cellOf(x);
     if (navBlocked[gc] || (lvN[gc] > 1) || (o.avoid && o.avoid(x, z))) continue;
     const s = 0.7 + Math.random() * 0.9;
-    dummy.position.set(x, 0, z); dummy.rotation.set(0, Math.random() * TAU, 0); dummy.scale.set(s, s * (0.8 + Math.random() * 0.6), s); dummy.updateMatrix();
+    dummy.position.set(x, TERR.on ? TH(x, z) : 0, z); dummy.rotation.set(0, Math.random() * TAU, 0); dummy.scale.set(s, s * (0.8 + Math.random() * 0.6), s); dummy.updateMatrix();
     grassMesh.setMatrixAt(n++, dummy.matrix);
   }
   grassMax = n; grassMesh.count = Math.floor(n * FX.grass); grassMesh.frustumCulled = false; scene.add(grassMesh);

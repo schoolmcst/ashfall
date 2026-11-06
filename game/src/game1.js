@@ -96,7 +96,7 @@ function updatePlayer(dt) {
   if (moversRiding()) moversZip(dt);   // ZIPLINE (movers.js)
   else if (!mvMantle(dt, fwd, hold)) {
   P.x += P.vx * dt; P.z += P.vz * dt;
-  resolve(P, 0.4, P.y);
+  resolve(P, 0.4, P.y, true);
   P.x = clamp(P.x, PLAYRECT[0] + 0.45, PLAYRECT[1] - 0.45); P.z = clamp(P.z, PLAYRECT[2] + 0.45, PLAYRECT[3] - 0.45);
   if ((kb('jump') || pad.jump) && P.onGround && !hold && !G.downed && !prone && !(P.noJumpT > 0)) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); if (P.slideT > 0) { P.slideT = 0; P.vx *= 1.05; P.vz *= 1.05; } }   // a slide-jump keeps the speed
   P.vy -= 22 * (M && M.feat && M.feat.lowgrav ? 0.42 : 1) * dt; const py0 = P.y; P.y += P.vy * dt;
@@ -356,7 +356,7 @@ function nadeStep(g, pos, dt, sim) {
       else if (!wasX) { nx = pos.x; g.vx *= -0.45; } else if (!wasZ) { nz = pos.z; g.vz *= -0.45; } else { nx = pos.x; nz = pos.z; g.vx *= -0.3; g.vz *= -0.3; }
       hit = true;
     }
-    if (ny < 0.09) { ny = 0.09; g.vy = Math.abs(g.vy) * 0.38; g.vx *= 0.75; g.vz *= 0.75; if (Math.abs(g.vy) < 1) g.vy = 0; hit = hit || !sim; }
+    const gfl = TERR.on ? TH(nx, nz) + 0.09 : 0.09; if (ny < gfl) { ny = gfl; g.vy = Math.abs(g.vy) * 0.38; g.vx *= 0.75; g.vz *= 0.75; if (Math.abs(g.vy) < 1) g.vy = 0; hit = hit || !sim; }
     pos.set(nx, ny, nz); if (hit) { hitAny = true; if (g.sticky) { g.vx = g.vy = g.vz = 0; break; } }
   }
   return hitAny;

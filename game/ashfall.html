@@ -930,6 +930,73 @@ function updateAmbience(t) {
   burst(2.4, 160 + d * 120, 0.35, 'lowpass', Object.assign({}, o, { bus: 'amb' }));
   tone(42 + d * 14, 1.6, 0.3, 'sine', 24, o);
 }
+/* ================================================================== TERRAIN (1.2.90): real hills, valleys and cliffs
+   A height field for maps that want one (STASH ISLAND): a grid of heights every TERR.cs metres, smooth between points.
+   Off (TERR.on false) on every other map, so they stay exactly as they were.
+   - groundAt() starts from the terrain height instead of 0, so players, bots, crates and everything that stands on the
+     ground follow the hills; buildNav() uses it as the bottom floor of every cell.
+   - terrSlope(): nothing walks or drives up a slope steeper than ~42 degrees (cliffs): it slides along it instead.
+     Bots path round cliffs on their own (the nav steps are limited the same way).
+   - The ground is drawn as one mesh (grass, dirt, rock on steep faces, sand by the sea, the roads painted on) and is
+     added to the ray chunks, so hills block bullets and sight.
+   - BUILD_YOFF: while a map is being built, everything placed (blocks, colliders, batches, rays, props, lights) is
+     raised by this much, so a place can be built at its own height without changing its numbers. */
+const TERR = { on: false, cs: 2, n: 0, x0: 0, z0: 0, h: null, mesh: null };
+let BUILD_YOFF = 0;
+function TH(x, z) {
+  if (!TERR.on) return 0;
+  const fx = (x - TERR.x0) / TERR.cs, fz = (z - TERR.z0) / TERR.cs, n = TERR.n;
+  const ix = Math.max(0, Math.min(n - 2, Math.floor(fx))), iz = Math.max(0, Math.min(n - 2, Math.floor(fz))), tx = Math.max(0, Math.min(1, fx - ix)), tz = Math.max(0, Math.min(1, fz - iz));
+  const h = TERR.h, a = h[iz * n + ix], b = h[iz * n + ix + 1], c = h[(iz + 1) * n + ix], d = h[(iz + 1) * n + ix + 1];
+  return (a * (1 - tx) + b * tx) * (1 - tz) + (c * (1 - tx) + d * tx) * tz;
+}
+function terrOff() { TERR.on = false; TERR.h = null; if (TERR.mesh) { scene.remove(TERR.mesh); TERR.mesh.geometry.dispose(); TERR.mesh = null; } }
+// fill the grid from fn(x, z) over [-half, half] (a little beyond, for the sea floor)
+function terrDefine(fn, half, cs = 2) {
+  const n = Math.ceil(half * 2 / cs) + 1; TERR.cs = cs; TERR.n = n; TERR.x0 = -half; TERR.z0 = -half; TERR.h = new Float32Array(n * n);
+  for (let iz = 0; iz < n; iz++) for (let ix = 0; ix < n; ix++) TERR.h[iz * n + ix] = fn(-half + ix * cs, -half + iz * cs);
+  TERR.on = true;
+}
+// a seeded value noise and a few octaves of it
+function terrNoise(seed) {
+  const hash = (x, z) => { let h = (x * 374761393 + z * 668265263 + seed * 2246822519) | 0; h = Math.imul(h ^ (h >>> 13), 1274126177); return ((h ^ (h >>> 16)) >>> 0) / 4294967296; };
+  const sm = t => t * t * (3 - 2 * t);
+  const v = (x, z) => { const ix = Math.floor(x), iz = Math.floor(z), fx = sm(x - ix), fz = sm(z - iz); const a = hash(ix, iz), b = hash(ix + 1, iz), c = hash(ix, iz + 1), d = hash(ix + 1, iz + 1); return (a * (1 - fx) + b * fx) * (1 - fz) + (c * (1 - fx) + d * fx) * fz; };
+  return (x, z, oct = 4, base = 120) => { let s = 0, amp = 1, tot = 0, f = 1 / base; for (let i = 0; i < oct; i++) { s += (v(x * f, z * f) * 2 - 1) * amp; tot += amp; amp *= 0.5; f *= 2; } return s / tot; };
+}
+// the slope rule: called with the position before the move
+function terrSlope(pos, ox, oz, feetY) {
+  if (!TERR.on) return;
+  const d = Math.hypot(pos.x - ox, pos.z - oz); if (d < 1e-5 || d > 2) return;   // not moving, or a teleport
+  const hn = TH(pos.x, pos.z); if (hn <= feetY + 0.03) return;   // not climbing the terrain (going down, or on a floor above it)
+  const ho = Math.max(TH(ox, oz), feetY - 0.05), steep = (h, dd) => dd > 1e-5 && (h - ho) / dd > 0.9 && h > feetY + 0.03;
+  if (!steep(hn, d)) return;
+  const hx = TH(pos.x, oz), hz = TH(ox, pos.z);
+  if (!steep(hx, Math.abs(pos.x - ox))) pos.z = oz; else if (!steep(hz, Math.abs(pos.z - oz))) pos.x = ox; else { pos.x = ox; pos.z = oz; }
+}
+/* the ground mesh: colours by height, slope and the map's own paint (roads etc.); colourFn(x, z, h, slope) -> [r, g, b] */
+function terrBuildMesh(colourFn, half) {
+  const n = TERR.n, cs = TERR.cs, pos = new Float32Array(n * n * 3), col = new Float32Array(n * n * 3), uv = new Float32Array(n * n * 2), idx = [];
+  for (let iz = 0; iz < n; iz++) for (let ix = 0; ix < n; ix++) {
+    const i = iz * n + ix, x = TERR.x0 + ix * cs, z = TERR.z0 + iz * cs, h = TERR.h[i];
+    const sx = (TERR.h[iz * n + Math.min(n - 1, ix + 1)] - TERR.h[iz * n + Math.max(0, ix - 1)]) / (2 * cs), sz = (TERR.h[Math.min(n - 1, iz + 1) * n + ix] - TERR.h[Math.max(0, iz - 1) * n + ix]) / (2 * cs);
+    const c = colourFn(x, z, h, Math.hypot(sx, sz));
+    pos[i * 3] = x; pos[i * 3 + 1] = h; pos[i * 3 + 2] = z; col[i * 3] = c[0]; col[i * 3 + 1] = c[1]; col[i * 3 + 2] = c[2]; uv[i * 2] = x / 6; uv[i * 2 + 1] = z / 6;
+  }
+  for (let iz = 0; iz < n - 1; iz++) for (let ix = 0; ix < n - 1; ix++) { const a = iz * n + ix, b = a + 1, c = a + n, d = c + 1; idx.push(a, c, b, b, c, d); }
+  const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3)); g.setAttribute('color', new THREE.BufferAttribute(col, 3)); g.setAttribute('uv', new THREE.BufferAttribute(uv, 2)); g.setIndex(idx); g.computeVertexNormals();
+  const set = TEX.ground || TEX.concrete, mat = new THREE.MeshStandardMaterial({ map: set.map, vertexColors: true, roughness: 0.95, metalness: 0 });
+  const m = new THREE.Mesh(g, mat); m.receiveShadow = true; m.castShadow = false; scene.add(m); TERR.mesh = m;
+  // the same ground for bullets and sight, cut into 16 m pieces (the ray chunks)
+  const step = 8; for (let iz = 0; iz < n - 1; iz += step) for (let ix = 0; ix < n - 1; ix += step) {
+    const ex = Math.min(n - 1, ix + step), ez = Math.min(n - 1, iz + step), p = [], ii = []; let k = 0;
+    for (let z = iz; z <= ez; z++) for (let x = ix; x <= ex; x++) { const i = z * n + x; p.push(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]); }
+    const w = ex - ix + 1; for (let z = 0; z < ez - iz; z++) for (let x = 0; x < ex - ix; x++) { const a = z * w + x; ii.push(a, a + w, a + 1, a + 1, a + w, a + w + 1); }
+    const rg = new THREE.BufferGeometry(); rg.setAttribute('position', new THREE.Float32BufferAttribute(p, 3)); rg.setIndex(ii);
+    const cx = TERR.x0 + (ix + step / 2) * cs, cz = TERR.z0 + (iz + step / 2) * cs; rg.translate(-cx, 0, -cz);
+    const sv = BUILD_YOFF; BUILD_YOFF = 0; rayAdd(rg, new THREE.Matrix4().makeTranslation(cx, 0, cz)); BUILD_YOFF = sv;
+  }
+}
 /* recorded sounds (CC0), generated by tools/sounds/build_sounds.py: do not edit by hand */
 const SAMPLE_B64 = {"shot_ak":"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",
 "shot_smg":"T2dnUwACAAAAAAAAAACwK8ihAAAAAB3AcLkBHgF2b3JiaXMAAAAAAQB9AAAAAAAAsDABAAAAAAC4AU9nZ1MAAAAAAAAAAAAAsCvIoQEAAACZBz7OD0D/////////////////kQN2b3JiaXMNAAAATGF2ZjYwLjE2LjEwMAEAAAAfAAAAZW5jb2Rlcj1MYXZjNjAuMzEuMTAyIGxpYnZvcmJpcwEFdm9yYmlzJkJDVgEACAAAgCJMGMSA0JBVAAAQAACgrDeWe8i99957gahHFHuIvffee+OsR9B6iLn33nvuvacae8u9995zIDRkFQAABACAKQiacuBC6r33HhnmEVEaKse99x4ZhYkwlBmFPZXaWushk9xC6j3nHggNWQUAAAIAQAghhBRSSCGFFFJIIYUUUkgppZhiiimmmGLKKaccc8wxxyCDDjropJNQQgkppFBKKqmklFJKLdZac+69B91z70H4IIQQQgghhBBCCCGEEEIIQkNWAQAgAAAEQgghZBBCCCGEFFJIIaaYYsopp4DQkFUAACAAgAAAAABJkRTLsRzN0RzN8RzPESVREiXRMi3TUjVTMz1VVEXVVFVXVV1dd23Vdm3Vlm3XVm3Vdm3VVm1Ztm3btm3btm3btm3btm3btm0gNGQVACABAKAjOZIjKZIiKZLjOJIEhIasAgBkAAAEAKAoiuM4juRIjiVpkmZ5lmeJmqiZmuipngqEhqwCAAABAAQAAAAAAOB4iud4jmd5kud4jmd5mqdpmqZpmqZpmqZpmqZpmqZpmqZpmqZpmqZpmqZpmqZpmqZpmqZpmqZpmqZpQGjIKgBAAgBAx3Ecx3Ecx3EcR3IkBwgNWQUAyAAACABAUiTHcixHczTHczxHdETHdEzJlFTJtVwLCA1ZBQAAAgAIAAAAAABAEyxFUzzHkzzPEzXP0zTNE01RNE3TNE3TNE3TNE3TNE3TNE3TNE3TNE3TNE3TNE3TNE3TNE3TNE1TFIHQkFUAAAQAACGdZpZqgAgzkGEgNGQVAIAAAAAYoQhDDAgNWQUAAAQAAIih5CCa0JrzzTkOmuWgqRSb08GJVJsnuamYm3POOeecbM4Z45xzzinKmcWgmdCac85JDJqloJnQmnPOeRKbB62p0ppzzhnnnA7GGWGcc85p0poHqdlYm3POWdCa5qi5FJtzzomUmye1uVSbc84555xzzjnnnHPOqV6czsE54Zxzzonam2u5CV2cc875ZJzuzQnhnHPOOeecc84555xzzglCQ1YBAEAAAARh2BjGnYIgfY4GYhQhpiGTHnSPDpOgMcgppB6NjkZKqYNQUhknpXSC0JBVAAAgAACEEFJIIYUUUkghhRRSSCGGGGKIIaeccgoqqKSSiirKKLPMMssss8wyy6zDzjrrsMMQQwwxtNJKLDXVVmONteaec645SGultdZaK6WUUkoppSA0ZBUAAAIAQCBkkEEGGYUUUkghhphyyimnoIIKCA1ZBQAAAgAIAAAA8CTPER3RER3RER3RER3RER3P8RxREiVREiXRMi1TMz1VVFVXdm1Zl3Xbt4Vd2HXf133f141fF4ZlWZZlWZZlWZZlWZZlWZZlCUJDVgEAIAAAAEIIIYQUUkghhZRijDHHnINOQgmB0JBVAAAgAIAAAAAAR3EUx5EcyZEkS7IkTdIszfI0T/M00RNFUTRNUxVd0RV10xZlUzZd0zVl01Vl1XZl2bZlW7d9WbZ93/d93/d93/d93/d939d1IDRkFQAgAQCgIzmSIimSIjmO40iSBISGrAIAZAAABACgKI7iOI4jSZIkWZImeZZniZqpmZ7pqaIKhIasAgAAAQAEAAAAAACgaIqnmIqniIrniI4oiZZpiZqquaJsyq7ruq7ruq7ruq7ruq7ruq7ruq7ruq7ruq7ruq7ruq7ruq7rukBoyCoAQAIAQEdyJEdyJEVSJEVyJAcIDVkFAMgAAAgAwDEcQ1Ikx7IsTfM0T/M00RM90TM9VXRFFwgNWQUAAAIACAAAAAAAwJAMS7EczdEkUVIt1VI11VItVVQ9VVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVVV1TRN0zSB0JCVAAAQAAANOvgae8mYxJJ7aIxCDHrrmHOOes2MIshx7BAziHkLlSMEeY2ZRIhxIDRkRQAQBQAAGIMcQ8wh55ykTlLknKPSUWqcc5Q6Sh2lFGvKtaNUYku1Ns45Sh2ljFLKtbTaUUq1phoLAAAIcAAACLAQCg1ZEQBEAQAQCCGlkFJIKeaccg4ppZxjziGmlHPKOeWcg9JJqZxz0jkpkVLKOeWccs5J6ZxUzjkpnYQCAAACHAAAAiyEQkNWBABxAgAOx/E8SdNEUdI0UfRM0XU90XRdSdNMUxNFVdVEUVVNV7Vt0VRlW9I009REUVU1UVRVUTVt2VRV2/ZM05ZN19VtUVV1W7ZtYXht2/c907RtUVVt3XRdW3dt2fdlW9eNR9NMUxNFV9VEUXVNV9VtU3VtXRNF1xVVV5ZF1ZVlV5Z1X5Vl3ddE0XVF1ZRdUXVlW5Vd33ZlWfdN1/V1VZaFX5Vl4bd1XRhu3zeeUVV1X5Vd31dl2Rdu3TZ+2/eFZ9I009RE0VU10VRd01V13XRd29ZE0XVFV7Vl0VRd2ZVt31dd2fY1UXRd0VVlWXRVWVZl2fddWfZ1UVV9W5Vl31dd2fdt3xeG2dZ94XRdXVdl2RdWWfZ929eV5dZ14fhM07ZN19V103V93/Z1Z5l1XfhF1/V9VZZ9Y7VlX/iF36n7xvGMqqrrqu0KvyrLwrALu/Pcvi+Uddv4bd1n3L6P8eP8xpFr28Ix67Zz3L6uLL/zM35lWHqmadum6/q66bq+L+u6Mdy+rxRV1ddVWzaG1ZWF4xZ+49h94ThG1/V9VZZ9Y7VlYdh933h+YXie17aN4fZ9ymzrRh98n/LMuo3t+8Zy+zrnd47O8AwJAAAYcAAACDChDBQasiIAiBMAYBByDjEFIVIMQgghpQ5CShFjEDLnpGTMSQmlpBZKSS1iDELmmJTMOSmhlJZCKS2FEloLpcQWSmmttVZrai3WEEproZQYQyktptZqTK3VGjEGIXNOSuaclFJKa6GU1jLnqHQOUuogpJRSarGkFGPlnJQMOiodhJRKKjGVlGIMqcRWUoq1pFRja7HlFmPOoZQWSyqxlZRibTHlGGPMOWIMQuaclMw5KaGU1kpJLVbOSekgpJQ5KKmkFGMpKcXMOUkdhJQ66CiVlGJMLcUWSomtpFRjKanFFmPOLcVYQ0ktlpRiLSnF2GLMucWWWwehtZBKjKGUGFuMObfWag2lxFhSirWkVGOMtfYYY86hlBhLKjWWlGJtNfbaYqw5tZZrarHmFmPPteXWa869p9ZqTbHl2mLMPeYYZM25Bw9Ca6GUFkMpMbbWam0x5hxKia2kVGMpKdYYY84t1tpDKTGWlGItKdUaY8w51thrai3XFmPPqcWaa87Bx5hjTy3WHGPMPcWWa82595pbkAUAAAw4AAAEmFAGCg1ZCQBEAQAQhCjFGIQGIcack9AgxJhzUirGnIOQSsWYcxBKypyDUEpKmXMQSkkplJJKSq2FUkpKqbUCAAAKHAAAAmzQlFgcoNCQlQBAKgCAwXEsy/NEUTVl2bEkzxNF01RV23Ysy/NE0TRV1bYtzxNF01RV19V1y/NE0VRV1XV13RNF1VRV15Vl3/dE0TRV1XVl2fdN03RV15Vl2/Z90zRV13VlWbZ9YXVV15Vl29ZtY1hV13Vl2bZtXTlu3dZ14ReGYZjauu77vi8Mx/BMAwDAExwAgApsWB3hpGgssNCQlQBABgAAYQxCBiGFDEJIIYWUQkgpJQAAYMABACDAhDJQaMhKACAVAAAgxFprrbXWWmKptdZaa621hkprrbXWWmuttdZaa6211lprrbXWWmuttdZaa6211lprrbWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSimllFJKKaWUUkoppZRSSikVAOhX4QDg/2DD6ggnRWOBhYasBADCAQAAY5RiDDrpJKTUMOUYhFJSSaWVRjHnIJSSUkqtVc5JSKWl1lqLsXJOSkkptRZbjB2ElFpqLcYYY+wgpJRaazHGGGMopaUYY6wx1lpDSam1GGOMNddaUmotxlprrbn3klKLMcZca+65l9ZirLXmnHPOPbUWY60159xz8Km1GGPOtffee1CtxVhrrjkH4XsBANwNDgAQCTbOsJJ0VjgaXGjISgAgJACAQIgxxpxzDkIIIURKMeaccxBCCCGESCnGnHMOQgghhJAx5pxzEEIIoZRSMsaccw5CCCWUUErmnHMQQgihlFJKyZxzDkIIIZRSSikddBBCCKGUUkoppXMOQgihlFJKKaWEEEIopZRSSimllBBCCKWUUkoppZQSQgillFJKKaWUUkIIoZRSSimlpFJKCKGUUkoppZRSSgkhlFJKKaWUUkopoYRSSimllFJKKSWUUEoppZRSSiqlFAAAcOAAABBgBJ1kVFmEjSZceAAKDVkJAAABACDOWmwpRkYx5yCGyCDEIIYKKcWctQwpgxymTCmElJXOMYaIkxZbCxUDAABAEABAIGQCgQIoMJABAAcICVIAQGGBoUOECBCjwMC4uLQBAAhCZIZIRCwGiQnVQFExHQAsLjDkA0CGxkbaxQV0GeCCLu46EEIQghDE4gAKSMDBCTc88YYn3OAEnaJSBwEAAAAAgAAADwAAxwYQEdEcR4fHB0iIyAhJSQAAAAAAAAHABwDAYQJERDTH0eHxARIiMkJSEgAAAAAAAAAAAAQEBAAAAAAAAgAAAAQET2dnUwAEQGoAAAAAAACwK8ihAgAAAPhq6oE9NTM1NDY2NjT4JigrKSsmMzcyNDb/Av8BKSs1Mvj/Af8B+/8IJyknKDI1Lv8D/wnu5+js7efw6Obc5N/ZNAQCF8C8OHBPB7D4GLBloTl31zdVuW/9CuPj7Usp1qu1e98x4Us1enI6HsI7xRwrU/6LL0cCbC5HMqwG4//DyQhIyRDuO95+ezt43pTtVl3i5VLKuVWdOJo8B1b33DGoNL7VsLN/eRgAnA49Ai2A9R9zRUaQ1ku4kq22l9ps2/dPXdEAx0YDhZ9mBFRi59bMcfSNV7fc1LywyI3JMgCcSveoUusFSvzt+qUh2nldvnTV72XdZT+uvvv8nE538PI3xsm0RnHRNb5JrJYY704QCjUKtBolFqOYuGL+U+ffDRbYzD3VkhjC1mOdej2W3r+o/RZ8/bbx54sLiflZes8f+BhxNlxopAgBfApHFpcEL60/TdlcKwVB2qeZ576HQm6LpbZ09Xmsis/tiV+fnkyf/h2+/w89TTbZSFrt9RgAbB47DGIes+zXU8lIolXm+MeRnEFbfHtc4fvLd+HC4Uun+nXsLbrvW2mlPdwYzdqPn8IysxwFPPq6EFoMcNB/fecjoS3dBJtoHo12PA9N5b6+9Fpoxd+sE6OoFrm7rikensn5o7NBkL+IBPIn2xBqPDU0JCzwT7s9OXJ8Mo73b/NcxJ07pTSyj21Yvcp263pVVfU8Q0Jlo6E3mxwx+bi97k3kq+c1XfG3NOoxWtzIxiGh+cbB9SrVvkSOGkNWwFR907ZgisvNuIJRcNo+Z7mxHlTxL7ZFuOFDtDm17iUt0UIm5Nmvmiq8MaVCorx64yNHzhpqlra+VV5DIrwX53F/eIDWGiAAv+YSc6wMjT5W31w6shbV5/wjGXMIqMFzuDMPEVzpiSh6pWSOuVI09aUtZqR1F68Va/M6utrLziUZXQIor05PS7f8H60Hy3M6rh7WeE2cmTNuFTIliaQozsHZPBsB7NXeBFiAs/3wZILxcK9DRqJrW92QHH8Ys/6VpAaMbCHCt02YtAes3W6g3U4lhlgRH2/SNoHQPCbJeU/z8thk1RFTux1lCdVKQxyuE9UCtNl+Glll/pApAVgBDlkgzKdbD2FHjRdYCFsRLeyZ+1Br39xnds9HUz8jAPzB9hwGQUJaTFTeBwTCbt88t4ep9C736HA+UK3I83HNfasU2oJa1UEBNNIWUJY5giGz+a9kgoN4Z/PRTqMRITfSGwPxmAfuHbAO3lPnD7XfI/GsBCzmlhkYgM0nN4ARQGKijmTxfKldrFyNJzYo9l18yZS+6zix/O8M3LmeIrgBU/2Nm8mGFGUTRvx7mG/n85qS5bD9KjZeWhZ+6fMngfvljBolej99PJ7+8TI3zL2eMpqLiBC85G+OKbHI9E5nOpP0/t3bteYJ9aQuzUYnmGGiN45rP+UUtf3Dq7t8xZvmV0mkBvzN9q201EH2Z5y2JJVgXO+JjT8dHvLKm8L+3up1lckWHdMWMYy+n97D1+SiXevbeN5fHMp2W6hIoP65esaGjumz/7L7cS+PH7cqbDxVh/zsL+Wf62Hl10NWEJfSSpU6jo6lHSlskQzeGow9aTAebyqjrajDlm5VZl+fdqN8XOY1Ww62ZiPe9bf9nGPLHh0vsjkj9UYNaqDN0cJ3BTqn2njkeTduAMKC1/c7WU8c3/tWT9zxHHfEtU/0DgEsZtEJgCpbXVW9r5jINJwjyXIuw9zde9vH4S/s99eXTxuWIw3XjZx0M8URXyhzWBFbjcITxDnsLWXAqd35Y95ymoxGeeVCBtAwqyTege8h47R7/zKWrijKcRfJzSbKprj9JeJhTlyi0kOEvU3uhrVWr1FI048pilPG65VRBs4WrrSfqupRGRHOVa9qIwEvqMRKSWCD0eX3v8MfjssAkOt/ygiz1XVd3zrHQWNHZMDVsj5RUIyTbREKqR7aoBwSJnZQTfGUmwC0K3EtGbcJe8WCjxD2RXGebWAUT8qpxJAi23IG1sbaJJiYVwECBfCKqOt+3vwXp51xR3l6e2J6OHl2EUR2W72CpNSoGmU5+qcvBv1DnaGmhyQcccn5tXR3O3qw2Uy5/ny10TqfhVYDgKIfHhD41T6NLG8sEW+2lbxlW3H9oWo6QyDdW1K7/RnvASprFshk2Zr3c9dMoBO/hebkf/qDVJNt0dwOULN0nCHWgISrG/3EFiaI1rRSnG1ZSa02Q8uj6zWMiBbsnVl+drvNZQdU0vjquqqzmskGh3uSejxRsJaF3jDN27zUwl+kggtvccIZvRbtVKPulWzy2aWgQxMuWtV/LcV6smy2LzVeNBm1pKZ7l9HiSdXjhq8TL6tNB/zRnkwAgE98i0OQSKeni/+JLY0Y2auL99SKhNpxl9GIrdepTMfjBuUEvNG+EYZkiEpW5eW8FjDCPvcpKU3V2xl8o7e4jXdfa39njSwSYL1HDTKqBjS2EonSZswK/3xSxtZo8crIoQ8/eRUbL4ftcl+977cfOF+VPJT7PWQBmqDxgwgiH9XvY4oYFMJ2CYQeIPT7k/ds2F6bNbamHnrrz2/lam2wH12YYfUWneA7pFr/5wl52v4QxhuvhgOahtpkXFgXDgDwuz+Zi1uM8eGr+oTnpEpcZ8omYiV6r7IVvUuqKXa2De+PX2g9iTLCMMmP+UiCWTXKsuMn39dJbTXT5z6sCI/SgleoaJ2Rd3cCMtQqWbKIge2j2VosSi/Y/vnJob0NSKxQM5zwj8Ymb8STnIiFCrs0N/J6ffMj5Jt1qBGxm2d9twUquGUSQXFsH2YVB0j9+aGArM5H1Gxp9+l137l7RJwjNsdbD7eaYWYD2+Dk5/nNHBwUAZzKeU7jqAG38Ae3r24zkqxqaiqcwZPRy4T03plnuCSkH0aNhdp9SUWMaywDNgx6bgDEechn+oFl42/vAf5W2qjqiMGiAYbhFUGSPU6jx9iea7nzLCAtom+sBlBWox0l4GhgPf9pjMnL673GtniGf9+ky6pBj8QrtBy/ttrTRpu2eWjrWXgm1cDZSnZ1jRWTmAq6uEsVgpZH2mH9NXJi0tkvMIC5J5a2JDdJ9jcRBD0WGnI1kWFlTl8khUiPcljyeUp/aI+cz8xV7W2R2I3r0ilmj55be7T3fd3pWFs6WaOmHtQPEiCL1GEhxcBVPMl4UVbapTYTXTLqLnTUCcNT+CNXOfpiPsHlLuAIrMnO7AQlD3wGLL26Po5D+u2EgO2tIx7RNg0rW1eTfGVxzY7ZrD6ve3RB5b6ZTWum4fbeRtoEKzEBgNDc/ASEmFfLuj4inZf1QYylVwWxKqqqtypXE5EzHT6nMb42eUu1/AneuLL+cZ0eb4p/r9zi4UKwH+E1XstE4uwC9slEZhBLBTK0xV6+CzN2zreJL8SM8azeYuvv+xfyLBeL5AKuOCijtButC1gJSbmd9b4b+dN942mG97yJunt7H+v/zn266ltzi3iYvudiAsxnt2TSk+RsF1D8iM9DrBTtd8FquC975HCryp62KBg7cCPH7VrNqCDXjgp1yx52SeqVqTY1wtro3gembplV5mY4OaUKn/HcPi3+1qXhMCXN2J1o7Xn2GtE/NUPS0Rbxr4iLgSaOEp8kPhbaJNvTCQCAV8CuGNsyXjbHyWY5jqOF1KuqYmKNauCVn7GBlXaY/XYSre98P2vSOZNVc+yb9/uzRuJubA2mMD5BZhebXhX1dmStqFZeWQ7mofVArYtbi82cccbqUsYPqjAeiZ+bMJ/n8QMlIo6uiIBQUfxEDhcG7hHeCLurIcxWGccsg3gitxFewnimfLeybM53TO8lI7zaCg9YTX/AjmxvPvPMcniYA+08/SDPRrvRhsMZldIWNS6xxAGTlye+W6MNZ9YhnqvOuliaVF5uwqdj2k/4xWvb+H2sD1c2/nDGoR/19lvoMpWe6/ZZ00+EFfxnkzUSwNTBpwJWBtp4oHkyAAL8+InDm+ey7Dun5E9Vvj7/sm783qnXZB4907tNkBqqAl8VqNckiJy+5LCBNTESKu7+XvrV8pdAck3C3fPAZiWRX512an3c3VvZlY6YkBaBeFSvhlH9A3OoR/WNJEdtphxbz/vSWDxY157vToEJCZAZ9XdaC51zx4H2BCH/7pdA2lgvUuwRXGtcxbNds596n+3Ruqlv1uXVE6o2TByt2t8f9uzzhsnPem4J+gWg9LwZwi9nGs86pyuddHbs6iYdZqb0PpE9jSSCZ0mOt1Vmtqt6nCh4nuwaUm1YU3QcIZ6ru83NjK/aCX9Pb+m4j/KbsDQjbg91WybNuNCAghpFPsy1diNCfUCbn28lKILtE/LqpeIvR7EhS9tQp81oSN8eVEp2SeL6J3yhfhI0MoXgKt4noyFwjHq2c2lVoBBvk9FSgbUlxpQpfEtsiFOrqmEAlJ2ecoPq4LiiPr/JgCDM+OT7b21nW1r8b+cOb1Ip/pr7rS+bf1oHnKG+HWD9AIqdHBNgwrjlXzTqWKAUGKbsP2/0JhK53JganCKqHaqmALSJPqmRDRA2f/hAEoNqNUvoyXuFndODgq4g3sYxnW229husWoLizXsj2lSw2DSeOjoDdLn+jJWVZ7X8z/ckJdqyTNcv6VI2W88bebPqQfzh3vfNb8/wwdZFgyKAVk9jI43tas+T9wB0iT5VQAGs/ns0wmD6zF+/jblVi7HarlOVg7dqFfBLHkz+JvcoTKkUZgPpSU4CWrbZCPUCwEsFAHjE1vm5nPLyyY5x1+/K17l1jN1IS+rVfZleMZIVlfsfdIn51GFuJWvqb5o+VP/lpl9verK5zoem2pvcyHAuHo2t8YTR0mJObKXulVVcXYiAWAlqxZuQU1PyZNbarwfjVgKG7KmiC07dzvuKVBS/i8DT0YVTNlpaEnr0D9BryHl18CtGOvF8WaNgGQDTqb5a+4m7smlA0EZsLqIy0cx3+kG+TVP9VaSLqtflaYHU2NaPPkhsXTTqIpo3o1UZIAjRAuDooXRMhzTKm3st9DfZURGJyy6yqx3fKzkrXhcBsW8R7c0faslKLj7JnvaYcUxXeOSjDjEh1vg1vrYZ4CIvAhAJC24bK8oe9ulTx7c8Rhw5932kXrbKlq2o1iiP5ZrYp8TvQvS72rDPnkrF898k8yt2Keapdnv7tD1KDbVmiY+mtQWdr4jXoZMhxpqLYlH58kR3g25ebstraTaVDJzg9HvyGc0ICZOOV8i6uiZelvbu9ES+hqAssF20Ijo5wzgavoaF+1rY0LSPo8y0WxKX281QfN20BXoSLdZTdfJ9UZrx4kWfm22XKreXbaWqKX4c0PYs3emF+8xUCtToHpl/jme+PeI+xWn7xcZ+X1TwfoYIQIazpSggJtAsvGsyWXOpqeIUp63Oprdo8ezvaqxGJ9mGzghFXU4PpK1H1oCngbwHPnYZxhc+FADgyO7Yzd3utaU44qaYpTbqNuaqil6VJK1hceTrftS6dHt6shrpJp2H3pjPeNZbXn1tcNz7K4Jepozdbx3klK+eAZI4X/V59v0hKSy/J4p6uzSn8ZnRGmmUBEtZRCF1SxVv5MUK5LNv1hbmG61dtPCQhxUfOGXXn69zlidrUBfwsMqXlc9r9OIq1sFjSiMjgIqzxYfLFHJCymvdULohU0ruJ0GHfm/kKpuS+5I47RV4GLkxioqebnPP4AIxB2EwVOB+Zu1fidG6cIdjw6cfnWSjSO9OzRqz1N/UXyr2YZIxgWPz4mBDAL6GyfKJD20gEBYcGKKP6M3jPCMj5v3muDS9Kih1Xa9KauRmlKSZTAmXsP7mxaTvNTk409Lk9WYk+Lpq/5ntSSO8fXkfGYq+aCQk02MCLuGZXcFLINx9tNFl46z9psBvhZVNoix/WP05vYo3oxCFywHmRuKxHoW6Cl+2GA1/HeRe0uWBHFdzX/u3ZQAfW/ztgUskpfyTVeRXj1znZ1HhAFIhAn6HnCNlSdQ8OWQrtqXXF700l/eo8spHLLyhYBaw5tjiOvRJa53oqVuXlSTHym8woh3i/W61BrW4mA2DKJHOuwfy1A8UAF52yStRAAgB2hzAAdlZqyOikyPHRISYm15lA5OoRkc9ySWca+vakvM4Wz7mzM2M5FTxvhz3buneJ5HV7OMcq9fc0BFmw1xRTJ06mZQUaLIyRBv+8wNm0hnFCQAzsf87xsdNExd12un/iyPerIwy9JGmueOIgOGZc7ezMYBPkeQso9E274GIG37Z1+ChdpiwI3ox8Is2rn1Js7a79ogebkevRTIO7wtO52TJ/Solhnq4ak6hciIYK5l67owLyQ/wl4AzY7tpvnhMMQXCCKM5WbK+L4OLUGUkzQSWjP+OaxrLIFyZA2RDRwN+VgmIJACOBKAAxzDCzue17CQ7sxfRkdmDJKiKrhr1qhwZYzn329SvT2c89VdP7fyz1bgm4ebr6KvZW62lxnT1/XLugTupu+dTo4G49IomZ8Tl4Jp4zQFcTC/RoWU8Lk467dq3u8Bl/bSXpzHbsGW1g2nkdzJM3RFrlqTVGW3MlWNC+n6fxrrF3cigjTdTsSPk1Ym1cjZVTeV0VB8OhURPO84MbRewsXPujKlXNabWIIfS78CiBFUWtA/9uE75bD4lkDdhJGEKbNMUiD4q+c3eB30+fY9lPmc+N1ejC2suhKAqXxRqnYPBmUAPAH5WCYkuAEIDBUQcTYvalW1PmOvM+Wbu3daLsAsAVbaiEWDVhKhSYUj8evWqsZ4mTqYdhKvZ5H6e/2gH9YVzB1zDDSttMatcICzgLTsCMevCCau3NRWLirhZQhGKWjByzZlVL8aLPrpiuH/Pjtso062ZGXDNRrDbP3uR+R6jeH3u5ygqlcVaJJAbc+ErS0Q/y9Nj9t1N2U/RVl+gF1zvDOc2TTSxs2bh8esaYW1xH/lrHuwdPjKPOI97uYRQVBnL07W6oj+4blX3CuWkLeSFs1yGPzo3R91vUqw417Rqq6BXl5foBTVJteAoUYBYEl5WCYgmAIQOABzaaB07l2l7jrBdp9xQ95hEUYWVTDQaKbXq77msr5Xk5otdj12/xjvSc03vvm/21d3eLtvRD8deZqoEnwBRtLIM6/4mjmZx1kkNq8OyUduZsrWEDUzziwgFoUWobZtcX0+v7T9uP6YdNmbtcOLUJ3ccqG2iiaLAV6QZydbhsZyarxdv4RIThGI0JMoXUxrFpDr6km6UQ+ooQ513uaqCIrpE3xVzbfib52Y0ComPOVxStksESmZiPHufE+0AXvBdHZN7+Sf69TNHSHU/VLaQhwFD/XPpsKy/IFyqJAOKBH5WscAiAKOlIGjAsd2R+oi937lH5qE3NrPnHot6N+gEqLLiGGVAqjfKcPdZMcl9p6scR/odh81t/quRm+84dtKT9Exq9DAjxWuJPjacJAkuHxZqr//1CNrNkdMg2kOTSs2d7XddwBLvKfHw7NvepWPxX83GA7hKR6trXflCh6XbhqGi1EjrvTWGA9t4PBMzt/VZf9Ek0Zw+0szBc4arzwLVT91H4VX2Lbcuem+Zu/LhJjMHGmlijrxWT/9VSSmYjXrGDHVRUA2iZqcscmuFoEnOEpXbk38ijLp1Amc9ZpwSTkoAmqTkt1fp49I+wwKWBX5WUfAsACMaGACH1vMcm3MXI2fz0LE1HWthMXoBqltbagRI9a5ktKQd7ziSfQ7/x5KyFIHRZ6g02LFtRXOu4f9bEroEfK2SaUPKtTE5nSc3ntuL4H1RT0OixpDO6cXqx3qO3bqmmbNjaoAn2Kk7pKgsPs8uIdK32DNv8Ysz38bjIhIleCeWr5+hsbE+wl1yquF9X7TTs+jmwrqVgx57vCVL2sDm++Vw5XiwwE53D3P67rhk+7qVQla1zpp5Ni1H0aswlU2ybx9teMKNFSGdcecuf9VZ0Wbxk2J9Bwtc4JvOsNJVYHZEAgB+RuHwKgAjGhgYhiNr3bpmd49Z17lOn1zZ2iqbS0l1taIkAJGUs+z73B5n2oKkp6cvqesxjB6jeLht/Nqq7W5dspPr7BvfDHBrOvRJ5jaXGYe4wIyjQ7GZ5/rY4XyLjdGdiBGkjMwRMJdKlpgIYTNhvRLa/lv670pHIIudcmVFM52CiUKvTfOwe44LxL6JTBqBwio7J0XzqcJq0rbVe3cRoRqto247ltsZJUme/7Hf03Gnk80QJOYYL0mXHtKSHY3K85RUaatYDCxHDB9Cww8TYxPujL5GM+ioBn1QHeJVkvZOoBKYAH5WIdlWAMYdDIADOm9GZhstc6Y3exu9ythWVY2GpUOhPGHJ/iXLmoaj0oSD87ZQ+/Yb434V9USOWfLF076FBZ6BhKUoEDpmLsBP8wGAqD8+f5uEwTtTNviCw/g8zIIbjUoqsHcxowo/4438j+SzWYJYdr1z0UtGyjPNFGUvHKfevjuTSbGrq10OdrG23U4WNFUvuUMnKORVPxHCoCtlMPpqTHOkLWvavssrJOMSZznWIJzvCDLBwlW4VCrbSUk1R5BZlnGSFneCk6nMakSu3wvhoGlz+7SADdUCHgA+ViHYLgCEaWIDHNpmH0fEce08M5kZlox57t1GG62q+qgS0MKfmpEcM02XtLB5Za3/3hnPG/eEpf2Ww5sZtlo3FxfJX3bPEU+NK1Xk9D17Nq751mOlZSOxbrG5iLeZBuPNM1y+1dDKcPtsTUXcNWDK9Vdvmp17FWyuPZeGGyE6+DahFvXvIi+uZqM4nFl6Zdx8C2s+wTqeRWKtaPzB75IyXFopyYhDPaS0B5yRNUKQfyXyop2gUAppHGYy3P9zWdtw+uZRsM9O90BZINoNvFM5YtHsZ8FfpEpNmJrUuxtfViiJigQ+VsHxwmcivLEBDoyN7Tb3e26ddm5qhFGB2liiRKNnSQHFPnI47XecVX7aMPw8bDrIOpv+2Vjtb7t5Qa2RM3Gf+Cb1ZGpH7f0BFZbXva/PU2KtZkbREwk0VKBSDJZ49Ze8Sfv4dPD7UZPKWY5KHDX0rT/dxMNZsP2NoSULJ9g+DjGpi1wKon/UbWWkZnHKNhI7WDkI3YcYaZySldk/JUsnQSDRazo5yhcgqcC3Pf2+d0EcKRSgXI8apxKJgaCGUqeFcX9dqJaEtHfNQ2nnHpA71WrBQKFSTzlXjESBogQAXhap68yeT2wAOCDGMM8bczDPnTDG6OxVaqtUVZIkCQAo+2n3Y/176udNZOcWm5F7DuXkyeh8etbG0OtZT1Z1fdTm6hzL12iJHDw3MEbtNqN/+qZgxReDhi2HL3M1xTvRTorGkIvmLX9EdCW6vuKSyF6Y7S1tpKDmQSZN5ITxEPDQHTPyxYngFbnM+unRuIpn2lwQzE1Vd0Qa13eRxKfWyVulu+TN+4j1sZ43x6wXjZP4yoh65CYh9aIeySmIljepUy8Y3fGOt4A+TUEhj5dVQlVLxwelEPQqAX4W+X1gbjoAACFRkqQAAAAAoBd9VTRANksChEvW9KADHYxRq4cVbUAf7AyoT4ld0q0CWgE=",
@@ -1682,7 +1749,7 @@ const wallMeshes = []; // raycast targets (bullets, line of sight, blasts)
 const MAT = {};
 // static scenery is merged per material so the whole map costs a few dozen draw calls instead of hundreds
 const batches = {}, IDENT = new THREE.Matrix4();
-function batchAdd(key, geo, matrix, shadow = true) { const id = key + (shadow ? '+s' : ''); (batches[id] || (batches[id] = { key, shadow, list: [] })).list.push({ g: geo, m: matrix || IDENT }); }
+function batchAdd(key, geo, matrix, shadow = true) { if (BUILD_YOFF) { matrix = matrix ? matrix.clone() : new THREE.Matrix4(); matrix.elements[13] += BUILD_YOFF; } const id = key + (shadow ? '+s' : ''); (batches[id] || (batches[id] = { key, shadow, list: [] })).list.push({ g: geo, m: matrix || IDENT }); }
 function flushBatches() {
   for (const id in batches) { const b = batches[id]; const m = new THREE.Mesh(mergeGeos(b.list), MAT[b.key]); m.castShadow = b.shadow; m.receiveShadow = true; scene.add(m); delete batches[id]; }
 }
@@ -1774,7 +1841,7 @@ function deco(geo, mat, x, y, z, rx = 0, ry = 0, rz = 0, shadow = true) {
 // o: { y: bottom height (boxes you can walk under), walk: top counts as floor for bots, stair: part of a stair/ramp }
 const STAIR_CODE = { n: 1, s: 2, e: 3, w: 4 };   // which way a stair climbs (0 = not a stair)
 function mkBox(cx, cz, w, d, h, o = {}) {
-  const y = o.y || 0;
+  const y = (o.y || 0) + BUILD_YOFF;
   return { minx: cx - w / 2, maxx: cx + w / 2, minz: cz - d / 2, maxz: cz + d / 2, top: y + h, bot: y, walk: o.walk !== undefined ? o.walk : Math.min(w, d) >= 0.9, stair: o.stair ? (STAIR_CODE[o.stair] || 1) : 0, rail: !!o.rail };
 }
 function addCollider(cx, cz, w, d, h, mesh, o) {
@@ -1803,7 +1870,8 @@ function boxesNear(x, z) {
   if (gx < 0 || gz < 0 || gx >= GN || gz >= GN) return EMPTY;
   return boxGrid[gx * GN + gz] || EMPTY;
 }
-function resolve(pos, r, feetY) {
+function resolve(pos, r, feetY, slope) {
+  if (slope && TERR.on) { if (pos._ox !== undefined) terrSlope(pos, pos._ox, pos._oz, feetY); }
   for (const b of boxesNear(pos.x, pos.z)) {
     if (b.top <= feetY + STEP || b.bot >= feetY + HEAD) continue;
     const cx = clamp(pos.x, b.minx, b.maxx), cz = clamp(pos.z, b.minz, b.maxz);
@@ -1815,6 +1883,7 @@ function resolve(pos, r, feetY) {
       if (m === l) pos.x = b.minx - r; else if (m === rr) pos.x = b.maxx + r; else if (m === t) pos.z = b.minz - r; else pos.z = b.maxz + r;
     }
   }
+  if (slope) { pos._ox = pos.x; pos._oz = pos.z; }
 }
 // lowest overhead surface above someone standing at feetY (for jumping into floors above)
 function ceilingAt(x, z, feetY, r = 0.3) {
@@ -1823,7 +1892,7 @@ function ceilingAt(x, z, feetY, r = 0.3) {
   return c;
 }
 function groundAt(x, z, feetY) {
-  let g = 0;
+  let g = TERR.on ? TH(x, z) : 0;
   for (const b of boxesNear(x, z)) if (x > b.minx - 0.25 && x < b.maxx + 0.25 && z > b.minz - 0.25 && z < b.maxz + 0.25 && b.top <= feetY + STEP) g = Math.max(g, b.top);
   return g;
 }
@@ -2069,7 +2138,7 @@ function buildGrass(o = {}) {
     const gc = cellOf(z) * NN + cellOf(x);
     if (navBlocked[gc] || (lvN[gc] > 1) || (o.avoid && o.avoid(x, z))) continue;
     const s = 0.7 + Math.random() * 0.9;
-    dummy.position.set(x, 0, z); dummy.rotation.set(0, Math.random() * TAU, 0); dummy.scale.set(s, s * (0.8 + Math.random() * 0.6), s); dummy.updateMatrix();
+    dummy.position.set(x, TERR.on ? TH(x, z) : 0, z); dummy.rotation.set(0, Math.random() * TAU, 0); dummy.scale.set(s, s * (0.8 + Math.random() * 0.6), s); dummy.updateMatrix();
     grassMesh.setMatrixAt(n++, dummy.matrix);
   }
   grassMax = n; grassMesh.count = Math.floor(n * FX.grass); grassMesh.frustumCulled = false; scene.add(grassMesh);
@@ -2088,7 +2157,7 @@ const cellPos = i => -ARENA + (i + 0.5) * NCELL;   // centre of cell column/row 
 function buildNav() {
   for (let cz = 0; cz < NN; cz++) for (let cx = 0; cx < NN; cx++) {
     const c = cz * NN + cx, x = cellPos(cx), z = cellPos(cz), near = boxesNear(x, z);
-    const cand = [[0, 0]];
+    const tg = TERR.on ? TH(x, z) : 0, cand = [[tg, 0]];
     for (const b of near) if (b.walk && x > b.minx - 0.05 && x < b.maxx + 0.05 && z > b.minz - 0.05 && z < b.maxz + 0.05) cand.push([b.top, b.stair]);
     cand.sort((a, b) => a[0] - b[0]);
     let n = 0, last = -9;
@@ -2108,7 +2177,7 @@ function buildNav() {
       lvH[c * NL + n] = h; lvS[c * NL + n] = st; n++; last = h;
     }
     lvN[c] = n;
-    navBlocked[c] = n && lvH[c * NL] < 0.5 ? 0 : 1;
+    navBlocked[c] = n && lvH[c * NL] < tg + 0.5 ? 0 : 1;
   }
   FLOW.clear(); navTarget = -1;
 }
@@ -2788,6 +2857,7 @@ const mapName = id => (MAPS[id] || MAPS.ruins).name;
 /* ---------- invisible merged meshes for bullets and line of sight (chunked so rays can skip far chunks) */
 const RAYC = new Map(), RAY_CHUNK = 16;
 function rayAdd(geo, matrix) {
+  if (BUILD_YOFF) { matrix = matrix.clone(); matrix.elements[13] += BUILD_YOFF; }
   const e = new THREE.Vector3().setFromMatrixPosition(matrix), k = Math.floor(e.x / RAY_CHUNK) + ',' + Math.floor(e.z / RAY_CHUNK);
   if (!RAYC.has(k)) RAYC.set(k, []);
   RAYC.get(k).push({ g: geo, m: matrix });
@@ -3024,7 +3094,7 @@ function skyline(n, rMin, rMax, hMin, hMax, key = 'facade') {
     batchAdd(key, g, mat4(Math.cos(a) * r, h / 2 - 1, Math.sin(a) * r, 0, -a + (Math.random() - 0.5) * 0.4, 0), false);
   }
 }
-function lampLight(x, y, z, col = 0xffc27a, i = 1.0, dist = 14) { const l = new THREE.PointLight(C(col), i, dist, 2); l.position.set(x, y, z); scene.add(l); return l; }
+function lampLight(x, y, z, col = 0xffc27a, i = 1.0, dist = 14) { const l = new THREE.PointLight(C(col), i, dist, 2); l.position.set(x, y + BUILD_YOFF, z); scene.add(l); return l; }
 
 /* ---------- extra materials the new maps use */
 function buildMapMaterials() {
@@ -3077,6 +3147,7 @@ function applyEnv(env) {
 
 /* ---------- loading and clearing */
 function clearWorld() {
+  try { terrOff(); } catch (e) {} BUILD_YOFF = 0;
   const shared = new Set(); for (const id in MGEO) for (const mk in MGEO[id]) shared.add(MGEO[id][mk]);
   for (const o of worldObjs) {
     scene.remove(o);
@@ -7141,6 +7212,7 @@ defineMap({
    from fixed numbers and a seed, so every machine builds the same island. Loot spots (STASH_LOOT) are inside, upstairs
    and on roofs; brSetup puts most of the crates there. */
 const STASH_LOOT = [];
+STASH_LOOT.push = function (...a) { for (const o of a) o.y = +((o.y || 0) + BUILD_YOFF).toFixed(2); return Array.prototype.push.apply(this, a); };
 // a slab with a rectangular hole (for a stairwell): up to four pieces round the hole
 function stashSlabHole(x0, x1, z0, z1, top, key, hole, walk = true) {
   const th = 0.25, piece = (a, b, c, d) => { if (b - a > 0.05 && d - c > 0.05) blk((a + b) / 2, (c + d) / 2, b - a, d - c, th, key, { y: top - th, walk }); };
@@ -7176,13 +7248,13 @@ function stashBld(o) {
       const cx = (edges[r] + edges[r + 1]) / 2, zs = r === 0 ? z0 + 3.2 : z0 + 0.5, cz = pz !== null && r === 0 ? (pz + z1) / 2 : (zs + z1) / 2;
       if (edges[r + 1] - edges[r] < 3) continue;
       if (sr() < 0.7) blk(cx + (sr() - 0.5) * 1.2, cz + (sr() - 0.5) * 1.2, 1.2, 0.8, 0.9, sr() < 0.5 ? 'wood' : 'dark', { y, walk: false });
-      if (sr() < 0.6) STASH_LOOT.push({ x: +(cx + (sr() - 0.5) * 1.5).toFixed(2), z: +(cz + 1.6).toFixed(2), y: y + 0.01 });
+      if (sr() < 0.65) { const left = sr() < 0.5, lx = left ? edges[r] + 1.1 : edges[r + 1] - 1.1; STASH_LOOT.push({ x: +lx.toFixed(2), z: +(z1 - 0.95).toFixed(2), y: y + 0.01, q: s > 0 ? 1 : 0 }); }   // against the back wall, in a corner
     }
   }
   // the stairs: flight k climbs to level k, switching between the two bands; each level has its hole over its flight
   for (let k = 1; k <= flights; k++) { const odd = k % 2 === 1, b = odd ? bandA : bandB; stairs(odd ? sx0 : sx1, (b[0] + b[1]) / 2, odd ? 'e' : 'w', 1.25, y0 + (k - 1) * H, y0 + k * H, 'concrete'); }
   for (let k = 1; k <= f; k++) { const hole = k <= flights ? [sx0, sx1, ...(k % 2 === 1 ? bandA : bandB)] : null; stashSlabHole(x0 + 0.15, x1 - 0.15, z0 + 0.15, z1 - 0.15, y0 + k * H, k === f ? (o.roofKey || 'concrete') : fl === 'wood' ? 'wood' : 'concrete', hole, k < f || roofWalk); }
-  if (roofWalk) { for (const [ax, az, bx, bz] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) wall(ax, az, bx, bz, 1.0, key, { y: y0 + f * H, t: 0.3 }); STASH_LOOT.push({ x: +(o.x + w * 0.25).toFixed(2), z: +(o.z + d * 0.2).toFixed(2), y: y0 + f * H + 0.01 }); }
+  if (roofWalk) { for (const [ax, az, bx, bz] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) wall(ax, az, bx, bz, 1.0, key, { y: y0 + f * H, t: 0.3 }); STASH_LOOT.push({ x: +(x1 - 1.2).toFixed(2), z: +(z1 - 1.2).toFixed(2), y: y0 + f * H + 0.01, q: 1 }); }
   return { x0, x1, z0, z1, top: y0 + f * H };
 }
 // a big hall (warehouse, barn, turbine hall): one tall room, big doors, a mezzanine along the north side with stairs
@@ -7196,7 +7268,7 @@ function stashHall(o) {
   // the mezzanine (rails on its open edge), stairs up at the west end
   deck(o.x + 1, z0 + 0.15 + md / 2, w - 2.3, md, M, 'steel', {});
   stairs(x0 + 3.2, z0 + 0.15 + md + Math.ceil(M / 0.27) * 0.42, 'n', 1.3, 0, M, 'steel', { open: true });
-  STASH_LOOT.push({ x: +(o.x + w * 0.2).toFixed(2), z: +(z0 + md / 2).toFixed(2), y: M + 0.01 }, { x: +(o.x - w * 0.2).toFixed(2), z: +(o.z + d * 0.2).toFixed(2), y: 0.01 });
+  STASH_LOOT.push({ x: +(o.x + w * 0.2).toFixed(2), z: +(z0 + md / 2).toFixed(2), y: M + 0.01, q: 1 }, { x: +(x1 - 1.4).toFixed(2), z: +(o.z + d * 0.15).toFixed(2), y: 0.01, q: 0 });
   // stacks of crates and pallets on the floor: cover
   const sr = stashRand((o.x * 13 + o.z * 7) | 0);
   for (let i = 0; i < Math.round(w * d / 70); i++) { const px = x0 + 3 + sr() * (w - 6), pz = z0 + md + 2 + sr() * (d - md - 4); if (Math.abs(pz - z1) < 4 && Math.abs(px - o.x) < 3.5) continue; blk(px, pz, 1.6, 1.6, 1.2 + (sr() < 0.4 ? 1.2 : 0), sr() < 0.5 ? 'wood' : 'dark', { walk: true }); }
@@ -7216,115 +7288,210 @@ function stashTiers(x, z, sizes, step, key, rampSide = 's') {
   });
 }
 function stashTank(x, z, r, h) { CYL('paintWhite', r, r, h, 20, x, h / 2, z); PZ(x, 0, z, r * 1.6, h, r * 1.6); CYL('rustIron', r + 0.05, r + 0.05, 0.4, 20, x, h * 0.7, z, 0, 0, 0, false); }
+/* ---------- the land: places sit on flat pads at heights that suit them, natural hills between, cliffs where a pad
+   meets low ground with a short blend. y: the pad's height; b: how far (m) it blends into the hills (2-4 = a cliff). */
+const STASH_POIS = [
+  { id: 'town', name: 'OLD TOWN', x: 0, z: 0, w: 96, d: 96, y: 8, b: 26 },
+  { id: 'school', name: 'THE SCHOOL', x: 0, z: -140, w: 76, d: 46, y: 12, b: 18 },
+  { id: 'green', name: 'GREENHOUSE ROW', x: -132, z: -112, w: 72, d: 58, y: 7, b: 18 },
+  { id: 'radio', name: 'RADIO HILL', x: -72, z: -64, w: 20, d: 18, y: 26, b: 8 },
+  { id: 'refinery', name: 'THE REFINERY', x: 125, z: -122, w: 78, d: 66, y: 3, b: 14 },
+  { id: 'light', name: 'THE LIGHTHOUSE', x: 172, z: -176, w: 30, d: 30, y: 18, b: 3 },
+  { id: 'hotel', name: 'THE HOTEL', x: -158, z: 20, w: 50, d: 70, y: 3, b: 16 },
+  { id: 'cellar', name: 'THE CELLAR', x: 122, z: 20, w: 36, d: 62, y: 9, b: 12 },
+  { id: 'estate', name: 'THE ESTATE', x: 164, z: 20, w: 42, d: 56, y: 14, b: 3 },
+  { id: 'farm', name: 'THE FARM', x: -140, z: 142, w: 78, d: 68, y: 5, b: 18 },
+  { id: 'docks', name: 'THE DOCKS', x: 0, z: 165, w: 132, d: 46, y: 1.2, b: 12 },
+  { id: 'quarryRim', name: '', x: 128, z: 146, w: 92, d: 82, y: 15, b: 18 },
+  { id: 'quarry', name: 'THE QUARRY', x: 128, z: 148, w: 60, d: 50, y: 9, b: 2.5 },
+  { id: 'power', name: 'POWER STATION', x: -66, z: 100, w: 72, d: 58, y: 6, b: 16 },
+  { id: 'bunkers', name: 'THE BUNKERS', x: 62, z: 90, w: 56, d: 48, y: 16, b: 14 },
+];
+// ramps: a strip whose height runs from y0 (at a) to y1 (at b); y0 'nat' takes the hill's height there
+const STASH_RAMPS = [
+  { ax: 122, az: -176, bx: 157, bz: -176, w: 8, y0: 'nat', y1: 18 },      // the road up to the lighthouse
+  { ax: 162, az: 78, bx: 162, bz: 48, w: 8, y0: 'nat', y1: 14 },          // the drive up to the estate
+];
+const STASH_HOUSES = [[60, -60, 2], [-38, -50, 1], [70, 50, 2], [-60, 46, 2], [-124, -40, 1], [124, -52, 2], [-40, -170, 1], [60, -170, 2], [-176, -60, 1], [176, 92, 1], [-100, 176, 1], [-22, 100, 2], [96, 60, 1], [-96, -150, 2]];
+const stashSmooth = t => t <= 0 ? 0 : t >= 1 ? 1 : t * t * (3 - 2 * t);
+const stashRoad = (x, z) => Math.abs(x) < 4.5 || Math.abs(z) < 4.5 || ((Math.abs(Math.abs(x) - 110) < 4.5 && Math.abs(z) < 114) || (Math.abs(Math.abs(z) - 110) < 4.5 && Math.abs(x) < 114));
+function stashNat(x, z) {
+  const H = STASH_H, nz = STASH_NOISE || (STASH_NOISE = terrNoise(4207));
+  const e = Math.min(H - Math.abs(x), H - Math.abs(z)) + nz(x + 900, z - 300, 3, 60) * 7;   // distance to the coast, ragged
+  const land = stashSmooth(e / 30), hills = 7 + nz(x, z, 4, 110) * 6 + Math.max(0, nz(x - 400, z + 200, 3, 70)) * 6;
+  const peak = 22 * Math.exp(-((x + 72) ** 2 + (z + 64) ** 2) / (2 * 34 * 34));          // Radio Hill
+  const ridge = 7 * Math.exp(-((x - 62) ** 2 / (2 * 40 * 40) + (z - 92) ** 2 / (2 * 22 * 22)));   // the bunker ridge
+  return -2.5 + land * (2.5 + Math.max(0.6, hills + peak + ridge));
+}
+let STASH_NOISE = null;
+function stashHeight(x, z) {
+  let h = stashNat(x, z);
+  const pads = STASH_POIS.concat(STASH_HOUSES.map(([hx, hz]) => ({ x: hx, z: hz, w: 18, d: 15, y: 'nat', b: 7 })), [{ x: DUEL_PEN.stashisle.x, z: DUEL_PEN.stashisle.z, w: 14, d: 18, y: 'nat', b: 5 }]);
+  for (const p of pads) {
+    const dx = Math.max(0, Math.abs(x - p.x) - p.w / 2), dz = Math.max(0, Math.abs(z - p.z) - p.d / 2), dd = Math.hypot(dx, dz); if (dd >= p.b) continue;
+    const py = p.y === 'nat' ? (p._ny !== undefined ? p._ny : (p._ny = stashNat(p.x, p.z))) : p.y;
+    h = h + (py - h) * (1 - stashSmooth(dd / p.b));
+  }
+  for (const r of STASH_RAMPS) {
+    const lx = r.bx - r.ax, lz = r.bz - r.az, L = Math.hypot(lx, lz), t = ((x - r.ax) * lx + (z - r.az) * lz) / (L * L), off = Math.abs((x - r.ax) * lz - (z - r.az) * lx) / L;
+    if (t < -0.05 || t > 1.05 || off > r.w) continue;
+    const y0 = r.y0 === 'nat' ? (r._ny !== undefined ? r._ny : (r._ny = stashNat(r.ax, r.az))) : r.y0, ry = y0 + (r.y1 - y0) * Math.max(0, Math.min(1, t));
+    h = h + (ry - h) * (1 - stashSmooth((off - r.w / 2) / (r.w / 2)));
+  }
+  return h;
+}
+const stashPoi = id => STASH_POIS.find(p => p.id === id);
+function stashColour(x, z, h, slope) {
+  const W = typeof isleWinter === 'function' && isleWinter(), n = (STASH_NOISE || terrNoise(4207))(x * 3, z * 3, 2, 8) * 0.06;
+  if (h < 0.3) return W ? [0.78, 0.82, 0.86] : [0.78 + n, 0.7 + n, 0.5];                                     // sand (and under the sea)
+  if (stashRoad(x, z) && slope < 0.5) return [0.32, 0.32, 0.33];                                            // the roads
+  if (slope > 0.6) return [0.46 + n, 0.43 + n, 0.4 + n];                                                    // rock faces
+  if (W) return slope > 0.45 ? [0.7, 0.72, 0.76] : [0.93 + n, 0.95 + n, 0.98];
+  if (h < 1.6) return [0.72 + n, 0.66 + n, 0.46];                                                            // the beach above the waterline
+  const g = Math.min(1, slope * 1.6); return [0.36 + g * 0.18 + n, 0.5 - g * 0.06 + n, 0.24 + g * 0.08];   // grass, browner as it steepens
+}
+function stashAt(id, fn) { const p = stashPoi(id); BUILD_YOFF = p ? p.y : 0; try { fn(); } finally { BUILD_YOFF = 0; } }
 function buildStash() {
   buildMap2Materials(); worksMaterials(); airpMaterials(); isleMaterials();
   if (!MAT.stashGlass) MAT.stashGlass = new THREE.MeshStandardMaterial({ color: C(0xcfeedd), roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide });
-  STASH_LOOT.length = 0;
+  STASH_LOOT.length = 0; BUILD_YOFF = 0;
   const sr = stashRand(4207), H = STASH_H;
-  // ---- the ground, the beach, the sea, the water's edge
-  floorQuad(0, 0, H * 2 + 4, H * 2 + 4, 0, 'ground', 30);
-  for (const [x, z, w, d] of [[0, -H + 5, H * 2, 10], [0, H - 5, H * 2, 10], [-H + 5, 0, 10, H * 2], [H - 5, 0, 10, H * 2]]) floorQuad(x, z, w, d, 0.01, 'sand', 12);
-  for (const [x, z, w, d] of [[0, -H - 150, 900, 300], [0, H + 150, 900, 300], [-H - 150, 0, 300, 900], [H + 150, 0, 300, 900]]) floorQuad(x, z, w, d, -0.35, 'sea', 30);
-  for (const [x, z, w, d] of [[0, -H - 1.5, H * 2 + 6, 3], [0, H + 1.5, H * 2 + 6, 3], [-H - 1.5, 0, 3, H * 2 + 6], [H + 1.5, 0, 3, H * 2 + 6]]) blk(x, z, w, d, 9, 'dark', { noDraw: true });
-  // ---- roads: the cross and the ring
-  floorQuad(0, 0, 8, H * 2 - 20, 0.015, 'asphalt', 30); floorQuad(0, 0, H * 2 - 20, 8, 0.016, 'asphalt', 30);
-  for (const [x, z, w, d] of [[0, -110, 228, 8], [0, 110, 228, 8], [-110, 0, 8, 228], [110, 0, 8, 228]]) floorQuad(x, z, w, d, 0.014, 'asphalt', 24);
-  /* ======== CENTRE: OLD TOWN (16 buildings round the crossroads) */
-  floorQuad(0, 0, 84, 84, 0.012, 'cobble', 14);
+  // ---- the land and the sea
+  if (MAT.sea) { MAT.sea.polygonOffset = true; MAT.sea.polygonOffsetFactor = 2; MAT.sea.polygonOffsetUnits = 8; }   // the shallows never flicker through the beach from far up
+  terrDefine(stashHeight, H + 24, 2);
+  terrBuildMesh(stashColour, H + 24);
+  for (const [x, z, w, d] of [[0, -H - 170, 1000, 300], [0, H + 170, 1000, 300], [-H - 170, 0, 300, 1000], [H + 170, 0, 300, 1000], [0, -H + 4, H * 2 + 50, 50], [0, H - 4, H * 2 + 50, 50], [-H + 4, 0, 50, H * 2 - 40], [H - 4, 0, 50, H * 2 - 40]]) floorQuad(x, z, w, d, -0.35, 'sea', 30);   // the sea all round and over the shallows (never under the island itself)
+  for (const [x, z, w, d] of [[0, -H - 1.5, H * 2 + 6, 3], [0, H + 1.5, H * 2 + 6, 3], [-H - 1.5, 0, 3, H * 2 + 6], [H + 1.5, 0, 3, H * 2 + 6]]) blk(x, z, w, d, 40, 'dark', { noDraw: true, y: -5 });
+  /* ======== CENTRE: OLD TOWN, on the rise in the middle of the island */
   const townKeys = ['plaster', 'brick', 'facade', 'plaster', 'brick', 'panel'];
-  let ti = 0;
-  for (const x of [-30, -10, 10, 30]) for (const z of [-30, -10, 10, 30]) {
-    const big = Math.abs(x) === 30 && Math.abs(z) === 30, ds = [];
-    ds.push(z < 0 ? 's' : 'n'); ds.push(x < 0 ? 'e' : 'w');
-    stashBld({ x, z, w: big ? 15 : 12, d: big ? 14 : 12, f: big ? 3 : (ti % 3 === 0 ? 1 : 2), key: townKeys[ti % townKeys.length], doors: ds, seed: 100 + ti });
-    ti++;
-  }
-  CYL('stone', 1.6, 1.8, 1.0, 16, 0, 0.5, 0); PZ(0, 0, 0, 3.4, 1.0, 3.4); CYL('stone', 0.4, 0.5, 3.4, 10, 0, 2.2, 0);   // the monument in the crossroads
-  /* ======== N: THE SCHOOL */
-  floorQuad(0, -140, 70, 40, 0.012, 'concrete', 10);
-  stashBld({ x: 0, z: -146, w: 44, d: 16, f: 2, key: 'brick', doors: ['s', 'e', 'w'], seed: 7 });
-  stashHall({ x: -30, z: -124, w: 18, d: 14, h: 6.5, key: 'brick', roofKey: 'dark', floor: 'wood' });   // the gym
-  for (const x of [8, 18]) { blk(x, -126, 0.15, 3, 3, 'steel', { walk: false }); }
+  stashAt('town', () => {
+    floorQuad(0, 0, 90, 90, 0.012, 'cobble', 14);
+    let ti = 0;
+    for (const x of [-30, -10, 10, 30]) for (const z of [-30, -10, 10, 30]) { const big = Math.abs(x) === 30 && Math.abs(z) === 30; stashBld({ x, z, w: big ? 15 : 12, d: big ? 14 : 12, f: big ? 3 : (ti % 3 === 0 ? 1 : 2), key: townKeys[ti % townKeys.length], doors: [z < 0 ? 's' : 'n', x < 0 ? 'e' : 'w'], seed: 100 + ti }); ti++; }
+    CYL('stone', 1.6, 1.8, 1.0, 16, 0, 0.5, 0); PZ(0, 0, 0, 3.4, 1.0, 3.4); CYL('stone', 0.4, 0.5, 3.4, 10, 0, 2.2, 0);
+  });
+  /* ======== N: THE SCHOOL, on the north hill */
+  stashAt('school', () => {
+    floorQuad(0, -140, 70, 40, 0.012, 'concrete', 10);
+    stashBld({ x: 0, z: -146, w: 44, d: 16, f: 2, key: 'brick', doors: ['s', 'e', 'w'], seed: 7 });
+    stashHall({ x: -30, z: -124, w: 18, d: 14, h: 6.5, key: 'brick', roofKey: 'dark', floor: 'wood' });
+    for (const x of [8, 18]) blk(x, -126, 0.15, 3, 3, 'steel', { walk: false });
+  });
   /* ======== NW: GREENHOUSE ROW */
-  for (const x of [-150, -138, -126, -114]) stashGreenhouse(x, -128, 7, 24);
-  stashBld({ x: -132, z: -100, w: 26, d: 12, f: 2, key: 'panel', doors: ['n', 's'], seed: 21 });
-  for (let i = 0; i < 4; i++) stashContainer(-160 + i * 3, -100, false, i % 2 ? 'paintGreen' : 'rustIron');
-  /* ======== NW mid: RADIO HILL */
-  stashTiers(-72, -64, [40, 28, 16], 2, 'ground', 's');
-  stashBld({ x: -72, z: -64, w: 10, d: 8, f: 1, y: 6, key: 'concrete', doors: ['s'], seed: 31 });
-  CYL('steel', 0.15, 0.25, 22, 6, -66, 17, -68, 0, 0, 0, false); PZ(-66, 6, -68, 0.6, 22, 0.6);
-  /* ======== NE: THE REFINERY + THE LIGHTHOUSE */
-  floorQuad(125, -125, 70, 60, 0.012, 'concrete', 10);
-  for (const [x, z] of [[105, -140], [122, -142], [139, -140]]) stashTank(x, z, 6, 9);
-  stashHall({ x: 128, z: -112, w: 30, d: 18, h: 8, key: 'panel' });
-  stashBld({ x: 96, z: -112, w: 12, d: 10, f: 2, key: 'concrete', doors: ['s', 'e'], seed: 41 });
-  for (let i = 0; i < 6; i++) beam('rustIron', 105 + i * 6, 6.5, -134, 105 + i * 6, 6.5, -120, 0.25, 0.25, false);
-  stashBld({ x: 168, z: -170, w: 9, d: 9, f: 3, key: 'plaster', doors: ['s'], seed: 51, roofKey: 'redBarn' });   // the lighthouse keeper's tower
-  CYL('paintWhite', 3.2, 3.6, 14, 16, 176, 7, -178); PZ(176, 0, -178, 7, 14, 7); CYL('redBarn', 3.25, 3.25, 1.4, 16, 176, 10, -178, 0, 0, 0, false); CYL('glass', 2.2, 2.2, 2.2, 12, 176, 15.1, -178, 0, 0, 0, false);
-  /* ======== W: THE HOTEL (three wings round the pool) */
-  stashBld({ x: -170, z: 20, w: 12, d: 40, f: 2, key: 'plaster', doors: ['e', 'w'], seed: 61 });
-  stashBld({ x: -149, z: -6, w: 30, d: 12, f: 2, key: 'plaster', doors: ['s', 'n'], seed: 62 });
-  stashBld({ x: -149, z: 46, w: 30, d: 12, f: 2, key: 'plaster', doors: ['n', 's'], seed: 63 });
-  blk(-148, 20, 16, 10, 0.4, 'whiteTile', { walk: true }); floorQuad(-148, 20, 14.6, 8.6, 0.42, 'water', 2);
-  for (const z of [10, 30]) for (const x of [-156, -140]) blk(x, z, 2.2, 0.8, 0.5, 'paintWhite', { walk: true });
-  /* ======== E: THE ESTATE: a 5 m cliff, the mansion on top, THE CELLAR inside its west part, a tunnel through it */
-  const EH = 5;
-  blk(161, 6.25, 42, 22.5, EH, 'rock', { walk: true, tile: 8 }); blk(161, 33.75, 42, 22.5, EH, 'rock', { walk: true, tile: 8 });   // solid either side of the tunnel
-  slab(161, 20, 42, 5, EH, 'rock', 0.6); floorQuad(161, 20, 42, 5, 0.013, 'concrete', 6);   // the tunnel (x 140..182, z 17.5..22.5) and its roof
-  // the cellar block (x 122..140): outer walls with the tunnel mouths, rooms inside, the roof is the cliff top
-  for (const [ax, az, bx, bz, holes] of [[122, -5, 140, -5, []], [122, 45, 140, 45, []], [122, -5, 122, 45, [{ at: 25, w: 4, b: 0, h: 3 }, { at: 8, w: 1.8, b: 0, h: 2.4 }]]]) wall(ax, az, bx, bz, EH, 'rock', { t: 1, holes });
-  slab(131, 20, 18.6, 50.6, EH, 'rock', 0.4);
-  wall(131, -5, 131, 45, EH - 0.4, 'concrete', { t: 0.3, holes: [{ at: 25, w: 3, b: 0, h: 3 }, { at: 9, w: 1.8, b: 0, h: 2.3 }, { at: 41, w: 1.8, b: 0, h: 2.3 }] });
-  for (const z of [7, 33]) wall(131, z, 140, z, EH - 0.4, 'concrete', { t: 0.3, holes: [{ at: 4.5, w: 1.8, b: 0, h: 2.3 }] });
-  for (const z of [7, 33]) wall(122, z, 131, z, EH - 0.4, 'concrete', { t: 0.3, holes: [{ at: 4.5, w: 1.8, b: 0, h: 2.3 }] });
-  floorQuad(131, 20, 17.4, 49.4, 0.012, 'concrete', 6);
-  for (const [x, z] of [[126, 0], [136, 2], [126, 40], [136, 38], [135, 20], [127, 16]]) { blk(x, z, 1.6, 1.0, 1.0, 'dark', { walk: false }); STASH_LOOT.push({ x: x + 1.6, z: z + 1.2, y: 0.01 }); }
-  // ramps up the cliff: from the west road and from the south
-  stashRamp(98, 32, 'e', 4.5, 24, 0, EH, 'rock'); stashRamp(162, 70, 'n', 4.5, 25, 0, EH, 'rock');
-  stashBld({ x: 162, z: 6, w: 26, d: 18, f: 2, y: EH, key: 'plaster', doors: ['s', 'w'], seed: 71, floor: 'wood' });
-  floorQuad(158, 30, 12, 7, EH + 0.02, 'water', 2); for (const x of [150, 166]) blk(x, 36, 2, 0.8, 0.5, 'paintWhite', { y: EH, walk: true });
-  /* ======== SW: THE FARM */
-  floorQuad(-140, 140, 70, 60, 0.012, 'ground', 8);
-  stashHall({ x: -140, z: 132, w: 24, d: 16, h: 7.5, key: 'redBarn', roofKey: 'dark', floor: 'soil' });
-  for (const z of [118, 130]) { CYL('rustIron', 3, 3, 11, 16, -115, 5.5, z); PZ(-115, 0, z, 6, 11, 6); }
-  stashBld({ x: -166, z: 160, w: 13, d: 11, f: 2, key: 'plaster', doors: ['n', 'e'], seed: 81 });
-  for (let i = 0; i < 10; i++) blk(-150 + (i % 5) * 7, 168 + ((i / 5) | 0) * 6, 1.6, 1.2, 1.2, 'hay', { walk: true });
-  /* ======== S: THE DOCKS */
-  floorQuad(0, 168, 120, 40, 0.012, 'concrete', 10);
-  stashHall({ x: -32, z: 160, w: 28, d: 18, h: 8, key: 'panel' }); stashHall({ x: 30, z: 160, w: 28, d: 18, h: 8, key: 'rustIron', roofKey: 'dark' });
-  for (let i = 0; i < 4; i++) { stashContainer(-6 + (i % 2) * 7, 150 + ((i / 2) | 0) * 8, false, ['paintBlue', 'rustIron', 'paintGreen', 'paintRed'][i]); blk(-6 + (i % 2) * 7, 150 + ((i / 2) | 0) * 8, 2.5, 6, 2.6, ['paintRed', 'paintBlue'][i % 2], { y: 2.6, walk: true }); }
-  stairs(1, 147 - Math.ceil(5.2 / 0.27) * 0.42, 's', 1.2, 0, 5.2, 'steel', { open: true });
-  for (const x of [-60, 60]) { blk(x, 186, 6, 18, 0.6, 'wood', { walk: true }); }
-  /* ======== SE: THE QUARRY (three terraces down into the pit) */
-  for (const [z, top] of [[112, 4.5], [120, 3], [128, 1.5]]) blk(130, z, 56, 8, top, 'rock', { walk: true, tile: 6 });
-  for (const [x, top] of [[162, 4.5], [154, 3], [146, 1.5]]) blk(x, 150, 8, 36, top, 'rock', { walk: true, tile: 6 });
-  for (const [x, z, y0] of [[108, 132, 0], [108, 124, 1.5], [108, 116, 3]]) stairs(x, z + Math.ceil(1.5 / 0.27) * 0.42, 'n', 2, y0, y0 + 1.5, 'rock');
-  floorQuad(125, 150, 40, 36, 0.015, 'stone', 8);
-  stashBld({ x: 100, z: 168, w: 12, d: 10, f: 2, key: 'panel', doors: ['n', 'e'], seed: 91 });
-  for (const [x, z] of [[118, 146], [132, 158], [124, 164]]) stashRock(x, z, 1.8, 2.2);
-  /* ======== mid S: THE POWER STATION + THE BUNKERS */
-  stashHall({ x: -62, z: 92, w: 30, d: 18, h: 9, key: 'concrete', roofKey: 'dark' });
-  CYL('concrete', 9, 7, 18, 24, -90, 9, 120); PZ(-90, 0, 120, 16, 18, 16);
-  for (let i = 0; i < 6; i++) blk(-48 + (i % 3) * 5, 116 + ((i / 3) | 0) * 5, 2.2, 2.2, 2.6, 'dark', { walk: true });
-  for (const [x, z] of [[52, 80], [72, 80], [52, 100], [72, 100]]) stashBld({ x, z, w: 12, d: 8, f: 1, key: 'concrete', doors: [z < 90 ? 's' : 'n'], seed: (x + z) | 0, roofKey: 'concrete' });
-  for (const [x, z, w, al] of [[62, 70, 18, true], [62, 110, 18, true], [42, 90, 14, false], [82, 90, 14, false]]) stashSandbags(x, z, w, al);
-  /* ======== houses along the roads (quick loot, cover between the big places) */
-  const hs = [[60, -60, 2], [-38, -50, 1], [70, 50, 2], [-60, 46, 2], [-124, -40, 1], [124, -52, 2], [-40, -170, 1], [60, -170, 2], [-176, -60, 1], [176, 92, 1], [-100, 176, 1], [-22, 100, 2], [96, 60, 1], [-96, -150, 2]];
-  hs.forEach(([x, z, f], i) => stashBld({ x, z, w: 12, d: 9, f, key: townKeys[(i + 2) % townKeys.length], doors: ['s', 'n'], seed: 200 + i }));
-  /* ======== scatter: trees and rocks on the open ground (not on roads or places) */
-  for (let i = 0, n = 0; i < 2000 && n < 150; i++) {
-    const x = (sr() - 0.5) * (H * 2 - 30), z = (sr() - 0.5) * (H * 2 - 30); if (stashBusy(x, z, 4)) continue; n++;
-    if (sr() < 0.75) tree(x, z, sr() < 0.08, 0.9 + sr() * 0.5); else stashRock(x, z, 1.2 + sr() * 1.6, 1.4 + sr() * 2);
+  stashAt('green', () => {
+    floorQuad(-132, -112, 66, 52, 0.012, 'concrete', 10);
+    for (const x of [-150, -138, -126, -114]) stashGreenhouse(x, -128, 7, 24);
+    stashBld({ x: -132, z: -100, w: 26, d: 12, f: 2, key: 'panel', doors: ['n', 's'], seed: 21 });
+    for (let i = 0; i < 4; i++) stashContainer(-160 + i * 3, -100, false, i % 2 ? 'paintGreen' : 'rustIron');
+  });
+  /* ======== RADIO HILL: the top of the island */
+  stashAt('radio', () => {
+    floorQuad(-72, -64, 18, 16, 0.012, 'concrete', 4);
+    stashBld({ x: -72, z: -64, w: 10, d: 8, f: 1, key: 'concrete', doors: ['s'], seed: 31 });
+    CYL('steel', 0.15, 0.25, 22, 6, -66, 11, -69.5, 0, 0, 0, false); PZ(-66, 0, -69.5, 0.6, 22, 0.6);
+  });
+  /* ======== NE: THE REFINERY by the shore, THE LIGHTHOUSE on its headland */
+  stashAt('refinery', () => {
+    floorQuad(125, -122, 74, 62, 0.012, 'concrete', 10);
+    for (const [x, z] of [[105, -140], [122, -142], [139, -140]]) stashTank(x, z, 6, 9);
+    stashHall({ x: 128, z: -112, w: 30, d: 18, h: 8, key: 'panel' });
+    stashBld({ x: 96, z: -112, w: 12, d: 10, f: 2, key: 'concrete', doors: ['s', 'e'], seed: 41 });
+    for (let i = 0; i < 6; i++) beam('rustIron', 105 + i * 6, 6.5, -134, 105 + i * 6, 6.5, -120, 0.25, 0.25, false);
+  });
+  stashAt('light', () => {
+    stashBld({ x: 168, z: -170, w: 9, d: 9, f: 3, key: 'plaster', doors: ['s'], seed: 51, roofKey: 'redBarn' });
+    CYL('paintWhite', 3.2, 3.6, 14, 16, 176, 7, -178); PZ(176, 0, -178, 7, 14, 7); CYL('redBarn', 3.25, 3.25, 1.4, 16, 176, 10, -178, 0, 0, 0, false); CYL('glass', 2.2, 2.2, 2.2, 12, 176, 15.1, -178, 0, 0, 0, false);
+  });
+  /* ======== W: THE HOTEL on the west shore */
+  stashAt('hotel', () => {
+    floorQuad(-156, 20, 46, 66, 0.012, 'concrete', 10);
+    stashBld({ x: -170, z: 20, w: 12, d: 40, f: 2, key: 'plaster', doors: ['e', 'w'], seed: 61 });
+    stashBld({ x: -149, z: -6, w: 30, d: 12, f: 2, key: 'plaster', doors: ['s', 'n'], seed: 62 });
+    stashBld({ x: -149, z: 46, w: 30, d: 12, f: 2, key: 'plaster', doors: ['n', 's'], seed: 63 });
+    blk(-148, 20, 16, 10, 0.4, 'whiteTile', { walk: true }); floorQuad(-148, 20, 14.6, 8.6, 0.42, 'water', 2);
+    for (const z of [10, 30]) for (const x of [-156, -140]) blk(x, z, 2.2, 0.8, 0.5, 'paintWhite', { walk: true });
+  });
+  /* ======== E: THE CELLAR dug into the foot of the cliff, THE ESTATE on top */
+  stashAt('cellar', () => {
+    const EH = 5;
+    for (const [ax, az, bx, bz, holes] of [[122, -5, 140, -5, []], [122, 45, 140, 45, []], [122, -5, 122, 45, [{ at: 25, w: 4, b: 0, h: 3 }, { at: 8, w: 1.8, b: 0, h: 2.4 }, { at: 42, w: 1.8, b: 0, h: 2.4 }]], [140, -5, 140, 45, []]]) wall(ax, az, bx, bz, EH, 'rock', { t: 1, holes });
+    slab(131, 20, 18.6, 50.6, EH, 'rock', 0.4);
+    wall(131, -5, 131, 45, EH - 0.4, 'concrete', { t: 0.3, holes: [{ at: 25, w: 3, b: 0, h: 3 }, { at: 9, w: 1.8, b: 0, h: 2.3 }, { at: 41, w: 1.8, b: 0, h: 2.3 }] });
+    for (const z of [7, 33]) { wall(131, z, 140, z, EH - 0.4, 'concrete', { t: 0.3, holes: [{ at: 4.5, w: 1.8, b: 0, h: 2.3 }] }); wall(122, z, 131, z, EH - 0.4, 'concrete', { t: 0.3, holes: [{ at: 4.5, w: 1.8, b: 0, h: 2.3 }] }); }
+    floorQuad(131, 20, 17.4, 49.4, 0.012, 'concrete', 6);
+    for (const [x, z] of [[126, 0], [136, 2], [126, 40], [136, 38], [135, 20], [127, 16]]) { blk(x, z, 1.6, 1.0, 1.0, 'dark', { walk: false }); STASH_LOOT.push({ x: x + 1.6, z: z + 1.2, y: 0.01, q: 2 }); }
+    blk(141.75, 20, 3.5, 54, EH, 'rock', { walk: true, tile: 4 });   // fills the gap between the cellar roof and the cliff top
+  });
+  stashAt('estate', () => {
+    floorQuad(164, 20, 40, 52, 0.012, 'stone', 8);
+    stashBld({ x: 162, z: 6, w: 26, d: 18, f: 2, key: 'plaster', doors: ['s', 'w'], seed: 71, floor: 'wood' });
+    floorQuad(158, 30, 12, 7, 0.02, 'water', 2); for (const x of [150, 166]) blk(x, 36, 2, 0.8, 0.5, 'paintWhite', { walk: true });
+  });
+  /* ======== SW: THE FARM in the valley */
+  stashAt('farm', () => {
+    stashHall({ x: -140, z: 132, w: 24, d: 16, h: 7.5, key: 'redBarn', roofKey: 'dark', floor: 'soil' });
+    for (const z of [118, 130]) { CYL('rustIron', 3, 3, 11, 16, -115, 5.5, z); PZ(-115, 0, z, 6, 11, 6); }
+    stashBld({ x: -166, z: 160, w: 13, d: 11, f: 2, key: 'plaster', doors: ['n', 'e'], seed: 81 });
+    for (let i = 0; i < 10; i++) blk(-150 + (i % 5) * 7, 168 + ((i / 5) | 0) * 6, 1.6, 1.2, 1.2, 'hay', { walk: true });
+  });
+  /* ======== S: THE DOCKS on the water */
+  stashAt('docks', () => {
+    floorQuad(0, 165, 126, 42, 0.012, 'concrete', 10);
+    stashHall({ x: -32, z: 160, w: 28, d: 18, h: 8, key: 'panel' }); stashHall({ x: 30, z: 160, w: 28, d: 18, h: 8, key: 'rustIron', roofKey: 'dark' });
+    for (let i = 0; i < 4; i++) { stashContainer(-6 + (i % 2) * 7, 150 + ((i / 2) | 0) * 8, false, ['paintBlue', 'rustIron', 'paintGreen', 'paintRed'][i]); blk(-6 + (i % 2) * 7, 150 + ((i / 2) | 0) * 8, 2.5, 6, 2.6, ['paintRed', 'paintBlue'][i % 2], { y: 2.6, walk: true }); }
+    stairs(1, 147 - Math.ceil(5.2 / 0.27) * 0.42, 's', 1.2, 0, 5.2, 'steel', { open: true });
+    for (const x of [-60, 60]) blk(x, 192, 6, 22, 0.6, 'wood', { walk: true, y: -0.4 });
+  });
+  /* ======== SE: THE QUARRY: a pit cut into the high ground, terraces stepping down its north side */
+  stashAt('quarry', () => {
+    for (const [z, top] of [[126, 6], [132, 4.5], [138, 3], [144, 1.5]]) blk(128, z, 56, 6, top, 'rock', { walk: true, tile: 6 });
+    for (const [e, y0] of [[147, 0], [141, 1.5], [135, 3], [129, 4.5]]) stairs(103, e + Math.ceil(1.5 / 0.27) * 0.42, 'n', 2, y0, y0 + 1.5, 'rock');
+    floorQuad(128, 158, 56, 28, 0.015, 'stone', 8);
+    for (const [x, z] of [[118, 156], [138, 164], [126, 168]]) stashRock(x, z, 1.8, 2.2);
+  });
+  stashAt('quarryRim', () => stashBld({ x: 100, z: 112, w: 12, d: 10, f: 2, key: 'panel', doors: ['s', 'e'], seed: 91 }));
+  /* ======== THE POWER STATION and THE BUNKERS on their ridge */
+  stashAt('power', () => {
+    floorQuad(-66, 100, 66, 52, 0.012, 'concrete', 10);
+    stashHall({ x: -62, z: 92, w: 30, d: 18, h: 9, key: 'concrete', roofKey: 'dark' });
+    CYL('concrete', 9, 7, 18, 24, -90, 9, 120); PZ(-90, 0, 120, 16, 18, 16);
+    for (let i = 0; i < 6; i++) blk(-48 + (i % 3) * 5, 116 + ((i / 3) | 0) * 5, 2.2, 2.2, 2.6, 'dark', { walk: true });
+  });
+  stashAt('bunkers', () => {
+    for (const [x, z] of [[52, 80], [72, 80], [52, 100], [72, 100]]) stashBld({ x, z, w: 12, d: 8, f: 1, key: 'concrete', doors: [z < 90 ? 's' : 'n'], seed: (x + z) | 0, roofKey: 'concrete' });
+    for (const [x, z, w, al] of [[62, 70, 18, true], [62, 110, 18, true], [42, 90, 14, false], [82, 90, 14, false]]) stashSandbags(x, z, w, al);
+  });
+  /* ======== loot outside, where a stash would be: by the containers, in the greenhouses, on the hay, by the tanks, in the
+     sandbag nests, on the terraces, on the container stacks and the piers ([place, x, z, height above it, quality]) */
+  for (const [id, x, z, y, q] of [['school', 10, -124, 0, 0], ['green', -150, -128, 0, 0], ['green', -138, -120, 0, 0], ['green', -126, -136, 0, 0], ['green', -114, -128, 0, 0], ['green', -158.5, -100, 2.6, 1],
+    ['radio', -66, -66.5, 0, 1], ['refinery', 111, -132, 0, 0], ['refinery', 128, -134, 0, 0], ['light', 176, -172, 0, 2], ['hotel', -156, 11, 0, 0], ['hotel', -140, 29, 0, 0],
+    ['estate', 158, 35, 0, 1], ['estate', 180, 40, 0, 1], ['farm', -150, 168, 1.2, 0], ['farm', -129, 174, 1.2, 0], ['farm', -111, 124, 0, 1], ['docks', 1, 150, 5.2, 1], ['docks', -2.5, 154, 0, 0],
+    ['docks', -60, 194, 0.2, 0], ['docks', 60, 194, 0.2, 0], ['quarry', 116, 126, 6, 1], ['quarry', 140, 132, 4.5, 0], ['quarry', 150, 144, 1.5, 0], ['quarry', 128, 166, 0, 0],
+    ['power', -44, 113, 0, 1], ['power', -79, 120, 0, 0], ['bunkers', 62, 72.5, 0, 0], ['bunkers', 44.5, 90, 0, 0], ['bunkers', 80, 90, 0, 1]]) stashAt(id, () => STASH_LOOT.push({ x, z, y, q }));
+  /* ======== houses along the roads, each on its own little level patch */
+  STASH_HOUSES.forEach(([x, z, f], i) => { BUILD_YOFF = stashNat(x, z); stashBld({ x, z, w: 12, d: 9, f, key: townKeys[(i + 2) % townKeys.length], doors: ['s', 'n'], seed: 200 + i }); BUILD_YOFF = 0; });
+  /* ======== trees and rocks on the open hills (not on roads, places or steep faces) */
+  for (let i = 0, n = 0; i < 3000 && n < 170; i++) {
+    const x = (sr() - 0.5) * (H * 2 - 30), z = (sr() - 0.5) * (H * 2 - 30); if (stashBusy(x, z, 4)) continue;
+    const h = TH(x, z), sl = Math.hypot(TH(x + 1, z) - TH(x - 1, z), TH(x, z + 1) - TH(x, z - 1)) / 2; if (h < 1.5 || sl > 0.45) continue; n++;
+    BUILD_YOFF = h - 0.1; if (sr() < 0.75) tree(x, z, sr() < 0.08, 0.9 + sr() * 0.5); else stashRock(x, z, 1.2 + sr() * 1.6, 1.4 + sr() * 2); BUILD_YOFF = 0;
   }
-  try { duelBuild(DUEL_PEN.stashisle); } catch (e) {}
+  BUILD_YOFF = stashNat(DUEL_PEN.stashisle.x, DUEL_PEN.stashisle.z); try { duelBuild(DUEL_PEN.stashisle); } catch (e) {} BUILD_YOFF = 0;
+  // jump pads and ziplines, at the heights of where they are now
+  const gy = (x, z) => TH(x, z), roofY = (id, f) => stashPoi(id).y + f * STASH_H3;
+  MOVERS.stashisle = {
+    pads: [{ x: 104, z: 6, y: gy(104, 6), to: { x: 146, y: 14, z: 24 } }, { x: 128, z: 162, y: 9, to: { x: 128, y: 15, z: 116 } }, { x: -92, z: -40, y: gy(-92, -40), to: { x: -63.5, y: 26, z: -62 } }],
+    zips: [{ a: { x: 18, y: roofY('school', 2) + 1.9, z: -142 }, b: { x: 46, y: gy(46, -104) + 2.6, z: -104 } }, { a: { x: 170, y: roofY('estate', 2) + 1.9, z: 10 }, b: { x: 112, y: gy(112, 46) + 2.6, z: 46 } }, { a: { x: -70, y: roofY('radio', 1) + 1.9, z: -64 }, b: { x: -40, y: gy(-40, -20) + 2.6, z: -20 } }],
+  };
   try { moversMaterials(); moversBuild('stashisle'); } catch (e) {}
 }
 // where the trees, rocks and grass don't go
-const STASH_PLACES = [[0, 0, 46], [0, -140, 40], [-132, -115, 38], [-72, -64, 24], [125, -125, 42], [172, -174, 14], [-158, 20, 36], [150, 20, 40], [-140, 142, 38], [0, 165, 64], [132, 142, 38], [-70, 104, 32], [62, 90, 26]];
+const STASH_PLACES = [[0, 0, 50], [0, -140, 40], [-132, -112, 38], [-72, -64, 14], [125, -122, 42], [172, -176, 18], [-158, 20, 30], [123, 20, 22], [164, 20, 24], [-140, 142, 40], [0, 165, 68], [128, 146, 48], [-66, 100, 36], [62, 90, 30]];
 function stashBusy(x, z, m = 0) {
   if (Math.abs(x) < 6 + m || Math.abs(z) < 6 + m || Math.abs(Math.abs(x) - 110) < 6 + m || Math.abs(Math.abs(z) - 110) < 6 + m) return true;
   if (Math.abs(x) > STASH_H - 12 || Math.abs(z) > STASH_H - 12) return true;
   if (STASH_PLACES.some(([px, pz, r]) => Math.abs(x - px) < r + m && Math.abs(z - pz) < r + m)) return true;
+  if (STASH_HOUSES.some(([hx, hz]) => Math.abs(x - hx) < 10 + m && Math.abs(z - hz) < 9 + m)) return true;
   return typeof duelIn === 'function' && duelIn(x, z, 2 + m);
 }
 // the old island's definition gets the new size, build and look
@@ -7338,7 +7505,7 @@ function stashBusy(x, z, m = 0) {
     navPts: [{ x: 0, z: 0 }, { x: 0, z: -140 }, { x: -132, z: -100 }, { x: 125, z: -112 }, { x: -150, z: 20 }, { x: 131, z: 20 }, { x: 160, z: 20, y: 5 }, { x: -140, z: 140 }, { x: 0, z: 160 }, { x: 130, z: 145 }, { x: -62, z: 92 }, { x: 62, z: 90 }, { x: -72, z: -64, y: 6 }],
     views: [[22, 3, 22, 0, 2, 0], [0, 4, -110, 0, 4, -146], [-110, 3, -80, -132, 3, -110], [96, 3, -90, 128, 4, -112], [-128, 3, 20, -160, 3, 20], [110, 3, 34, 150, 6, 20], [-110, 3, 120, -140, 4, 132], [0, 3, 130, -30, 4, 160], [110, 6, 112, 130, 0, 150]],
   });
-  m.grass = { count: 16000, avoid: (x, z) => stashBusy(x, z, 1) };
+  m.grass = { count: 16000, avoid: (x, z) => stashBusy(x, z, 1) || TH(x, z) < 1.4 || Math.hypot(TH(x + 1, z) - TH(x - 1, z), TH(x, z + 1) - TH(x, z - 1)) > 1.1 };
 })();
 /* ================================================================== CORE maps (1.2.88): THE TRIM HOUSE and SKATE PARK
    THE TRIM HOUSE - 56 x 56 m, a grow farm on the edge of town, daytime. Spawns at the north and south gates.
@@ -7522,10 +7689,11 @@ function brkBuild(map) {
     if (keep.some(q => Math.hypot(q.x - x, q.z - z) < 5)) continue;
     if (BRK.list.some(o => Math.hypot(o.x - x, o.z - z) < 7)) continue;
     if (typeof duelIn === 'function' && duelIn(x, z, 2)) continue;
-    brkMake(i++, kind, x, z, w, d);
+    const ty = TERR.on ? TH(x, z) : 0; if (TERR.on && (ty < 1.2 || Math.hypot(TH(x + 1, z) - TH(x - 1, z), TH(x, z + 1) - TH(x, z - 1)) > 0.5)) continue;   // flat ground only
+    brkMake(i++, kind, x, z, w, d, ty);
   }
 }
-function brkMake(id, kind, x, z, w, d) {
+function brkMake(id, kind, x, z, w, d, y0 = 0) {
   const K = BRK_KINDS[kind], g = new THREE.Group();
   const mat = MAT[K.mat] || MAT.wood, dark = MAT.dark || mat;
   const add = (bw, bh, bd, px, py, pz, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), m || mat); me.position.set(px, py, pz); me.castShadow = true; me.receiveShadow = true; me.userData.brk = id; g.add(me); return me; };
@@ -7533,10 +7701,10 @@ function brkMake(id, kind, x, z, w, d) {
   else if (kind === 'fence') { const along = w > d; for (let i = 0; i < 6; i++) { const o = -1.05 + i * 0.42; add(along ? 0.36 : d, K.h, along ? d : 0.36, along ? o : 0, K.h / 2, along ? 0 : o); } add(along ? w : 0.05, 0.08, along ? 0.05 : d, 0, K.h * 0.75, 0, dark); }
   else if (kind === 'shield') { add(w, K.h, d, 0, K.h / 2, 0); add(w > d ? w + 0.02 : d + 0.04, 0.12, w > d ? d + 0.04 : w + 0.02, 0, K.h * 0.82, 0, MAT.paintYellow || dark); }
   else { for (let i = 0; i < 4; i++) add(w, 0.12, d, 0, 0.08 + i * 0.17, 0); }
-  g.position.set(x, 0, z); scene.add(g);   // (loadMap puts it in worldObjs with the rest of the map)
-  const box = mkBox(x, z, w, d, K.h, { walk: false }); box.brk = id; boxes.push(box); boxGridDirty = true;
+  g.position.set(x, y0, z); scene.add(g);   // (loadMap puts it in worldObjs with the rest of the map)
+  const box = mkBox(x, z, w, d, K.h, { walk: false, y: y0 }); box.brk = id; boxes.push(box); boxGridDirty = true;
   // the bullet target: one invisible box, so a shot hits it like a wall
-  const hit = new THREE.Mesh(new THREE.BoxGeometry(w, K.h, d), mat); hit.visible = false; hit.position.set(x, K.h / 2, z); hit.userData = { brk: id }; scene.add(hit); hit.updateMatrixWorld(true); wallMeshes.push(hit);   // raycasts ignore visible: an invisible box with the wood material (for the right chips)
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(w, K.h, d), mat); hit.visible = false; hit.position.set(x, y0 + K.h / 2, z); hit.userData = { brk: id }; scene.add(hit); hit.updateMatrixWorld(true); wallMeshes.push(hit);   // raycasts ignore visible: an invisible box with the wood material (for the right chips)
   const o = { id, kind, x, z, w, d, h: K.h, hp: K.hp, max: K.hp, g, box, hit, broken: false };
   BRK.list[id] = o; return o;
 }
@@ -7645,9 +7813,9 @@ const MV2 = { fly: null, zip: null, cd: 0, uH: false };
 function moversBuild(id) {
   const d = MOVERS[id]; if (!d) return;
   for (const p of d.pads) {
-    CYL('steel', 1.1, 1.2, 0.1, 24, p.x, 0.05, p.z, 0, 0, 0, false);
-    batchAdd('stashPad', new THREE.TorusGeometry(0.85, 0.06, 8, 32), mat4(p.x, 0.13, p.z, Math.PI / 2, 0, 0), false);
-    batchAdd('stashPad', new THREE.CylinderGeometry(0.12, 0.12, 0.6, 8), mat4(p.x, 0.35, p.z - 1.3), false);
+    const py = p.y || 0; CYL('steel', 1.1, 1.2, 0.1, 24, p.x, py + 0.05, p.z, 0, 0, 0, false);
+    batchAdd('stashPad', new THREE.TorusGeometry(0.85, 0.06, 8, 32), mat4(p.x, py + 0.13, p.z, Math.PI / 2, 0, 0), false);
+    batchAdd('stashPad', new THREE.CylinderGeometry(0.12, 0.12, 0.6, 8), mat4(p.x, py + 0.35, p.z - 1.3), false);
   }
   for (const z of d.zips) {
     for (const e of [z.a, z.b]) { const gy = groundAt(e.x, e.z, e.y); CYL('rustIron', 0.08, 0.1, e.y + 0.4 - gy, 8, e.x, gy + (e.y + 0.4 - gy) / 2, e.z); }
@@ -7662,7 +7830,7 @@ function moversTick(dt) {
   if (MV2.zip) return;   // (the ride itself runs in updatePlayer: moversZip)
   // pads: step on one to fly
   if (!MV2.fly && MV2.cd <= 0 && P.onGround) for (const p of d.pads) {
-    if (Math.hypot(P.x - p.x, P.z - p.z) > 1.0 || P.y > 0.6) continue;
+    if (Math.hypot(P.x - p.x, P.z - p.z) > 1.0 || P.y > (p.y || 0) + 0.6) continue;
     const T = 1.15 + Math.hypot(p.to.x - p.x, p.to.z - p.z) / 40, dx = p.to.x - P.x, dz = p.to.z - P.z, dy = p.to.y - P.y;
     MV2.fly = { vx: dx / T, vz: dz / T, t: T }; P.vy = (dy + 0.5 * 22 * T * T) / T; P.onGround = false; MV2.cd = 1.5;
     try { sfx.thud({ vol: 0.9 }); sfx.streak(); achAdd('pads'); } catch (e) {}
@@ -8380,14 +8548,14 @@ function updateFx(dt) {
   for (const k in chunkPools) for (const c of chunkPools[k].list) {
     if (!c.on) continue; c.life -= dt; if (c.life <= 0) { c.on = false; c.m.visible = false; continue; }
     c.vy -= 14 * dt; c.m.position.x += c.vx * dt; c.m.position.y += c.vy * dt; c.m.position.z += c.vz * dt;
-    if (c.m.position.y < 0.02) { c.m.position.y = 0.02; c.vy *= -0.3; c.vx *= 0.6; c.vz *= 0.6; }
+    const cfl = TERR.on ? TH(c.m.position.x, c.m.position.z) + 0.02 : 0.02; if (c.m.position.y < cfl) { c.m.position.y = cfl; c.vy *= -0.3; c.vx *= 0.6; c.vz *= 0.6; }
     c.m.rotation.x += dt * 8; c.m.rotation.z += dt * 6;
   }
   for (const c of casings) {
     if (!c.on) continue; c.life -= dt; if (c.life <= 0) { c.on = false; c.m.visible = false; continue; }
     c.vy -= 12 * dt; const pos = c.m.position; pos.x += c.vx * dt; pos.y += c.vy * dt; pos.z += c.vz * dt;
     c.m.rotation.x += c.rx * dt; c.m.rotation.z += c.rz * dt;
-    if (pos.y < 0.02) { pos.y = 0.02; if (Math.abs(c.vy) > 1.2) sfx.casing(at(pos.x, pos.z, 6)); c.vy *= -0.35; c.vx *= 0.5; c.vz *= 0.5; c.rx *= 0.4; c.rz *= 0.4; }
+    const pfl = TERR.on ? TH(pos.x, pos.z) + 0.02 : 0.02; if (pos.y < pfl) { pos.y = pfl; if (Math.abs(c.vy) > 1.2) sfx.casing(at(pos.x, pos.z, 6)); c.vy *= -0.35; c.vx *= 0.5; c.vz *= 0.5; c.rx *= 0.4; c.rz *= 0.4; }
   }
   for (const t of tracers) { if (!t.on) continue; t.life -= dt; if (t.life <= 0) { t.on = false; t.m.visible = false; } else t.m.material.opacity = 0.9 * (t.life / t.max); }
   if (lightFx.t > 0) { lightFx.t -= dt; muzzleLight.intensity = lightFx.i * Math.max(0, lightFx.t / lightFx.max); } else muzzleLight.intensity = 0;
@@ -8504,7 +8672,7 @@ function updatePlayer(dt) {
   if (moversRiding()) moversZip(dt);   // ZIPLINE (movers.js)
   else if (!mvMantle(dt, fwd, hold)) {
   P.x += P.vx * dt; P.z += P.vz * dt;
-  resolve(P, 0.4, P.y);
+  resolve(P, 0.4, P.y, true);
   P.x = clamp(P.x, PLAYRECT[0] + 0.45, PLAYRECT[1] - 0.45); P.z = clamp(P.z, PLAYRECT[2] + 0.45, PLAYRECT[3] - 0.45);
   if ((kb('jump') || pad.jump) && P.onGround && !hold && !G.downed && !prone && !(P.noJumpT > 0)) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); if (P.slideT > 0) { P.slideT = 0; P.vx *= 1.05; P.vz *= 1.05; } }   // a slide-jump keeps the speed
   P.vy -= 22 * (M && M.feat && M.feat.lowgrav ? 0.42 : 1) * dt; const py0 = P.y; P.y += P.vy * dt;
@@ -8764,7 +8932,7 @@ function nadeStep(g, pos, dt, sim) {
       else if (!wasX) { nx = pos.x; g.vx *= -0.45; } else if (!wasZ) { nz = pos.z; g.vz *= -0.45; } else { nx = pos.x; nz = pos.z; g.vx *= -0.3; g.vz *= -0.3; }
       hit = true;
     }
-    if (ny < 0.09) { ny = 0.09; g.vy = Math.abs(g.vy) * 0.38; g.vx *= 0.75; g.vz *= 0.75; if (Math.abs(g.vy) < 1) g.vy = 0; hit = hit || !sim; }
+    const gfl = TERR.on ? TH(nx, nz) + 0.09 : 0.09; if (ny < gfl) { ny = gfl; g.vy = Math.abs(g.vy) * 0.38; g.vx *= 0.75; g.vz *= 0.75; if (Math.abs(g.vy) < 1) g.vy = 0; hit = hit || !sim; }
     pos.set(nx, ny, nz); if (hit) { hitAny = true; if (g.sticky) { g.vx = g.vy = g.vz = 0; break; } }
   }
   return hitAny;
@@ -9212,7 +9380,7 @@ function updateEnemies(dt) {
     } else { mx = -nz * e.strafe + (dist < e.hold * 0.55 ? -nx : 0); mz = nx * e.strafe + (dist < e.hold * 0.55 ? -nz : 0); }
     const ml = Math.hypot(mx, mz) || 1, sp = e.speed * (holding ? 0.55 : 1) * ((e.slowT = Math.max(0, (e.slowT || 0) - 1 / 60)) > 0 ? 0.35 : 1);
     g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt;
-    resolve(g.position, 0.45, g.position.y); botGround(g, dt);
+    resolve(g.position, 0.45, g.position.y, true); botGround(g, dt);
     for (let j = 0; j < enemies.length; j++) {
       if (j === i) continue;
       const o = enemies[j].group.position, sx = g.position.x - o.x, sz = g.position.z - o.z, sd = Math.hypot(sx, sz);
@@ -9912,14 +10080,14 @@ function buildSpawns() {
   const SP = Math.max(41, Math.min(PLAYRECT[1], -PLAYRECT[0], PLAYRECT[3], -PLAYRECT[2]) - 3);   // the whole play area (STASH ISLAND is 120 m)
   for (let z = -SP; z <= SP; z += 3.5) for (let x = -SP; x <= SP; x += 3.5) {
     const cx = cellOf(x + rnd(-1.2, 1.2)), cz = cellOf(z + rnd(-1.2, 1.2)), c = cz * NN + cx, opts = [];
-    for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h > maxY || lvS[c * NL + l]) continue; let room = 0; for (const [ox, oz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const c2 = (cz + oz) * NN + cx + ox; if (c2 >= 0 && c2 < NN * NN) for (let m = 0; m < lvN[c2]; m++) if (Math.abs(lvH[c2 * NL + m] - h) < 0.3) { room++; break; } } if (room >= 3) opts.push(h); }
+    for (let l = 0; l < lvN[c]; l++) { const h = lvH[c * NL + l]; if (h - (TERR.on ? TH(cellPos(cx), cellPos(cz)) : 0) > maxY || lvS[c * NL + l]) continue; let room = 0; for (const [ox, oz] of [[2, 0], [-2, 0], [0, 2], [0, -2]]) { const c2 = (cz + oz) * NN + cx + ox; if (c2 >= 0 && c2 < NN * NN) for (let m = 0; m < lvN[c2]; m++) if (Math.abs(lvH[c2 * NL + m] - h) < 0.3) { room++; break; } } if (room >= 3) opts.push(h); }
     if (!opts.length) continue;
     const p = { x: cellPos(cx), z: cellPos(cz), y: opts[(Math.random() * opts.length) | 0] };
     if (ok && !ok(p)) continue;
     if (p.x < PLAYRECT[0] + 1.5 || p.x > PLAYRECT[1] - 1.5 || p.z < PLAYRECT[2] + 1.5 || p.z > PLAYRECT[3] - 1.5) continue;   // inside the play area (small maps)
     SPAWNS.push(p);
   }
-  for (const k of ['spawn', 'hp', 'flags', 'sites']) LAYOUT[k] = LAYOUT[k].map(p => p.y !== undefined ? Object.assign({}, p) : Object.assign({}, p, openNear(p.x, p.z), { y: 0 }));
+  for (const k of ['spawn', 'hp', 'flags', 'sites']) LAYOUT[k] = LAYOUT[k].map(p => p.y !== undefined ? Object.assign({}, p) : Object.assign({}, p, openNear(p.x, p.z), { y: TERR.on ? TH(p.x, p.z) : 0 }));
   return SPAWNS;
 }
 // the alive positions of everyone hostile to `team`
@@ -10344,7 +10512,7 @@ function updateBots(dt) {
     if (ml > 0.01) { g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt; if (!face) face = Math.atan2(mx, mz); }
     if (e.stunT > 0) { e.stunT -= dt; e.aim = 0; }
     if (e.spawnProt > 0) e.spawnProt -= dt;
-    resolve(g.position, 0.45, g.position.y); botGround(g, dt);
+    resolve(g.position, 0.45, g.position.y, true); botGround(g, dt);
     for (let j = 0; j < enemies.length; j++) { if (j === i) continue; const o = enemies[j].group.position, sx = g.position.x - o.x, sz = g.position.z - o.z, sd = Math.hypot(sx, sz); if (sd < 0.85 && sd > 0.001) { const pu = (0.85 - sd) * 0.5; g.position.x += sx / sd * pu; g.position.z += sz / sd * pu; } }
     if (!e.net) { g.position.x = clamp(g.position.x, PLAYRECT[0] + 0.5, PLAYRECT[1] - 0.5); g.position.z = clamp(g.position.z, PLAYRECT[2] + 0.5, PLAYRECT[3] - 0.5); }
     const pd = Math.hypot(P.x - g.position.x, P.z - g.position.z); if (pd < 0.9 && pd > 0.001 && G.state === 'playing') { g.position.x -= (P.x - g.position.x) / pd * (0.9 - pd); g.position.z -= (P.z - g.position.z) / pd * (0.9 - pd); }
@@ -11415,10 +11583,11 @@ function brSetup() {
   const used = [], want = ARENA > 120 ? 120 : ARENA > 44 ? 40 : 24, roll = () => { const r = Math.random(); return r < 0.12 ? 2 : r < 0.45 ? 1 : 0; };
   // a map with loot spots (STASH ISLAND: inside the buildings, upstairs, on the roofs) fills most of its crates there
   const spots = ((MAPS[curMap] && MAPS[curMap].loot) || []).slice().sort(() => Math.random() - 0.5);
-  for (const s of spots) { if (M.br.crates.length >= want * 0.65 || !netHostNow()) break; if (used.some(u => Math.hypot(u.x - s.x, u.z - s.z) < 5 && Math.abs((u.y || 0) - (s.y || 0)) < 1)) continue; used.push(s); const c = brCrate(s.x, s.z, roll(), s.y || 0); c.id = M.br.crates.length; M.br.crates.push(c); }
-  for (let i = 0; i < 600 && M.br.crates.length < want && netHostNow(); i++) {   // online, only the host makes the crates (everyone else gets them in the pack)
+  const hasSpots = spots.length >= want * 0.6, rollQ = q => { const r = Math.random(); return q >= 2 ? (r < 0.4 ? 2 : r < 0.85 ? 1 : 0) : q >= 1 ? (r < 0.15 ? 2 : r < 0.55 ? 1 : 0) : (r < 0.06 ? 2 : r < 0.35 ? 1 : 0); };   // better loot where it's harder to get
+  for (const s of spots) { if (M.br.crates.length >= want || !netHostNow()) break; if (used.some(u => Math.hypot(u.x - s.x, u.z - s.z) < 5 && Math.abs((u.y || 0) - (s.y || 0)) < 1)) continue; used.push(s); const c = brCrate(s.x, s.z, rollQ(s.q | 0), s.y || 0); c.id = M.br.crates.length; M.br.crates.push(c); }
+  for (let i = 0; i < 600 && !hasSpots && M.br.crates.length < want && netHostNow(); i++) {   // (only maps without loot spots scatter crates on open ground)   // online, only the host makes the crates (everyone else gets them in the pack)
     const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (duelIn(o.x, o.z, 1)) continue; if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
-    const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier); c.id = M.br.crates.length; M.br.crates.push(c);
+    const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier, TERR.on ? TH(o.x, o.z) : 0); c.id = M.br.crates.length; M.br.crates.push(c);
   }
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
@@ -11593,7 +11762,7 @@ function ltTick(dt) {
   if (host && !LT.storm && !LT.stormDone && M.t > (B.stormAt || 9e9)) ltStorm(true);
   if (LT.storm) { LT.storm.t -= dt; if (LT.storm.t <= 0 && host) ltStorm(false); ltStormFx(dt); }
   // supply drops land
-  for (const c of B.crates) if (c.fall > 0) { c.fall = Math.max(0, c.fall - dt * 6); c.g.position.y = c.fall; if (c.chute) { c.chute.visible = c.fall > 0.2; c.chute.position.y = 2.2; } if (c.fall === 0) try { sfx.thud(Object.assign({ vol: 1 }, at(c.x, c.z, 30))); } catch (e) {} }
+  for (const c of B.crates) if (c.fall > 0) { c.fall = Math.max(0, c.fall - dt * 6); c.g.position.y = (c.y || 0) + c.fall; if (c.chute) { c.chute.visible = c.fall > 0.2; c.chute.position.y = 2.2; } if (c.fall === 0) try { sfx.thud(Object.assign({ vol: 1 }, at(c.x, c.z, 30))); } catch (e) {} }
   if (B.plane) { B.plane.t += dt; const P0 = B.plane; P0.m.position.set(P0.x0 + P0.dx * P0.t * 28, 60, P0.z0 + P0.dz * P0.t * 28); if (P0.t > 8) { B.group.remove(P0.m); B.plane = null; } }
   // the HUD
   const el = $('ltHud'); if (el) { const txt = `$${LT.cash} · PLATES ${LT.plates} · ARMOR ${Math.round(G.armor || 0)}${LT.plateT > 0 ? ' · PLATING…' : ''}${LT.selfRev ? ' · SELF-REVIVE' : ''}${LT.contract ? ' · ' + ltContractTxt() : ''}`; if (el._t !== txt) { el._t = txt; el.innerHTML = txt; } el.style.display = alive || LT.contract ? 'block' : 'none'; }
@@ -11700,12 +11869,12 @@ function ltWxApply(v) { if (v === 1 && !LT.storm) ltStorm(true); if (v !== 1 && 
 /* ---------- supply drops (the host, at the start of the 2nd and 3rd circles) */
 function ltDrop() {
   const B = M.br, t = B.to || { x: B.cx, z: B.cz, r: B.r * 0.6 }, a = Math.random() * TAU, d = Math.random() * t.r * 0.6, o = openNear(t.x + Math.cos(a) * d, t.z + Math.sin(a) * d);
-  const c = brCrate(o.x, o.z, 3); c.id = B.crates.length; B.crates.push(c); ltDropFx(c);
+  const c = brCrate(o.x, o.z, 3, TERR.on ? TH(o.x, o.z) : 0); c.id = B.crates.length; B.crates.push(c); ltDropFx(c);
   const m = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.6 })), dx = Math.sign(o.x) || 1;
   B.plane = { m, t: 0, x0: o.x - dx * 110, z0: o.z, dx, dz: 0 }; m.rotation.y = Math.PI / 2; B.group.add(m);
   try { showBanner('SUPPLY DROP', 'a red crate is coming down inside the circle'); } catch (e) {}
 }
-function ltDropFx(c) { c.fall = 45; c.g.position.y = 45; const ch = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 6, 0, TAU, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xff4a3a, side: THREE.DoubleSide, roughness: 0.8 })); ch.position.y = 2.2; c.g.add(ch); c.chute = ch; }
+function ltDropFx(c) { c.fall = 45; c.g.position.y = (c.y || 0) + 45; const ch = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 6, 0, TAU, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xff4a3a, side: THREE.DoubleSide, roughness: 0.8 })); ch.position.y = 2.2; c.g.add(ch); c.chute = ch; }
 function ltClear() { ltCloseBuy(); if (LT.storm) ltStorm(false); LT.contract = null; G.armor = 0; }
 (() => {
   BR_TIERS.push({ n: 'SUPPLY DROP', col: 0xff4a3a, cats: ['sr', 'lmg', 'mr'] });
@@ -12156,8 +12325,8 @@ function vhModel(type) {
   return g;
 }
 function vhMake(id, type, x, z, yaw) {
-  const T = VH_TYPES[type], o = openNear(x, z), v = { id, type, T, x: o.x, z: o.z, y: 0, yaw, spd: 0, hp: T.hp, driver: null, g: vhModel(type), lean: 0, pitch: 0, net: null, netT: 0, hitT: 0, dead: false };
-  v.g.position.set(v.x, 0, v.z); v.g.rotation.y = yaw; (M.br && M.br.group || scene).add(v.g); return v;
+  const T = VH_TYPES[type], o = openNear(x, z), v = { id, type, T, x: o.x, z: o.z, y: TERR.on ? TH(o.x, o.z) : 0, yaw, spd: 0, hp: T.hp, driver: null, g: vhModel(type), lean: 0, pitch: 0, net: null, netT: 0, hitT: 0, dead: false };
+  v.g.position.set(v.x, v.y, v.z); v.g.rotation.y = yaw; (M.br && M.br.group || scene).add(v.g); return v;
 }
 // at the start of a LAST TOKE match: the same vehicles in the same places on every machine
 function vhSetup() {
@@ -12207,7 +12376,7 @@ function vhPhys(v, thr, steer, brake, dt, who) {
   v.spd = clamp(v.spd, -5, T.max * (me ? 1 : 0.8) * (M && M.feat && M.feat.lowgrav ? 1.1 : 1)); if (Math.abs(v.spd) < 0.05 && !thr) v.spd = 0;
   const grip = clamp(Math.abs(v.spd) / 4, 0, 1) * (brake ? 1.35 : 1); v.yaw += -steer * T.turn * grip * Math.sign(v.spd || 1) * dt; v.steer = steer;
   const fx = -Math.sin(v.yaw), fz = -Math.cos(v.yaw), nx = v.x + fx * v.spd * dt, nz = v.z + fz * v.spd * dt;
-  const q = { x: nx, z: nz }; resolve(q, T.r, v.y);
+  const q = { x: nx, z: nz }; terrSlope(q, v.x, v.z, v.y); resolve(q, T.r, v.y);
   q.x = clamp(q.x, PLAYRECT[0] + T.r, PLAYRECT[1] - T.r); q.z = clamp(q.z, PLAYRECT[2] + T.r, PLAYRECT[3] - T.r);
   let crash = false;
   if (Math.hypot(q.x - nx, q.z - nz) > 0.02 && Math.abs(v.spd) > 3) {   // crashed into something
@@ -12256,7 +12425,8 @@ function vhUpdate(dt) {
     if (v.net && NOW - v.netT > 1.5) { v.net = null; v.driver = null; v.spd = 0; }   // the remote driver stopped sending: it stays parked there
     if (v.net) { v.x = lerp(v.x, v.nx, clamp(dt * 10, 0, 1)); v.z = lerp(v.z, v.nz, clamp(dt * 10, 0, 1)); let dyw = v.nyaw - v.yaw; dyw = Math.atan2(Math.sin(dyw), Math.cos(dyw)); v.yaw += dyw * clamp(dt * 10, 0, 1); v.y = groundAt(v.x, v.z, v.y + 0.3); }
     const k = v.spd / v.T.max; const st = v.driver ? v.steer || 0 : 0; v.lean = lerp(v.lean, v.type === 'bike' ? clamp(-st * k * 0.5, -0.4, 0.4) : 0, clamp(dt * 6, 0, 1));
-    v.pitch = lerp(v.pitch, v.type === 'bike' && v.driver === 'me' && kb('fwd') && kb('sprint') && v.spd > 4 ? -0.35 : 0, clamp(dt * 4, 0, 1));   // SPRINT + forward on the bike: a wheelie
+    const hillP = TERR.on && v.y - TH(v.x, v.z) < 0.4 ? -Math.atan2(TH(v.x - Math.sin(v.yaw) * 1.3, v.z - Math.cos(v.yaw) * 1.3) - TH(v.x + Math.sin(v.yaw) * 1.3, v.z + Math.cos(v.yaw) * 1.3), 2.6) : 0;   // nose up a hill
+    v.pitch = lerp(v.pitch, (v.type === 'bike' && v.driver === 'me' && kb('fwd') && kb('sprint') && v.spd > 4 ? -0.35 : 0) + hillP, clamp(dt * 4, 0, 1));   // SPRINT + forward on the bike: a wheelie
     v.g.position.set(v.x, v.y, v.z); v.g.rotation.set(v.pitch, v.yaw, v.lean, 'YXZ');
     for (const w of v.g.userData.wheels) w.rotation.x += v.spd * dt / 0.3;
     if (v.g.userData.wheel && v.driver === 'me') v.g.userData.wheel.rotation.z = -((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx) * 0.6;
@@ -12585,10 +12755,10 @@ function duelTake() {
   const ke = G.killer && G.killer.entry; if (ke) try { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> <b>YOU</b> <span class="fw">· TO THE HOTBOX</span>`); } catch (e) {}
   try { if (VH.me) vhExit(true); } catch (e) {}
   G.downed = false; P.slideT = 0; P.mantle = null;
-  Object.assign(P, { x: pen.x, z: pen.z + pen.d / 2 - 1.2, y: 0, vx: 0, vz: 0, vy: 0, onGround: true }); P.yaw = 0; P.pitch = 0;
+  Object.assign(P, { x: pen.x, z: pen.z + pen.d / 2 - 1.2, y: groundAt(pen.x, pen.z + pen.d / 2 - 1.2, 1e3), vx: 0, vz: 0, vy: 0, onGround: true }); P.yaw = 0; P.pitch = 0;
   G.health = G.maxHp || 100; G.spawnProt = 0;
   try { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } catch (e) {}
-  let bot = null; try { bot = spawnBot(en, { x: pen.x, z: pen.z - pen.d / 2 + 1.2, y: 0 }); } catch (e) {}
+  let bot = null; try { bot = spawnBot(en, { x: pen.x, z: pen.z - pen.d / 2 + 1.2, y: groundAt(pen.x, pen.z - pen.d / 2 + 1.2, 1e3) }); } catch (e) {}
   if (!bot) bot = enemies.find(e => e.entry === en) || null;
   if (bot) { bot.duel = true; bot.hp = bot.maxHp; bot.brTier = 99; bot.reactT = 3.2; bot.spawnProt = 0; bot.group.rotation.y = 0; try { botGunProfile(bot, 'sidearm'); } catch (e) {} }
   DUEL.on = { bot, en, wait: 3, t: 0 };
@@ -20519,7 +20689,7 @@ function zombThink(e, i, dt) {
   const ml = Math.hypot(mx, mz), slow = (e.slowT = Math.max(0, (e.slowT || 0) - dt)) > 0 ? 0.45 : 1;
   const sp = ml > 0.01 ? e.speed * slow * (e.stunT > 0 ? 0.3 : 1) : 0;
   if (ml > 0.01) { g.position.x += mx / ml * sp * dt; g.position.z += mz / ml * sp * dt; }
-  resolve(g.position, 0.42, g.position.y); botGround(g, dt);
+  resolve(g.position, 0.42, g.position.y, true); botGround(g, dt);
   for (let j = 0; j < enemies.length; j++) { if (j === i) continue; const o = enemies[j].group.position, sx = g.position.x - o.x, sz = g.position.z - o.z, sd = Math.hypot(sx, sz); if (sd < 0.8 && sd > 0.001) { const pu = (0.8 - sd) * 0.5; g.position.x += sx / sd * pu; g.position.z += sz / sd * pu; } }
   if (dist < 0.95) { g.position.x -= nx * (0.95 - dist); g.position.z -= nz * (0.95 - dist); }
   g.position.x = clamp(g.position.x, PLAYRECT[0] + 0.5, PLAYRECT[1] - 0.5); g.position.z = clamp(g.position.z, PLAYRECT[2] + 0.5, PLAYRECT[3] - 0.5);
@@ -26170,7 +26340,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { zwwGiveL: m => zwwGive(m), zwwFireL: w => zwwFire(w), zwwL: () => ZWWL.length, edPrivPick, edNetCode, ccCampSt: () => CAMP.st, ccSpawnL: n => campSpawnSquad(n, { alert: true }), ccPlayL: (a, b) => campPlay(a, b), ccStepL: () => campStepDone(), ccDmgL: (...a) => damageEnemy(...a), ccDoneL: () => campComplete(), ccJoin, ccLeave, CC_GET: () => CC, ccHost: () => ccHost(), ccClient: () => ccClient(), edOpen, edPlay, edCode, edUncode, edDefine, ED_GET: () => ED, ISLE_W, isleWinter, chwOpen, CHW_GET: () => CHW, zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { TH, TERR_GET: () => TERR, stashHeightL: (x, z) => stashHeight(x, z), zwwGiveL: m => zwwGive(m), zwwFireL: w => zwwFire(w), zwwL: () => ZWWL.length, edPrivPick, edNetCode, ccCampSt: () => CAMP.st, ccSpawnL: n => campSpawnSquad(n, { alert: true }), ccPlayL: (a, b) => campPlay(a, b), ccStepL: () => campStepDone(), ccDmgL: (...a) => damageEnemy(...a), ccDoneL: () => campComplete(), ccJoin, ccLeave, CC_GET: () => CC, ccHost: () => ccHost(), ccClient: () => ccClient(), edOpen, edPlay, edCode, edUncode, edDefine, ED_GET: () => ED, ISLE_W, isleWinter, chwOpen, CHW_GET: () => CHW, zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

@@ -23,10 +23,11 @@ function brSetup() {
   const used = [], want = ARENA > 120 ? 120 : ARENA > 44 ? 40 : 24, roll = () => { const r = Math.random(); return r < 0.12 ? 2 : r < 0.45 ? 1 : 0; };
   // a map with loot spots (STASH ISLAND: inside the buildings, upstairs, on the roofs) fills most of its crates there
   const spots = ((MAPS[curMap] && MAPS[curMap].loot) || []).slice().sort(() => Math.random() - 0.5);
-  for (const s of spots) { if (M.br.crates.length >= want * 0.65 || !netHostNow()) break; if (used.some(u => Math.hypot(u.x - s.x, u.z - s.z) < 5 && Math.abs((u.y || 0) - (s.y || 0)) < 1)) continue; used.push(s); const c = brCrate(s.x, s.z, roll(), s.y || 0); c.id = M.br.crates.length; M.br.crates.push(c); }
-  for (let i = 0; i < 600 && M.br.crates.length < want && netHostNow(); i++) {   // online, only the host makes the crates (everyone else gets them in the pack)
+  const hasSpots = spots.length >= want * 0.6, rollQ = q => { const r = Math.random(); return q >= 2 ? (r < 0.4 ? 2 : r < 0.85 ? 1 : 0) : q >= 1 ? (r < 0.15 ? 2 : r < 0.55 ? 1 : 0) : (r < 0.06 ? 2 : r < 0.35 ? 1 : 0); };   // better loot where it's harder to get
+  for (const s of spots) { if (M.br.crates.length >= want || !netHostNow()) break; if (used.some(u => Math.hypot(u.x - s.x, u.z - s.z) < 5 && Math.abs((u.y || 0) - (s.y || 0)) < 1)) continue; used.push(s); const c = brCrate(s.x, s.z, rollQ(s.q | 0), s.y || 0); c.id = M.br.crates.length; M.br.crates.push(c); }
+  for (let i = 0; i < 600 && !hasSpots && M.br.crates.length < want && netHostNow(); i++) {   // (only maps without loot spots scatter crates on open ground)   // online, only the host makes the crates (everyone else gets them in the pack)
     const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (duelIn(o.x, o.z, 1)) continue; if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
-    const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier); c.id = M.br.crates.length; M.br.crates.push(c);
+    const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier, TERR.on ? TH(o.x, o.z) : 0); c.id = M.br.crates.length; M.br.crates.push(c);
   }
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)

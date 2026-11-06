@@ -14,9 +14,9 @@ const MV2 = { fly: null, zip: null, cd: 0, uH: false };
 function moversBuild(id) {
   const d = MOVERS[id]; if (!d) return;
   for (const p of d.pads) {
-    CYL('steel', 1.1, 1.2, 0.1, 24, p.x, 0.05, p.z, 0, 0, 0, false);
-    batchAdd('stashPad', new THREE.TorusGeometry(0.85, 0.06, 8, 32), mat4(p.x, 0.13, p.z, Math.PI / 2, 0, 0), false);
-    batchAdd('stashPad', new THREE.CylinderGeometry(0.12, 0.12, 0.6, 8), mat4(p.x, 0.35, p.z - 1.3), false);
+    const py = p.y || 0; CYL('steel', 1.1, 1.2, 0.1, 24, p.x, py + 0.05, p.z, 0, 0, 0, false);
+    batchAdd('stashPad', new THREE.TorusGeometry(0.85, 0.06, 8, 32), mat4(p.x, py + 0.13, p.z, Math.PI / 2, 0, 0), false);
+    batchAdd('stashPad', new THREE.CylinderGeometry(0.12, 0.12, 0.6, 8), mat4(p.x, py + 0.35, p.z - 1.3), false);
   }
   for (const z of d.zips) {
     for (const e of [z.a, z.b]) { const gy = groundAt(e.x, e.z, e.y); CYL('rustIron', 0.08, 0.1, e.y + 0.4 - gy, 8, e.x, gy + (e.y + 0.4 - gy) / 2, e.z); }
@@ -31,7 +31,7 @@ function moversTick(dt) {
   if (MV2.zip) return;   // (the ride itself runs in updatePlayer: moversZip)
   // pads: step on one to fly
   if (!MV2.fly && MV2.cd <= 0 && P.onGround) for (const p of d.pads) {
-    if (Math.hypot(P.x - p.x, P.z - p.z) > 1.0 || P.y > 0.6) continue;
+    if (Math.hypot(P.x - p.x, P.z - p.z) > 1.0 || P.y > (p.y || 0) + 0.6) continue;
     const T = 1.15 + Math.hypot(p.to.x - p.x, p.to.z - p.z) / 40, dx = p.to.x - P.x, dz = p.to.z - P.z, dy = p.to.y - P.y;
     MV2.fly = { vx: dx / T, vz: dz / T, t: T }; P.vy = (dy + 0.5 * 22 * T * T) / T; P.onGround = false; MV2.cd = 1.5;
     try { sfx.thud({ vol: 0.9 }); sfx.streak(); achAdd('pads'); } catch (e) {}

@@ -72,7 +72,7 @@ function ltTick(dt) {
   if (host && !LT.storm && !LT.stormDone && M.t > (B.stormAt || 9e9)) ltStorm(true);
   if (LT.storm) { LT.storm.t -= dt; if (LT.storm.t <= 0 && host) ltStorm(false); ltStormFx(dt); }
   // supply drops land
-  for (const c of B.crates) if (c.fall > 0) { c.fall = Math.max(0, c.fall - dt * 6); c.g.position.y = c.fall; if (c.chute) { c.chute.visible = c.fall > 0.2; c.chute.position.y = 2.2; } if (c.fall === 0) try { sfx.thud(Object.assign({ vol: 1 }, at(c.x, c.z, 30))); } catch (e) {} }
+  for (const c of B.crates) if (c.fall > 0) { c.fall = Math.max(0, c.fall - dt * 6); c.g.position.y = (c.y || 0) + c.fall; if (c.chute) { c.chute.visible = c.fall > 0.2; c.chute.position.y = 2.2; } if (c.fall === 0) try { sfx.thud(Object.assign({ vol: 1 }, at(c.x, c.z, 30))); } catch (e) {} }
   if (B.plane) { B.plane.t += dt; const P0 = B.plane; P0.m.position.set(P0.x0 + P0.dx * P0.t * 28, 60, P0.z0 + P0.dz * P0.t * 28); if (P0.t > 8) { B.group.remove(P0.m); B.plane = null; } }
   // the HUD
   const el = $('ltHud'); if (el) { const txt = `$${LT.cash} · PLATES ${LT.plates} · ARMOR ${Math.round(G.armor || 0)}${LT.plateT > 0 ? ' · PLATING…' : ''}${LT.selfRev ? ' · SELF-REVIVE' : ''}${LT.contract ? ' · ' + ltContractTxt() : ''}`; if (el._t !== txt) { el._t = txt; el.innerHTML = txt; } el.style.display = alive || LT.contract ? 'block' : 'none'; }
@@ -179,12 +179,12 @@ function ltWxApply(v) { if (v === 1 && !LT.storm) ltStorm(true); if (v !== 1 && 
 /* ---------- supply drops (the host, at the start of the 2nd and 3rd circles) */
 function ltDrop() {
   const B = M.br, t = B.to || { x: B.cx, z: B.cz, r: B.r * 0.6 }, a = Math.random() * TAU, d = Math.random() * t.r * 0.6, o = openNear(t.x + Math.cos(a) * d, t.z + Math.sin(a) * d);
-  const c = brCrate(o.x, o.z, 3); c.id = B.crates.length; B.crates.push(c); ltDropFx(c);
+  const c = brCrate(o.x, o.z, 3, TERR.on ? TH(o.x, o.z) : 0); c.id = B.crates.length; B.crates.push(c); ltDropFx(c);
   const m = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.5, 6), new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.6 })), dx = Math.sign(o.x) || 1;
   B.plane = { m, t: 0, x0: o.x - dx * 110, z0: o.z, dx, dz: 0 }; m.rotation.y = Math.PI / 2; B.group.add(m);
   try { showBanner('SUPPLY DROP', 'a red crate is coming down inside the circle'); } catch (e) {}
 }
-function ltDropFx(c) { c.fall = 45; c.g.position.y = 45; const ch = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 6, 0, TAU, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xff4a3a, side: THREE.DoubleSide, roughness: 0.8 })); ch.position.y = 2.2; c.g.add(ch); c.chute = ch; }
+function ltDropFx(c) { c.fall = 45; c.g.position.y = (c.y || 0) + 45; const ch = new THREE.Mesh(new THREE.SphereGeometry(1.6, 12, 6, 0, TAU, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xff4a3a, side: THREE.DoubleSide, roughness: 0.8 })); ch.position.y = 2.2; c.g.add(ch); c.chute = ch; }
 function ltClear() { ltCloseBuy(); if (LT.storm) ltStorm(false); LT.contract = null; G.armor = 0; }
 (() => {
   BR_TIERS.push({ n: 'SUPPLY DROP', col: 0xff4a3a, cats: ['sr', 'lmg', 'mr'] });

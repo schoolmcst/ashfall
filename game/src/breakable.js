@@ -27,10 +27,11 @@ function brkBuild(map) {
     if (keep.some(q => Math.hypot(q.x - x, q.z - z) < 5)) continue;
     if (BRK.list.some(o => Math.hypot(o.x - x, o.z - z) < 7)) continue;
     if (typeof duelIn === 'function' && duelIn(x, z, 2)) continue;
-    brkMake(i++, kind, x, z, w, d);
+    const ty = TERR.on ? TH(x, z) : 0; if (TERR.on && (ty < 1.2 || Math.hypot(TH(x + 1, z) - TH(x - 1, z), TH(x, z + 1) - TH(x, z - 1)) > 0.5)) continue;   // flat ground only
+    brkMake(i++, kind, x, z, w, d, ty);
   }
 }
-function brkMake(id, kind, x, z, w, d) {
+function brkMake(id, kind, x, z, w, d, y0 = 0) {
   const K = BRK_KINDS[kind], g = new THREE.Group();
   const mat = MAT[K.mat] || MAT.wood, dark = MAT.dark || mat;
   const add = (bw, bh, bd, px, py, pz, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), m || mat); me.position.set(px, py, pz); me.castShadow = true; me.receiveShadow = true; me.userData.brk = id; g.add(me); return me; };
@@ -38,10 +39,10 @@ function brkMake(id, kind, x, z, w, d) {
   else if (kind === 'fence') { const along = w > d; for (let i = 0; i < 6; i++) { const o = -1.05 + i * 0.42; add(along ? 0.36 : d, K.h, along ? d : 0.36, along ? o : 0, K.h / 2, along ? 0 : o); } add(along ? w : 0.05, 0.08, along ? 0.05 : d, 0, K.h * 0.75, 0, dark); }
   else if (kind === 'shield') { add(w, K.h, d, 0, K.h / 2, 0); add(w > d ? w + 0.02 : d + 0.04, 0.12, w > d ? d + 0.04 : w + 0.02, 0, K.h * 0.82, 0, MAT.paintYellow || dark); }
   else { for (let i = 0; i < 4; i++) add(w, 0.12, d, 0, 0.08 + i * 0.17, 0); }
-  g.position.set(x, 0, z); scene.add(g);   // (loadMap puts it in worldObjs with the rest of the map)
-  const box = mkBox(x, z, w, d, K.h, { walk: false }); box.brk = id; boxes.push(box); boxGridDirty = true;
+  g.position.set(x, y0, z); scene.add(g);   // (loadMap puts it in worldObjs with the rest of the map)
+  const box = mkBox(x, z, w, d, K.h, { walk: false, y: y0 }); box.brk = id; boxes.push(box); boxGridDirty = true;
   // the bullet target: one invisible box, so a shot hits it like a wall
-  const hit = new THREE.Mesh(new THREE.BoxGeometry(w, K.h, d), mat); hit.visible = false; hit.position.set(x, K.h / 2, z); hit.userData = { brk: id }; scene.add(hit); hit.updateMatrixWorld(true); wallMeshes.push(hit);   // raycasts ignore visible: an invisible box with the wood material (for the right chips)
+  const hit = new THREE.Mesh(new THREE.BoxGeometry(w, K.h, d), mat); hit.visible = false; hit.position.set(x, y0 + K.h / 2, z); hit.userData = { brk: id }; scene.add(hit); hit.updateMatrixWorld(true); wallMeshes.push(hit);   // raycasts ignore visible: an invisible box with the wood material (for the right chips)
   const o = { id, kind, x, z, w, d, h: K.h, hp: K.hp, max: K.hp, g, box, hit, broken: false };
   BRK.list[id] = o; return o;
 }
