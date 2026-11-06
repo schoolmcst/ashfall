@@ -64,7 +64,7 @@ async function socSendRequest(code, quiet) {
 // INVITE (1.2.83): sit in a friend's inbox for up to 30 s with an invite; they get a JOIN toast that joins my party
 async function socInvite(code) {
   code = cleanFcode(code); if (code.length !== 6 || SOC.inviting.has(code)) return;
-  SOC.inviting.set(code, 1); const f = FRIENDS.find(x => x.c === code); PARTY.status = 'party invite sent to ' + (f ? f.n : code); socRender();
+  SOC.inviting.set(code, 1); try { achAdd('invites'); } catch (e) {} const f = FRIENDS.find(x => x.c === code); PARTY.status = 'party invite sent to ' + (f ? f.n : code); socRender();
   const r = await socPeek(code, { inv: 1 });
   if (!r) { SOC.inviting.delete(code); PARTY.status = (f ? f.n : code) + ' is not online'; socRender(); return; }
   for (let i = 0; i < 250; i++) { await new Promise(res => setTimeout(res, 100)); if (r.room.closed) break; }

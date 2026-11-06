@@ -57,7 +57,7 @@ function growHarvest(i) {
   const g = growLoad(), p = g.pots[i]; growTick(); if (!p || !p.s || growStage(p) < 1) return null;
   const s = STRAIN[p.s], k = 1 + 0.5 * p.fed, xp = Math.round(s.xp * k), dz = Math.round(s.dz * k), idx = STRAINS.indexOf(s);
   const back = 1 + (Math.random() < 0.5 + 0.2 * p.fed ? 1 : 0); g.seeds[s.id] = (g.seeds[s.id] | 0) + back;
-  let next = null; const nx = STRAINS[idx + 1]; if (nx && Math.random() < (idx < 2 ? 0.45 : 0.3) + 0.1 * p.fed) { next = nx; g.seeds[nx.id] = (g.seeds[nx.id] | 0) + 1; }
+  let next = null; const nx = !s.hy && STRAINS[idx + 1] && !STRAINS[idx + 1].hy ? STRAINS[idx + 1] : null; if (nx && Math.random() < (idx < 2 ? 0.45 : 0.3) + 0.1 * p.fed) { next = nx; g.seeds[nx.id] = (g.seeds[nx.id] | 0) + 1; }
   const first = !g.done[s.id]; g.done[s.id] = (g.done[s.id] | 0) + 1; g.harvests++; g.pots[i] = null;
   // XP and DZ (the battle pass counts the XP too), the strain camo on a first harvest
   try { const before = PROG.xp; PROG.xp = Math.min(XP_AT[MAXLVL], PROG.xp + xp); grantLevels(before, PROG.xp); if (typeof bpGain === 'function') bpGain(xp); } catch (e) {}

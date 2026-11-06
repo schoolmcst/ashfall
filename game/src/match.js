@@ -32,6 +32,14 @@ const MODES = {
   obr: { name: 'ONLINE LAST TOKE', short: 'ONLINE BR', icon: 'BR', desc: 'Real people, battle royale: one life, pistols, loot crates and the closing Nightshade cloud. Last one standing wins the round. Bots fill up to 16.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br' },
   oic: { name: 'ONE IN THE CHAMBER', short: 'OITC', icon: '1IC', desc: 'One bullet in a pistol and every shot kills. A kill gives you another bullet; a miss is gone for good. Three lives each, last one standing wins.', teams: false, respawn: 2, score: 999, time: 8, players: 8, unit: 'KILLS' },
   hso: { name: 'HEADSHOTS ONLY', short: 'HEADS', icon: 'HSO', desc: 'Any gun, but only hits to the head count, and one headshot kills. Bodies, grenades and melee do nothing. First to 20 kills.', teams: false, respawn: 2.5, score: 20, time: 8, players: 8, unit: 'KILLS' },
+  kf: { name: 'KNIFE FIGHT', short: 'KNIVES', icon: 'KNF', desc: 'Free-for-all with melee and throwing knives only. A kill gives you a knife back. First to 25.', teams: false, respawn: 2, score: 25, time: 8, players: 8, unit: 'KILLS' },
+  plug: { name: 'ESCORT THE PLUG', short: 'PLUG', icon: 'VIP', desc: 'Take turns attacking. One attacker is THE PLUG: get them into the enemy base alive within 2 minutes. Defenders kill the Plug or run the clock out. First to 4 rounds.', teams: true, respawn: 4, score: 4, time: 0, perTeam: 5, unit: 'ROUNDS' },
+  heist: { name: 'THE HEIST', short: 'HEIST', icon: '$$$', desc: 'Rob the vault: run the six stash bags to your getaway van, or stop the other team doing it. Four rounds, sides swap every round, most bags wins.', teams: true, respawn: 4, score: 999, time: 0, perTeam: 5, unit: 'BAGS' },
+  grow: { name: 'GROW WARS', short: 'GROW', icon: 'GRW', desc: 'Five grow spots. Take one and its plant has to grow before it scores: nothing for 20 s, then a point a second, two once it has been yours for 50 s. Lose it and the plant dies. First to 300.', teams: true, respawn: 4, score: 300, time: 12, perTeam: 6, unit: 'POINTS' },
+  okf: { name: 'ONLINE KNIFE FIGHT', short: 'ONLINE KNIVES', icon: 'KNF', desc: 'Real people, melee and throwing knives only. First to 20.', teams: false, respawn: 2, score: 20, time: 0, players: 12, unit: 'KILLS', online: true, base: 'kf' },
+  oplug: { name: 'ONLINE ESCORT THE PLUG', short: 'ONLINE PLUG', icon: 'VIP', desc: 'Real people: get your Plug into their base, or stop theirs. First to 4 rounds.', teams: true, respawn: 4, score: 4, time: 0, perTeam: 6, unit: 'ROUNDS', online: true, base: 'plug' },
+  oheist: { name: 'ONLINE THE HEIST', short: 'ONLINE HEIST', icon: '$$$', desc: 'Real people: rob the vault or guard it, sides swap every round. First to 10 bags.', teams: true, respawn: 4, score: 10, time: 0, perTeam: 6, unit: 'BAGS', online: true, base: 'heist' },
+  ogrow: { name: 'ONLINE GROW WARS', short: 'ONLINE GROW', icon: 'GRW', desc: 'Real people: five grow spots that only score once their plants have grown. First to 300.', teams: true, respawn: 4, score: 300, time: 0, perTeam: 6, unit: 'POINTS', online: true, base: 'grow' },
   rbr: { name: 'RANKED LAST TOKE', short: 'RANKED BR', icon: 'RNK', desc: 'Ranked battle royale: real people and bots, one life. Your placement and kills raise or lower your SR.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', ranked: true },
   ooic: { name: 'ONLINE ONE IN THE CHAMBER', short: 'ONLINE OITC', icon: '1IC', desc: 'Real people, one bullet each, every shot kills, a kill gives you another bullet. First to 15 kills wins the round.', teams: false, respawn: 2, score: 15, time: 0, players: 12, unit: 'KILLS', online: true, base: 'oic' },
   ohso: { name: 'ONLINE HEADSHOTS ONLY', short: 'ONLINE HEADS', icon: 'HSO', desc: 'Real people, only headshots count and one headshot kills. First to 20 kills wins the round.', teams: false, respawn: 2.5, score: 20, time: 0, players: 12, unit: 'KILLS', online: true, base: 'hso' },
@@ -43,7 +51,7 @@ const MODES = {
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'obr2', 'obr4', 'ooic', 'ohso', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'rbr', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'oic', 'hso', 'inf', 'gf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'obr2', 'obr4', 'ooic', 'ohso', 'okf', 'oplug', 'oheist', 'ogrow', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'rbr', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'oic', 'hso', 'kf', 'plug', 'heist', 'grow', 'inf', 'gf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 // bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
@@ -174,7 +182,7 @@ function startMatch(mode, custom) {
   else if (!NET.app) loadMap(DEFAULT_MAP);   // claude.ai rooms have no host to pick a map
   try { brkReset(); } catch (e) {}   // broken cover comes back for a new match
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
-  M.squad = (def.squad | 0) > 1 ? def.squad | 0 : mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false; try { pingClear(); duelClear(); fuReset(); tacClear(); } catch (e) {}   // LAST TOKE DUOS / SQUADS (squads.js), pings (ping.js)
+  M.squad = (def.squad | 0) > 1 ? def.squad | 0 : mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false; try { pingClear(); duelClear(); fuReset(); tacClear(); w2Clear(); STK.watchT = 0; } catch (e) {}   // LAST TOKE DUOS / SQUADS (squads.js), pings (ping.js)
   resetGame();
   if (mode === 'zomb') { zombStart(cfg); return; }
   if (mode === 'range') { rangeStart(cfg); return; }
@@ -189,7 +197,7 @@ function startMatch(mode, custom) {
     NET.priv = null; if (privWanted()) privEnter(); else if (NET.pubNext) privEnterPublic(); NET.pubNext = false;
     netStart(mode); if (NET.priv) return; showBanner(def.name, NET.app ? (NET.kind === 'code' ? 'private match: ' + NET.code.toUpperCase() : NET.kind === 'slot' ? 'joining a game on your Wi-Fi' : 'quick play') : NET.ns ? 'room: ' + NET.code.toUpperCase() : 'offline'); return;
   }
-  const names = BOT_NAMES.slice().sort(() => Math.random() - 0.5); let ni = 0;
+  const names = cfg.names && cfg.names.length ? cfg.names.slice() : BOT_NAMES.slice().sort(() => Math.random() - 0.5); let ni = 0;
   const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: true };
   M.entries.push(me); M.me = me;
   if (def.teams) {
@@ -295,7 +303,7 @@ function creditKill(ke, victim) {
 }
 function matchPlayerKilled(killer) {
   if (!inMatch()) return;
-  M.me.deaths++; M.me.alive = false;
+  M.me.deaths++; M.me.alive = false; try { heatAdd('d', P.x, P.z); } catch (e) {}
   try { if (DUEL.on) { const D = DUEL.on; DUEL.on = null; if (D.bot && enemies.includes(D.bot) && M.br) duelSendBack(D.bot); } } catch (err) {}   // lost THE HOTBOX DUEL: the bot goes back in
   try { if (killer && killer.entry) brainHumanKilled(killer, P.x, P.z); } catch (err) {}
   const ke = killer && killer.entry ? killer.entry : null;
@@ -398,7 +406,7 @@ function botGoal(e, cands) {
   const set = (p, hold) => { e.goalT = M.t + (hold || rnd(3, 6)); return p; };
   if (e.inf) { const g = infGoal(e, set); if (g) return g; }
   if (e.camp) { const g = campGoal(e, keep, near, set); if (g) return g; }
-  if (M.kc || M.dom || M.ru || M.br) { const g = m2Goal(e, keep, near, set); if (g) return g; }
+  if (M.kc || M.dom || M.ru || M.br || M.plug || M.heist) { const g = m2Goal(e, keep, near, set); if (g) return g; }
   if (e.job) { const g = botRoleGoal(e, cands, keep, near, set); if (g) return g; }
   if (M.mode === 'hp' && M.hp && !M.hp.wait) {
     const z = LAYOUT.hp[M.hp.idx];
@@ -435,6 +443,7 @@ function botSettle(e) {
   return clamp(0.5 + on * (0.5 + hum * 0.6), 0.5, 1) * (1 - 0.3 * (1 - hum * 0.6) * Math.min(1, (e.moveSp || 0) / 4));
 }
 function botShoot(e, t, dist) {
+  if (M && M.kf) { kfStab(e, t); return; }   // KNIFE FIGHT: a stab (modes7.js)
   const from = enemyMuzzle(e, new THREE.Vector3());
   botsHear(e.group.position.x, e.group.position.z, e.team, e.stealth ? 18 : 40, e);
   e.lastShotT = M.t; if (e.entry) e.entry.sh = (e.entry.sh || 0) + 1;
@@ -472,7 +481,7 @@ function updateBots(dt) {
     const goal = e.goal;
     let goalD = goal ? Math.hypot(goal.x - ex, goal.z - ez) : 0;
     if (goal && Math.abs((goal.y || 0) - g.position.y) > 1.2) goalD = Math.max(goalD, 3);   // right above or below it: not there yet
-    const objUrgent = goal && goalD > 3 && (M.mode === 'hp' || M.mode === 'ctf' || M.mode === 'snd' || M.mode === 'dom') && (e.role === 'obj' || (M.ctf && M.ctf.flags[1 - e.team].carrier === e));
+    const objUrgent = goal && goalD > 3 && (M.mode === 'hp' || M.mode === 'ctf' || M.mode === 'snd' || M.mode === 'dom' || M.mode === 'grow' || M.plug || M.heist) && (e.role === 'obj' || (M.ctf && M.ctf.flags[1 - e.team].carrier === e));
     if (busy) holding = true;
     else if (hurt) {   // back off out of the fight to heal, still shooting
       const nx = (tp.x - ex) / (dist || 1), nz = (tp.z - ez) / (dist || 1); e.strafeT -= dt; if (e.strafeT <= 0) { e.strafe *= -1; e.strafeT = rnd(0.5, 1.2); }
@@ -521,7 +530,7 @@ function updateBots(dt) {
     if (e.inf) infBotMelee(e, dt, tp, dist);
     else if (e.tgt && e.aim > 0.6 && !(e.reloadT > 0) && !busy && !(e.stunT > 0)) {
       e.cd -= dt;
-      if (e.cd <= 0 && oicCanFire(e)) { oicBotFired(e); botShoot(e, e.tgt, dist); if (--e.mag <= 0) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; } e.shots--; if (e.shots <= 0) { e.shots = e.burstMin ? Math.floor(rnd(e.burstMin, e.burstMax || 7)) : dist > 25 ? Math.floor(rnd(2, 5)) : Math.floor(rnd(4, 9)); e.cd = rnd(0.35, 0.9) + (e.gap > 0.3 ? e.gap : 0); } else e.cd = e.gap || 0.11; }
+      if (e.cd <= 0 && oicCanFire(e) && kfCanFire(e, dist)) { oicBotFired(e); botShoot(e, e.tgt, dist); if (--e.mag <= 0) { e.mag = e.magSize; e.reloadDur = e.reloadT = rnd(1.9, 2.5); e.reloadSnd = false; } e.shots--; if (e.shots <= 0) { e.shots = e.burstMin ? Math.floor(rnd(e.burstMin, e.burstMax || 7)) : dist > 25 ? Math.floor(rnd(2, 5)) : Math.floor(rnd(4, 9)); e.cd = rnd(0.35, 0.9) + (e.gap > 0.3 ? e.gap : 0); } else e.cd = e.gap || 0.11; }
     }
   }
 }
@@ -609,7 +618,7 @@ function netObjPack() {
   const ts = M.teamScore || [0, 0];
   if (M.mode === 'hp' && M.hp) { const h = M.hp; return ['h', h.idx, Math.round(h.t), Math.ceil(h.wait || 0), h.status, ts[0], ts[1]]; }
   if (M.mode === 'ctf' && M.ctf) return ['c', ts[0], ts[1], ...M.ctf.flags.flatMap(f => [CTF_ST.indexOf(f.state), f.carrier === 'player' ? NET.me : f.carrier ? (f.carrier.net || (f.carrier.entry && f.carrier.entry.botLabel) || '') : '', r2(f.x), r2(f.z)])];
-  if (M.kc || M.dom || M.ru || M.pp || M.ph || M.br) return m2Pack();
+  if (M.kc || M.dom || M.ru || M.pp || M.ph || M.br || M.plug || M.heist) return m2Pack();
   if (M.inf) return infPack();
   if (M.gf) return gfPack();
   if (M.mode === 'snd' && M.snd) { const sn = M.snd, b = sn.bomb; return ['s', sn.round, sn.wins[0], sn.wins[1], sn.att, ['wait', 'freeze', 'live', 'planted', 'post', 'done'].indexOf(sn.state), Math.round(sn.t), b ? r2(b.x) : 0, b ? r2(b.z) : 0, b ? +b.t.toFixed(1) : -1, b ? b.n : '', sn.bombN || 0, sn.lastWhy || '']; }
@@ -617,7 +626,7 @@ function netObjPack() {
 }
 function netObjApply() {
   const o = NET.ob; if (!Array.isArray(o)) return;
-  if (o[0] === 'k' || o[0] === 'd' || o[0] === 'r' || o[0] === 'p' || (o[0] === 'q' && M.ph) || (o[0] === 'b' && M.br)) { m2Apply(o); return; }
+  if (o[0] === 'k' || o[0] === 'd' || o[0] === 'r' || o[0] === 'p' || (o[0] === 'q' && M.ph) || (o[0] === 'b' && M.br) || (o[0] === 'X' && M.plug) || (o[0] === 'Y' && M.heist)) { m2Apply(o); return; }
   if (o[0] === 'i') { infApply(o); return; }
   if (o[0] === 'g') { gfApply(o); return; }
   if (o[0] === 'h' && M.hp) {
@@ -817,6 +826,8 @@ function endMatch(winner) {
   hadLock = false; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   hideCenter(); $('ihold').classList.add('hide');
   finishMatchStats(won);
+  try { achMatch(won); } catch (e) {}
+  try { tourResult(won); } catch (e) {}
   try { rpFinish(won); } catch (e) {}
   showResults(winner, won);
   try { brainMatchEnd(); } catch (e) {}   // bots' learning is saved silently
@@ -829,7 +840,7 @@ function showResults(winner, won) {
   else if (winner && winner.name) sub += `  ·  ${winner.isPlayer ? 'YOU WIN' : winner.name.toUpperCase() + ' WINS'}`;
   if (M.mode === 'surv') sub += `  ·  WAVE ${G.wave}`;
   $('resSub').textContent = sub;
-  $('resBoard').innerHTML = scoreboardHtml();
+  $('resBoard').innerHTML = (() => { try { return podiumHtml(); } catch (e) { return ''; } })() + scoreboardHtml();
   const kd = MS.deaths ? (MS.kills / MS.deaths).toFixed(2) : MS.kills.toFixed(2), acc = MS.shots ? Math.round(MS.hits / MS.shots * 100) : 0;
   $('resMine').innerHTML = [['KILLS', MS.kills], ['DEATHS', MS.deaths], ['K/D', kd], ['ACCURACY', acc + '%'], ['HEADSHOTS', MS.heads], ['BEST STREAK', MS.bestStreak], ['LONGEST KILL', Math.round(MS.longest) + ' M'], ['SCORE', M.me ? M.me.score : G.score]].map(([k, v]) => `<div><span>${k}</span><b>${v}</b></div>`).join('');
   try { const g = PROG.lastGain, box = $('resXP') || (() => { const d = document.createElement('div'); d.id = 'resXP'; const m = $('resMine'), side = document.createElement('div'); side.className = 'res-side'; m.parentNode.insertBefore(side, m); side.append(m, d); return d; })(); box.innerHTML = (typeof rankResHtml === 'function' ? rankResHtml() : '') + (g && Date.now() - g.t < 8000 ? progResultsHtml(g) : ''); } catch (e) {}

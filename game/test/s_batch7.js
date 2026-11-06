@@ -1,41 +1,32 @@
-// first load timing, colour-blind modes, FOV / ADS FOV, voice picking: SHOTS=dir node run.js s_batch7.js
-const path = require('path');
+// custom rules, the cup, touch, languages, squad voice, clip files, zombies types/trials/custom, breeding
 module.exports = async p => {
-  const out = process.env.SHOTS || '/tmp', r = {};
-  const shot = async (n, ms = 900, fn) => { await p.evaluate(() => { window.__A.G.noRender = false; }); const t0 = Date.now(); while (Date.now() - t0 < ms) { if (fn) await p.evaluate(fn); await p.waitForTimeout(120); } await p.screenshot({ path: path.join(out, n + '.png'), timeout: 120000 }); await p.evaluate(() => { window.__A.G.noRender = true; }); };
-  r.boot = await p.evaluate(() => ({ steps: window.BOOT_T, total: window.BOOT_T.reduce((s, b) => s + b[1], 0) }));
-  await p.waitForTimeout(3000);
-  r.env = await p.evaluate(() => !!window.__A.scene.environment);
-  await p.evaluate(() => { const s = document.getElementById('hcSplash'); if (s) s.remove(); });
-  // ---- voices: a Mac's list (with the joke voices) and a Windows / Edge list
-  r.voices = await p.evaluate(() => { const A = window.__A, V = n => ({ name: n, lang: /Google UK/.test(n) ? 'en-GB' : 'en-US', localService: !/Online|Google/.test(n) }), o = {};
-    const lists = { mac: ['Albert', 'Bad News', 'Bubbles', 'Fred', 'Junior', 'Kathy', 'Ralph', 'Zarvox', 'Samantha', 'Alex', 'Daniel', 'Karen', 'Moira', 'Tessa', 'Google US English', 'Google UK English Male', 'Google UK English Female'],
-      win: ['Microsoft David - English (United States)', 'Microsoft Mark - English (United States)', 'Microsoft Zira - English (United States)', 'Microsoft Aria Online (Natural) - English (United States)', 'Microsoft Guy Online (Natural) - English (United States)', 'Microsoft Jenny Online (Natural) - English (United States)', 'Microsoft Ryan Online (Natural) - English (United Kingdom)', 'Microsoft Sonia Online (Natural) - English (United Kingdom)'] };
-    const real = speechSynthesis.getVoices.bind(speechSynthesis);
-    for (const k in lists) { speechSynthesis.getVoices = () => lists[k].map(V); A.zvLoadVoices(); o[k] = Object.fromEntries(Object.entries(A.ZV.vmap).map(([c, v]) => [c, v && v.name])); }
-    const u = A.zvUtter({ id: 'sparks', name: 'SPARKS', voice: { pitch: 1.12, rate: 1.08 } }, 'test', 1); o.sparksNatural = { pitch: +u.pitch.toFixed(2), rate: +u.rate.toFixed(2) };
-    speechSynthesis.getVoices = real; A.zvLoadVoices(); return o; });
-  // ---- a TDM match: first match start (the gun's shaders compile now), then colour-blind looks
-  await p.evaluate(() => { const A = window.__A; A.startMatch('tdm', { map: 'town', score: 999, time: 0, perTeam: 4, custom: true }); A.G.holdT = 0.05; A.G.loadT = 0.05; A.G.noRender = true; });
-  await p.waitForTimeout(3000);
-  const setup = () => p.evaluate(() => { const A = window.__A; A.G.health = A.G.maxHp = 1e6; A.G.state = 'playing'; const sp = A.LAYOUT.spawn[0]; Object.assign(A.P, { x: sp.x, z: sp.z, y: sp.y || 0 }); A.P.yaw = Math.atan2(sp.x, sp.z); A.P.pitch = -0.05;
-    const fx = -Math.sin(A.P.yaw), fz = -Math.cos(A.P.yaw); A.enemies.forEach((e, i) => { const f = 7 + (i % 4) * 2.5, s = (i - 3.5) * 1.6; e.group.position.set(A.P.x + fx * f + fz * s, A.P.y, A.P.z + fz * f - fx * s); e.speed = 0; e.cd = 99; e.spawnProt = 99; }); A.STK.uavT = 20; A.M.respawnQ.length = 0; });
-  for (const m of ['off', 'deut', 'prot', 'trit']) {
-    await p.evaluate(m => { const A = window.__A; A.S.cbMode = m; A.cbApply(); A.feedLine && 0; }, m);
-    await setup();
-    await shot('cb_' + m, 1200, () => { const A = window.__A; if (A.G.state === 'paused') A.G.state = 'playing'; A.setScoreboard(true); });
-    await p.evaluate(() => window.__A.setScoreboard(false));
-  }
-  r.cb = await p.evaluate(() => window.__A.TEAM_COL.slice());
-  await p.evaluate(() => { const A = window.__A; A.S.cbMode = 'off'; A.cbApply(); A.STK.uavT = 0; });
-  // ---- FOV 60 / 90 / 110, hip and aiming, with each ADS FOV option
-  r.fov = {};
-  for (const f of [60, 90, 110]) {
-    await p.evaluate(f => { const A = window.__A; A.S.fov = f; A.applyVideoSettings ? A.applyVideoSettings() : 0; }, f);
-    await setup();
-    await shot('fov_' + f, 900, () => { const A = window.__A; if (A.G.state === 'paused') A.G.state = 'playing'; A.G.adsOn = false; });
-    for (const mode of ['affected', 'independent']) r.fov[f + '_' + mode] = await p.evaluate(m => { const A = window.__A; A.S.adsFov = m; return +A.adsFovFor(A.W[A.G.cur], A.S.fov).toFixed(1); }, mode);
-  }
-  r.fovHip = await p.evaluate(() => { const A = window.__A; A.G.adsOn = false; return +A.camera.fov.toFixed(1); });
+  const r = {}, SH = process.env.SHOTS || '/tmp';
+  const go = async (m, cfg) => { await p.evaluate(([m, cfg]) => { for (const o of document.querySelectorAll('.onb-ov,#hcSplash')) o.remove(); try { window.__A.leaveGame(); } catch (e) {} window.__A.G.noRender = true; window.__A.startMatch(m, cfg); }, [m, cfg]); await p.waitForTimeout(5000); await p.evaluate(() => { const A = window.__A; A.G.holdT = 0.01; A.G.loadT = 0; }); await p.waitForTimeout(2500); };
+  // custom rules
+  await go('tdm', { map: 'random', custom: true, rules: { hp: 200, speed: 1.3, lowgrav: true, bighead: false, regen: false, streaks: false, nades: false, weap: 'snipers' } });
+  r.rules = await p.evaluate(() => { const A = window.__A; return { on: A.rulesOn(), maxHp: A.M.maxHp, gHp: A.G.maxHp, speed: A.rulesSpeed(), grav: !!(A.M.feat && A.M.feat.lowgrav), cat: A.W[0] && A.W[0].def.cat, botHp: (A.enemies.find(e => e.pvp) || {}).maxHp }; });
+  // the cup
+  r.tour = await p.evaluate(() => { const A = window.__A; try { A.leaveGame(); } catch (e) {} const T = A.tourNew(['ALICE', 'BOB']); return { n: T.bracket[0].length, you: T.bracket[0].includes('YOU'), friends: T.bracket[0].includes('ALICE') }; });
+  await p.evaluate(() => { window.__A.G.noRender = true; window.__A.tourPlay(); }); await p.waitForTimeout(5000); await p.evaluate(() => { const A = window.__A; A.G.holdT = 0.01; A.G.loadT = 0; }); await p.waitForTimeout(2500);
+  r.tourMatch = await p.evaluate(() => { const A = window.__A; const opp = A.M.entries.find(e => !e.isPlayer); const out = { mode: A.M.mode, n: A.M.entries.length, opp: opp && opp.name, tour: !!A.M.cfg.tour }; A.endMatch(A.M.me); const T = A.tourGet(); out.round = T.round; out.semi = (T.bracket[1] || []).length; return out; });
+  await p.waitForTimeout(600);
+  await p.evaluate(() => window.__A.openTour()); await p.waitForTimeout(300); await p.screenshot({ path: SH + '/cup.png' }); await p.evaluate(() => document.getElementById('tourOv').remove());
+  // touch + language
+  r.touch = await p.evaluate(() => { const A = window.__A; A.touchBuild(); return document.querySelectorAll('#touchUi .tc-b').length; });
+  r.lang = await p.evaluate(() => { const A = window.__A; try { A.leaveGame(); } catch (e) {} A.showScreen('menu'); A.S.lang = 'es'; A.langApply(); const t = [...document.querySelectorAll('#menu .cod-tab')].map(b => b.textContent.trim()).slice(0, 4); return t; });
+  await p.waitForTimeout(400); await p.screenshot({ path: SH + '/lang_es.png' });
+  r.langBack = await p.evaluate(() => { const A = window.__A; A.S.lang = 'en'; A.langApply(); return [...document.querySelectorAll('#menu .cod-tab')].map(b => b.textContent.trim()).slice(0, 2); });
+  // clip file round trip
+  r.clip = await p.evaluate(async () => { const A = window.__A, c = { name: 'TEST', map: 'blackwell', len: 3, frames: [[0], [10], [20]], feed: [], score: [] }; const b = await A.clipBytes(c); const back = await A.clipParse(b.buffer); const n0 = A.RP_LIB.clips.length; await A.clipImport(b.buffer); return { bytes: b.length, frames: back.frames.length, added: A.RP_LIB.clips.length - n0 }; });
+  // zombies: types and trials, custom
+  await p.evaluate(() => { const Z = window.__A.ZCUS_GET(); Object.assign(Z, { on: true, start: 10, pts: 10000, hp: 2, speed: 'run', specials: true, strays: false, pups: true }); });
+  await go('zomb', { map: 'random' });
+  r.zcus = await p.evaluate(() => { const A = window.__A; return { round: A.Z.round, pts: A.G.points, custom: A.Z.custom }; });
+  r.ztypes = await p.evaluate(() => { const A = window.__A, out = {}; const z = A.enemies.filter(e => e.zombie); if (!z.length) return 'none'; for (const [i, k] of ['scream', 'spit', 'brute'].entries()) { const e = z[i % z.length]; const hp = e.maxHp; A.zs2Make(e, k); out[k] = +(e.maxHp / hp).toFixed(2); } return out; });
+  r.trial = await p.evaluate(() => { const A = window.__A; A.zs2TrialStart(6); const t = A.ZS2.trial; return t ? { id: t.T.id, need: t.need, hud: !!document.getElementById('zTrial') } : null; });
+  await p.evaluate(() => { const Z = window.__A.ZCUS_GET(); Z.on = false; });
+  // breeding
+  r.breed = await p.evaluate(() => { const A = window.__A; try { A.leaveGame(); } catch (e) {} const g = A.GROW_GET(); g.done.og = 1; g.done.blue = 1; g.seeds.og = 2; g.seeds.blue = 2; g.breed = null; const ok = A.breedStart('og', 'blue'); g.breed.t -= 3 * 3600e3; const out = A.breedCollect(); return { ok, got: out && out.id, seeds: g.seeds.ogblue, strain: !!A.STRAIN.ogblue, hybrids: A.HYBRIDS.length }; });
+  await p.evaluate(() => { window.__A.showScreen('menu'); document.querySelector('[data-act="growop"]').click(); }); await p.waitForTimeout(600); await p.screenshot({ path: SH + '/breed.png' });
   return r;
 };

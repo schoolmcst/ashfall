@@ -31,7 +31,7 @@ let STK_SEL = ['uav', 'mortar', 'air'];
 try { const a = JSON.parse(localStorage.getItem(STK_KEY) || 'null'); if (Array.isArray(a) && a.length && a.every(k => STREAKS[k])) STK_SEL = a.slice(0, 3); } catch (e) {}
 const stkSave = () => { try { localStorage.setItem(STK_KEY, JSON.stringify(STK_SEL)); } catch (e) {} };
 const stkIcon = (id, cls = '') => `<svg class="stk-ic ${cls}" viewBox="0 0 24 24" aria-hidden="true">${STK_ICON[id] || ''}</svg>`;
-const stkOn = () => typeof M !== 'undefined' && M && inMatch() && M.mode !== 'gun' && M.mode !== 'snd' && M.mode !== 'gf' && !M.infMe && !G.bench;
+const stkOn = () => typeof M !== 'undefined' && M && inMatch() && M.mode !== 'gun' && M.mode !== 'snd' && M.mode !== 'gf' && !M.infMe && !G.bench && !(typeof rulesNoStreaks === 'function' && rulesNoStreaks());
 // cooldowns: after you call in a streak you must wait STK_USE_CD seconds before calling another, and that streak can't be
 // earned again until its own cd (seconds) has passed
 const STK_USE_CD = 15;
@@ -53,7 +53,7 @@ function stkUse() {
   if (!stkOn() || !STK.have.length || !(G.state === 'playing')) return;
   if (STK.useCd > 0) { showBanner('SCORESTREAK COOLING DOWN', `ready in ${Math.ceil(STK.useCd)} s`); return; }
   const id = STK.have.pop(), en = () => enemies.filter(e => !isFriend(e) && (!e.entry || e.entry.alive !== false));
-  sfx.ui(); STK.useCd = STK_USE_CD; STK.cd[id] = STREAKS[id].cd; if (MS && MS.active) MS.streaks = (MS.streaks | 0) + 1;
+  sfx.ui(); STK.useCd = STK_USE_CD; STK.cd[id] = STREAKS[id].cd; if (MS && MS.active) MS.streaks = (MS.streaks | 0) + 1; try { achAdd('streaks'); } catch (e) {}
   if (id === 'uav' || id === 'vuav') { STK.uavT = Math.max(STK.uavT, id === 'vuav' ? 35 : 25); STK.vuav = STK.vuav || id === 'vuav'; showBanner(STREAKS[id].name + ' ONLINE', 'enemies revealed'); stkRadio(); }
   else if (id === 'supply') { for (const w of WEAPONS) if (w) { w.ammo = w.magSize; w.reserve = w.reserveMax; } G.grenades = EQUIP[G.equip].count; G.health = G.maxHp; showBanner('SUPPLY DROP', 'ammo, grenades and health refilled'); sfx.pickup(); }
   else if (id === 'armor') { G.maxHp += 40; G.health = Math.min(G.maxHp, G.health + 40); showBanner('BODY ARMOR', '+40 health until you die'); sfx.pickup(); }
@@ -91,15 +91,15 @@ function updateStreaks(dt) {
   if (STK.uavT > 0) { STK.uavT -= dt; if (STK.uavT <= 0) { STK.uavT = 0; STK.vuav = false; } }
   stk2Update(dt); stkMarks(); stkHud(false);
 }
-const stkSeen = e => (STK.uavT > 0 && !isFriend(e) && !e.ghost && !stkJammed()) || (typeof tacSensed === 'function' && tacSensed(e));   // + MOTION SENSOR (tactical.js)   // Shadow players don't show on a UAV
+const stkSeen = e => (STK.uavT > 0 && !isFriend(e) && !e.ghost && !stkJammed()) || (typeof tacSensed === 'function' && tacSensed(e)) || (typeof w2Watched === 'function' && w2Watched(e));   // + MOTION SENSOR, WATCHER DRONE   // Shadow players don't show on a UAV
 // on-screen enemy diamonds while a UAV is up (the advanced one adds the way they face)
 const _sv = new THREE.Vector3();
 function stkMarks() {
   const lay = $('uavMarks'); if (!lay) return;
-  const sensed = typeof TAC !== 'undefined' && TAC.sensors.length > 0;
+  const sensed = (typeof TAC !== 'undefined' && TAC.sensors.length > 0) || (STK.watchT || 0) > 0;
   const on = ((STK.uavT > 0 && STK.vuav && !stkJammed()) || sensed) && (G.state === 'playing' || G.state === 'paused');   // the plain UAV is radar only; the ADVANCED UAV marks them on screen too
   if (!on) { if (lay._n) { lay.innerHTML = ''; lay._n = 0; } return; }
-  const list = enemies.filter(e => !isFriend(e) && (STK.vuav && STK.uavT > 0 || tacSensed(e))), W = innerWidth, H = innerHeight;
+  const list = enemies.filter(e => !isFriend(e) && (STK.vuav && STK.uavT > 0 || tacSensed(e) || w2Watched(e))), W = innerWidth, H = innerHeight;
   while (lay.children.length < list.length) { const d = document.createElement('i'); lay.appendChild(d); }
   lay._n = list.length;
   for (let i = 0; i < lay.children.length; i++) {

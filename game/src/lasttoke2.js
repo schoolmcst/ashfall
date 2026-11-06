@@ -56,7 +56,7 @@ function ltTick(dt) {
   const pk = kb('plate') || (pad.on && pad.plate);
   if (pk && !LT.plateH && alive && LT.plates > 0 && G.armor < 150 && LT.plateT <= 0) { LT.plateT = 1.0; try { sfx.reload && sfx.reload(); } catch (e) {} }
   LT.plateH = pk;
-  if (LT.plateT > 0) { LT.plateT -= dt; if (LT.plateT <= 0 && alive) { LT.plates--; G.armor = Math.min(150, (G.armor | 0) + 50); try { sfx.pickup(); } catch (e) {} } }
+  if (LT.plateT > 0) { LT.plateT -= dt; if (LT.plateT <= 0 && alive) { LT.plates--; G.armor = Math.min(150, (G.armor | 0) + 50); try { achAdd('plates'); } catch (e) {} try { sfx.pickup(); } catch (e) {} } }
   // buy stations and tablets: USE
   const u = kb('use') || pad.use, press = u && !LT.uH; LT.uH = u;
   if (alive && !LT.buyOpen) {
@@ -83,7 +83,7 @@ function ltArmorTake(dmg) { if (!ltOn() || !(G.armor > 0)) return dmg; const a =
 function ltBotArmor(e, dmg, by) { if (!ltOn() || !(e.armor > 0) || by === 'cloud') return dmg; const a = Math.min(e.armor, dmg); e.armor -= a; return dmg - a; }
 // a crate opened: plates and cash (brOpen calls this)
 function ltCrate(c, who) {
-  if (who === 'player') { LT.cash += 100; const n = c.tier >= 3 ? 3 : 1 + (Math.random() < 0.4 ? 1 : 0); LT.plates = Math.min(5, LT.plates + n); if (c.tier >= 3) { G.armor = 150; } }
+  if (who === 'player') { LT.cash += 100; const n = c.tier >= 3 ? 3 : 1 + (Math.random() < 0.4 ? 1 : 0); LT.plates = Math.min(5, LT.plates + n); if (c.tier >= 3) { G.armor = 150; try { achAdd('drops'); } catch (e) {} } }
   else if (who && who.group) who.armor = Math.min(150, (who.armor | 0) + 50 * Math.min(3, c.tier + 1));
 }
 /* ---------- the buy station */
@@ -133,10 +133,10 @@ function ltContractTick(dt) {
   const C = LT.contract; if (!C) return; C.t -= dt;
   if (C.k === 'bounty') {
     const gone = !enemies.includes(C.e) || C.en.alive === false;
-    if (gone) { const mine = C.en.lastBy === 'player'; LT.contract = null; if (mine) { LT.cash += 1500; LT.plates = Math.min(5, LT.plates + 1); try { showBanner('BOUNTY DONE', '+$1500 · +1 plate'); sfx.streak(); } catch (e) {} } else try { showMsg('BOUNTY FAILED · SOMEONE ELSE GOT THEM'); } catch (e) {} return; }
+    if (gone) { const mine = C.en.lastBy === 'player'; LT.contract = null; if (mine) { try { achAdd('contracts'); } catch (e) {} LT.cash += 1500; LT.plates = Math.min(5, LT.plates + 1); try { showBanner('BOUNTY DONE', '+$1500 · +1 plate'); sfx.streak(); } catch (e) {} } else try { showMsg('BOUNTY FAILED · SOMEONE ELSE GOT THEM'); } catch (e) {} return; }
   } else if (C.k === 'scav') {
     for (const c of C.caches) if (!c.got && playerAlive() && Math.hypot(P.x - c.x, P.z - c.z) < 1.5) { c.got = true; if (c.m.parent) c.m.parent.remove(c.m); try { sfx.pickup(); showMsg(`CACHE ${C.caches.filter(q => q.got).length} / 3`); } catch (e) {} }
-    if (C.caches.every(c => c.got)) { LT.contract = null; LT.cash += 1000; LT.plates = Math.min(5, LT.plates + 1); try { const d = brGun(2); equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); showBanner('SCAVENGER DONE', `+$1000 · +1 plate · ${d.name}`); sfx.streak(); } catch (e) {} return; }
+    if (C.caches.every(c => c.got)) { try { achAdd('contracts'); } catch (e) {} LT.contract = null; LT.cash += 1000; LT.plates = Math.min(5, LT.plates + 1); try { const d = brGun(2); equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); showBanner('SCAVENGER DONE', `+$1000 · +1 plate · ${d.name}`); sfx.streak(); } catch (e) {} return; }
   }
   if (C.t <= 0) { if (C.caches) for (const c of C.caches) if (c.m.parent) c.m.parent.remove(c.m); LT.contract = null; try { showMsg('CONTRACT RAN OUT'); } catch (e) {} }
 }

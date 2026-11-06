@@ -37,7 +37,7 @@ function lcBox(html, wire) {
   addEventListener('keydown', k, true); wire(o, close); return o;
 }
 function lcShare() {
-  const code = lcMake(); try { navigator.clipboard && navigator.clipboard.writeText(code); } catch (e) {}
+  const code = lcMake(); try { achAdd('codes'); } catch (e) {} try { navigator.clipboard && navigator.clipboard.writeText(code); } catch (e) {}
   lcBox(`<small>CREATE A CLASS · ${activeClass().name}</small><b>SHARE THIS BUILD</b><p>The code is copied. Send it to a friend; they press PASTE CODE in Create a Class.</p><input class="lc-in" readonly value="${code}"><div class="onb-acts"><button class="btn primary" data-lc="ok">DONE</button></div>`,
     (o, close) => { const i = o.querySelector('input'); i.onkeydown = e => e.stopPropagation(); setTimeout(() => { i.focus(); i.select(); }, 50); o.querySelector('[data-lc="ok"]').onclick = close; });
 }

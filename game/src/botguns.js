@@ -23,8 +23,9 @@ function botRandomAtts(def, quiet) {
   return set;
 }
 function botPickGun(e) {
+  if (typeof rulesOn === 'function' && rulesOn()) { const g = rulesBotGun(e); if (g) return g; }
   const prefs = BOT_GUN_PREF[e.job] || ['ar', 'smg'], cat = prefs[(Math.random() * prefs.length) | 0];
-  const list = ARMORY.filter(d => d.cat === cat);
+  const list = ARMORY.filter(d => d.cat === cat && !d.noBot);
   return list.length ? list[(Math.random() * list.length) | 0] : ARMORY.find(d => d.cat === 'ar');
 }
 // stats from the gun and its attachments

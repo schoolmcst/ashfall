@@ -378,7 +378,7 @@ function zstGameOver() {
   if (!zmapIs(curMap) || Z.statDone) return; Z.statDone = true;
   try { growMatch(-1); } catch (e) {}
   const s = zstOf(curMap); s.games++; s.rounds += Z.round || 0; s.kills += G.kills || 0;
-  if ((Z.round || 0) > s.best || (Z.round === s.best && G.score > s.pts)) { s.best = Z.round || 0; s.pts = G.score || 0; }
+  if (!Z.custom && ((Z.round || 0) > s.best || (Z.round === s.best && G.score > s.pts))) { s.best = Z.round || 0; s.pts = G.score || 0; }
   zstSave();
 }
 function zstStory() { if (!zmapIs(curMap)) return; zstOf(curMap).story++; zstSave(); }

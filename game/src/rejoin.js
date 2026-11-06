@@ -22,7 +22,7 @@ function rjGo() {
   const o = rjSaved(); if (!o || !NET.app) return false;
   try { localStorage.removeItem(RJ_KEY); } catch (e) {}
   if (G.state !== 'menu') leaveGame();
-  showMsg('REJOINING YOUR MATCH');
+  showMsg('REJOINING YOUR MATCH'); try { achAdd('rejoins'); } catch (e) {}
   RJ.restore = o; LOBBY.mode = o.m; NET.kind = 'slot'; NET.slot = o.s; NET.pubNext = !/-priv-c-/.test(o.s);
   startMatch(o.m); NET.kind = 'quick'; return true;
 }

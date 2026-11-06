@@ -36,7 +36,7 @@ function sqBotDown(e) {
   return true;
 }
 function sqPlayerUp() { G.downed = false; G.bleed = 0; G.health = 40; try { showBanner('BACK ON YOUR FEET', 'your squad picked you up'); sfx.ui(); } catch (e) {} }
-function sqBotUp(e, by) { e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; if (by === 'player') try { popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
+function sqBotUp(e, by) { e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; if (by === 'player') try { achAdd('revives'); popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
 /* ---------- every frame (from brUpdate) */
 function sqUpdate(dt) {
   if (!sqOn()) return;

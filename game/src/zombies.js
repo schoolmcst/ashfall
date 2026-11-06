@@ -209,7 +209,7 @@ function zombRecall(dt) {
   }
 }
 function zombRound() {
-  Z.round++; try { growZRound(Z.round); } catch (e) {} Z.toSpawn = Math.min(80, 6 + (Z.round - 1) * 3); Z.spawnT = 1; Z.active = true; try { zspRoundStart(Z.round); } catch (e) { reportError(e); }
+  Z.round++; try { growZRound(Z.round); achMax('zround', Z.round); } catch (e) {} Z.toSpawn = Math.min(80, 6 + (Z.round - 1) * 3); Z.spawnT = 1; Z.active = true; try { zspRoundStart(Z.round); } catch (e) { reportError(e); }
   G.wave = Z.round; if (!(ZC.on && ZC.down)) G.health = G.maxHp; if (ZC.on && ZC.dead) zcRespawn();
   if (!Z.dogRound) showBanner(`ROUND ${Z.round}`, Z.round === 1 ? 'here they come' : Z.round % 5 === 0 ? 'they are getting faster' : `${Z.toSpawn} zombies`);
   try { tone(70, 1.6, 0.18, 'sawtooth'); tone(52, 2.2, 0.14, 'triangle'); } catch (e) {}
@@ -349,7 +349,7 @@ function zombHud(force) {
 function zombClear() { Z.active = false; Z.crate = Z.ammo = null; zombHud(); try { zdClear(); } catch (e) {} if (typeof ZC !== 'undefined' && ZC.on) { ZC.inGame = false; ZC.down = ZC.dead = false; zcClearProxies(); for (const R of ZC.rem.values()) zcDropAvatar(R); zcTeamHud(true); } }
 function zombDeathText() {
   try { zstGameOver(); } catch (e) {}
-  const nb = Z.round > (Z.best.round || 0) || (Z.round === Z.best.round && G.score > (Z.best.pts || 0));
+  const nb = !Z.custom && (Z.round > (Z.best.round || 0) || (Z.round === Z.best.round && G.score > (Z.best.pts || 0)));
   if (nb) { Z.best = { round: Z.round, pts: G.score }; try { localStorage.setItem('ashfall.zbest', JSON.stringify(Z.best)); } catch (e) {} }
   $('overStats').textContent = `YOU SURVIVED ${Z.round} ROUND${Z.round === 1 ? '' : 'S'}  ·  KILLS ${G.kills}  ·  SCORE ${G.score}`;
   $('overBest').textContent = nb ? 'NEW PERSONAL BEST' : `BEST  ·  ROUND ${Z.best.round}  ·  SCORE ${Z.best.pts}`;

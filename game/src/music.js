@@ -78,7 +78,7 @@ function musicTick() {
   if (MUS.level < 0.004 && want === 0) { MUS.on = false; return; }
   if (!MUS.on) { MUS.on = true; MUS.next = actx.currentTime + 0.08; if (MUS.level < 0.02) { MUS.step = 0; MUS.bar = 0; } }
   if (MUS.next < actx.currentTime - 0.1) MUS.next = actx.currentTime + 0.05;   // tab was in the background
-  while (MUS.next < actx.currentTime + 0.3) { musStep(MUS.next); MUS.next += MUS_STEP; }
+  while (MUS.next < actx.currentTime + 0.3) { musStep(MUS.next); MUS.next += (typeof radioStepLen === 'function' ? radioStepLen() : MUS_STEP); }
 }
 setInterval(() => { try { musicTick(); } catch (e) {} }, 100);
 // renders the song offline (used by the test to make a sample to listen to)

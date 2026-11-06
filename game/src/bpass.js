@@ -1,4 +1,4 @@
-/* ================================================================== BATTLE PASS · SEASONS (1 AFTERSHOCK, 2 HARVEST)
+/* ================================================================== BATTLE PASS · SEASONS (1 AFTERSHOCK, 2 HARVEST, 3 HIGH TIMES)
    100 tiers. Every match's XP also fills the pass (2,500 XP a tier). Two rows:
    - FREE row: DZ, free CHANCE BOX openings (standard / elite / prestige) and a few cosmetics
    - PREMIUM row: one pass-only cosmetic on every tier (camos, skins, stickers; tier 100 is the master skin)
@@ -11,6 +11,7 @@
 const SEASONS = [
   { season: 1, name: 'AFTERSHOCK', starts: '2026-01-01', ends: '2026-12-31', col: '#ff5a14' },
   { season: 2, name: 'HARVEST', starts: '2027-01-01', ends: '2027-03-31', col: '#e0802a' },
+  { season: 3, name: 'HIGH TIMES', starts: '2027-04-01', ends: '2027-06-30', col: '#5dff7a' },
 ];
 const BPT = { fake: null };   // tests: a fake date
 const bpNow = () => BPT.fake ? new Date(BPT.fake) : new Date();

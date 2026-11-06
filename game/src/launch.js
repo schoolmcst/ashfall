@@ -133,6 +133,7 @@ function lnErrUi() {
 }
 function lnAct(act) {
   if (act === 'sv-make') { sfx.ui(); lnSaveUi(); return true; }
+  if (act === 'hud-edit') { sfx.ui(); hudEdit(); return true; }
   if (act === 'sv-load') { sfx.ui(); lnLoadUi(); return true; }
   if (act === 'bk-list') { sfx.ui(); lnBlockUi(); return true; }
   if (act === 'er-view') { sfx.ui(); lnErrUi(); return true; }

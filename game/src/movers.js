@@ -34,11 +34,11 @@ function moversTick(dt) {
     if (Math.hypot(P.x - p.x, P.z - p.z) > 1.0 || P.y > 0.6) continue;
     const T = 1.15 + Math.hypot(p.to.x - p.x, p.to.z - p.z) / 40, dx = p.to.x - P.x, dz = p.to.z - P.z, dy = p.to.y - P.y;
     MV2.fly = { vx: dx / T, vz: dz / T, t: T }; P.vy = (dy + 0.5 * 22 * T * T) / T; P.onGround = false; MV2.cd = 1.5;
-    try { sfx.thud({ vol: 0.9 }); sfx.streak(); } catch (e) {}
+    try { sfx.thud({ vol: 0.9 }); sfx.streak(); achAdd('pads'); } catch (e) {}
   }
   // ziplines: USE at the top
   const u = kb('use') || pad.use;
-  if (!MV2.zip && u && !MV2.uH) for (const z of d.zips) if (Math.hypot(P.x - z.a.x, P.z - z.a.z) < 1.8 && Math.abs(P.y + 1.9 - z.a.y) < 2.2) { MV2.zip = { z, k: 0, len: Math.hypot(z.b.x - z.a.x, z.b.y - z.a.y, z.b.z - z.a.z) }; try { sfx.ui(); } catch (e) {} break; }
+  if (!MV2.zip && u && !MV2.uH) for (const z of d.zips) if (Math.hypot(P.x - z.a.x, P.z - z.a.z) < 1.8 && Math.abs(P.y + 1.9 - z.a.y) < 2.2) { achAdd('zips'); MV2.zip = { z, k: 0, len: Math.hypot(z.b.x - z.a.x, z.b.y - z.a.y, z.b.z - z.a.z) }; try { sfx.ui(); } catch (e) {} break; }
   if (!MV2.zip) for (const z of d.zips) if (Math.hypot(P.x - z.a.x, P.z - z.a.z) < 1.8 && Math.abs(P.y + 1.9 - z.a.y) < 2.2) { G.interactTxt = `ZIPLINE · PRESS ${actName('use')} TO RIDE`; try { showMsg(G.interactTxt); } catch (e) {} }
   MV2.uH = u;
 }

@@ -126,6 +126,21 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   ZIPLINES (stashisle only). lasttoke2.js: armor plates (bind plate = 4, G.armor), cash + BUY STATIONS (G.menuOpen stops the
   pause-on-unlock), contracts (bounty/scavenger), the storm (host presence wx), supply drops (BR tier 3), RANKED LAST TOKE
   'rbr' (rankMatch uses placement). Tests: s_wallbang, s_breakable, s_prone, s_fieldup, s_tactical, s_movers, s_lasttoke2.
+- 1.2.85 TEST (batches 4-7a): weapons2.js (CROSSBOW, THE BONG launcher, throwing knife EQUIP.knife, WATCHER and HOTBOX
+  STRIKE streaks, BLUEPRINTS); modes7.js KNIFE FIGHT / ESCORT THE PLUG ('X') / THE HEIST ('Y') / GROW WARS (+ online o*).
+  progress2.js TROPHIES screen (TRO state; 49 achievements in PROG.cnt/PROG.ach with 'ach_*' banners, tracers PROG.trc,
+  kill effects PROG.kfx, emotes on J with presence em, podium on results, prestige tokens shop, heatmaps PROG.heat);
+  G.killSrc ('wall'/'knife'/'bolt'/'veh') is set around those damageEnemy calls. crewhouse.js CREW WARS; Season 3 HIGH TIMES
+  (BP3_ITEMS generated in progress.js). events2.js: FROSTY NUGS winter event + EVENTS CALENDAR (click the event strip),
+  LIVING MAPS weather (AMB; ambTick in updateFx), STASH HOUSE RADIO (S.radio, radioStep; music loop steps at radioStepLen).
+  tools.js AIM TRAINER (range pause menu) + HUD EDITOR (S.hud). rules.js custom match RULES (cfg.rules -> M.feat; wraps
+  equipClass). tourney.js THE CUP (TOUR in ashfall.tour.v1; cfg.names/cfg.tour). touch.js, lang.js (S.lang, a
+  MutationObserver swaps exact strings), squadvox.js (wraps sqBotDown/sqBotUp/sqPlayerDown/damageEnemy), clipshare.js
+  (.dzclip files + webm video), zspecial2.js (SCREAMER/SPITTER/BRUTE, zombies TRIALS, ZOMBIES CUSTOM GAME ZCUS: Z.custom
+  never sets a best), growbreed.js (6 HYBRIDS, g.breed), map_new.js THE TRIM HOUSE + SKATE PARK (6v6).
+  Files loaded after ui.js (touch, lang, squadvox, clipshare) must not be named as consts in window.__A (TDZ).
+  Tests: s_weapons2, s_modes7, s_progress2, s_tools, s_batch7. Still to do from the 60: zombies chapter 7 finale, winter
+  STASH ISLAND, map editor, walkable Crew Stash House, campaign chapter 2 + online co-op.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

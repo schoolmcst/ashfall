@@ -66,7 +66,7 @@ function pingDo() {
   if (!M || G.state !== 'playing' || !playerAlive() || NOW < PING.cd) return;
   PING.cd = NOW + 0.35;
   const o = pingPick(); const p = pingAdd(o, 'me'); if (!p) { try { sfx.ui(); } catch (e) {} return; }
-  PING.seq++; PING.out = { seq: PING.seq, k: PING_ORDER.indexOf(o.kind), x: o.x, y: o.y, z: o.z, until: NOW + 6 };
+  try { achAdd('pings'); } catch (e) {} PING.seq++; PING.out = { seq: PING.seq, k: PING_ORDER.indexOf(o.kind), x: o.x, y: o.y, z: o.z, until: NOW + 6 };
   // bot teammates answer
   for (const e of enemies) {
     if (e.net || !isFriend(e) || !e.entry || e.downed) continue;

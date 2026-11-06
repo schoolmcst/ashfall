@@ -1,15 +1,15 @@
 {
- "version": "1.2.84",
+ "version": "1.2.85",
  "notes": [
-  "WALLBANGS: bullets go through thin walls and cover",
-  "BREAKABLE COVER: wooden crates, fences and pallets on every map",
-  "PRONE (B) and DIVE (prone while sprinting)",
-  "FIELD UPGRADES (T): cover, ammo crate, dead silence, rush - pick one in Create a Class",
-  "NEW GEAR: decoy, motion sensor, trophy system",
-  "STASH ISLAND: jump pads and ziplines",
-  "LAST TOKE: armor plates (4), cash, buy stations, contracts, the storm, supply drops",
-  "NEW: RANKED LAST TOKE"
+  "NEW WEAPONS: CROSSBOW, THE BONG launcher, THROWING KNIVES \u00b7 NEW STREAKS: WATCHER DRONE, HOTBOX STRIKE \u00b7 BLUEPRINTS",
+  "NEW MODES: KNIFE FIGHT, ESCORT THE PLUG, THE HEIST, GROW WARS (offline and online)",
+  "TROPHIES: 49 achievements with calling cards, bullet tracers, kill effects, emotes (J), the podium, PRESTIGE SHOP, HEATMAPS",
+  "SEASON 3 HIGH TIMES battle pass \u00b7 CREW WARS \u00b7 FROSTY NUGS winter event \u00b7 EVENTS CALENDAR",
+  "NEW MAPS: THE TRIM HOUSE and SKATE PARK \u00b7 living maps (rain, mist, leaves, snow, birds)",
+  "AIM TRAINER \u00b7 HUD EDITOR \u00b7 CUSTOM MATCH RULES \u00b7 THE CUP tournaments \u00b7 TOUCH CONTROLS \u00b7 4 new languages",
+  "STASH HOUSE RADIO \u00b7 SQUAD VOICE LINES \u00b7 SHARE CLIPS (files and video)",
+  "ZOMBIES: SCREAMERS, SPITTERS, BRUTES \u00b7 TRIALS \u00b7 CUSTOM GAMES \u00b7 GROW OP BREEDING (6 hybrids)"
  ],
- "sha256": "1151bf8045bd48d4de9b77247a3f0b6a307f2f877e7e7c73eaf02c4a4e2605ad",
+ "sha256": "e21c47fda713d4fa4cba0aa66348e418f9b3268c3853afd524478b3730603351",
  "minApp": "1.0.0"
 }

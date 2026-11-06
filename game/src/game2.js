@@ -358,7 +358,7 @@ function pauseGame() {
   G.pausedFrom = G.state; G.state = 'paused'; mouseDown = false; mouseAds = false;
   try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   $('pauseSub').textContent = M.mode === 'zomb' ? `ROUND ${Z.round}  ·  ${(G.points | 0).toLocaleString()} POINTS  ·  KILLS ${G.kills}` : `WAVE ${G.wave}  ·  KILLS ${G.kills}  ·  SCORE ${G.score}`;
-  showScreen('pause'); try { renderPauseSide(); } catch (e) {}
+  showScreen('pause'); try { renderPauseSide(); } catch (e) {} try { aimPauseButtons(); } catch (e) {}
 }
 function resumeGame() { if (G.state !== 'paused') return; G.state = G.pausedFrom || 'playing'; showScreen(null); lockPointer(); }
 // Scavenger: every kill tops up one magazine of reserve ammo

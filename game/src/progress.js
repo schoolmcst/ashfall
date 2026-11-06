@@ -371,7 +371,31 @@ const BP2_ITEMS = [
   ['LAST LIGHT', 99, 'banner', 'stars', 3, ['#0a0e1a', '#f2c04a', '#2a4a1a'], { em: ['leaf', '#9adf5a', '#1a2a10'] }, null],
   ['REAPER\'S HARVEST', 100, 'skin', 'leaves', 3, [0x120804, 0xff7a1a, 0x5a1a06, 0xffb03a], { glowIdx: 1 }, { anim: 'scroll', emis: 3, metal: 0.6, rough: 0.2 }],
 ];
-for (const [S, LIST] of [[1, BP_ITEMS], [2, BP2_ITEMS]]) for (const [name, tier, kind, t, r, c, gx, mx, track] of LIST) {
+// SEASON 3 · HIGH TIMES (the 4/20 season): 100 premium tiers and a free row, built from one name list
+const BP3_ITEMS = (() => {
+  const N = ['FOUR TWENTY', 'GREEN ROOM', 'SKY HIGH', 'BLUNT FORCE', 'CLOUD NINE', 'HOT KNIFE', 'PAPER PLANE', 'DAB RIG', 'ZONED', 'CHEEBA', 'LOUD PACK', 'BIG BUD', 'GHOST HIT', 'ASH TRAY', 'HAZE CRAZE', 'RED EYE', 'DANK BANK', 'SESH', 'PUFF DADDY', 'HIGH NOON',
+    'MUNCHIES', 'COTTONMOUTH', 'GREEN GIANT', 'SATIVA SKY', 'INDICA NIGHT', 'HYBRID', 'TERP SLURP', 'BONG WATER', 'STICKY ICKY', 'ONE HITTER', 'FLOWER POWER', 'NUG RUN', 'KIEF', 'GRINDER', 'HEMP ROPE', 'BLAZE', 'TOKE UP', 'PASS LEFT', 'ROACH CLIP', 'HOTBOXED',
+    'COUCH SURFER', 'SPACE CAKE', 'BROWNIE', 'ROLLING PAPERS', 'GOLD LEAF PAPERS', 'GREEN CRACK', 'PURPLE KUSH', 'SOUR DIESEL', 'NORTHERN LIGHT', 'BLUE DREAM', 'WEDDING CAKE', 'GELATO', 'ZKITTLEZ', 'MAUI WOWIE', 'ACAPULCO GOLD', 'THAI STICK', 'PANAMA RED', 'JACK HERER', 'TRAINWRECK', 'AK-420',
+    'WHITE WIDOW', 'BUBBA', 'CHEMDOG', 'GORILLA GLUE', 'PINEAPPLE EXPRESS', 'GRAPE APE', 'CHERRY PIE', 'LEMON HAZE', 'MANGO KUSH', 'STRAWBERRY COUGH', 'GIRL SCOUT', 'DO-SI-DOS', 'RUNTZ', 'MIMOSA', 'SUNSET SHERBET', 'TANGIE', 'CANDYLAND', 'SUPER SILVER', 'AFGHAN', 'HINDU KUSH',
+    'DURBAN', 'MALAWI', 'LAMB\'S BREATH', 'KALI MIST', 'SKUNK NO.1', 'HAZEMAN', 'THE HIGHLANDS', 'STRATOSPHERE', 'ORBIT', 'ZERO G', 'MOON LANDING', 'STARGAZER', 'COMET TAIL', 'NEBULA', 'SUPERNOVA', 'EVENT HORIZON', 'WORMHOLE', 'SINGULARITY', 'COSMIC DUST', 'THE HIGHEST'];
+  const pal = [[0x1a3a1a, 0x5dff7a, 0x0b1a0b, 0xb8ff5a], [0x2a0a3a, 0xc070ff, 0x14061e, 0xff8ad0], [0x0a1a2a, 0x5ac8ff, 0x061018, 0x9ae8ff], [0x3a1a0a, 0xff7a2a, 0x1a0a04, 0xffd23a], [0x1a1a1a, 0x9adf5a, 0x0a0a0a, 0xe8ff9a], [0x0a0e1a, 0x3a5a2a, 0x1a2a3a, 0x5dff7a]];
+  const hx = n => '#' + n.toString(16).padStart(6, '0'), camoT = ['leaves', 'blobs', 'stripes', 'splat', 'splinter', 'fade', 'fleck', 'digital', 'leopard', 'waves', 'cracked', 'hex'];
+  const out = [];
+  N.forEach((n, i) => { const tier = i + 1, r = tier < 15 ? 0 : tier < 50 ? 1 : tier < 88 ? 2 : 3, c = pal[i % pal.length], top = tier >= 88, mx = top ? { anim: ['twinkle', 'scroll', 'pulse'][i % 3], emis: tier === 100 ? 3 : 2.3 } : null;
+    if (tier === 100) out.push([n, tier, 'skin', 'leaves', 3, [0x0a1a0a, 0x5dff7a, 0x1a0a2a, 0xc070ff], { glowIdx: 1 }, { anim: 'scroll', emis: 3, metal: 0.6, rough: 0.2 }]);
+    else if (tier % 15 === 0) out.push([n, tier, 'banner', ['grad', 'rays', 'stars'][(tier / 15) % 3], r, [hx(c[2]), hx(c[1]), hx(c[0])], { em: ['leaf', hx(c[1]), hx(c[2])] }, null]);
+    else if (tier % 9 === 0) out.push([n, tier, 'charm', ['cube', 'star', 'coin', 'flame'][(tier / 9) % 4], r, [c[1], c[3], c[2]], null, null]);
+    else if (tier % 6 === 0) out.push([n, tier, 'sticker', ['text', 'eye', 'flame', 'leaf'][(tier / 6) % 4], r, [hx(c[2]), hx(c[1])], (tier / 6) % 4 ? null : n.split(' ')[0]]);
+    else if (tier % 5 === 0) out.push([n, tier, 'skin', ['facets', 'damascus', 'solid'][(tier / 5) % 3], r, [c[1], c[3]], top ? { fx: 'bands' } : null, Object.assign({ rough: 0.2, metal: 0.6 }, mx || {})]);
+    else out.push([n, tier, 'camo', camoT[i % camoT.length], r, c, top ? { glowIdx: 3 } : null, mx]);
+  });
+  // the free row
+  [['HIGH TIMES', 1, 'banner', 'rays', 0, ['#0b1a0b', '#5dff7a', '#1a3a1a'], { em: ['leaf', '#5dff7a', '#0b1a0b', '420'] }, 'f'], ['SEASON 3', 10, 'sticker', 'text', 0, ['#0b1a0b', '#5dff7a'], 'S3', 'f'],
+   ['GREEN HAZE', 30, 'camo', 'fade', 0, [0x1a3a1a, 0x5dff7a, 0x0b1a0b, 0xb8ff5a], null, null, 'f'], ['LIGHTER FLUID', 50, 'charm', 'flame', 1, [0xff7a2a, 0xffd23a, 0x3a1a0a], null, 'f'],
+   ['SMOKE RINGS', 75, 'camo', 'waves', 1, [0x8a8a8a, 0xc8c8c8, 0x4a4a4a, 0x5dff7a], null, null, 'f'], ['S3 SURVIVOR', 98, 'sticker', 'leaf', 2, ['#0b0c0d', '#5dff7a'], null, 'f']].forEach(x => out.push(x));
+  return out;
+})();
+for (const [S, LIST] of [[1, BP_ITEMS], [2, BP2_ITEMS], [3, BP3_ITEMS]]) for (const [name, tier, kind, t, r, c, gx, mx, track] of LIST) {
   const flat = kind !== 'camo' && kind !== 'skin', base = { id: 'bp' + S + '_' + slug(name) + ({ sticker: '_st', charm: '_ch', banner: '_bn' }[kind] || ''), name, kind, r, bp: S, tier, track: (flat ? mx : track) === 'f' ? 'f' : 'p' };
   if (kind === 'sticker') COSM.push(Object.assign(base, { g: { t: 'sticker', d: t, c, txt: gx } }));
   else if (flat) COSM.push(Object.assign(base, { g: Object.assign({ t, c }, gx || {}) }));
@@ -390,7 +414,7 @@ COSM.push({ id: 'pr_resin', name: 'AMBER RESIN', kind: 'skin', r: 3, pres: 6, g:
 COSM.push({ id: 'pr_frost', name: 'FROSTED TRICHOME', kind: 'camo', r: 3, pres: 10, g: { t: 'hex', c: [0xe8f2ea, 0xcfe3d4, 0xf8fff9, 0xb8d4c0], line: 0x7fd16b, glowLine: true }, m: { rough: 0.3, metal: 0.5 } });
 const COS = Object.fromEntries(COSM.map(c => [c.id, c]));
 const LEVEL_ITEM = Object.fromEntries(COSM.filter(c => c.lvl).map(c => [c.lvl, c.id]));
-const BOX_POOL = COSM.filter(c => !c.lvl && c.kind !== 'sticker' && !c.secret && !c.bp && !c.pres && !c.ev);   // battle pass items never drop from boxes
+const BOX_POOL = COSM.filter(c => !c.lvl && c.kind !== 'sticker' && !c.secret && !c.bp && !c.pres && !c.ev && !c.ach);   // battle pass items never drop from boxes
 
 /* ---------- saved progress */
 const progBlank = () => ({ v: 1, xp: 0, dz: 0, owned: {}, equip: { all: null, guns: {} }, stk: { all: null, guns: {} }, chm: { all: null, guns: {} }, banner: 'bn_default', daily: { last: '', streak: 0 }, boxes: 0, drops: [], lastGain: null, init: false });

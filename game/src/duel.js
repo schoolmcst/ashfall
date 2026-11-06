@@ -45,7 +45,7 @@ function duelUpdate(dt) {
     DUEL.on = null; if (botAlive) duelSendBack(D.bot); return;
   }
   if (!botAlive) {   // I won: back onto the island
-    DUEL.on = null;
+    DUEL.on = null; B.duelWon = 1; try { achAdd('duelwins'); } catch (e) {}
     const a = Math.random() * TAU, r = Math.max(0, B.r * 0.55), o = openNear(B.cx + Math.cos(a) * r * Math.random(), B.cz + Math.sin(a) * r * Math.random());
     Object.assign(P, { x: o.x, z: o.z, y: groundAt(o.x, o.z, 2), vx: 0, vz: 0, vy: 0 }); G.health = Math.min(G.maxHp || 100, 60); G.spawnProt = 1.5;
     try { showBanner('YOU WON THE DUEL', 'back on the island · find a better gun'); sfx.streak(); } catch (e) {}

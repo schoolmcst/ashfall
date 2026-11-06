@@ -138,6 +138,11 @@ const RANGES = {
 };
 // more kick: assault rifles +35%, SMGs +30%, LMGs +80% (they also climb more the longer you hold the trigger)
 const RECOIL_MUL = { ar: 1.35, smg: 1.3, lmg: 1.8 };
+// 1.2.85: the crossbow and THE BONG (weapons2.js has their models and projectiles)
+ARMORY_SRC.push(
+  { id: 'crossbow', cat: 'mr', name: 'CROSSBOW', desc: 'Silent. A heavy bolt that drops a little with distance: one to the body kills. Bolts stick in what they hit.', dmg: 105, head: 2, interval: 0.9, mag: 1, reload: 1.7, recoil: 0.03, reserve: 14, reserveMax: 20, snd: 'gl', proj: 'bolt', speed: 78, grav: 3, optic: 'irons', adsFov: 55, noBot: true, noSlots: ['muzzle', 'barrel', 'magazine', 'underbarrel', 'ammo', 'stock'], v: { t: 'xbow' } },
+  { id: 'bongcannon', cat: 'la', name: 'THE BONG', desc: 'Lobs a glass shell that bursts in a small blast and leaves a SKUNK stink cloud: nobody can aim inside it.', dmg: 90, interval: 0.9, mag: 2, reload: 3.2, recoil: 0.04, reserve: 6, reserveMax: 10, snd: 'gl', proj: 'stink', speed: 24, grav: 9, blast: 3.5, optic: 'irons_p', adsFov: 60, noBot: true, v: { t: 'bong' } },
+);
 const ARMORY = ARMORY_SRC.map(src => {
   const rg = RANGES[src.id], d = Object.assign({ move: 1, ads: 1 }, CAT_BASE[src.cat], src, BALANCE[src.id] || {}, rg ? { eff: rg[0], fallMin: rg[1] } : {});
   d.recoil *= RECOIL_MUL[d.cat] || 1;
@@ -404,7 +409,7 @@ function buildGunModel(def, fresh) {
     if (g.userData.mag) { g.userData.magBase = g.userData.mag.position.clone(); g.userData.magDir = DOWN; g.userData.magReach = 0.27; }
   } else {
     const t = (def.v && def.v.t) || 'rifle';
-    g = t === 'pistol' ? procPistol(def) : t === 'revolver' ? procRevolver(def) : t === 'double' ? procDouble(def) : t === 'thumper' ? procThumper(def) : t === 'rocket' ? procRocket(def) : procRifle(def);
+    g = t === 'pistol' ? procPistol(def) : t === 'revolver' ? procRevolver(def) : t === 'double' ? procDouble(def) : t === 'thumper' ? procThumper(def) : t === 'rocket' ? procRocket(def) : t === 'xbow' ? procCrossbow(def) : t === 'bong' ? procBong(def) : procRifle(def);
   }
   g.name = 'gun_' + def.id; g.userData.def = def;
   const u = g.userData;

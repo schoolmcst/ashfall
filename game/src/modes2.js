@@ -11,9 +11,9 @@ function m2Setup() {
   if (M.kc) for (const t of M.kc.tags) if (t.g && t.g.parent) t.g.parent.remove(t.g);
   if (M.dom && M.dom.group && M.dom.group.parent) M.dom.group.parent.remove(M.dom.group);
   M.kc = null; M.dom = null;
-  if ((M.mode === 'kc' || M.mode === 'dom') && !OBJ.group) { OBJ.group = new THREE.Group(); scene.add(OBJ.group); }
+  if ((M.mode === 'kc' || (M.mode === 'dom' || M.mode === 'grow')) && !OBJ.group) { OBJ.group = new THREE.Group(); scene.add(OBJ.group); }
   if (M.mode === 'kc') M.kc = { tags: [], seq: 0, ev: [], evSeq: 0, seen: -1 };
-  if (M.mode === 'dom') domSetup();
+  if ((M.mode === 'dom' || M.mode === 'grow')) domSetup();
   m3Setup();
 }
 // who an actor is in the online state ('' offline)
@@ -25,6 +25,8 @@ function m2Actors() {
 }
 // bots: about half go for the objective (more for the 'obj' role), the rest keep hunting
 function m2Goal(e, keep, near, set) {
+  if (M.plug) { const g = plugGoal(e, set); if (g) return g; }
+  if (M.heist) { const g = heistGoal(e, set); if (g) return g; }
   if (M.ru) return ruGoal(e, keep, near, set);
   if (M.br) { const g = brGoal(e, keep, near, set); if (g) return g; }
   const ex = e.group.position.x, ez = e.group.position.z;
@@ -32,7 +34,7 @@ function m2Goal(e, keep, near, set) {
     let best = null, bd = 1e9; for (const t of M.kc.tags) { const d = Math.hypot(t.x - ex, t.z - ez); if (d < bd) { bd = d; best = t; } }
     if (best && (bd < 14 || (e.role === 'obj' && bd < 40 && Math.random() < 0.7))) return set({ x: best.x, z: best.z, y: best.y }, 1.5);
   }
-  if (M.mode === 'dom' && M.dom) {
+  if ((M.mode === 'dom' || M.mode === 'grow') && M.dom) {
     const pts = M.dom.pts, mine = pts.filter(p => p.own === e.team).length;
     // closest spot we do not own; anchors (obj role) also guard what we have when we hold two
     const want = pts.filter(p => p.own !== e.team).sort((a, b) => Math.hypot(a.x - ex, a.z - ez) - Math.hypot(b.x - ex, b.z - ez));
@@ -42,15 +44,17 @@ function m2Goal(e, keep, near, set) {
   }
   return null;
 }
-function m2Update(dt) { if (M.oic || M.hso) m6Update(dt); try { fuTick(dt); tacTick(dt); moversTick(dt); } catch (e) {} if (M.mode === 'kc' && M.kc) kcUpdate(dt); if (M.mode === 'dom' && M.dom) domUpdate(dt); if (M.mode === 'ru' && M.ru) ruUpdate(dt); if (M.mode === 'pp' && M.pp) ppUpdate(dt); if (M.ph) phUpdate(dt); if (M.br) brUpdate(dt); }
+function m2Update(dt) { try { aimTick(dt); } catch (e) {} if (M.oic || M.hso) m6Update(dt); if (M.kf) kfTick(dt); if (M.plug) plugTick(dt); if (M.heist) heistTick(dt); if (M.mode === 'grow') growVisual(); try { fuTick(dt); tacTick(dt); moversTick(dt); w2Tick(); w2StreakTick(dt); } catch (e) {} if (M.mode === 'kc' && M.kc) kcUpdate(dt); if ((M.mode === 'dom' || M.mode === 'grow') && M.dom) domUpdate(dt); if (M.mode === 'ru' && M.ru) ruUpdate(dt); if (M.mode === 'pp' && M.pp) ppUpdate(dt); if (M.ph) phUpdate(dt); if (M.br) brUpdate(dt); }
 function m2Pack() {
   const ts = M.teamScore || [0, 0];
   if (M.mode === 'ru' && M.ru) return ruPack();
   if (M.mode === 'pp' && M.pp) return ppPack();
   if (M.ph) return phPack();
+  if (M.plug) return plugPack();
+  if (M.heist) return heistPack();
   if (M.br) return brPack();
   if (M.mode === 'kc' && M.kc) { const k = M.kc; return ['k', ts[0], ts[1], k.tags.length, ...k.tags.flatMap(t => [t.id, t.team, r2(t.x), r2(t.z), r2(t.y)]), ...k.ev.flatMap(v => v)]; }
-  if (M.mode === 'dom' && M.dom) return ['d', ts[0], ts[1], ...M.dom.pts.flatMap(p => [p.own, p.capT, Math.round(p.prog * 100), p.status])];
+  if ((M.mode === 'dom' || M.mode === 'grow') && M.dom) return ['d', ts[0], ts[1], ...M.dom.pts.flatMap(p => [p.own, p.capT, Math.round(p.prog * 100), p.status])];
 }
 function m2Apply(o) {
   if (o[0] === 'k' && M.kc) kcApply(o);
@@ -58,6 +62,8 @@ function m2Apply(o) {
   if (o[0] === 'r' && M.ru) ruApply(o);
   if (o[0] === 'p' && M.pp) ppApply(o);
   if (o[0] === 'q' && M.ph) phApply(o);
+  if (o[0] === 'X' && M.plug) plugApply(o);
+  if (o[0] === 'Y' && M.heist) heistApply(o);
   if (o[0] === 'b' && M.br) brApply(o);
 }
 function m2HudInfo() {
@@ -65,16 +71,19 @@ function m2HudInfo() {
   if (M.mode === 'pp' && M.pp) return ppHud();
   if (M.ph) return phHud();
   if (M.br) return brHud();
+  if (M.plug) return plugHud();
+  if (M.heist) return heistHud();
   if (M.oic || M.hso) return m6Hud();
   if (M.mode === 'kc' && M.kc) { const near = M.kc.tags.filter(t => Math.hypot(t.x - P.x, t.z - P.z) < 25), e = near.filter(t => t.team !== M.myTeam).length, f = near.length - e; return `${e} ENEMY BAG${e === 1 ? '' : 'S'} NEARBY${f ? ` · ${f} OF YOUR TEAM'S TO SAVE` : ''}`; }
-  if (M.mode === 'dom' && M.dom) return M.dom.pts.map(p => { const c = p.own === -1 ? '#ddd' : TEAM_COL[p.own === M.myTeam ? 0 : 1]; return `<span class="dom-l" style="--c:${c}${p.status ? ';--b:#ffd24a' : ''}">${p.n}</span>`; }).join('') + ` ${domHeld(M.myTeam)} HELD`;
+  if ((M.mode === 'dom' || M.mode === 'grow') && M.dom) return M.dom.pts.map(p => { const c = p.own === -1 ? '#ddd' : TEAM_COL[p.own === M.myTeam ? 0 : 1]; return `<span class="dom-l" style="--c:${c}${p.status ? ';--b:#ffd24a' : ''}">${p.n}</span>`; }).join('') + ` ${domHeld(M.myTeam)} HELD`;
   return '';
 }
 function m2Markers(out) {
+  if (M.plug) plugMarkers(out); if (M.heist) heistMarkers(out);
   if (M.mode === 'ru' && M.ru) ruMarkers(out);
   if (M.br) brMarkers(out);
   if (M.mode === 'kc' && M.kc) for (const t of M.kc.tags) { if (Math.hypot(t.x - P.x, t.z - P.z) > 30) continue; out.push({ x: t.x, y: t.y + 1.1, z: t.z, t: t.team === M.myTeam ? 'SAVE' : 'BAG', c: TEAM_COL[t.team === M.myTeam ? 0 : 1] }); }
-  if (M.mode === 'dom' && M.dom) for (const p of M.dom.pts) out.push({ x: p.x, y: p.y + 2.6, z: p.z, t: p.n, c: p.status ? '#ffd24a' : p.own === -1 ? '#ffffff' : TEAM_COL[p.own === M.myTeam ? 0 : 1] });
+  if ((M.mode === 'dom' || M.mode === 'grow') && M.dom) for (const p of M.dom.pts) out.push({ x: p.x, y: p.y + 2.6, z: p.z, t: p.n, c: p.status ? '#ffd24a' : p.own === -1 ? '#ffffff' : TEAM_COL[p.own === M.myTeam ? 0 : 1] });
 }
 
 /* ---------- BAGGED UP */
@@ -172,8 +181,8 @@ function domSpots() {
   return [pick(-20, 0), pick(0, 0), pick(20, 0)];
 }
 function domSetup() {
-  const spots = domSpots(), group = new THREE.Group(); (OBJ.group || scene).add(group);
-  M.dom = { group, acc: 0, pts: spots.map((s, i) => ({ n: 'ABC'[i], x: s.x, y: s.y || 0, z: s.z, own: -1, capT: -1, prog: 0, status: 0, cnt: [0, 0] })) };
+  const spots = M.mode === 'grow' ? growExtraSpots(domSpots()) : domSpots(), group = new THREE.Group(); (OBJ.group || scene).add(group);
+  M.dom = { group, acc: 0, pts: spots.map((s, i) => ({ n: 'ABCDE'[i], x: s.x, y: s.y || 0, z: s.z, own: -1, capT: -1, prog: 0, status: 0, cnt: [0, 0] })) };
   for (const p of M.dom.pts) domMesh(p);
 }
 function domLetter(n) {
@@ -194,7 +203,7 @@ function domMesh(p) {
   for (let tier = 0; tier < 5; tier++) for (let i = 0; i < 3; i++) {   // fan leaves: seven fingers per leaf, five tiers up the stem
     const fan = new THREE.Group(); fan.position.y = 0.75 + tier * 0.24; fan.rotation.y = tier * 1.1 + (i % 2) * Math.PI;
     for (let f = -3; f <= 3; f++) { const l = new THREE.Mesh(leafG, leafM); l.rotation.z = f * 0.38; l.scale.setScalar((1 - Math.abs(f) * 0.17) * (1.25 - tier * 0.15)); fan.add(l); }
-    fan.rotation.x = -0.9; const arm = new THREE.Group(); arm.rotation.y = i * (TAU / 3); arm.add(fan); fan.position.z = 0.05; g.add(arm);
+    fan.rotation.x = -0.9; const arm = new THREE.Group(); arm.rotation.y = i * (TAU / 3); arm.add(fan); fan.position.z = 0.05; arm.userData.leafArm = true; g.add(arm);
   }
   const bud = new THREE.Mesh(new THREE.ConeGeometry(0.11, 0.35, 8), std(0x6a9a3a, { emissive: new THREE.Color(0x1a2a0a) })); bud.position.y = 1.95; g.add(bud);
   // the lamp: two poles and a glowing purple panel
@@ -206,7 +215,7 @@ function domMesh(p) {
   const ring = new THREE.Mesh(new THREE.RingGeometry(DOM_R - 0.18, DOM_R, 56), objMat('#ffffff', 0.5)); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.04; g.add(ring);
   const fill = new THREE.Mesh(new THREE.RingGeometry(DOM_R - 0.6, DOM_R - 0.22, 56, 1, 0, 0.001), objMat('#ffffff', 0.45)); fill.rotation.x = -Math.PI / 2; fill.position.y = 0.05; g.add(fill);
   const let_ = new THREE.Sprite(new THREE.SpriteMaterial({ map: domLetter(p.n), transparent: true, depthWrite: false })); let_.scale.set(0.8, 0.8, 1); let_.position.y = 3.3; g.add(let_);
-  M.dom.group.add(g); Object.assign(p, { g, ring, fill, lamp, cone, fillK: -1 });
+  M.dom.group.add(g); Object.assign(p, { g, ring, fill, lamp, cone, fillK: -1, bud });
 }
 const domHeld = team => M.dom ? M.dom.pts.filter(p => p.own === team).length : 0;
 function domVisual(dt) {
@@ -246,10 +255,10 @@ function domUpdate(dt) {
     }
   }
   D.acc += dt;
-  if (D.acc >= DOM_TICK) { D.acc -= DOM_TICK; for (let t = 0; t < 2; t++) M.teamScore[t] += domHeld(t); checkScoreLimit(); }
+  if (D.acc >= DOM_TICK) { D.acc -= DOM_TICK; for (let t = 0; t < 2; t++) M.teamScore[t] += M.mode === 'grow' ? growPts(t) : domHeld(t); checkScoreLimit(); }
   domVisual(dt);
 }
-function domMine(p) { MS.caps = (MS.caps || 0) + 1; MS.turf = (MS.turf || 0) + 1; G.score += 150; popScore('+150', 'big', `${p.n} SECURED`); }
+function domMine(p) { try { achAdd('grows'); } catch (e) {} MS.caps = (MS.caps || 0) + 1; MS.turf = (MS.turf || 0) + 1; G.score += 150; popScore('+150', 'big', `${p.n} SECURED`); }
 // online, not the host: a spot your team just took while you stood in it
 function domMyCapture() {
   for (const p of M.dom.pts) {

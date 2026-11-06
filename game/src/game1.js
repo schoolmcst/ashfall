@@ -86,7 +86,7 @@ function updatePlayer(dt) {
   if (G.reloading) speed *= 0.85;
   if (G.downed) speed *= 0.22;   // LAST TOKE squads: crawling
   if (prone) speed *= 0.25;
-  speed *= fuSpeed();   // FIELD UPGRADE: RUSH
+  speed *= (typeof rulesSpeed === 'function' ? rulesSpeed() : 1) * fuSpeed() * (typeof heistSlow === 'function' ? heistSlow() : 1);   // FIELD UPGRADE: RUSH; THE HEIST: carrying a bag
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
   const tx = moving ? wx / wl * speed * mag : 0, tz = moving ? wz / wl * speed * mag : 0;
@@ -108,7 +108,7 @@ function updatePlayer(dt) {
   const hs = Math.hypot(P.vx, P.vz);
   if (P.onGround && hs > 0.5 && !sliding) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev && !fuSilent()) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
   const rec = Math.min(P.recoilAcc, P.recoilAcc * dt * 4 + 0.0005); P.pitch -= rec; P.recoilAcc -= rec;
-  if (!G.downed && G.time - G.lastHit > (perk('tough') ? 3 : 5) && G.health < (G.maxHp || 100)) G.health = Math.min(G.maxHp || 100, G.health + 28 * (inMatch() ? 1 : diff().regen) * (G.maxHp || 100) / 100 * dt);
+  if (!G.downed && !(typeof rulesNoRegen === 'function' && rulesNoRegen()) && G.time - G.lastHit > (perk('tough') ? 3 : 5) && G.health < (G.maxHp || 100)) G.health = Math.min(G.maxHp || 100, G.health + 28 * (inMatch() ? 1 : diff().regen) * (G.maxHp || 100) / 100 * dt);
 
   const shk = G.shake * S.shake / 100, bobOn = S.bob ? 1 : 0;
   camera.position.set(P.x + rnd(-shk, shk), P.y + P.eye + Math.sin(P.bob * 2) * 0.025 * (hs / 5) * bobOn + rnd(-shk, shk), P.z + rnd(-shk, shk));
@@ -238,7 +238,7 @@ function shoot(moving) {
     raycaster.set(_org, _sdir); raycaster.far = w.range;
     const hits = raycaster.intersectObjects(targets, false);
     const h = hits[0];
-    if (!h) { if (!w.stealth && p === 0 && w.pellets === 1 && (G.shots & 1)) addTracer(_muz, _v.copy(_org).addScaledVector(_sdir, 70), 0.05, 0.012); continue; }
+    if (!h) { if (!w.stealth && p === 0 && w.pellets === 1 && (G.shots & 1)) { addTracer(_muz, _v.copy(_org).addScaledVector(_sdir, 70), 0.05, 0.012); try { trcPaint(); } catch (e) {} } continue; }
     const ud = h.object.userData;
     // full damage up to the gun's MAX DAMAGE RANGE, then down to its floor (fallMin) at twice that distance
     const fall = dmgFall(w, h.distance);
@@ -250,9 +250,9 @@ function shoot(moving) {
     } else {
       hitEffects(h, false); if (p === 0 || p === 3) try { sfx.impact(at(h.point.x, h.point.z, 9, h.point.y - 1.1), Math.random() < 0.14); } catch (err) {}
       const wb = typeof wbPierce === 'function' ? wbPierce(w, _org, _sdir, h, hits) : null;   // WALLBANG: through thin cover (wallbang.js)
-      if (wb) { const u2 = wb.hit.object.userData, head = !!u2.head, killed = damageEnemy(u2.enemy, w.dmg * dmgFall(w, wb.hit.distance) * wb.k * (head ? w.head : (u2.mult || 1)), head, _sdir); anyHit = true; anyKill = anyKill || killed; anyHead = anyHead || head; G.wbT = G.time; try { hitEffects(wb.hit, true); puff(wb.exit.x, wb.exit.y, wb.exit.z, { color: 0xbbb4a8, size: 0.35, grow: 0.8, life: 0.6, vy: 0.3, op: 0.5, minor: 1 }); } catch (err) {} }
+      if (wb) { const u2 = wb.hit.object.userData, head = !!u2.head, killed = (G.killSrc = 'wall', damageEnemy(u2.enemy, w.dmg * dmgFall(w, wb.hit.distance) * wb.k * (head ? w.head : (u2.mult || 1)), head, _sdir)); G.killSrc = ''; anyHit = true; anyKill = anyKill || killed; anyHead = anyHead || head; G.wbT = G.time; try { hitEffects(wb.hit, true); puff(wb.exit.x, wb.exit.y, wb.exit.z, { color: 0xbbb4a8, size: 0.35, grow: 0.8, life: 0.6, vy: 0.3, op: 0.5, minor: 1 }); } catch (err) {} }
     }
-    if (!w.stealth && (w.pellets === 1 ? (!w.auto || (G.shots & 1)) : p < 3)) addTracer(_muz, h.point, 0.045, w.pellets > 1 ? 0.01 : 0.014);
+    if (!w.stealth && (w.pellets === 1 ? (!w.auto || (G.shots & 1)) : p < 3)) { addTracer(_muz, h.point, 0.045, w.pellets > 1 ? 0.01 : 0.014); try { trcPaint(); } catch (e) {} }
   }
   statShot(anyHit);
   if (M && M.ph && !anyHit) phMissed();
@@ -319,7 +319,8 @@ function melee() {
   }, 130);
 }
 function throwGrenade() {
-  if (G.grenades <= 0 || G.state !== 'playing' || (M && M.infMe)) return;
+  if (G.grenades <= 0 || G.state !== 'playing' || (M && M.infMe) || (typeof rulesNoNades === 'function' && rulesNoNades())) return;
+  if (G.equip === 'knife') { knifeThrow(); return; }   // THROWING KNIFE (weapons2.js)
   if (!gGeo && hasModel('props', 'grenade')) { const gg = modelGeos('props', 'grenade'); gGeo = mergeGeos(Object.keys(gg).map(k => ({ g: gg[k] }))); gMat = new THREE.MeshStandardMaterial({ color: C(0x3a4630), metalness: 0.5, roughness: 0.5 }); }
   if (!gGeo) { gGeo = mergeGeos([{ g: Sp(0.055, 10, 8), m: mat4(0, 0, 0, 0, 0, 0, 1, 1.25, 1) }, { g: Cy(0.022, 0.022, 0.03, 8), m: mat4(0, 0.075, 0) }, { g: Bx(0.012, 0.012, 0.07), m: mat4(0.03, 0.08, 0) }]); gMat = new THREE.MeshStandardMaterial({ color: C(0x3a4630), metalness: 0.5, roughness: 0.55 }); }
   const eq = EQUIP[G.equip] || EQUIP.frag;
@@ -398,7 +399,7 @@ function launchProjectile(w, u) {
   }
   camera.updateMatrixWorld();
   const dir = new THREE.Vector3(rnd(-1, 1) * (G.adsOn ? w.adsSpread : w.spread), rnd(-1, 1) * (G.adsOn ? w.adsSpread : w.spread), -1).normalize().applyQuaternion(camera.quaternion);
-  const m = new THREE.Mesh(projGeo[w.proj], projMat); m.castShadow = true;
+  const m = new THREE.Mesh(projGeo[w.proj] || (projGeo[w.proj] = w.proj === 'bolt' ? new THREE.BoxGeometry(0.012, 0.012, 0.42) : new THREE.SphereGeometry(0.06, 10, 8)), projMat); m.castShadow = true;
   m.position.copy(camera.position).addScaledVector(dir, 0.9); m.position.y -= 0.08; m.lookAt(_pa.copy(m.position).sub(dir));
   scene.add(m);
   const fl = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0xffb060, blending: THREE.AdditiveBlending, depthWrite: false, transparent: true }));
@@ -478,6 +479,7 @@ function updateProjectile(g, dt) {
   if (hit) boom = hit.point.clone().addScaledVector(_pd, -0.1);
   else if (_pb.y <= groundAt(_pb.x, _pb.z, _pb.y) + 0.03) boom = _pb.clone().setY(groundAt(_pb.x, _pb.z, _pb.y) + 0.1);
   else if (g.life <= 0 || Math.abs(_pb.x) > ARENA + 30 || Math.abs(_pb.z) > ARENA + 30) return true;
+  if (boom && (g.proj === 'bolt' || g.proj === 'knife' || g.proj === 'stink') && w2ProjHit(g, hit, boom, _pd)) return true;   // crossbow bolts, knives, THE BONG (weapons2.js)
   if (boom) { if (hit && hit.object.userData.enemy) damageEnemy(hit.object.userData.enemy, g.dmg * 0.35, false, _pd); explode(boom, 'grenade', g.blast, g.dmg / 150); return true; }
   m.position.copy(_pb); m.lookAt(_pa.copy(_pb).sub(_pd));
   if (g.proj === 'rocket' && (g.trailT -= dt) <= 0) { g.trailT = 0.025; puff(_pb.x, _pb.y, _pb.z, { color: 0xaaa69e, size: 0.2, grow: 0.9, life: 1.3, vy: 0.2, op: 0.3, minor: 1 }); }

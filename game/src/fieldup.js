@@ -19,7 +19,7 @@ const fuOn = () => !!(M && inMatch() && M.mode !== 'zomb' && M.mode !== 'camp' &
 function fuReset() { FU.charge = 0.3; FU.silenceT = FU.rushT = 0; fuCoverGone(); if (FU.ammo && FU.ammo.g.parent) FU.ammo.g.parent.remove(FU.ammo.g); FU.ammo = null; FU.kills = G.kills; for (const [, o] of FU.remote) { brkBreak(o, false, true); delete BRK.list[o.id]; } FU.remote.clear(); }
 function fuUse() {
   if (!fuOn() || !playerAlive() || FU.charge < 1 || G.downed) return;
-  const t = fuType(), fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw); FU.charge = 0;
+  const t = fuType(), fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw); FU.charge = 0; try { achAdd('fus'); } catch (e) {}
   if (t === 'cover') {
     fuCoverGone(); const x = P.x + fx * 1.6, z = P.z + fz * 1.6, along = Math.abs(fx) < Math.abs(fz);
     FU.cover = brkMake(4000 + (++FU.seq), 'shield', x, z, along ? 1.7 : 0.18, along ? 0.18 : 1.7); FU.cover.until = NOW + 25; FU.cover.fy = P.y;

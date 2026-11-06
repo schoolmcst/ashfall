@@ -54,7 +54,7 @@ function photoSave() {
     renderFrame(); const src = renderer.domElement, c = document.createElement('canvas'); c.width = src.width; c.height = src.height;
     const g = c.getContext('2d'); g.filter = PHOTO_FILT[PHOTO.filt][1] || 'none'; g.drawImage(src, 0, 0);
     const a = document.createElement('a'); a.download = `darkzone-${curMap}-${new Date().toISOString().slice(0, 19).replace(/[:T]/g, '-')}.png`; a.href = c.toDataURL('image/png'); document.body.appendChild(a); a.click(); a.remove();
-    PHOTO.saved = (PHOTO.saved | 0) + 1; try { sfx.ui(); } catch (e) {}
+    PHOTO.saved = (PHOTO.saved | 0) + 1; try { sfx.ui(); achAdd('photos'); } catch (e) {}
     const ui = $('photoUi'); if (ui) { ui.classList.add('flash'); setTimeout(() => ui.classList.remove('flash'), 300); }
   } catch (e) { reportError(e); }
 }

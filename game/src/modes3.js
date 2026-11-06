@@ -16,6 +16,7 @@ function m3Setup() {
   try { phClear(); } catch (e) {} M.ph = null; if (M.mode === 'ph') phSetup();
   try { brClear(); } catch (e) {} M.br = null; if (M.mode === 'br') brSetup();
   m6Setup();   // ONE IN THE CHAMBER / HEADSHOTS ONLY (modes6.js)
+  M.kf = M.mode === 'kf' ? {} : null; M.plug = null; M.heist = null; if (M.mode === 'plug') plugSetup(); if (M.mode === 'heist') heistSetup();   // modes7.js
 }
 // the key that names an actor in the carry list (the same on every machine online)
 function ruKey(who) {

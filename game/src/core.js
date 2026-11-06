@@ -32,7 +32,7 @@ function dzFilter(t) { if (!dzFilterOn()) return t; const flat = s => s.toLowerC
 const FXQ = { low: 0.35, medium: 0.65, high: 1, ultra: 1.5 };
 const DEFAULTS = {
   quality: 'auto', cfgVer: 5, dynRes: true, fpsCap: 0, aa: 'msaa', gpuPref: 'high', anis: 8, grass: 65, fxQ: 'high', texQ: 'high', shadowDist: 100, gunShader: true, realTex: true, realSnd: true, sheen: 100, renderScale: 100, shadows: 'high', post: 'high', bloom: 100, shadowLift: 60, postV: 0, fov: 75, brightness: 100, grain: false, shake: 100, showFps: false, bob: true,
-  master: 80, sfx: 100, ambience: 60, music: 50, chatFilter: true, perfMode: false, perfGraph: false, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
+  master: 80, sfx: 100, ambience: 60, music: 50, radio: 'fm', touch: 'auto', lang: 'en', sqvox: true, chatFilter: true, perfMode: false, perfGraph: false, zvoice: true, zvoiceVol: 70, zvoiceRate: 100,
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,
@@ -59,7 +59,7 @@ function loadSettings() {
   } catch (e) { NEED_AUTO_DERIVE = true; }
 }
 // keyboard bindings (Settings > KEYBINDS); mouse stays fire / aim
-const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab', streak: 'KeyX', ping: 'KeyZ', prone: 'KeyB', field: 'KeyT', plate: 'Digit4' };
+const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab', streak: 'KeyX', ping: 'KeyZ', prone: 'KeyB', field: 'KeyT', plate: 'Digit4', emote: 'KeyJ' };
 const PAD_DEFAULT = { jump: 0, crouch: 1, reload: 2, swap: 3, grenade: 5, melee: 11, sprint: 10, streak: 12, inspect: 13, board: 8, ping: 14, field: 15, plate: 4 };
 const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', 'L3', 'R3', 'D-PAD UP', 'D-PAD DOWN', 'D-PAD LEFT', 'D-PAD RIGHT'];
 const pb = a => (S.padBinds && S.padBinds[a] !== undefined ? S.padBinds[a] : PAD_DEFAULT[a]);

@@ -41,7 +41,7 @@ function tacTick(dt) {
     for (let j = grenadesInFlight.length - 1; j >= 0 && t.charges > 0; j--) {
       const g = grenadesInFlight[j]; const enemyNade = g.by && g.by !== 'player' && !isFriend(g.by); if (!enemyNade) continue;
       const q = g.m.position; if (Math.hypot(q.x - t.x, q.y - t.y, q.z - t.z) > 6) continue;
-      t.charges--; try { addTracer(new THREE.Vector3(t.x, t.y + 0.1, t.z), q.clone(), 0.08, 0.02); puff(q.x, q.y, q.z, { color: 0x666666, size: 0.4, grow: 0.8, life: 0.5, vy: 0.3, op: 0.6 }); sfx.impact(at(q.x, q.z, 14), true); } catch (e) {}
+      t.charges--; try { if (t.mine) achAdd('trophies'); addTracer(new THREE.Vector3(t.x, t.y + 0.1, t.z), q.clone(), 0.08, 0.02); puff(q.x, q.y, q.z, { color: 0x666666, size: 0.4, grow: 0.8, life: 0.5, vy: 0.3, op: 0.6 }); sfx.impact(at(q.x, q.z, 14), true); } catch (e) {}
       scene.remove(g.m); grenadesInFlight.splice(j, 1);
     }
     if (t.t <= 0 || t.charges <= 0) { scene.remove(t.m); TAC.trophies.splice(i, 1); }

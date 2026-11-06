@@ -11,7 +11,7 @@ function buildFx() {
   }
   const mk = (color, emissive) => emissive ? new THREE.MeshBasicMaterial({ color }) : new THREE.MeshStandardMaterial({ color: C(color), roughness: 1 });
   const geo = new THREE.BoxGeometry(0.05, 0.05, 0.05);
-  [['spark', mk(0xffb040, true), 50], ['dust', mk(0x8a7e66), 50], ['blood', mk(0x6a0a0a), 40], ['wood', mk(0x7a5a38), 24], ['metal', mk(0xb0b4b8, true), 24]].forEach(([k, mat, n]) => {
+  [['spark', mk(0xffb040, true), 50], ['dust', mk(0x8a7e66), 50], ['blood', mk(0x6a0a0a), 40], ['wood', mk(0x7a5a38), 24], ['metal', mk(0xb0b4b8, true), 24], ['leaf', mk(0x3fae3a, true), 30], ['confetti', mk(0xff4fa3, true), 36]].forEach(([k, mat, n]) => {
     const list = []; for (let i = 0; i < n; i++) { const m = new THREE.Mesh(geo, mat); m.visible = false; scene.add(m); list.push({ m, on: false, life: 0, vx: 0, vy: 0, vz: 0 }); }
     chunkPools[k] = { list, i: 0 };
   });
@@ -64,6 +64,7 @@ function hitEffects(h, enemyHit) {
 function addTracer(a, b, life = 0.06, thick = 0.02) {
   let t = null; for (const q of tracers) if (!q.on) { t = q; break; } if (!t) return;
   _v.copy(b).sub(a); const len = _v.length(); if (len < 0.5) return;
+  if (t.paint) { t.paint = 0; t.m.material.color.setHex(0xffe2a0); }
   t.on = true; t.life = t.max = life; t.m.visible = true; t.m.position.copy(a).add(b).multiplyScalar(0.5); t.m.scale.set(thick, thick, len); t.m.lookAt(b);
 }
 function spawnCasing(origin, right, fwd, big) {
@@ -89,6 +90,7 @@ function explosionFx(p, power) {
 }
 
 function updateFx(dt) {
+  try { ambTick(dt); } catch (e) {}
   for (const p of spritePool) {
     if (!p.on) continue; p.life -= dt;
     if (p.life <= 0) { p.on = false; p.s.visible = false; continue; }

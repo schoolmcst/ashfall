@@ -94,7 +94,7 @@ function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGro
 
 /* ---------- custom game */
 const CUS_KEY = 'ashfall.custom.v1';
-let CUS = { mode: 'tdm', score: 50, time: 8, perTeam: 6, players: 8, skill: 'regular', hardcore: false, map: 'random' };
+let CUS = { mode: 'tdm', score: 50, time: 8, perTeam: 6, players: 8, skill: 'regular', hardcore: false, map: 'random', rules: null };
 try { const o = JSON.parse(localStorage.getItem(CUS_KEY) || 'null'); if (o && MODES[o.mode]) CUS = Object.assign(CUS, o); } catch (e) {}
 const CUS_LIM = { tdm: [10, 150, 5], ffa: [5, 50, 5], hp: [50, 300, 10], ctf: [1, 10, 1], snd: [1, 8, 1] };
 function cusSetMode(k) {
@@ -111,9 +111,11 @@ function renderCustom() {
   else if (k !== 'surv') rows.push({ name: 'PLAYERS', hint: 'You plus bots', t: 'range', min: 2, max: 12, step: 1, get: () => CUS.players, set: v => { CUS.players = v; }, fmt: v => v });
   if (k !== 'surv') rows.push({ name: 'BOT SKILL', t: 'seg', opts: Object.keys(SKILL).map(s => [s, SKILL[s].name]), get: () => CUS.skill, set: v => { CUS.skill = v; } });
   if (k !== 'surv') rows.push({ name: 'HARDCORE', hint: '30 health for everyone: one or two hits kill', t: 'toggle', get: () => CUS.hardcore, set: v => { CUS.hardcore = v; } });
+  if (k !== 'surv') { CUS.rules = Object.assign(rulesDefault(), CUS.rules || {}); rulesRows(rows, CUS.rules); }
   const cp = $('cusPriv'); if (cp) { cp.innerHTML = privCodeHtml(); if (NET.app) { netLobbyWire(); const g = $('netCodeGo'); if (g) g.onclick = () => { sfx.ui(); if (!MODES[LOBBY.mode].online) LOBBY.mode = LOBBY.lastOn || 'otdm'; netGo('code'); }; } }
   const body = $('cusBody'); body.innerHTML = `<div class="cus-desc">${d.desc}</div>`;
   for (const it of rows) {
+    if (it.head) { const h = document.createElement('div'); h.className = 'cus-rules-h'; h.textContent = it.head; body.appendChild(h); continue; }
     const row = document.createElement('div'); row.className = 'setrow';
     const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = it.name; if (it.hint) { const h = document.createElement('span'); h.className = 'hint'; h.textContent = it.hint; nm.appendChild(h); }
     const ctl = document.createElement('div'); ctl.className = 'ctl';
@@ -126,5 +128,5 @@ function renderCustom() {
 function saveCus() { try { localStorage.setItem(CUS_KEY, JSON.stringify(CUS)); } catch (e) {} }
 function startCustom() {
   if (CUS.mode === 'surv') return startMatch('surv', { map: CUS.map });
-  startMatch(CUS.mode, { map: CUS.map, score: CUS.mode === 'gun' ? GUN_LADDER.length : CUS.score, time: CUS.time, perTeam: CUS.perTeam, players: CUS.players, skill: CUS.skill, hardcore: CUS.hardcore, custom: true });
+  startMatch(CUS.mode, { map: CUS.map, score: CUS.mode === 'gun' ? GUN_LADDER.length : CUS.score, time: CUS.time, perTeam: CUS.perTeam, players: CUS.players, skill: CUS.skill, hardcore: CUS.hardcore, custom: true, rules: CUS.rules && JSON.stringify(CUS.rules) !== JSON.stringify(rulesDefault()) ? Object.assign({}, CUS.rules) : null });
 }
