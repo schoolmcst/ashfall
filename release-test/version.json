@@ -1,9 +1,12 @@
 {
- "version": "1.2.88",
+ "version": "1.2.89",
  "notes": [
-  "FIX: EDIT HUD in Settings > Gameplay now opens the HUD editor (and it's in the pause menu too)",
-  "HUD editor: every part gets a box you can grab, even ones that are empty in the menu"
+  "STASH ISLAND REMADE: 391 x 391 m (152,865 m\u00b2), ten times bigger",
+  "Almost every place to land is buildings you go inside: 2-3 storeys, rooms, stairwells, windows, walkable roofs",
+  "New places: Old Town, the School, Greenhouse Row, Radio Hill, the Refinery, the Lighthouse, the Hotel, the Estate (cliff, mansion, cellar and tunnel), the Farm, the Docks, the Quarry, the Power Station, the Bunkers",
+  "Loot inside, upstairs and on roofs; 120 crates; a longer 5-phase cloud; 18 vehicles; new jump pads and ziplines",
+  "FIX: EDIT HUD opens from Settings and the pause menu"
  ],
- "sha256": "f07a42fca5ce9520116781b4ced77e56c63011b92edbe94541eef4adb8083ba7",
+ "sha256": "0b044e8390cf2e5d86d1d47f5cc6ea5de7e74c2f53106b234a84b2a9ebf470b4",
  "minApp": "1.0.0"
 }

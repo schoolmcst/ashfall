@@ -152,6 +152,15 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.89 TEST: STASH ISLAND REMADE at 390.98 m square = 152,865 m² (STASH_A 200, STASH_H 195.49), original layout
+  (not a copy of any other game's map). map_stash2.js: stashBld (2-3 storey buildings: rooms with 1.8 m doorways, a
+  switchback stairwell along the north wall - north doors go at the east end of that wall -, open windows, walkable
+  roofs with a parapet, loot spots in STASH_LOOT), stashHall (warehouses with a mezzanine), stashTiers/stashRamp
+  (raised ground with visible ramps), the ESTATE cliff (solid pieces either side of a roofed tunnel + THE CELLAR rooms).
+  Nav on huge maps (ARENA > 120): flow fields Int16, cache 12, BFS stops at 190 steps (~95 m). Crates have a height
+  (brCrate y; the 'b' pack is 5 numbers a crate, up to 200); 120 crates, ~65% on loot spots. BR_PHASES_BIG (5 phases).
+  Moved for the new island: DUEL_PEN, MOVERS.stashisle, VH_SPOTS (18), LT buy spots (6) and contracts (12), 90
+  breakables. Test: s_isle2 (size, every loot spot reachable by bots, pictures).
 - 1.2.88 TEST: EDIT HUD button fixed (settings actions only reach lnAct for sv-/bk-/er-; hud-edit is now a ui.js case), also in the pause menu.
 - 1.2.87 PUBLIC (the follow-ups): campaign co-op friend can finish action steps (CC_ACT go/use/multi/pick/carry/search/
   photo: the client's suppressed campStepDone sends rq [step, seq]; the host finishes it). MAP EDITOR online: pick MY MAP

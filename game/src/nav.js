@@ -93,11 +93,12 @@ function flowField(x, z, y) {
   let f = FLOW.get(node); if (f) { f.used = NOW; return f.d; }
   if (ARENA > 44) { if (FLOWB.t !== NOW) { FLOWB.t = NOW; FLOWB.n = 0; } if (FLOWB.n++ >= 1) return null; }   // a big map: at most one new field a frame (the rest walk straight until next frame)
   let d = null;
-  if (FLOW.size > 40) { let ok = null, ou = 1e9; FLOW.forEach((v, k) => { if (v.used < ou) { ou = v.used; ok = k; } }); d = FLOW.get(ok).d; FLOW.delete(ok); }   // reuse the oldest field's memory
-  if (!d || d.length !== NN * NN * NL) d = new Int32Array(NN * NN * NL); d.fill(-1); const q = flowQ;
+  const huge = ARENA > 120, cap = huge ? 12 : 40, far = huge ? 190 : 1e9;   // a huge map (STASH ISLAND, 391 m): fewer fields, half the memory each, ~95 m reach
+  if (FLOW.size > cap) { let ok = null, ou = 1e9; FLOW.forEach((v, k) => { if (v.used < ou) { ou = v.used; ok = k; } }); d = FLOW.get(ok).d; FLOW.delete(ok); }   // reuse the oldest field's memory
+  if (!d || d.length !== NN * NN * NL || (huge && !(d instanceof Int16Array))) d = huge ? new Int16Array(NN * NN * NL) : new Int32Array(NN * NN * NL); d.fill(-1); const q = flowQ;
   let head = 0, tail = 0; q[tail++] = node; d[node] = 0;
   while (head < tail) {
-    const nd0 = q[head++], c = (nd0 / NL) | 0, l = nd0 % NL, cx = c % NN, cz = (c / NN) | 0, h = lvH[nd0], st = lvS[nd0];
+    const nd0 = q[head++]; if (d[nd0] >= far) continue; const c = (nd0 / NL) | 0, l = nd0 % NL, cx = c % NN, cz = (c / NN) | 0, h = lvH[nd0], st = lvS[nd0];
     for (let k = 0; k < 8; k++) {
       const nx = cx + NX[k], nz = cz + NZ[k]; if (nx < 0 || nz < 0 || nx >= NN || nz >= NN) continue;
       const n = nz * NN + nx;

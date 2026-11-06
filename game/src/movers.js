@@ -4,9 +4,9 @@
    island: USE at the top to clip on, you slide down at speed (you can shoot on the way), JUMP lets go early.
    Built with the map; the pads and lines are the same on every machine. */
 const MOVERS = {
-  stashisle: {
-    pads: [{ x: -30, z: -3.6, to: { x: -42.6, y: 5, z: -3.6 } }, { x: 40, z: 12, to: { x: 46, y: 5, z: 26.5 } }],
-    zips: [{ a: { x: -44.6, y: 7.4, z: 4.2 }, b: { x: -14, y: 2.6, z: 24 } }, { a: { x: 47.6, y: 7.2, z: 27.6 }, b: { x: 30, y: 2.6, z: -10 } }],
+  stashisle: {   // 1.2.89 island: pads onto the estate cliff and out of the quarry pit; ziplines off the school, the mansion and the radio hill
+    pads: [{ x: 104, z: 6, to: { x: 128, y: 5, z: 6 } }, { x: 128, z: 150, to: { x: 130, y: 4.5, z: 112 } }, { x: -92, z: -40, to: { x: -72, y: 6, z: -58 } }],
+    zips: [{ a: { x: 18, y: 9.1, z: -142 }, b: { x: 46, y: 2.6, z: -108 } }, { a: { x: 170, y: 14.1, z: 10 }, b: { x: 112, y: 2.6, z: 46 } }, { a: { x: -70, y: 11.5, z: -64 }, b: { x: -40, y: 2.6, z: -20 } }],
   },
 };
 const MV2 = { fly: null, zip: null, cd: 0, uH: false };

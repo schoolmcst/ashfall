@@ -30,9 +30,9 @@ function ltSetup() {
   LT.plates = 1; LT.cash = 0; LT.kills = G.kills | 0; LT.plateT = 0; LT.selfRev = false; LT.contract = null; LT.storm = null; LT.stormDone = false; LT.flashT = 0; G.armor = 0; ltCloseBuy();
   for (const o of LT.stations.concat(LT.tablets)) if (o.g && o.g.parent) o.g.parent.remove(o.g); LT.stations = []; LT.tablets = [];
   const B = M.br, rand = ltSeed(curMap + ':lt'), pr = PLAYRECT;
-  const spots = curMap === 'stashisle' ? [[12, -16.6], [-34, -13], [33, 40], [-6, 44]] : [0, 1].map(() => [pr[0] + 8 + rand() * (pr[1] - pr[0] - 16), pr[2] + 8 + rand() * (pr[3] - pr[2] - 16)]);
+  const spots = curMap === 'stashisle' ? [[0, -60], [-110, 0], [110, -60], [0, 110], [-60, 0], [60, 0]] : [0, 1].map(() => [pr[0] + 8 + rand() * (pr[1] - pr[0] - 16), pr[2] + 8 + rand() * (pr[3] - pr[2] - 16)]);
   for (const [x, z] of spots) { const o = openNear(x, z); LT.stations.push({ x: o.x, z: o.z, g: ltKiosk(o.x, o.z, 'BUY', '#5dff7a') }); }
-  const n = curMap === 'stashisle' ? 6 : 3;
+  const n = curMap === 'stashisle' ? 12 : 3;
   for (let i = 0, t = 0; i < n && t < 60; t++) { const o = openNear(pr[0] + 6 + rand() * (pr[1] - pr[0] - 12), pr[2] + 6 + rand() * (pr[3] - pr[2] - 12)); if (LT.tablets.some(q => Math.hypot(q.x - o.x, q.z - o.z) < 15) || (typeof duelIn === 'function' && duelIn(o.x, o.z, 2))) continue; LT.tablets.push({ x: o.x, z: o.z, used: false, g: ltKiosk(o.x, o.z, 'JOB', '#ffb03a', true) }); i++; }
   B.stormAt = 150 + rand() * 120;
 }

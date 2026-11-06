@@ -4,7 +4,7 @@
    Pistols only, 3 seconds to get ready, no cloud in there. Win and you drop back onto the island near the circle with
    60 HP and a pistol; lose and you're out for good. Once a match. The bot can win too: then it drops back in instead.
    The pit's walls are 4 m high (too high to climb), so nobody on the island gets in or shoots in. */
-const DUEL_PEN = { stashisle: { x: 54, z: -20, w: 8, d: 12 } };
+const DUEL_PEN = { stashisle: { x: 182, z: -70, w: 8, d: 12 } };
 const DUEL = { on: null };
 const duelPen = () => DUEL_PEN[curMap] || null;
 const duelIn = (x, z, pad = 0) => { const p = duelPen(); return !!p && Math.abs(x - p.x) < p.w / 2 + pad && Math.abs(z - p.z) < p.d / 2 + pad; };

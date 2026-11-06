@@ -18,7 +18,7 @@ function brkBuild(map) {
   BRK.list = []; BRK.mine = [];
   if (!map || map.zombiesOnly || !map.layout) return;
   const rand = (() => { let s = brkSeed(map.id); return () => { s = (s * 1664525 + 1013904223) >>> 0; return s / 4294967296; }; })();
-  const pr = map.play || [-43.5, 43.5, -43.5, 43.5], n = map.id === 'stashisle' ? 26 : 12, keep = [];
+  const pr = map.play || [-43.5, 43.5, -43.5, 43.5], n = map.id === 'stashisle' ? 90 : 12, keep = [];
   const L = map.layout; for (const k of ['spawn', 'hp', 'flags', 'sites']) for (const q of (L[k] || [])) if (q && q.x !== undefined) keep.push(q);
   for (let i = 0, tries = 0; i < n && tries < 500; tries++) {
     const x = pr[0] + 3 + rand() * (pr[1] - pr[0] - 6), z = pr[2] + 3 + rand() * (pr[3] - pr[2] - 6), kind = ['crate', 'crate', 'fence', 'pallets'][(rand() * 4) | 0], rot = rand() < 0.5;

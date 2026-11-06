@@ -13,7 +13,7 @@ const VH_TYPES = {
   bike: { name: 'DIRT BIKE', max: 19, acc: 14, turn: 2.6, hp: 220, r: 0.6, eye: 1.9, len: 1.9 },
 };
 const VH = { list: [], me: null, uH: false, eng: null };
-const VH_SPOTS = { stashisle: [['cart', 6, -8, 0], ['bike', -6, 9, 1.6], ['cart', 4, 30.5, 1.57], ['bike', -30.5, -12, 0], ['cart', 30.5, 12, 3.14], ['bike', -12, -30.5, 1.57], ['cart', -36, 26, 0.5], ['bike', 36, -28, 2], ['cart', 22, 44, 1.2], ['bike', -24, -48, 0.3], ['cart', 54, -8, 3], ['bike', -54, 14, 0]] };
+const VH_SPOTS = { stashisle: [['cart', 2, 60, 0], ['bike', -2, -60, 3.14], ['cart', 60, 2, 1.57], ['bike', -60, -2, -1.57], ['cart', 110, -80, 0], ['bike', 110, 80, 0], ['cart', -110, -80, 3.14], ['bike', -110, 80, 3.14], ['cart', -80, 110, 1.57], ['bike', 80, 110, -1.57], ['cart', -80, -110, 1.57], ['bike', 80, -110, 1.57], ['cart', 2, 150, 0], ['bike', -2, -170, 0], ['cart', 150, -2, 1.57], ['bike', -150, 2, 1.57], ['cart', 40, -110, 1.57], ['bike', -40, 110, 1.57]] };   // 1.2.89: on the roads of the 391 m island
 function vhMat(c, o) { return new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.55, metalness: 0.2 }, o || {})); }
 function vhModel(type) {
   const g = new THREE.Group(), box = (w, h, d, m, x, y, z) => { const b = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); b.position.set(x, y, z); b.castShadow = true; g.add(b); return b; };
