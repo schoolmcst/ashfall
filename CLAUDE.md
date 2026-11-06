@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.90 TEST (released to TEST APP): island v3 + map + controller + LAST TOKE intro.
+- 1.2.90 PUBLIC (owner said send it; includes 1.2.88 + 1.2.89): island v3 + map + controller + LAST TOKE intro.
   terrain.js: a height field (TERR, TH(x,z)) on maps that want one (only stashisle); groundAt starts from TH, buildNav uses
   it as the floor, terrSlope (in resolve(.., slope) and vehicles) stops climbs steeper than ~42 degrees, the ground mesh is
   added to the ray chunks. BUILD_YOFF raises everything placed while building a POI on its pad (mkBox, batchAdd, rayAdd,
@@ -169,7 +169,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   land together, so sqGroup is skipped). Tests skip it: run.js / mp_lib set window.BR_SKIPINTRO unless INTRO=1.
   Fixed: online remote players' height was clamped to 0-12 m (net.js), wrong on hills; the LAST TOKE line (alive, cloud)
   was never shown in the top bar. Tests: s_pad, mp_brintro (online intro), s_isle2.
-- 1.2.89 TEST: STASH ISLAND REMADE at 390.98 m square = 152,865 m² (STASH_A 200, STASH_H 195.49), original layout
+- 1.2.89 PUBLIC: STASH ISLAND REMADE at 390.98 m square = 152,865 m² (STASH_A 200, STASH_H 195.49), original layout
   (not a copy of any other game's map). map_stash2.js: stashBld (2-3 storey buildings: rooms with 1.8 m doorways, a
   switchback stairwell along the north wall - north doors go at the east end of that wall -, open windows, walkable
   roofs with a parapet, loot spots in STASH_LOOT), stashHall (warehouses with a mezzanine), stashTiers/stashRamp
@@ -178,7 +178,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   (brCrate y; the 'b' pack is 5 numbers a crate, up to 200); 120 crates, ~65% on loot spots. BR_PHASES_BIG (5 phases).
   Moved for the new island: DUEL_PEN, MOVERS.stashisle, VH_SPOTS (18), LT buy spots (6) and contracts (12), 90
   breakables. Test: s_isle2 (size, every loot spot reachable by bots, pictures).
-- 1.2.88 TEST: EDIT HUD button fixed (settings actions only reach lnAct for sv-/bk-/er-; hud-edit is now a ui.js case), also in the pause menu.
+- 1.2.88 PUBLIC: EDIT HUD button fixed (settings actions only reach lnAct for sv-/bk-/er-; hud-edit is now a ui.js case), also in the pause menu.
 - 1.2.87 PUBLIC (the follow-ups): campaign co-op friend can finish action steps (CC_ACT go/use/multi/pick/carry/search/
   photo: the client's suppressed campStepDone sends rq [step, seq]; the host finishes it). MAP EDITOR online: pick MY MAP
   in a private match (plobby MAP list, edPrivPick); the host sends its code as presence ec every 10th update (edNetCode);

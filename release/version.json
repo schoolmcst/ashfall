@@ -1,10 +1,14 @@
 {
- "version": "1.2.87",
+ "version": "1.2.90",
  "notes": [
-  "CAMPAIGN CO-OP: your friend can now finish objectives too (reach a place, USE things, pick up and carry)",
-  "MAP EDITOR ONLINE: pick MY MAP in a private match and everyone plays your map",
-  "BAYVIEW WONDER WEAPON: THE GREEN LIGHTNING, a bolt of cure that jumps through up to 7 zombies"
+  "STASH ISLAND now has real hills, valleys and cliffs - every place sits at its own height (Radio Hill, the cliff-top Estate, the Lighthouse on the sea cliff, the Quarry pit)",
+  "New MAP button (M / D-pad down): the whole island, place names, the cloud, your squad, set a waypoint",
+  "LAST TOKE WARM-UP before every round: random good gun, free respawns, kills don't count",
+  "THE BONG HIT: you (or your whole squad, passing it round) take a hit on THE HOTBOX CLOUD, then FLOAT IN from the sky - steer, hold crouch to dive",
+  "Loot crates sit in places that make sense: inside buildings, upstairs, better loot where it's harder to get",
+  "Controller works on the map, emote wheel (hold D-pad left), map editor, HUD editor and the newer menus",
+  "Fixed: online players on hills showed at the wrong height"
  ],
- "sha256": "1562697f7304fddf9d5af71249988f46dd9c98f608dd02a4de9c08c8c22de04c",
+ "sha256": "153c71a1f4cce7cb62887774710c3122ec5284eaf14e8337bcd2d998eeb4bc08",
  "minApp": "1.0.0"
 }
