@@ -32,6 +32,7 @@ const MODES = {
   obr: { name: 'ONLINE LAST TOKE', short: 'ONLINE BR', icon: 'BR', desc: 'Real people, battle royale: one life, pistols, loot crates and the closing Nightshade cloud. Last one standing wins the round. Bots fill up to 16.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br' },
   oic: { name: 'ONE IN THE CHAMBER', short: 'OITC', icon: '1IC', desc: 'One bullet in a pistol and every shot kills. A kill gives you another bullet; a miss is gone for good. Three lives each, last one standing wins.', teams: false, respawn: 2, score: 999, time: 8, players: 8, unit: 'KILLS' },
   hso: { name: 'HEADSHOTS ONLY', short: 'HEADS', icon: 'HSO', desc: 'Any gun, but only hits to the head count, and one headshot kills. Bodies, grenades and melee do nothing. First to 20 kills.', teams: false, respawn: 2.5, score: 20, time: 8, players: 8, unit: 'KILLS' },
+  rbr: { name: 'RANKED LAST TOKE', short: 'RANKED BR', icon: 'RNK', desc: 'Ranked battle royale: real people and bots, one life. Your placement and kills raise or lower your SR.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', ranked: true },
   ooic: { name: 'ONLINE ONE IN THE CHAMBER', short: 'ONLINE OITC', icon: '1IC', desc: 'Real people, one bullet each, every shot kills, a kill gives you another bullet. First to 15 kills wins the round.', teams: false, respawn: 2, score: 15, time: 0, players: 12, unit: 'KILLS', online: true, base: 'oic' },
   ohso: { name: 'ONLINE HEADSHOTS ONLY', short: 'ONLINE HEADS', icon: 'HSO', desc: 'Real people, only headshots count and one headshot kills. First to 20 kills wins the round.', teams: false, respawn: 2.5, score: 20, time: 0, players: 12, unit: 'KILLS', online: true, base: 'hso' },
   obr2: { name: 'ONLINE LAST TOKE DUOS', short: 'ONLINE BR DUOS', icon: 'BR2', desc: 'Real people in teams of 2: battle royale with the closing Nightshade cloud. Get knocked down instead of killed while your partner stands, and pick each other up. Bots fill the empty spots.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', squad: 2 },
@@ -42,7 +43,7 @@ const MODES = {
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
 };
-const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'obr2', 'obr4', 'ooic', 'ohso', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'oic', 'hso', 'inf', 'gf', 'snd', 'surv'];
+const MODE_ORDER = ['otdm', 'offa', 'ogun', 'ohp', 'octf', 'okc', 'odom', 'oru', 'opp', 'oph', 'obr', 'obr2', 'obr4', 'ooic', 'ohso', 'oinf', 'ogf', 'osnd', 'rhp', 'rsnd', 'rbr', 'tdm', 'ffa', 'gun', 'hp', 'ctf', 'kc', 'dom', 'ru', 'pp', 'ph', 'br', 'oic', 'hso', 'inf', 'gf', 'snd', 'surv'];
 const GUN_LADDER = ['sidearm', 'magnum', 'stinger', 'hornet', 'viper', 'bulwark', 'kestrel', 'wasp', 'breacher', 'rampart', 'marc', 'kv47', 'talon', 'vanguard', 'anvil', 'hailstorm', 'arbiter', 'hawkeye', 'warden', 'deadeye'];
 const BOT_NAMES = ['Ghost', 'Reaper', 'Havoc', 'Nomad', 'Kilo', 'Raven', 'Brick', 'Saint', 'Atlas', 'Rook', 'Ash', 'Hex', 'Wolf', 'Juno', 'Sparrow', 'Bishop', 'Tank', 'Echo', 'Mako', 'Vex', 'Flint', 'Onyx'];
 // bot skill: acc = hit chance, dmg per hit, aim = how fast they get on target, iq = how often they use the smart
@@ -171,8 +172,9 @@ function startMatch(mode, custom) {
   initAudio(); clearMenuSoldiers(); try { chatNewMatch(); } catch (e) {}
   if (!def.online) { cfg.mapSel = cfg.mapSel || cfg.map || LOBBY.map; cfg.map = pickMapFor(cfg.mapSel, mode); loadMap(cfg.map); }
   else if (!NET.app) loadMap(DEFAULT_MAP);   // claude.ai rooms have no host to pick a map
+  try { brkReset(); } catch (e) {}   // broken cover comes back for a new match
   M = { mode, def, cfg, entries: [], teamScore: [0, 0], t: 0, over: false, myTeam: 0, respawnQ: [], maxHp: cfg.hardcore ? 30 : 100, hpT: 0, events: [] };
-  M.squad = (def.squad | 0) > 1 ? def.squad | 0 : mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false; try { pingClear(); duelClear(); } catch (e) {}   // LAST TOKE DUOS / SQUADS (squads.js), pings (ping.js)
+  M.squad = (def.squad | 0) > 1 ? def.squad | 0 : mode === 'br' && !def.online && custom && (custom.squad | 0) > 1 ? custom.squad | 0 : 0; G.downed = false; try { pingClear(); duelClear(); fuReset(); tacClear(); } catch (e) {}   // LAST TOKE DUOS / SQUADS (squads.js), pings (ping.js)
   resetGame();
   if (mode === 'zomb') { zombStart(cfg); return; }
   if (mode === 'range') { rangeStart(cfg); return; }
@@ -354,7 +356,7 @@ function botsHear(x, z, team, r, who) {
   for (const o of enemies) {
     if (!o.entry || o.net || o.team === team || o.tgt) continue;
     const d = Math.hypot(o.group.position.x - x, o.group.position.z - z);
-    if (d < r && Math.random() < 0.4 + o.iq * 0.6) { o.lkp = { x: x + rnd(-2, 2), z: z + rnd(-2, 2), y: 0 }; o.lkpT = M.t; o.lkpWho = who || null; if (o.camp) campAlert(o); }
+    if (d < r * (typeof ltHearK === 'function' ? ltHearK() : 1) && Math.random() < 0.4 + o.iq * 0.6) { o.lkp = { x: x + rnd(-2, 2), z: z + rnd(-2, 2), y: 0 }; o.lkpT = M.t; o.lkpWho = who || null; if (o.camp) campAlert(o); }
   }
 }
 // shot by someone: turn to them straight away

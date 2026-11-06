@@ -27,6 +27,7 @@ function rankMatch(won, partial) {
   const R = rankState(), before = R.sr, obj = (MS.plants | 0) + (MS.defuses | 0) + (MS.caps | 0) + Math.floor((MS.hpTime | 0) / 15);
   let d;
   if (partial) { if (MS.time < 60) return null; d = -25; }
+  else if (M.br) { const pl = won === 1 ? 1 : (M.br.place || 16); d = (pl === 1 ? 60 : pl <= 3 ? 32 : pl <= 6 ? 12 : pl <= 10 ? -6 : -18) + Math.min(30, (MS.kills | 0) * 3); }   // RANKED LAST TOKE: placement and kills
   else { const perf = clamp((MS.kills - MS.deaths) * 1.5 + obj * 2, -12, 12); d = won === 1 ? 28 + perf : won === -1 ? -22 + perf * 0.6 : perf * 0.5; }
   if (R.played < 5) d *= 2;
   d = Math.round(d); R.sr = Math.max(0, R.sr + d); R.best = Math.max(R.best, R.sr); if (!partial) { R.played++; if (won === 1) R.wins++; }

@@ -91,14 +91,15 @@ function updateStreaks(dt) {
   if (STK.uavT > 0) { STK.uavT -= dt; if (STK.uavT <= 0) { STK.uavT = 0; STK.vuav = false; } }
   stk2Update(dt); stkMarks(); stkHud(false);
 }
-const stkSeen = e => STK.uavT > 0 && !isFriend(e) && !e.ghost && !stkJammed();   // Shadow players don't show on a UAV
+const stkSeen = e => (STK.uavT > 0 && !isFriend(e) && !e.ghost && !stkJammed()) || (typeof tacSensed === 'function' && tacSensed(e));   // + MOTION SENSOR (tactical.js)   // Shadow players don't show on a UAV
 // on-screen enemy diamonds while a UAV is up (the advanced one adds the way they face)
 const _sv = new THREE.Vector3();
 function stkMarks() {
   const lay = $('uavMarks'); if (!lay) return;
-  const on = STK.uavT > 0 && STK.vuav && !stkJammed() && (G.state === 'playing' || G.state === 'paused');   // the plain UAV is radar only; the ADVANCED UAV marks them on screen too
+  const sensed = typeof TAC !== 'undefined' && TAC.sensors.length > 0;
+  const on = ((STK.uavT > 0 && STK.vuav && !stkJammed()) || sensed) && (G.state === 'playing' || G.state === 'paused');   // the plain UAV is radar only; the ADVANCED UAV marks them on screen too
   if (!on) { if (lay._n) { lay.innerHTML = ''; lay._n = 0; } return; }
-  const list = enemies.filter(e => !isFriend(e)), W = innerWidth, H = innerHeight;
+  const list = enemies.filter(e => !isFriend(e) && (STK.vuav && STK.uavT > 0 || tacSensed(e))), W = innerWidth, H = innerHeight;
   while (lay.children.length < list.length) { const d = document.createElement('i'); lay.appendChild(d); }
   lay._n = list.length;
   for (let i = 0; i < lay.children.length; i++) {

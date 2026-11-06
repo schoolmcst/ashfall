@@ -120,6 +120,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   lcodes.js loadout codes (DZ1-…); photo.js PHOTO MODE from the pause menu (G.state 'photo'). Tests: s_m6, s_batch1,
   mp_rejoin, mp_invite. The owner asked for all 60 ideas ("do it all"): batches 2-7 follow (fights, LAST TOKE, weapons,
   modes, progress, the rest).
+- 1.2.84 TEST (batches 2+3): wallbang.js (bullets through thin boxes, WB_PEN per class), breakable.js (seeded wooden cover
+  on every MP map, BRK; presence bk), movement.js PRONE/DIVE (bind prone = B), fieldup.js FIELD UPGRADES (T; class.fu;
+  cover = a BRK 'shield', presence fc), tactical.js DECOY / MOTION SENSOR / TROPHY (new EQUIP), movers.js JUMP PADS +
+  ZIPLINES (stashisle only). lasttoke2.js: armor plates (bind plate = 4, G.armor), cash + BUY STATIONS (G.menuOpen stops the
+  pause-on-unlock), contracts (bounty/scavenger), the storm (host presence wx), supply drops (BR tier 3), RANKED LAST TOKE
+  'rbr' (rankMatch uses placement). Tests: s_wallbang, s_breakable, s_prone, s_fieldup, s_tactical, s_movers, s_lasttoke2.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

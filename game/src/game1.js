@@ -52,6 +52,7 @@ const vig = $('vignette'), dmgdir = $('dmgdir');
 function hurtPlayer(dmg, fx, fz, boom) {
   if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0 || G.holdT > 0) return;
   if (M && M.hso && inMatch()) { if (boom) return; dmg = 999; }   // HEADSHOTS ONLY: what reaches me was a head hit
+  if (M && M.br) dmg = ltArmorTake(dmg);   // LAST TOKE armour plates take it first
   if (boom && perk('flak')) dmg *= 0.65;
   if (!boom && G.state === 'playing') { const kn = perk('iron') ? 0.3 : 1; P.pitch += rnd(0.004, 0.012) * kn; P.yaw += rnd(-0.008, 0.008) * kn; }   // getting shot knocks your aim
   if (typeof mcRock === 'function' && M && M.mode === 'zomb' && mcRock()) dmg *= 0.5;
@@ -65,10 +66,10 @@ function hurtPlayer(dmg, fx, fz, boom) {
     dmgdir.style.opacity = 1; G.dmgDirT = 1.2;
   }
   sfx.hurt(); rumble(0.7, 0.4, 180);
-  if (G.health <= 0) { if (typeof sqPlayerDown === 'function' && sqPlayerDown()) return; if (typeof duelTake === 'function' && M && M.br && duelTake()) return; G.health = 0; die(); }   // squads: downed; LAST TOKE: THE HOTBOX DUEL
+  if (G.health <= 0) { if (typeof sqPlayerDown === 'function' && sqPlayerDown()) return; if (typeof duelTake === 'function' && M && M.br && duelTake()) return; if (typeof ltSelfRevive === 'function' && ltSelfRevive()) return; G.health = 0; die(); }   // squads: downed; LAST TOKE: THE HOTBOX DUEL
 }
 
-function isFiring() { return !VH.me && !P.mantle && !G.downed && (mouseDown || pad.fire); }
+function isFiring() { return !VH.me && !P.mantle && !G.downed && !(typeof ltPlating === 'function' && ltPlating()) && (mouseDown || pad.fire); }
 let wasSprint = false;
 function updatePlayer(dt) {
   if (VH.me && vhPlayer(dt)) return { moving: false, sprint: false };   // driving a LAST TOKE vehicle
@@ -78,30 +79,34 @@ function updatePlayer(dt) {
   const fwd = hold ? 0 : clamp((kb('fwd') ? 1 : 0) - (kb('back') ? 1 : 0) - pad.my, -1, 1);
   const str = hold ? 0 : clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
   const moving = fwd !== 0 || str !== 0;
-  const sprint = !G.downed && !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading) && !(typeof CAMP !== 'undefined' && CAMP.carry && M.mode === 'camp');
+  const prone = mvProne(dt, crouch);   // PRONE / DIVE (movement.js)
+  const sprint = !G.downed && !prone && !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading) && !(typeof CAMP !== 'undefined' && CAMP.carry && M.mode === 'camp');
   if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
   let speed = (typeof campCarrySlow === 'function' ? campCarrySlow() : 1) * (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof mcFizz === 'function' && M && M.mode === 'zomb' && mcFizz() ? 1.25 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
   if (G.reloading) speed *= 0.85;
   if (G.downed) speed *= 0.22;   // LAST TOKE squads: crawling
+  if (prone) speed *= 0.25;
+  speed *= fuSpeed();   // FIELD UPGRADE: RUSH
   const wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str;
   const wl = Math.hypot(wx, wz) || 1, mag = Math.min(1, wl);
   const tx = moving ? wx / wl * speed * mag : 0, tz = moving ? wz / wl * speed * mag : 0;
   const acc = P.onGround ? 14 : 3;
   P.vx = lerp(P.vx, tx, clamp(acc * dt, 0, 1)); P.vz = lerp(P.vz, tz, clamp(acc * dt, 0, 1));
-  const sliding = mvSlide(dt, fwd, crouch, sprint);   // SLIDE / MANTLE (movement.js)
-  if (!mvMantle(dt, fwd, hold)) {
+  const sliding = mvSlide(dt, fwd, crouch && !prone, sprint); mvDive(dt); moversFly(dt);   // SLIDE / MANTLE / DIVE (movement.js)
+  if (moversRiding()) moversZip(dt);   // ZIPLINE (movers.js)
+  else if (!mvMantle(dt, fwd, hold)) {
   P.x += P.vx * dt; P.z += P.vz * dt;
   resolve(P, 0.4, P.y);
   P.x = clamp(P.x, PLAYRECT[0] + 0.45, PLAYRECT[1] - 0.45); P.z = clamp(P.z, PLAYRECT[2] + 0.45, PLAYRECT[3] - 0.45);
-  if ((kb('jump') || pad.jump) && P.onGround && !hold && !G.downed) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); if (P.slideT > 0) { P.slideT = 0; P.vx *= 1.05; P.vz *= 1.05; } }   // a slide-jump keeps the speed
+  if ((kb('jump') || pad.jump) && P.onGround && !hold && !G.downed && !prone && !(P.noJumpT > 0)) { P.vy = 7.4; P.onGround = false; sfx.thud({ vol: 0.5 }); if (P.slideT > 0) { P.slideT = 0; P.vx *= 1.05; P.vz *= 1.05; } }   // a slide-jump keeps the speed
   P.vy -= 22 * (M && M.feat && M.feat.lowgrav ? 0.42 : 1) * dt; const py0 = P.y; P.y += P.vy * dt;
   if (P.vy > 0) { const ce = ceilingAt(P.x, P.z, py0); if (P.y + 1.8 > ce) { P.y = Math.max(py0, ce - 1.8); P.vy = 0; } }
   const gy = groundAt(P.x, P.z, P.y);
   if (P.y <= gy) { if (!P.onGround && P.vy < -2) G.landT = clamp(-P.vy / 11, 0.25, 1); if (!P.onGround && P.vy < -4 && !perk('light')) { G.shake = Math.max(G.shake, 0.01); sfx.thud({ vol: 0.8 }); } P.y = gy; P.vy = 0; P.onGround = true; } else if (P.y > gy + 0.05) P.onGround = false;
   }
-  P.eye = lerp(P.eye, G.downed ? 0.45 : sliding ? 0.85 : crouch ? 1.1 : 1.7, clamp((sliding ? 14 : 10) * dt, 0, 1));
+  P.eye = lerp(P.eye, G.downed ? 0.45 : prone && !(P.diveT > 0) ? 0.38 : sliding ? 0.85 : crouch ? 1.1 : 1.7, clamp((sliding ? 14 : 10) * dt, 0, 1));
   const hs = Math.hypot(P.vx, P.vz);
-  if (P.onGround && hs > 0.5 && !sliding) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
+  if (P.onGround && hs > 0.5 && !sliding) { const prev = Math.floor(P.bob / Math.PI); P.bob += dt * hs * 1.6; if (Math.floor(P.bob / Math.PI) !== prev && !fuSilent()) sfx.step(clamp(hs / 6, 0.2, 1.2) * (perk('dead') ? 0.3 : 1)); }
   const rec = Math.min(P.recoilAcc, P.recoilAcc * dt * 4 + 0.0005); P.pitch -= rec; P.recoilAcc -= rec;
   if (!G.downed && G.time - G.lastHit > (perk('tough') ? 3 : 5) && G.health < (G.maxHp || 100)) G.health = Math.min(G.maxHp || 100, G.health + 28 * (inMatch() ? 1 : diff().regen) * (G.maxHp || 100) / 100 * dt);
 
@@ -216,11 +221,11 @@ function shoot(moving) {
   if (u.cylSpin) u.cylBase = (u.cylBase || 0) + TAU / 6;
   if (w.ww && typeof zwwFire === 'function') { zwwFire(w); return; }   // zombies wonder weapons fire their own way
   if (w.proj) { launchProjectile(w, u); return; }
-  if (typeof botsHear === 'function') botsHear(P.x, P.z, M.myTeam, w.stealth ? 14 : 55, 'P');
+  if (typeof botsHear === 'function' && !fuSilent()) botsHear(P.x, P.z, M.myTeam, w.stealth ? 14 : 55, 'P');
   const fresh = G.time - (G.lastShotTime || -9) > Math.max(0.22, w.interval * 2.4); G.lastShotTime = G.time;
   G.bloom = fresh ? 0 : Math.min(1.6, (G.bloom || 0) + (w.pellets > 1 ? 0 : 0.2));
   let spread = G.adsOn ? (fresh && w.pellets === 1 ? 0 : w.adsSpread * (w.pellets > 1 ? 1 : 0.55 + G.bloom)) : w.spread * (perk('steady') ? 0.75 : 1) * (1 + G.bloom * 0.35);
-  if (moving) spread *= 1.7; if (!P.onGround) spread *= 2.2; if (P.eye < 1.4) spread *= 0.75;
+  if (moving) spread *= 1.7; if (!P.onGround) spread *= 2.2; if (P.eye < 1.4) spread *= 0.75; if (P.prone) spread *= 0.6;
   camera.updateMatrixWorld();
   _org.copy(camera.position);
   const targets = wallMeshes.slice();
@@ -238,10 +243,15 @@ function shoot(moving) {
     // full damage up to the gun's MAX DAMAGE RANGE, then down to its floor (fallMin) at twice that distance
     const fall = dmgFall(w, h.distance);
     if (ud.barrel) damageBarrel(ud.barrel, w.dmg * fall);
+    if (ud.brk !== undefined) brkHit(ud.brk, w.dmg * fall);
     if (ud.enemy) {
       const head = !!ud.head, armour = ud.enemy.type === 'heavy' && !ud.enemy.pvp ? (w.vsHeavy || 1) : 1, killed = damageEnemy(ud.enemy, w.dmg * fall * armour * (head ? w.head : (ud.mult || 1)), head, _sdir);
       anyHit = true; anyKill = anyKill || killed; anyHead = anyHead || head; hitEffects(h, true); if (p === 0) try { sfx.flesh(); } catch (err) {}
-    } else { hitEffects(h, false); if (p === 0 || p === 3) try { sfx.impact(at(h.point.x, h.point.z, 9, h.point.y - 1.1), Math.random() < 0.14); } catch (err) {} }
+    } else {
+      hitEffects(h, false); if (p === 0 || p === 3) try { sfx.impact(at(h.point.x, h.point.z, 9, h.point.y - 1.1), Math.random() < 0.14); } catch (err) {}
+      const wb = typeof wbPierce === 'function' ? wbPierce(w, _org, _sdir, h, hits) : null;   // WALLBANG: through thin cover (wallbang.js)
+      if (wb) { const u2 = wb.hit.object.userData, head = !!u2.head, killed = damageEnemy(u2.enemy, w.dmg * dmgFall(w, wb.hit.distance) * wb.k * (head ? w.head : (u2.mult || 1)), head, _sdir); anyHit = true; anyKill = anyKill || killed; anyHead = anyHead || head; G.wbT = G.time; try { hitEffects(wb.hit, true); puff(wb.exit.x, wb.exit.y, wb.exit.z, { color: 0xbbb4a8, size: 0.35, grow: 0.8, life: 0.6, vy: 0.3, op: 0.5, minor: 1 }); } catch (err) {} }
+    }
     if (!w.stealth && (w.pellets === 1 ? (!w.auto || (G.shots & 1)) : p < 3)) addTracer(_muz, h.point, 0.045, w.pellets > 1 ? 0.01 : 0.014);
   }
   statShot(anyHit);
@@ -253,7 +263,7 @@ function shoot(moving) {
   // holding the trigger climbs: each shot of a spray kicks a bit more (LMGs most), with a steady sideways pull per gun
   const cat = w.def.cat, sprayN = G.sprayN = G.time - (G.lastKickT || -9) < Math.max(0.25, w.interval * 2.2) ? Math.min(14, (G.sprayN || 0) + 1) : 0; G.lastKickT = G.time;
   const climb = 1 + sprayN * (cat === 'lmg' ? 0.07 : cat === 'smg' ? 0.05 : cat === 'ar' ? 0.06 : 0);
-  const kick = w.recoil * rnd(0.9, 1.1) * (G.adsOn ? 0.72 : 1) * climb, pull = (w.def.id.charCodeAt(0) % 3 - 1) * 0.45;
+  const kick = w.recoil * rnd(0.9, 1.1) * (G.adsOn ? 0.72 : 1) * climb * (P.prone ? 0.7 : 1), pull = (w.def.id.charCodeAt(0) % 3 - 1) * 0.45;
   P.pitch = clamp(P.pitch + kick, -1.5, 1.5); P.recoilAcc += kick * (cat === 'lmg' ? 0.35 : 0.42); P.yaw += (rnd(-1, 1) + pull * Math.min(1, sprayN / 4)) * w.recoil * (G.adsOn ? 0.42 : 0.6) * (cat === 'lmg' ? 1.3 : 1);   // less snaps back on its own: you pull down
   G.kick = clamp(w.recoil / ((w.def.recoil || w.recoil || 0.011) * recoilK(w.def)), 0.5, 2.2); G.shake = Math.max(G.shake, w.pellets > 1 ? 0.01 : 0.003);   // the gun visibly kicks harder or softer with recoil attachments
   // muzzle flash on the weapon, light on the world, smoke and a brass casing
@@ -422,7 +432,7 @@ function blastClear(p, x, y, z) {
 }
 function explode(p, src = 'grenade', R = 8, dmgK = 1, by = 'player') {
   const dp = Math.hypot(P.x - p.x, P.y + 1 - p.y, P.z - p.z);
-  sfx.explode(at(p.x, p.z, 30)); explosionFx(p, 1); try { vhBlast(p, R); } catch (e) {} if (by === 'player' && typeof zcEvent === 'function') zcEvent('b', p);
+  sfx.explode(at(p.x, p.z, 30)); explosionFx(p, 1); try { vhBlast(p, R); } catch (e) {} try { brkBlast(p, R); } catch (e) {} if (by === 'player' && typeof zcEvent === 'function') zcEvent('b', p);
   for (const e of enemies.slice()) {
     if (by === 'player' && isFriend(e)) continue;
     if (by && by.group && (e === by ? false : e.team === by.team)) continue;   // a bot's grenade spares its own team
@@ -454,7 +464,7 @@ function updateGrenades(dt) {
   }
 }
 
-function detonate(g) { if (g.kind === 'hotbox' || g.kind === 'skunk') { smkDetonate(g); return; } if (g.kind === 'stun') stunBlast(g.m.position.clone()); else explode(g.m.position.clone(), 'grenade', g.kind === 'semtex' ? 6.5 : 8, g.kind === 'semtex' ? 0.9 : 1, g.by || 'player'); }
+function detonate(g) { if (g.kind === 'hotbox' || g.kind === 'skunk') { smkDetonate(g); return; } if (TAC_KINDS[g.kind]) { tacDetonate(g); return; } if (g.kind === 'stun') stunBlast(g.m.position.clone()); else explode(g.m.position.clone(), 'grenade', g.kind === 'semtex' ? 6.5 : 8, g.kind === 'semtex' ? 0.9 : 1, g.by || 'player'); }
 const _pr = new THREE.Raycaster();
 function updateProjectile(g, dt) {
   const m = g.m; g.life -= dt; g.armed += dt;

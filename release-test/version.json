@@ -1,13 +1,15 @@
 {
- "version": "1.2.83",
+ "version": "1.2.84",
  "notes": [
-  "NEW MODES: ONE IN THE CHAMBER and HEADSHOTS ONLY (offline and online)",
-  "REJOIN: dropped out of an online match? rejoin it from the main menu",
-  "a bot stands in for a player who leaves (keeps their score) until they come back",
-  "INVITE friends to your party from the friends list",
-  "share builds: SHARE CODE / PASTE CODE in Create a Class",
-  "PHOTO MODE in the pause menu (free camera, filters, save a picture)"
+  "WALLBANGS: bullets go through thin walls and cover",
+  "BREAKABLE COVER: wooden crates, fences and pallets on every map",
+  "PRONE (B) and DIVE (prone while sprinting)",
+  "FIELD UPGRADES (T): cover, ammo crate, dead silence, rush - pick one in Create a Class",
+  "NEW GEAR: decoy, motion sensor, trophy system",
+  "STASH ISLAND: jump pads and ziplines",
+  "LAST TOKE: armor plates (4), cash, buy stations, contracts, the storm, supply drops",
+  "NEW: RANKED LAST TOKE"
  ],
- "sha256": "1d9459cb70b249ccfecd7ac67fee5df9b80841a78db47233066e390ce98f8dc7",
+ "sha256": "1151bf8045bd48d4de9b77247a3f0b6a307f2f877e7e7c73eaf02c4a4e2605ad",
  "minApp": "1.0.0"
 }

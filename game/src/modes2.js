@@ -42,7 +42,7 @@ function m2Goal(e, keep, near, set) {
   }
   return null;
 }
-function m2Update(dt) { if (M.oic || M.hso) m6Update(dt); if (M.mode === 'kc' && M.kc) kcUpdate(dt); if (M.mode === 'dom' && M.dom) domUpdate(dt); if (M.mode === 'ru' && M.ru) ruUpdate(dt); if (M.mode === 'pp' && M.pp) ppUpdate(dt); if (M.ph) phUpdate(dt); if (M.br) brUpdate(dt); }
+function m2Update(dt) { if (M.oic || M.hso) m6Update(dt); try { fuTick(dt); tacTick(dt); moversTick(dt); } catch (e) {} if (M.mode === 'kc' && M.kc) kcUpdate(dt); if (M.mode === 'dom' && M.dom) domUpdate(dt); if (M.mode === 'ru' && M.ru) ruUpdate(dt); if (M.mode === 'pp' && M.pp) ppUpdate(dt); if (M.ph) phUpdate(dt); if (M.br) brUpdate(dt); }
 function m2Pack() {
   const ts = M.teamScore || [0, 0];
   if (M.mode === 'ru' && M.ru) return ruPack();

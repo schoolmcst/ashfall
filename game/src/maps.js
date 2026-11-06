@@ -321,6 +321,7 @@ function loadMap(id) {
   applyEnv(map.env);
   const before = new Set(scene.children);
   map.build(); flushBatches(); rayFlush();
+  try { brkBuild(map); } catch (e) { reportError(e); }   // BREAKABLE COVER (breakable.js)
   boxGridDirty = true; buildNav();
   buildGrass(map.grass || {});
   try { addWind(grassMesh && grassMesh.material, 1); addWind(MAT.leaf, 3); } catch (e) {}

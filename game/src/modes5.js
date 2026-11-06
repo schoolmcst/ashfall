@@ -22,6 +22,7 @@ function brSetup() {
     const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier); c.id = M.br.crates.length; M.br.crates.push(c);
   }
   try { vhSetup(); } catch (e) {}
+  try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
   if (!$('brCloud')) { const d = document.createElement('div'); d.id = 'brCloud'; ($('hud') || document.body).appendChild(d); const s = document.createElement('style'); s.textContent = '#brCloud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;background:radial-gradient(circle at 50% 50%,rgba(120,40,200,.15),rgba(90,20,160,.6));z-index:4}'; document.head.appendChild(s); }
 }
 function brCrate(x, z, tier) {
@@ -38,18 +39,19 @@ function brGun(tier) { const cats = M && M.feat && M.feat.pistols ? ['pi'] : BR_
 function brOpen(c, who) {
   if (c.open) return; c.open = true; M.br.group.remove(c.g); const d = brGun(c.tier), T = BR_TIERS[c.tier];
   if (who === 'player' && M.online && M.br.mine.indexOf(c.id) < 0) M.br.mine.push(c.id);
+  try { ltCrate(c, who); } catch (e) {}
   if (who === 'player') { try { equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 1; G.health = G.maxHp || 100; M.br.myTier = c.tier; showBanner(`${T.n} LOOT`, d.name); sfx.pickup(); } catch (e) {} }
   else { try { botGunProfile(who, d.id); who.hp = who.maxHp; who.brTier = c.tier; } catch (e) {} }
 }
 const brAliveBots = () => enemies.filter(e => e.entry && e.entry.alive !== false);
 function brUpdate(dt) {
   const B = M.br; if (!B) return; if (M.online && !netHostNow()) netObjApply();   // the host's cloud and crates (1.2.82: was never applied on joiners)
-  try { vhUpdate(dt); } catch (e) {} try { duelUpdate(dt); } catch (e) {}
+  try { vhUpdate(dt); } catch (e) {} try { ltTick(dt); } catch (e) {} try { duelUpdate(dt); } catch (e) {}
   if (!B.armed) { B.armed = true; brArmAll(); if (sqOn()) sqGroup(); }   // the first frame of the match: everyone down to a pistol (after the class was equipped)
   // the cloud: wait, then close on the next circle (a spot inside the current one)
   B.t -= dt; const host = netHostNow();
   if (host && B.t <= 0) {
-    if (B.phase < 0 || B.closing) { B.closing = false; B.phase++; const P0 = BR_PHASES[B.phase]; if (!P0) { B.t = 1e9; } else { B.t = P0[0]; const r = B.R0 * P0[2], a = Math.random() * TAU, d = Math.random() * Math.max(0, B.r - r); B.to = { x: B.cx + Math.cos(a) * d, z: B.cz + Math.sin(a) * d, r }; B.from = { x: B.cx, z: B.cz, r: B.r }; try { showBanner('THE CLOUD IS COMING', `it closes in ${P0[0]} s · get inside the circle`); } catch (e) {} } }
+    if (B.phase < 0 || B.closing) { B.closing = false; B.phase++; if (B.phase === 1 || B.phase === 2) try { ltDrop(); } catch (e) {} const P0 = BR_PHASES[B.phase]; if (!P0) { B.t = 1e9; } else { B.t = P0[0]; const r = B.R0 * P0[2], a = Math.random() * TAU, d = Math.random() * Math.max(0, B.r - r); B.to = { x: B.cx + Math.cos(a) * d, z: B.cz + Math.sin(a) * d, r }; B.from = { x: B.cx, z: B.cz, r: B.r }; try { showBanner('THE CLOUD IS COMING', `it closes in ${P0[0]} s · get inside the circle`); } catch (e) {} } }
     else { B.closing = true; B.t = BR_PHASES[B.phase][1]; try { showBanner('THE CLOUD IS CLOSING', 'move!'); sfx.streak(); } catch (e) {} }
   }
   if (B.closing && B.to) { const P0 = BR_PHASES[B.phase], k = 1 - clamp(B.t / P0[1], 0, 1); B.cx = B.from.x + (B.to.x - B.from.x) * k; B.cz = B.from.z + (B.to.z - B.from.z) * k; B.r = B.from.r + (B.to.r - B.from.r) * k; }
@@ -99,8 +101,8 @@ function brHud() {
   const B = M.br; if (!B) return ''; const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
   return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
-function brMarkers(out) { const B = M.br; if (!B) return; for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
-function brClear() { try { vhClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
+function brMarkers(out) { const B = M.br; if (!B) return; try { ltMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
+function brClear() { try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
 
 /* ---------- online */
 function brPack() {
@@ -113,7 +115,7 @@ function brApply(o) {
   B.from = { x: num(7), z: num(8), r: num(9) }; B.to = num(12) > 0 ? { x: num(10), z: num(11), r: num(12) } : null; B.most = o[13] | 0;
   B.winTxt = String(o[14] || ''); B.winName = String(o[15] || '');
   const n = Math.min(40, o[16] | 0);
-  if (B.crates.length !== n || (n && B.crates.some((c, i) => Math.abs(c.x - num(17 + i * 4)) > 0.2))) { for (const c of B.crates) if (!c.open) B.group.remove(c.g); B.crates = []; for (let i = 0; i < n; i++) { const c = brCrate(num(17 + i * 4), num(18 + i * 4), clamp(o[19 + i * 4] | 0, 0, 2)); c.id = i; B.crates.push(c); } }
+  if (B.crates.length !== n || (n && B.crates.some((c, i) => Math.abs(c.x - num(17 + i * 4)) > 0.2))) { for (const c of B.crates) if (!c.open) B.group.remove(c.g); B.crates = []; for (let i = 0; i < n; i++) { const c = brCrate(num(17 + i * 4), num(18 + i * 4), clamp(o[19 + i * 4] | 0, 0, 3)); c.id = i; if (c.tier >= 3) try { ltDropFx(c); } catch (e) {} B.crates.push(c); } }
   for (let i = 0; i < n; i++) { const c = B.crates[i]; if (o[20 + i * 4] && !c.open) { c.open = true; B.group.remove(c.g); } }
 }
 // the host: crates other players opened

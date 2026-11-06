@@ -74,7 +74,7 @@ function mvMantle(dt, fwd, hold) {
     if (k >= 1) { P.mantle = null; P.onGround = true; P.y = groundAt(P.x, P.z, m.y1 + 0.05); }
     return true;
   }
-  if (!jump || fwd <= 0 || G.downed || (typeof VH !== 'undefined' && VH.me)) return false;
+  if (!jump || fwd <= 0 || G.downed || P.prone || (typeof VH !== 'undefined' && VH.me)) return false;
   if (!press && (P.onGround || P.vy > 3)) return false;   // a fresh press on the ground, or holding JUMP in the air (on the way down / at the top)
   const L = mvLedge(); if (!L) return false;
   P.mantle = { t: 0, dur: L.h > 1.3 ? 0.42 : 0.3, x0: P.x, y0: P.y, z0: P.z, x1: L.x, y1: L.y, z1: L.z }; P.slideT = 0; P.vy = 0;
@@ -83,3 +83,25 @@ function mvMantle(dt, fwd, hold) {
 }
 // the camera's extra roll / dip for both
 function mvTilt(dt) { P.tilt = lerp(P.tilt || 0, P.slideT > 0 ? 0.06 : 0, clamp(dt * 10, 0, 1)); return P.tilt; }
+/* ---------- PRONE and DIVE (1.2.84): PRONE (B; on a controller hold CROUCH) lies you flat - you crawl, your
+   aim steadies (less spread and kick) and you're much harder to hit. PRONE while sprinting is a DIVE: a forward jump that
+   lands you prone. JUMP gets you up, CROUCH gets you to a crouch. */
+function mvProne(dt, crouch) {
+  const key = kb('prone'), press = key && !MOV.proneH; MOV.proneH = key;
+  if (P.noJumpT > 0) P.noJumpT -= dt;
+  // a controller: hold CROUCH half a second
+  if (pad.crouch && pad.on && !P.slideT) { MOV.padHold = (MOV.padHold || 0) + dt; if (MOV.padHold > 0.45 && !P.prone && !MOV.padDone) { MOV.padDone = true; P.prone = true; } } else { MOV.padHold = 0; MOV.padDone = false; }
+  if (press && !G.downed && !(typeof VH !== 'undefined' && VH.me)) {
+    if (P.prone) P.prone = false;
+    else if (MOV.sprintPrev && P.onGround && Math.hypot(P.vx, P.vz) > 5) {   // DIVE
+      const l = Math.hypot(P.vx, P.vz); P.diveDx = P.vx / l; P.diveDz = P.vz / l; P.vy = 4.2; P.onGround = false; P.diveT = 0.55; P.prone = true; P.slideT = 0;
+      try { sfx.thud({ vol: 0.5 }); } catch (e) {}
+    } else P.prone = true;
+  }
+  if (P.prone && ((kb('jump') || pad.jump) && !P.diveT)) { P.prone = false; P.noJumpT = 0.25; }
+  if (P.prone && crouch && !pad.on && kb('crouch')) P.prone = false;
+  if (G.downed || P.mantle) P.prone = false;
+  return !!P.prone;
+}
+// during a dive: keep flying forward until you land
+function mvDive(dt) { if (!(P.diveT > 0)) return; P.diveT -= dt; if (!P.onGround) { P.vx = P.diveDx * 6.5; P.vz = P.diveDz * 6.5; } else if (P.diveT < 0.4) P.diveT = 0; }

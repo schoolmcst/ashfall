@@ -5,7 +5,7 @@
    that doesn't exist (an old attachment, a weapon you can't use there) is skipped. */
 const LC_PRE = 'DZ1-';
 function lcMake(c) {
-  c = c || activeClass(); const o = { p: c.p, s: c.s, e: c.e, a: {} };
+  c = c || activeClass(); const o = { p: c.p, s: c.s, e: c.e, a: {}, fu: c.fu };
   for (const k of PERK_KEYS) o[k] = c[k];
   for (const id of [c.p, c.s]) if (ATTS[id] && typeof ATTS[id] === 'object') o.a[id] = ATTS[id];
   const b = btoa(unescape(encodeURIComponent(JSON.stringify(o)))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
@@ -21,6 +21,7 @@ function lcApply(code) {
   if (ARM[o.p] && CATS[ARM[o.p].cat] && CATS[ARM[o.p].cat].slot === 'primary') { c.p = o.p; got.push(ARM[o.p].name); }
   if (ARM[o.s] && CATS[ARM[o.s].cat] && CATS[ARM[o.s].cat].slot === 'secondary') { c.s = o.s; got.push(ARM[o.s].name); }
   if (EQUIP[o.e]) c.e = o.e;
+  if (typeof FU_TYPES !== 'undefined' && FU_TYPES[o.fu]) c.fu = o.fu;
   PERK_KEYS.forEach((k, i) => { if (PERKS[o[k]] && PERKS[o[k]].t === i + 1) c[k] = o[k]; });
   if (o.a && typeof o.a === 'object') for (const id of [c.p, c.s]) {
     const want = o.a[id]; if (!want || typeof want !== 'object') continue; const out = {};

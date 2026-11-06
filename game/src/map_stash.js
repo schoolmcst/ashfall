@@ -110,9 +110,10 @@ function buildStash() {
   stashHouse(-50, 10, 5, 4, 'brick', 'e', 2.8, 'sheet');
   // ---- scatter: palms on the beach, trees and rocks inland (away from the places and the roads)
   const busy = (x, z) => Math.abs(x) < 5 || Math.abs(z) < 5 || (Math.abs(Math.abs(x) - 30) < 4 && Math.abs(z) < 34) || (Math.abs(Math.abs(z) - 30) < 4 && Math.abs(x) < 34) || Math.hypot(x, z) < 24 ||
-    [[-38, -34, 16], [42, -42, 13], [46, 0, 14], [38, 38, 15], [0, 50, 15], [-38, 38, 15], [-46, 2, 11], [54, -20, 9]].some(([px, pz, r]) => Math.hypot(x - px, z - pz) < r);
+    [[-38, -34, 16], [42, -42, 13], [46, 0, 14], [38, 38, 15], [0, 50, 15], [-38, 38, 15], [-46, 2, 11], [54, -20, 9], [-30, -3.6, 3], [40, 12, 3]].some(([px, pz, r]) => Math.hypot(x - px, z - pz) < r);
   for (let i = 0; i < 40; i++) { const side = i % 4, t = -H + 6 + sr() * (H * 2 - 12), o = H - 3 - sr() * 3; const x = side === 0 ? t : side === 1 ? t : side === 2 ? -o : o, z = side === 0 ? -o : side === 1 ? o : t; if (!busy(x, z)) palm(x, z, 5.5 + sr() * 2.5, (sr() - 0.5) * 0.4); }
-  try { duelBuild(DUEL_PEN.stashisle); } catch (e) {}   // THE HOTBOX DUEL pit (duel.js)
+  try { duelBuild(DUEL_PEN.stashisle); } catch (e) {}
+  try { moversMaterials(); moversBuild('stashisle'); } catch (e) {}   // JUMP PADS and ZIPLINES (movers.js)   // THE HOTBOX DUEL pit (duel.js)
   for (let i = 0, n = 0; i < 300 && n < 44; i++) { const x = (sr() - 0.5) * (H * 2 - 18), z = (sr() - 0.5) * (H * 2 - 18); if (busy(x, z)) continue; n++; if (sr() < 0.7) tree(x, z, sr() < 0.1, 0.9 + sr() * 0.4); else stashRock(x, z, 1 + sr() * 1.2, 0.8 + sr() * 1.2); }
 }
 defineMap({
