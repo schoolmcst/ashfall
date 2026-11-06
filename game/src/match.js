@@ -262,7 +262,7 @@ const playerAlive = () => (G.state === 'playing' || pausedOnline()) && M.me && M
 function respawnPlayer() {
   if (NET.spec) { G.state = 'spectate'; G.specIdx = G.specIdx || 0; return; }   // WATCH: spectators never spawn
   const p = pickSpawnFor(M.myTeam, sideOf(M.myTeam)); placePlayer(p);
-  if (M.mode === 'gun') equipGunGame(M.me.level); else if (M.pp) ppEquipMe(); else if (M.br) { if (M.online && M.br.phase >= 1 && !M.br.winTxt && M.t > 30) { G.state = 'spectate'; G.specIdx = 0; showBanner('ROUND IN PROGRESS', 'you join the next round · watch for now'); return; } equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; M.br.myTier = -1; } else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
+  if (M.mode === 'gun') equipGunGame(M.me.level); else if (M.pp) ppEquipMe(); else if (M.br) { if (M.online && M.br.phase >= 1 && !M.br.winTxt && M.t > 30) { G.state = 'spectate'; G.specIdx = 0; showBanner('ROUND IN PROGRESS', 'you join the next round · watch for now'); return; } if (brWarmNow()) brWarmGun(); else { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } M.br.myTier = -1; } else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
   G.state = 'playing'; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide'); $('killcam').classList.remove('kcv'); try { kcYou(null); } catch (e) {} vig.style.opacity = 0;
   camera.fov = baseFov; camera.updateProjectionMatrix(); lockPointer(); hideCenter();
 }
@@ -460,6 +460,7 @@ function updateBots(dt) {
   for (let i = 0; i < enemies.length; i++) {
     const e = enemies[i], g = e.group;
     if (!e.entry || e.net) continue;
+    if (e.brFloat && brfBot(e, dt)) continue;   // LAST TOKE: floating in (brintro.js)
     if ((e.think -= dt) <= 0) { e.think = 0.28 + Math.random() * 0.12; botThink(e); }
     if (e.tgt && !botValidTarget(e, e.tgt)) e.tgt = null;
     if (e.climb && mvBotClimb(e, dt)) continue;   // climbing a ledge (movement.js)
@@ -802,7 +803,7 @@ function timeUp() {
 // after the death cam in a match: respawn, or spectate a team-mate in S&D
 function afterDeathInMatch() {
   $('killcam').classList.add('hide');
-  if (M.mode === 'snd' || M.mode === 'gf' || M.br || oicOut(M.me)) { G.state = 'spectate'; G.specIdx = 0; G.dc = null; return; }
+  if (M.mode === 'snd' || M.mode === 'gf' || (M.br && !brWarmNow()) || oicOut(M.me)) { G.state = 'spectate'; G.specIdx = 0; G.dc = null; return; }
   G.state = 'respawning'; G.respT = 1.2; G.dcHold = !!G.dc;
 }
 function updateSpectate(dt) {
@@ -899,6 +900,7 @@ function updateModeHud(force) {
     mid = `<span class="ts a">${M.mode === 'gun' ? me.level + 1 : me.kills}</span><span class="tm"><b>${left}</b><small>${M.def.short} · ${M.cfg.score}</small></span><span class="ts b">${M.mode === 'gun' ? lead.level + 1 : lead.kills}</span>`;
     info = lead === me ? 'YOU ARE IN THE LEAD' : `LEADER: ${lead.name.toUpperCase()}`;
     if (M.pp) info = `${m2HudInfo()} · ${info}`;
+    if (M.br) info = m2HudInfo();   // LAST TOKE: alive, the cloud, the warm-up, the float
     if (M.mode === 'gun') info = `GUN ${me.level + 1}/${GUN_LADDER.length}${me.level + 1 < GUN_LADDER.length ? ' · NEXT ' + ARM[GUN_LADDER[me.level + 1]].name : ' · FINAL GUN'} · ${info}`;
   }
   if (M.online && NET.app && NET.room) { const R = NET.room, n = (String(R.slot).match(/-q(\d+)$/) || [])[1], hum = 1 + [...NET.rem.values()].filter(x => !x.isBot).length;

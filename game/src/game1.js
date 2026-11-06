@@ -50,7 +50,7 @@ function rumble(strong, weak, ms) {
 /* ------------------------------------------------------------------ player */
 const vig = $('vignette'), dmgdir = $('dmgdir');
 function hurtPlayer(dmg, fx, fz, boom) {
-  if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0 || G.holdT > 0) return;
+  if ((G.state !== 'playing' && !pausedOnline()) || G.spawnProt > 0 || G.holdT > 0 || (typeof brfSafe === 'function' && brfSafe())) return;
   if (M && M.hso && inMatch()) { if (boom) return; dmg = 999; }   // HEADSHOTS ONLY: what reaches me was a head hit
   if (M && M.br) dmg = ltArmorTake(dmg);   // LAST TOKE armour plates take it first
   if (boom && perk('flak')) dmg *= 0.65;
@@ -73,6 +73,7 @@ function isFiring() { return !VH.me && !P.mantle && !G.downed && !(typeof ltPlat
 let wasSprint = false;
 function updatePlayer(dt) {
   if (VH.me && vhPlayer(dt)) return { moving: false, sprint: false };   // driving a LAST TOKE vehicle
+  if (typeof brfPlayer === 'function' && brfPlayer(dt)) return { moving: false, sprint: false };   // LAST TOKE: the bong hit and the float in (brintro.js)
   const w = WEAPONS[G.cur];
   const crouch = kb('crouch') || pad.crouch;
   const hold = typeof holding === 'function' && holding();

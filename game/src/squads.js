@@ -22,14 +22,14 @@ function sqStanding(team, skip) {
 /* ---------- going down */
 // from hurtPlayer when the hit would kill me: true = I'm downed instead of dead
 function sqPlayerDown() {
-  if (!sqOn() || G.downed || !sqStanding(M.myTeam, 'player')) return false;
+  if (!sqOn() || G.downed || brWarmNow() || !sqStanding(M.myTeam, 'player')) return false;
   G.downed = true; G.bleed = SQ_BLEED; G.health = 100; P.slideT = 0; P.mantle = null; G.adsOn = false;
   try { showBanner('DOWNED', 'a squadmate can pick you up · crawl to cover'); sfx.hurt(); } catch (e) {}
   return true;
 }
 // from damageEnemy when a bot would die: true = it's downed instead
 function sqBotDown(e) {
-  if (!sqOn() || e.net || e.downed || e.sqFinal || !e.entry || !sqStanding(e.team, e)) return false;
+  if (!sqOn() || brWarmNow() || e.net || e.downed || e.sqFinal || !e.entry || !sqStanding(e.team, e)) return false;
   e.downed = true; e.bleed = SQ_BLEED; e.hp = 100; e.tgt = null; e.goal = null; e.revBy = null;
   try { if (e.veh) vhBotExit(e); } catch (er) {}
   e.group.rotation.x = -1.25;   // lying down

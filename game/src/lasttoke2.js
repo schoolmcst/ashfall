@@ -119,7 +119,7 @@ function ltRedeploy() {
   try { showBanner('SQUAD REDEPLOYED', n ? `${n} squadmate${n > 1 ? 's' : ''} back in` : 'nobody to bring back'); } catch (e) {}
 }
 // self-revive: from hurtPlayer, after the squads and duel checks
-function ltSelfRevive() { if (!ltOn() || !LT.selfRev) return false; LT.selfRev = false; G.health = 50; G.spawnProt = 1.5; try { showBanner('SELF-REVIVE', 'back on your feet'); sfx.streak(); } catch (e) {} return true; }
+function ltSelfRevive() { if (!ltOn() || !LT.selfRev || brWarmNow()) return false; LT.selfRev = false; G.health = 50; G.spawnProt = 1.5; try { showBanner('SELF-REVIVE', 'back on your feet'); sfx.streak(); } catch (e) {} return true; }
 /* ---------- contracts */
 function ltTakeContract(tb) {
   tb.used = true; tb.g.visible = false;

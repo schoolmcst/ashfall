@@ -19,7 +19,7 @@ function duelBuild(pen) {
 // from hurtPlayer when the hit would kill me (after the squads check): true = off to the duel instead
 function duelTake() {
   const B = M && M.br, pen = duelPen();
-  if (!B || !pen || M.online || B.duelUsed || B.phase >= 2 || DUEL.on) return false;
+  if (!B || !pen || M.online || B.phase < -1 || B.duelUsed || B.phase >= 2 || DUEL.on) return false;
   const pool = M.entries.filter(en => !en.isPlayer && en.alive === false && !en.duelDone && !(M.squad > 1 && en.team === M.myTeam)); if (!pool.length) return false;
   B.duelUsed = true; const en = pool[pool.length - 1]; en.duelDone = true; en.alive = true;
   const ke = G.killer && G.killer.entry; if (ke) try { creditKill(ke, M.me); feedLine(`${nameHtml(ke)} <span class="fw">${botGunName(ke.bot)}</span> <b>YOU</b> <span class="fw">· TO THE HOTBOX</span>`); } catch (e) {}

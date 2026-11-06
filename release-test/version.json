@@ -1,12 +1,14 @@
 {
- "version": "1.2.89",
+ "version": "1.2.90",
  "notes": [
-  "STASH ISLAND REMADE: 391 x 391 m (152,865 m\u00b2), ten times bigger",
-  "Almost every place to land is buildings you go inside: 2-3 storeys, rooms, stairwells, windows, walkable roofs",
-  "New places: Old Town, the School, Greenhouse Row, Radio Hill, the Refinery, the Lighthouse, the Hotel, the Estate (cliff, mansion, cellar and tunnel), the Farm, the Docks, the Quarry, the Power Station, the Bunkers",
-  "Loot inside, upstairs and on roofs; 120 crates; a longer 5-phase cloud; 18 vehicles; new jump pads and ziplines",
-  "FIX: EDIT HUD opens from Settings and the pause menu"
+  "STASH ISLAND now has real hills, valleys and cliffs - every place sits at its own height (Radio Hill, the cliff-top Estate, the Lighthouse on the sea cliff, the Quarry pit)",
+  "New MAP button (M / D-pad down): the whole island, place names, the cloud, your squad, set a waypoint",
+  "LAST TOKE WARM-UP before every round: random good gun, free respawns, kills don't count",
+  "THE BONG HIT: you (or your whole squad, passing it round) take a hit on THE HOTBOX CLOUD, then FLOAT IN from the sky - steer, hold crouch to dive",
+  "Loot crates sit in places that make sense: inside buildings, upstairs, better loot where it's harder to get",
+  "Controller works on the map, emote wheel (hold D-pad left), map editor, HUD editor and the newer menus",
+  "Fixed: online players on hills showed at the wrong height"
  ],
- "sha256": "0b044e8390cf2e5d86d1d47f5cc6ea5de7e74c2f53106b234a84b2a9ebf470b4",
+ "sha256": "153c71a1f4cce7cb62887774710c3122ec5284eaf14e8337bcd2d998eeb4bc08",
  "minApp": "1.0.0"
 }

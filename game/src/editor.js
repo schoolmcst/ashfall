@@ -124,6 +124,7 @@ function edDraw() {
     else if (it.t === 'ramp') { box(it.x, it.z, 3, 3, '#7a8aa0'); g.fillStyle = '#5a6a80'; g.fillRect(X(it.x - 1), Z(it.z + 1.5), 2 * k, 3.6 * k); }
   }
   if (ED.drag) { g.strokeStyle = '#ffd23a'; g.lineWidth = Math.max(3, 0.4 * k); g.beginPath(); g.moveTo(X(ED.drag.a.x), Z(ED.drag.a.z)); g.lineTo(X(ED.drag.b.x), Z(ED.drag.b.z)); g.stroke(); }
+  if (ED.padCur && document.body.classList.contains('padnav')) { g.strokeStyle = '#ffffff'; g.lineWidth = 2; g.strokeRect(X(Math.round(ED.padCur.x)) - k * 0.6, Z(Math.round(ED.padCur.z)) - k * 0.6, k * 1.2, k * 1.2); }   // the controller's cursor
   for (const [p, c, t] of [[m.A, '#5ab8ff', 'A'], [m.B, '#ff5a5a', 'B'], [m.P, '#ffd23a', '◆']]) { g.fillStyle = c; g.beginPath(); g.arc(X(p.x), Z(p.z), 0.9 * k, 0, TAU); g.fill(); g.fillStyle = '#000'; g.font = `bold ${Math.round(k)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, X(p.x), Z(p.z)); }
 }
 (() => { const s = document.createElement('style'); s.textContent = `#edOv{position:fixed;inset:0;z-index:92;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;pointer-events:auto}

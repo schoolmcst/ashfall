@@ -152,6 +152,23 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.90 TEST (released to TEST APP): island v3 + map + controller + LAST TOKE intro.
+  terrain.js: a height field (TERR, TH(x,z)) on maps that want one (only stashisle); groundAt starts from TH, buildNav uses
+  it as the floor, terrSlope (in resolve(.., slope) and vehicles) stops climbs steeper than ~42 degrees, the ground mesh is
+  added to the ray chunks. BUILD_YOFF raises everything placed while building a POI on its pad (mkBox, batchAdd, rayAdd,
+  lampLight; NOT placeProp, it goes through batchAdd). map_stash2.js: STASH_POIS each sit on a flat pad at its own height
+  (town 8, school 12, radio hill 26, estate 14 cliff, lighthouse 18 sea cliff, quarry pit 9 / rim 15, docks 1.2 ...),
+  stashNat (coast, hills, peaks) + STASH_RAMPS (roads up). Crates go only on loot spots when a map has them (quality q).
+  mapscreen.js: the MAP (M / D-pad down in LAST TOKE or on terrain): height-shaded picture, POI names, cloud now/next,
+  squad, vehicles, pings; click/A sets a waypoint; a banner when you walk into a POI. padmore.js: controller on the map,
+  emote wheel (hold D-pad left), map editor, HUD editor and B-closes for the newer overlays (s_pad uses a fake gamepad).
+  brintro.js: LAST TOKE WARM-UP (B.phase -3, 20 s / 30 s online, random good gun, free respawns, kills reset after, no
+  crates, USE skips offline) -> THE BONG HIT (B.phase -2: a cinematic on THE HOTBOX CLOUD at y 210 above the map, me or the
+  squad passing it round, JUMP skips; all enemies hidden locally while it plays) -> THE FLOAT IN (B.phase -1: start ~150 m
+  up, steer, CROUCH dives, soft landing; nobody can be hurt while floating; e.brFloat on bots, host-run; squads start and
+  land together, so sqGroup is skipped). Tests skip it: run.js / mp_lib set window.BR_SKIPINTRO unless INTRO=1.
+  Fixed: online remote players' height was clamped to 0-12 m (net.js), wrong on hills; the LAST TOKE line (alive, cloud)
+  was never shown in the top bar. Tests: s_pad, mp_brintro (online intro), s_isle2.
 - 1.2.89 TEST: STASH ISLAND REMADE at 390.98 m square = 152,865 m² (STASH_A 200, STASH_H 195.49), original layout
   (not a copy of any other game's map). map_stash2.js: stashBld (2-3 storey buildings: rooms with 1.8 m doorways, a
   switchback stairwell along the north wall - north doors go at the east end of that wall -, open windows, walkable

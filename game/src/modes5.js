@@ -31,6 +31,7 @@ function brSetup() {
   }
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
+  try { brfStartPhase(M.br); } catch (e) { reportError(e); }   // WARM-UP, the bong and the float in (brintro.js)
   if (!$('brCloud')) { const d = document.createElement('div'); d.id = 'brCloud'; ($('hud') || document.body).appendChild(d); const s = document.createElement('style'); s.textContent = '#brCloud{position:fixed;inset:0;pointer-events:none;opacity:0;transition:opacity .4s;background:radial-gradient(circle at 50% 50%,rgba(120,40,200,.15),rgba(90,20,160,.6));z-index:4}'; document.head.appendChild(s); }
 }
 function brCrate(x, z, tier, y = 0) {
@@ -54,8 +55,9 @@ function brOpen(c, who) {
 const brAliveBots = () => enemies.filter(e => e.entry && e.entry.alive !== false);
 function brUpdate(dt) {
   const B = M.br; if (!B) return; if (M.online && !netHostNow()) netObjApply();   // the host's cloud and crates (1.2.82: was never applied on joiners)
+  try { brfTick(); if (brPre(dt)) return; } catch (e) { reportError(e); }   // WARM-UP / the bong / the float (brintro.js)
   try { vhUpdate(dt); } catch (e) {} try { ltTick(dt); } catch (e) {} try { duelUpdate(dt); } catch (e) {}
-  if (!B.armed) { B.armed = true; brArmAll(); if (sqOn()) sqGroup(); }   // the first frame of the match: everyone down to a pistol (after the class was equipped)
+  if (!B.armed) { B.armed = true; brArmAll(); if (sqOn() && !BRF.ran) sqGroup(); }   // (after the float in, squads already start together)   // the first frame of the match: everyone down to a pistol (after the class was equipped)
   // the cloud: wait, then close on the next circle (a spot inside the current one)
   B.t -= dt; const host = netHostNow();
   if (host && B.t <= 0) {
@@ -97,6 +99,7 @@ function brUpdate(dt) {
 }
 // bots: run for the circle when they are outside (or it is closing on them), else go for a better crate nearby
 function brGoal(e, keep, near, set) {
+  if (brWarmNow()) return null;   // WARM-UP: just fight
   { const dg = duelGoal(e, set); if (dg) return dg; }   // the duel bot goes for me
   { const sg = sqBotGoal(e, set); if (sg) return sg; }   // squads: pick up a downed squadmate first
   const B = M.br, g = e.group.position, d = Math.hypot(g.x - B.cx, g.z - B.cz);
@@ -106,11 +109,11 @@ function brGoal(e, keep, near, set) {
   return null;
 }
 function brHud() {
-  const B = M.br; if (!B) return ''; const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
+  const B = M.br; if (!B) return ''; { const fh = brfHud(); if (fh) return fh + sqHud(); } const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
   return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
-function brMarkers(out) { const B = M.br; if (!B) return; try { ltMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
-function brClear() { try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
+function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
+function brClear() { try { brfReset(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
 
 /* ---------- online */
 function brPack() {

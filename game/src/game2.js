@@ -149,6 +149,7 @@ function updateEnemies(dt) {
 
 function damageEnemy(e, dmg, head, dir, boom, by = 'player') {
   if (!enemies.includes(e)) return false;
+  if (e.brFloat) return false;   // LAST TOKE: floating in (or waiting for the drop)
   if (e.zombie && by === 'player' && typeof zombGunMul === 'function') dmg *= zombGunMul(boom);
   if (e.proxy) { if (by === 'player') zcProxyHit(e, dmg, head, boom); return false; }
   if (e.entry) { e.entry.lastBy = by; e.entry.lastHead = head ? 1 : 0; }

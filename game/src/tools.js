@@ -77,6 +77,7 @@ function hudEdit() {
   document.body.appendChild(o);
   const boxes = [];
   const place = () => { const used = []; for (const b of boxes) { const r = b.el.getBoundingClientRect(), w = Math.max(130, r.width), h = Math.max(36, r.height); let x = clamp(r.left, 4, innerWidth - w - 4), y = clamp(r.top, 4, innerHeight - h - 4); while (used.some(u => Math.abs(u[0] - x) < 60 && Math.abs(u[1] - y) < 30)) y += 40; used.push([x, y]); Object.assign(b.d.style, { left: x + 'px', top: y + 'px', width: w + 'px', height: h + 'px' }); } };
+  window.__hudPlace = place;
   for (const [id, n] of HUD_PARTS) { const el = $(id); if (!el) continue; const prevD = el.style.display; if (getComputedStyle(el).display === 'none') { el.style.display = 'block'; el.dataset.heShown = '1'; el.dataset.heDisp = prevD; }
     const d = document.createElement('div'); d.className = 'hud-ed-box'; d.textContent = n; o.appendChild(d); boxes.push({ id, el, d });
     d.onpointerdown = ev => { ev.preventDefault(); d.setPointerCapture(ev.pointerId); const c = S.hud[id] || [0, 0, 1], sx = ev.clientX, sy = ev.clientY, ox = c[0], oy = c[1];
