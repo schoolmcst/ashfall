@@ -23,7 +23,7 @@ function chTotals() {
   const C = PROG.crew, s = chState(); if (!C || !s) return null;
   const mates = (typeof FRIENDS !== 'undefined' ? FRIENDS : []).filter(f => Array.isArray(f.cw) && f.cw[0] === C.id);
   const cp = s.cp + mates.reduce((t, f) => t + (+f.cp || 0), 0), k = s.k + mates.reduce((t, f) => t + (f.ckw === wkKey() ? +f.ck || 0 : 0), 0);
-  const story = Math.min(6, (typeof zstCard === 'function' ? zstCard()[3] : 0) + mates.reduce((t, f) => t + (Array.isArray(f.z) ? +f.z[3] || 0 : 0), 0));
+  const story = Math.min(7, (typeof zstCard === 'function' ? zstCard()[3] : 0) + mates.reduce((t, f) => t + (Array.isArray(f.z) ? +f.z[3] || 0 : 0), 0));
   const members = 1 + mates.length, goal = Math.min(600, 150 * members), lvl = CH_UPS.filter(u => cp >= u[0]).length - 1;
   return { cp, k, story, members, goal, lvl, next: CH_UPS[lvl + 1] || null };
 }
@@ -52,7 +52,7 @@ function chHtml() {
 ${T.next ? `<div class="gr-bar"><s style="width:${Math.min(100, (T.cp - CH_UPS[T.lvl][0]) / (T.next[0] - CH_UPS[T.lvl][0]) * 100).toFixed(1)}%;background:#7adf6a"></s></div><small>NEXT: ${T.next[1]} (${T.next[2]}) at ${T.next[0].toLocaleString()}</small>` : '<small>EVERY UPGRADE BUILT</small>'}
 <b style="margin-top:8px">WEEKLY CREW GOAL</b><span>${Math.min(T.k, T.goal)} / ${T.goal} KILLS BY THE CREW THIS WEEK · 1,000 DZ + AN ELITE BOX EACH</span><div class="gr-bar"><s style="width:${Math.min(100, T.k / T.goal * 100).toFixed(1)}%;background:#ffb03a"></s></div>
 <button class="mini" id="chClaim"${done && !claimed ? '' : ' disabled'}>${claimed ? 'CLAIMED THIS WEEK' : done ? 'CLAIM' : 'NOT YET'}</button>
-<small>crew points come from every match you play · the trophy shelf holds a trophy for every zombies story the crew has finished</small>${cwHtml()}${typeof radioHtml === 'function' ? radioHtml() : ''}</div></div>`;
+<small>crew points come from every match you play · the trophy shelf holds a trophy for every zombies story the crew has finished</small>${cwHtml()}${typeof radioHtml === 'function' ? radioHtml() : ''}<button class="btn primary" id="chWalk" style="margin-top:10px">WALK IN</button></div></div>`;
 }
 /* CREW WARS (1.2.87): this week's crews ranked by crew kills. The crews you can see (yours and every friend's crew,
    from their status cards) and a few rival AI crews, whose kills grow through the week the same for everyone. */
@@ -73,6 +73,6 @@ function cwHtml() {
 }
 (() => { const st = document.createElement('style'); st.textContent = `.cw-box{margin-top:10px;padding:8px 10px;border:1px solid var(--line);background:rgba(255,255,255,.03);text-align:left}.cw-box>b{display:block;font-size:12px;letter-spacing:.2em;color:var(--accent)}.cw-box>span{font-size:10px;color:var(--dim)}
 .cw-box ol{list-style:none;margin:6px 0 0;padding:0}.cw-box li{display:flex;gap:8px;align-items:center;padding:3px 4px;font-size:11px;border-bottom:1px solid rgba(255,255,255,.05)}.cw-box li.me{background:rgba(93,255,122,.12)}.cw-box li i{width:18px;font-style:normal;color:var(--dim)}.cw-box li b{width:52px;letter-spacing:.1em}.cw-box li span{flex:1;color:var(--dim)}.cw-box li em{font-style:normal;font-weight:700}`; document.head.appendChild(st); })();
-function chWire() { const cv = $('chCv'), T = chTotals(); if (cv && T) chDraw(cv, T); try { radioWire(null, renderLeaderboard); } catch (e) {} const b = $('chClaim'); if (b) b.onclick = () => { if (chClaim()) renderLeaderboard(); }; }
+function chWire() { const cv = $('chCv'), T = chTotals(); if (cv && T) chDraw(cv, T); try { radioWire(null, renderLeaderboard); } catch (e) {} const wk = $('chWalk'); if (wk) wk.onclick = () => { try { chwOpen(); } catch (e) {} }; const b = $('chClaim'); if (b) b.onclick = () => { if (chClaim()) renderLeaderboard(); }; }
 (() => { const s = document.createElement('style'); s.textContent = `.ch-wrap{display:flex;gap:14px;align-items:stretch;margin:4px 0 12px;padding:10px;border:1px solid var(--line);background:rgba(10,12,13,.7)}#chCv{width:560px;max-width:55%;height:auto;border:1px solid var(--line)}
 .ch-info{flex:1;display:flex;flex-direction:column;gap:5px}.ch-info b{letter-spacing:.2em;color:#fff;font-size:13px}.ch-info span{font-size:11px;color:#ddd;letter-spacing:.08em}.ch-info small{font-size:10px;color:var(--dim)}.ch-info .gr-bar{width:100%;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}.ch-info .gr-bar s{display:block;height:100%}.ch-info .mini{align-self:flex-start;width:auto;padding:0 12px;height:26px}.ch-info .mini[disabled]{opacity:.4}`; document.head.appendChild(s); })();

@@ -315,6 +315,7 @@ function campBehind(r) {
 function campEscortTick(dt) {
   const st = CAMP.st, a = campAllyOf(st.who);
   if (!a) { campFail(st.failDie || campChar(st.who).name + ' went down'); return; }
+  if (CAMP.escI >= st.path.length) return;   // done: the step is closing (its lines are playing)
   const p = st.path[CAMP.escI], ap = a.group.position, dP = Math.hypot(ap.x - P.x, ap.z - P.z);
   if (dP > (st.lead || 14)) { CAMP.escPt = { x: ap.x, z: ap.z, y: ap.y }; if (!CAMP.escWait) { CAMP.escWait = true; showMsg(campChar(st.who).name + ' IS WAITING FOR YOU'); } return; }
   CAMP.escWait = false;
@@ -415,7 +416,7 @@ function campComplete() {
   let o = $('campEndEl'); if (o) o.remove(); o = document.createElement('div'); o.id = 'campEndEl'; o.className = 'camp-end';
   o.innerHTML = `<div class="ce-box"><small>MISSION ${idx + 1} COMPLETE · ${D.name}</small><b>${m.title}</b>
     <div class="ce-grid">${[['TIME', fmtT(secs)], ['KILLS', MS.kills], ['HEADSHOTS', MS.heads], ['ACCURACY', acc + '%'], ['DEATHS', CAMP.deaths], ['STASH TINS', `${tins.size} / 3`]].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('')}</div>
-    <div class="ce-xp">+${xp.toLocaleString()} XP${dz ? ` · +${dz} DZ` : ''}</div>${!next && CAMP_MISSIONS.length >= CAMP_PLAN.length ? '<div class="ce-next">FIRST HARVEST · THE END<br><small>THE STORY CONTINUES IN ZOMBIES · CHAPTER ONE: THE GREEN CURE</small></div>' : ''}
+    <div class="ce-xp">+${xp.toLocaleString()} XP${dz ? ` · +${dz} DZ` : ''}</div>${CAMP.m && CAMP.m.id === 'c2m3' ? '<div class="ce-next">SECOND HARVEST · THE END<br><small>THANK YOU FOR PLAYING</small></div>' : CAMP.m && CAMP_MISSIONS.indexOf(CAMP.m) === 11 ? '<div class="ce-next">FIRST HARVEST · THE END<br><small>THE STORY CONTINUES IN ZOMBIES · CHAPTER ONE · CHAPTER TWO: SECOND HARVEST PICKS UP AFTER BAYVIEW</small></div>' : ''}
     <div class="ce-btns">${next ? `<button class="btn primary" data-act="cp-next">NEXT MISSION · ${next.title}</button>` : `<button class="btn primary" data-act="cp-menu">${CAMP_MISSIONS.length < CAMP_PLAN.length ? 'MORE MISSIONS COMING SOON' : 'THE END · BACK TO THE CAMPAIGN'}</button>`}<button class="btn" data-act="cp-menu">MISSION SELECT</button>${!next && CAMP_MISSIONS.length >= CAMP_PLAN.length ? '<button class="btn" data-act="go-zombies">PLAY ZOMBIES · CHAPTER ONE</button>' : ''}</div></div>`;
   document.body.appendChild(o);
   try { sfx.streak(); } catch (e) {}
@@ -604,7 +605,7 @@ setTimeout(() => {
   try {
     const tiles = document.querySelector('#menu .cod-tiles'); if (!tiles || document.querySelector('.cp-tile')) return;
     const b = document.createElement('button'); b.className = 'cod-tile cp-tile'; b.dataset.act = 'campaign';
-    b.innerHTML = '<small>STORY &middot; 12 MISSIONS</small><b>CAMPAIGN</b><span>FIRST HARVEST &middot; HOW IT ALL STARTED</span>';
+    b.innerHTML = '<small>STORY &middot; ' + CAMP_MISSIONS.length + ' MISSIONS &middot; 2 CHAPTERS</small><b>CAMPAIGN</b><span>FIRST HARVEST &middot; SECOND HARVEST</span>';
     tiles.insertBefore(b, tiles.children[1] || null);
   } catch (e) {}
 }, 0);

@@ -654,7 +654,7 @@
     <div id="cusPriv"></div>
     <div class="cus-sub">SOLO &middot; VS BOTS</div>
     <div class="body" id="cusBody"></div>
-    <div class="actions"><button class="btn" data-act="cus-back">BACK</button><button class="btn" data-act="tour">TOURNAMENT</button><button class="btn primary" data-act="cus-start">START SOLO GAME</button></div>
+    <div class="actions"><button class="btn" data-act="cus-back">BACK</button><button class="btn" data-act="tour">TOURNAMENT</button><button class="btn" data-act="editor">MAP EDITOR</button><button class="btn primary" data-act="cus-start">START SOLO GAME</button></div>
   </div>
 </div>
 
@@ -6498,6 +6498,153 @@ function tidePower() {
   TIDE.on = true; for (const f of TIDE.flick) { f.steady = true; f.l.intensity = f.i * 1.15; }
   try { if (TIDE.pool) TIDE.pool.material.emissiveIntensity = 0.7; } catch (e) {}
 }
+/* ================================================================== ZOMBIES map: BAYVIEW (chapter seven, the finale)
+   The High Tide's guest list sent the survivors to Bayview harbour, where three hundred passengers got off - and where
+   GREENLINE HOLDINGS, the company that owns both ships, has its tower. The town is gone. Built on the same plan as the
+   two ships (so the same doors, perks and windows line up), dressed as a harbour block at dawn:
+     START   - THE HARBOUR (south): the quay, the survivors' boat, the fish market stalls, crab pots.
+     MIDDLE  - the GREENLINE LOBBY (the hub): reception, the big leaf logo, the lifts, sofas.
+     SIDES   - the BAYVIEW DINER (west) and the GREENLINE PHARMACY (east), where the Nightshade was sold over the counter.
+     NORTH   - THE LAB (west house: the vats, the CROP DUSTER tank - the cure goes in there), the PLAZA in the middle (the
+               fountain, trees, benches), the BOARDROOM (east house: the long table, the portraits, the Chairman).
+     TOP     - THE HELIPAD (north end): the helicopter, the gun upgrader in the server room.
+   LAUNCH PADS (window cleaners' platforms) throw you around once the tower's power is back. The story ends here. */
+const BAY = { flick: [], t: 0, on: false, fountain: null };
+function bayMaterials() {
+  if (MAT.bayBrick) return;
+  const std = (set, o) => new THREE.MeshStandardMaterial(Object.assign({ map: set.map, bumpMap: set.bump, bumpScale: 0.015, roughness: 0.85, metalness: 0.1 }, o));
+  MAT.bayBrick = std(TEX.brick || TEX.concrete, { color: C(0x8a5a4a) });
+  MAT.bayTower = std(TEX.paintm || TEX.concrete, { color: C(0x2a3a3a), roughness: 0.4, metalness: 0.5 });
+  MAT.bayGreen = std(TEX.paintm || TEX.metal, { color: C(0x2f8a4a), roughness: 0.5 });
+  MAT.bayMarble = std(TEX.concrete, { color: C(0xd8d4cc), roughness: 0.35, metalness: 0.05 });
+  MAT.bayDock = std(TEX.planks || TEX.wood, { color: C(0x7a6a52), roughness: 0.9 });
+  MAT.bayDiner = std(TEX.paintm || TEX.metal, { color: C(0xc83a3a), roughness: 0.5 });
+  MAT.bayLab = std(TEX.paintm || TEX.metal, { color: C(0xe8ecee), roughness: 0.45 });
+  MAT.bayWater = new THREE.MeshStandardMaterial({ color: C(0x1a4a5a), roughness: 0.15, metalness: 0.3, transparent: true, opacity: 0.85 });
+  MAT.bayGlow = new THREE.MeshBasicMaterial({ color: C(0x5dff7a), toneMapped: false });
+  MAT.baySign = neonMat('GREENLINE', '#5dff7a', 'HOLDINGS · BAYVIEW', '#06100a', 1024, 256);
+  MAT.bayDinerS = neonMat('BAYVIEW DINER', '#ff5a5a', 'OPEN 24 HRS', '#140606');
+  MAT.bayPharm = neonMat('PHARMACY', '#5dff7a', 'GREENLINE · WELLNESS', '#06100a');
+  MAT.bayLabS = neonMat('THE LAB', '#5ac8ff', 'AUTHORISED STAFF', '#060a10', 512, 160);
+  MAT.bayBoard = neonMat('BOARDROOM', '#ffd23a', '', '#100c04', 512, 160);
+  MAT.bayHeli = neonMat('H', '#ffffff', '', '#1a3a1a', 256, 256);
+  TILES.bayBrick = 3; TILES.bayMarble = 3;
+}
+function buildBay() {
+  buildMap2Materials(); worksMaterials(); airpMaterials(); isleMaterials(); shipMaterials(); tideMaterials(); bayMaterials();
+  BAY.flick = []; BAY.on = false; BAY.t = 0;
+  floorQuad(0, 0, 52, 86, 0, 'asphalt', 6);
+  floorQuad(0, 0, 400, 400, -2.5, 'bayWater', 20);
+  // ---- the block: solid all round, brick walls with zombie windows at the same spots as the ships
+  for (const [x, z, w, d] of [[0, -43.4, 56, 2.5], [0, 43.2, 56, 2.5], [-27, 0, 3, 90], [27, 0, 3, 90]]) blk(x, z, w, d, 9, 'dark', { noDraw: true });
+  const winH = [[19, 1.6, 1.0, 1.4], [-8, 1.6, 1.0, 1.4]];
+  wkZ(-25, -30, 41, 3.2, 'bayBrick', winH); wkZ(25, -30, 41, 3.2, 'bayBrick', winH);
+  wkX(41, -25, 25, 1.2, 'bayDock'); blk(0, 41.9, 52, 0.6, 5, 'dark', { noDraw: true });
+  wkZ(-16, -42, -30, 3.2, 'bayBrick'); wkZ(16, -42, -30, 3.2, 'bayBrick'); wkX(-30, -25, -16, 3.2, 'bayBrick'); wkX(-30, 16, 25, 3.2, 'bayBrick'); wkX(-42, -16, 16, 3.2, 'bayBrick');
+  // the town behind the walls (scenery): dark houses and the tower
+  for (const s of [-1, 1]) for (let i = 0; i < 6; i++) B(i % 2 ? 'bayBrick' : 'facade', 6, 6 + (i * 7) % 5, 8, s * 31, 3, -30 + i * 12, 0, 0, 0, false);
+
+  /* ================= THE HARBOUR (start, z 26..41): the quay, the boat, the fish market */
+  floorQuad(0, 34, 50, 14, 0.011, 'bayDock', 6);
+  for (const [x, z] of [[-14, 31], [-8, 31], [12, 31]]) { blk(x, z, 3, 1.2, 0.9, 'wood', { walk: false }); B('awningGreen', 3.4, 0.08, 2.0, x, 2.4, z, 0.15, 0, 0, false); for (const dx of [-1.5, 1.5]) CYL('steel', 0.04, 0.04, 2.4, 6, x + dx, 1.2, z + 0.8, 0, 0, 0, false); }
+  for (const [x, z] of [[-20, 37], [-18.6, 37.6], [18, 38], [19.4, 37.2]]) { blk(x, z, 0.9, 0.9, 0.7, 'dark', { walk: false }); }
+  crate(4, 36.5, 1.2); crate(5.2, 36.5, 1.0); crate(-3, 39, 1.1); pallet(16, 33, 0, 2, true);
+  { const p = P2(-6, 47, -2, 0); p.b('isleWhite', 3.0, 1.4, 7.0, 0, 0.7, 0, false); p.b('isleTeal', 3.1, 0.25, 7.1, 0, 1.4, 0, false); }
+  for (const [x, z] of [[-21, 39], [21, 39]]) shipBollard(x, z);
+  shipLamp(-14, 27.4, 3.2, 0xffe0c0); shipLamp(14, 27.4, 3.2, 0xffe0c0); shipLamp(6, 38, 3.4, 0xfff0d0, 1.0, 14, false);
+
+  /* ================= THE GREENLINE LOBBY (the hub, x -10..10, z 12..26) */
+  const BH = 4.2;
+  wkX(26, -25, 25, 3.4, 'bayBrick', [[0, 6, 0, 4]]);
+  wkZ(-10, 12, 26, BH, 'bayTower', [[19, 6, 0, 4]]); wkZ(10, 12, 26, BH, 'bayTower', [[19, 6, 0, 4]]);
+  wkX(12, -25, 25, BH, 'bayBrick', [[-20, 4, 0, 4], [0, 6, 0, 4], [20, 4, 0, 4]]);
+  wkRoof(-10.3, 10.3, 11.7, 26.3, BH + 0.35, 'bayTower');
+  floorQuad(0, 19, 19.4, 13.4, 0.012, 'bayMarble', 3);
+  for (let k = 0; k < 9; k++) { const y = BH + 0.35 + k * 3.2; B('bayTower', 18, 3.2, 12, 0, y + 1.6, 19, 0, 0, 0, false); for (let i = 0; i < 7; i++) for (const sd of [-1, 1]) B((i + k) % 3 ? 'shipGlass' : 'tideCabin', 1.8, 2.2, 0.05, -7.5 + i * 2.5, y + 1.6, 19 + sd * 6.03, 0, 0, 0, false); }
+  batchAdd('baySign', new THREE.PlaneGeometry(8, 2), mat4(0, BH + 2.5, 26.4, 0, 0, 0), false);
+  blk(-5, 24.6, 4.4, 0.9, 1.05, 'bayMarble', { walk: false }); B('bayGreen', 4.6, 0.06, 1.1, -5, 1.08, 24.6, 0, 0, 0, false);   // reception
+  { const lf = new THREE.Mesh(new THREE.CircleGeometry(1.6, 7), MAT.bayGlow); lf.position.set(0, 2.3, 12.27); lf.rotation.y = Math.PI; scene.add(lf); }
+  for (const x of [-4, 4]) B('steel', 1.8, 3, 0.1, x, 1.5, 12.3, 0, 0, 0, false);   // the lifts
+  for (const [x, z, q] of [[5, 16.5, 0], [5, 21, 2]]) { const p = P2(x, z, 0, q); p.b('tideVelvet', 3.0, 0.45, 0.9, 0, 0.23, 0); p.b('tideVelvet', 3.0, 0.5, 0.2, 0, 0.7, -0.35, false); p.col(3.0, 0.7, 0.9); }
+  for (const [x, z] of [[-9.2, 13], [9.2, 13], [-9.2, 25]]) { CYL('paintWhite', 0.35, 0.28, 0.6, 10, x, 0.3, z); PZ(x, 0, z, 0.7, 0.6, 0.7); islePlant(x, z, 0.6, 1.2); }
+  shipCeil(-4, 15, BH, 0xe8f0ff, 0.9, 11); shipCeil(4, 23, BH, 0xe8f0ff, 0.9, 11); { const l = lampLight(0, BH - 1.4, 19, 0xd8ffe0, 1.0, 12); BAY.flick.push({ l, i: 1.0, t: 1 }); }
+
+  /* ================= THE BAYVIEW DINER (west, x -25..-10, z 12..26) */
+  floorQuad(-17.5, 19, 14.6, 13.4, 0.011, 'tileFloor', 3);
+  blk(-21.5, 19.5, 1.2, 7, 1.0, 'bayDiner', { walk: false }); B('paintWhite', 1.3, 0.06, 7.1, -21.5, 1.03, 19.5, 0, 0, 0, false);   // the counter
+  for (let i = 0; i < 5; i++) CYL('bayDiner', 0.22, 0.22, 0.65, 10, -19.8, 0.33, 16.8 + i * 1.3, 0, 0, 0, false);
+  for (const [x, z] of [[-14, 14.5], [-14, 23.5], [-17.5, 14.5]]) { blk(x, z, 1.6, 1.1, 0.75, 'paintWhite', { walk: false }); }
+  batchAdd('bayDinerS', new THREE.PlaneGeometry(2.4, 0.6), mat4(-10.27, 3.2, 15, 0, -Math.PI / 2, 0), false);
+  { const l = lampLight(-17, 3.2, 19, 0xff8a7a, 0.8, 12); BAY.flick.push({ l, i: 0.8, t: 0.4 }); }
+
+  /* ================= THE GREENLINE PHARMACY (east, x 10..25, z 12..26) */
+  floorQuad(17.5, 19, 14.6, 13.4, 0.011, 'bayMarble', 3);
+  for (const z of [14.8, 22.6]) { blk(17.5, z, 7, 0.6, 1.8, 'bayLab', { walk: false }); for (let i = 0; i < 6; i++) B(['paintGreen', 'paintWhite', 'bayGreen'][i % 3], 0.5, 0.3, 0.3, 14.8 + i * 1.1, 1.95, z, 0, 0, 0, false); }
+  blk(22.5, 13.5, 3.4, 0.9, 1.05, 'bayLab', { walk: false });
+  batchAdd('bayPharm', new THREE.PlaneGeometry(2.4, 0.6), mat4(10.27, 3.2, 15, 0, Math.PI / 2, 0), false);
+  { const l = lampLight(17.5, 3.2, 19, 0x9affb0, 0.8, 12); BAY.flick.push({ l, i: 0.8, t: 0.7 }); }
+
+  /* ================= the street north of the block (z -2..12): abandoned cars, a bus stop */
+  carWreck(-17, 6, true); carWreck(18, 4, false);
+  blk(-4, 6, 0.5, 3.2, 2.3, 'glass', { walk: false }); bench(-3, 6, 0, false);
+  shipLamp(-12, 10, 3.4, 0xffe0c0); shipLamp(12, 10, 3.4, 0xffe0c0); shipLamp(-17, 0, 3.4, 0xd8e0ff, 1.0, 13, false); shipLamp(17, 0, 3.4, 0xd8e0ff, 1.0, 13, false);
+
+  /* ================= THE LAB (west house, x -25..-8, z -26..-2): the vats, the crop duster tank */
+  const EH = 4.0;
+  wkZ(-8, -26, -2, EH, 'bayLab', [[-20, 2.4, 0, 2.6], [-8, 2.4, 0, 2.6]]);
+  wkX(-2, -25, -8, EH, 'bayLab', [[-16, 2.4, 0, 2.6]]); wkX(-26, -25, -8, EH, 'bayLab', [[-16, 2.4, 0, 2.6]]);
+  wkRoof(-25.3, -7.7, -26.3, -1.7, EH + 0.35, 'bayLab'); blk(-24.6, -14, 0.3, 24, EH - 3.2 + 0.35, 'bayLab', { y: 3.2 });
+  floorQuad(-16.5, -14, 16.5, 23.5, 0.011, 'whiteTile', 4);
+  batchAdd('bayLabS', new THREE.PlaneGeometry(2.0, 0.62), mat4(-7.73, 3.1, -14, 0, Math.PI / 2, 0), false);
+  for (const [x, z] of [[-20, -20], [-20, -8], [-13, -20]]) { CYL('steel', 1.1, 1.1, 2.6, 16, x, 1.3, z); PZ(x, 0, z, 2.2, 2.6, 2.2); CYL('tidePurple', 1.0, 1.0, 0.06, 16, x, 2.62, z, 0, 0, 0, false); }
+  blk(-22, -13.5, 2, 4, 1.4, 'bayGreen', { walk: false }); CYL('steel', 0.7, 0.7, 3, 12, -22, 2.1, -13.5, Math.PI / 2, 0, 0, false);   // the crop duster tank
+  blk(-11.5, -3.2, 4, 0.9, 1.05, 'bayLab', { walk: false });
+  for (const [c, x, z] of [[0x5ac8ff, -19, -17], [0x9affb0, -14, -11], [0xc070ff, -14, -17]]) { const l = lampLight(x, 3.4, z, c, 0.8, 9); BAY.flick.push({ l, i: 0.8, t: rnd(0, 2) }); }
+
+  /* ================= THE PLAZA (middle, x -8..8, z -26..12): the fountain, trees, benches */
+  CYL('bayMarble', 2.6, 2.8, 0.7, 20, 0, 0.35, -8); PZ(0, 0, -8, 5.2, 0.7, 5.2); CYL('bayWater', 2.4, 2.4, 0.02, 20, 0, 0.66, -8, 0, 0, 0, false); CYL('bayMarble', 0.3, 0.4, 2.2, 10, 0, 1.4, -8);
+  BAY.fountain = new THREE.Mesh(new THREE.CircleGeometry(1.2, 7), MAT.bayGlow); BAY.fountain.position.set(0, 2.6, -8); BAY.fountain.visible = false; scene.add(BAY.fountain);
+  for (const z of [5, -18]) for (const s of [-1, 1]) { blk(s * 3.8, z, 3.2, 5, 0.8, 'bayMarble', { walk: false }); B('soil', 3.0, 0.05, 4.8, s * 3.8, 0.81, z, 0, 0, 0, false); islePlant(s * 3.8, z - 1.2, 0.8, 1.8); islePlant(s * 3.8, z + 1.2, 0.8, 1.4); }
+  for (const z of [-2, -14]) for (const s of [-1, 1]) bench(s * 6.5, z, 0, false);
+  shipLamp(-6, -26, 3.4, 0xfff0d0, 1.0, 13, false); shipLamp(6, -26, 3.4, 0xfff0d0, 1.0, 13);
+
+  /* ================= THE BOARDROOM (east house, x 8..25, z -26..-2): the long table, the portraits */
+  wkZ(8, -26, -2, EH, 'bayTower', [[-20, 2.4, 0, 2.6], [-8, 2.4, 0, 2.6]]);
+  wkX(-2, 8, 25, EH, 'bayTower', [[16, 2.4, 0, 2.6]]); wkX(-26, 8, 25, EH, 'bayTower', [[16, 2.4, 0, 2.6]]);
+  wkRoof(7.7, 25.3, -26.3, -1.7, EH + 0.35, 'bayTower'); blk(24.6, -14, 0.3, 24, EH - 3.2 + 0.35, 'bayTower', { y: 3.2 });
+  floorQuad(16.5, -14, 16.5, 23.5, 0.011, 'tideCarpet', 4);
+  batchAdd('bayBoard', new THREE.PlaneGeometry(2.0, 0.62), mat4(7.73, 3.1, -14, 0, -Math.PI / 2, 0), false);
+  blk(16.5, -14, 3, 12, 0.78, 'tideTeak', { walk: false });                                 // the long table
+  for (let i = 0; i < 6; i++) for (const s of [-1, 1]) blk(16.5 + s * 2.1, -19 + i * 2, 0.6, 0.6, 1.0, 'tideVelvet', { walk: false });
+  for (let i = 0; i < 4; i++) B('bayGreen', 1.4, 1.8, 0.05, 11 + i * 3.6, 2.2, -25.7, 0, 0, 0, false);     // the portraits
+  for (const [c, x] of [[0xffd890, 12], [0xffe0a0, 16.5], [0xffd890, 21]]) { const l = lampLight(x, 3.4, -14, c, 0.7, 9); BAY.flick.push({ l, i: 0.7, t: rnd(0, 3) }); }
+
+  /* ================= THE HELIPAD (north end): the helicopter, the server room (gun upgrader) */
+  wkZ(-6, -42, -35, 3.4, 'bayTower'); wkZ(6, -42, -35, 3.4, 'bayTower'); wkX(-35, -6, 6, 3.4, 'bayTower', [[0, 2.4, 0, 2.6]]);
+  wkRoof(-6.3, 6.3, -42.3, -34.7, 3.75, 'bayTower'); floorQuad(0, -38.5, 11.4, 6.6, 0.012, 'dark', 3);
+  for (let i = 0; i < 4; i++) blk(-4.5 + i * 3, -41.5, 1.2, 0.8, 2.2, 'dark', { walk: false });   // server racks
+  shipCeil(0, -38.5, 3.4, 0x5dff7a, 0.8, 9);
+  batchAdd('bayHeli', new THREE.PlaneGeometry(4, 4), mat4(12, 0.03, -36, -Math.PI / 2, 0, 0), false);
+  { const p = P2(12, -36, 0, 0); p.b('bayGreen', 2.2, 1.8, 4.2, 0, 1.3, 0); p.b('shipGlass', 2.0, 1.0, 1.0, 0, 1.6, -2.3, false); p.b('steel', 0.4, 0.4, 4.5, 0, 1.6, 4.0, false); p.b('steel', 9, 0.06, 0.3, 0, 2.4, 0, false); p.col(2.2, 2.2, 4.2); }
+  for (const [x, z] of [[-13, -40.5], [13, -40.5]]) shipBollard(x, z);
+  shipLamp(-13, -27, 3.2); shipLamp(9.5, -28, 3.4, 0xfff0d0, 1.0, 13, false); shipLamp(-9, -40.5, 3.0);
+}
+defineMap({
+  id: 'bayview', size: 'large', hidden: true, zombiesOnly: true, planCut: 3.0, name: 'BAYVIEW', place: 'Harbour town, the Greenline tower, dawn', desc: 'The last stop: the harbour, the Greenline lobby, the diner and the pharmacy, the lab, the plaza and the boardroom, and the helipad on top.',
+  play: [-25, 25, -42, 41], build: buildBay,
+  env: { top: 0x3a4a6a, horizon: 0xe8a070, fog: 0.012, sun: [-30, 18, 40], sunCol: 0xffc090, sunI: 1.0, skySun: 0xffb070, hemiSky: 0xa0a8c0, hemiGround: 0x3a3430, exposure: 1.25 },
+  grass: { count: 0 }, spawnMaxY: 0.5,
+  layout: { spawn: [{ x: 2, z: 34 }, { x: 0, z: -20 }], hp: [{ x: 0, z: 19 }, { x: 0, z: 0 }, { x: 4, z: 31 }], flags: [{ x: 2, z: 34 }, { x: 0, z: -20 }], sites: [{ x: -17, z: -10 }, { x: 16, z: -14 }] },
+  menu: { x: 2, z: 30, r: 9, y: 2.4 },
+  navPts: [{ x: 2, z: 34 }, { x: 0, z: 19 }, { x: -18, z: 18 }, { x: 18, z: 18 }, { x: -16, z: -14 }, { x: -17, z: 5 }, { x: 0, z: -10 }, { x: 16, z: -14 }, { x: 22.5, z: -14 }, { x: 0, z: -33 }, { x: 0, z: -39 }, { x: 10, z: -32 }],
+  views: [[2, 1.7, 39, -8, 1, 30], [-6, 1.7, 23, 4, 1.2, 15], [-12, 1.7, 13, -21, 1.2, 22], [12, 1.7, 13, 20, 1.2, 22], [-9.5, 1.7, -8, -18, 1.5, -15], [0, 1.7, 8, 2, 2, -12], [16, 1.7, -3.5, 16, 1.5, -22], [0, 1.7, -24, 0, 6, -38]],
+});
+function bayTick(dt) {
+  if (curMap !== 'bayview') return; BAY.t += dt;
+  for (const f of BAY.flick) { if (BAY.on) { f.l.intensity = f.i; continue; } f.t -= dt; if (f.t <= 0) { f.t = rnd(0.05, 1.6); f.l.intensity = Math.random() < 0.3 ? 0.05 : f.i * rnd(0.4, 1); } }
+  if (BAY.fountain && BAY.fountain.visible) BAY.fountain.rotation.z += dt * 0.8;
+}
+function bayPower() { BAY.on = true; if (BAY.fountain) BAY.fountain.visible = true; }
 /* ================================================================== ZOMBIES map: THE HOTBOX (endless, no story)
    An abandoned grow warehouse, 44 x 44 m, for quick endless runs and the leaderboard. Two parts:
      THE GROW FLOOR (the middle, 32 x 32): eight grow tables round the GUN UPGRADER on its lamp platform, crates and
@@ -7180,6 +7327,34 @@ defineMap({
   navPts: [{ x: 0, z: 0, y: 1.2 }, { x: -17, z: 0 }, { x: 17, z: 6 }, { x: -9, z: 12 }, { x: 9, z: -12 }],
   views: [[0, 1.7, 20, 0, 1.4, 0], [-10, 1.7, 4, -17, 1.4, 0], [10, 1.7, 10, 20, 1.4, 12], [0, 2.9, -2, 0, 1.4, 8]],
 });
+/* ================================================================== WINTER STASH ISLAND (1.2.86)
+   From December 1 to the end of February (and all through FROSTY NUGS) LAST TOKE's island is snowed in: snow on the
+   fields and the beaches, a grey winter sky, snow falling all match, a frozen sea, no tall grass. Same island, same
+   places, same colliders, so nothing else changes; it is picked by the date, so everyone in an online match gets the
+   same island. ISLE_W.force (tests) can turn it on or off. */
+const ISLE_W = { force: null };
+function isleWinter() {
+  if (ISLE_W.force !== null) return !!ISLE_W.force;
+  const d = typeof evNow === 'function' ? evNow() : new Date(), m = d.getMonth() + 1;
+  if (m === 12 || m === 1 || m === 2) return true;
+  try { const e = evActive(); return !!(e && e.id === 'winter'); } catch (er) { return false; }
+}
+const ISLE_WENV = { top: 0xb4c0cc, horizon: 0xe8eef4, fog: 0.007, sun: [-40, 45, 30], sunCol: 0xe8f0ff, sunI: 1.5, skySun: 0xe0e8f0, hemiSky: 0xd8e4f0, hemiGround: 0x9aa4ae, exposure: 1.05 };
+const ISLE_WSWAP = { ground: 'snow', sand: 'snow', soil: 'snow', cobble: 'snow', sea: 'ice', hay: 'snow' };
+(() => {
+  const m = MAPS.stashisle; if (!m) return;
+  const env0 = m.env, grass0 = m.grass, name0 = m.name, place0 = m.place, build0 = m.build;
+  Object.defineProperty(m, 'env', { get: () => isleWinter() ? ISLE_WENV : env0, configurable: true });
+  Object.defineProperty(m, 'grass', { get: () => isleWinter() ? { count: 0 } : grass0, configurable: true });
+  Object.defineProperty(m, 'name', { get: () => isleWinter() ? 'STASH ISLAND · WINTER' : name0, configurable: true });
+  Object.defineProperty(m, 'place', { get: () => isleWinter() ? 'Grow island, snowed in' : place0, configurable: true });
+  m.build = function () {
+    const r = build0.apply(this, arguments); if (!isleWinter()) return r;
+    try { buildMap2Materials(); } catch (e) {}
+    for (const id in batches) { const b = batches[id], to = ISLE_WSWAP[b.key]; if (to && MAT[to]) b.key = to; }
+    return r;
+  };
+})();
 /* ================================================================== BREAKABLE COVER (1.2.84)
    Every multiplayer map (and STASH ISLAND) gets wooden cover that breaks: crate stacks, fence panels and pallet stacks,
    put down at fixed spots (the same on every machine: seeded by the map). Bullets chip them (a crate takes about two
@@ -9251,6 +9426,18 @@ function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
 {
+"v": "1.2.86",
+"d": "2026-11-06",
+"n": [
+"ZOMBIES CHAPTER 7 · BAYVIEW: the story finale (the Greenline tower, THE CHAIRMAN, 12 tapes, launch pads)",
+"CAMPAIGN CHAPTER 2 · SECOND HARVEST: 3 new missions (NEW ROOTS, THE MEETUP, LAST BUS OUT)",
+"CAMPAIGN CO-OP: play the story with a friend (desktop app, host a code)",
+"MAP EDITOR: draw your own map, play it vs bots, share it with a code (CUSTOM > MAP EDITOR)",
+"WINTER STASH ISLAND: snowed in from December to February",
+"WALK-IN CREW STASH HOUSE: walk around your crew's hideout (radio, arcade, crew wars board)"
+]
+},
+{
 "v": "1.2.85",
 "d": "2026-11-06",
 "n": [
@@ -9624,7 +9811,7 @@ let LOBBY = { mode: 'tdm', map: 'random' };
 function pickMapFor(sel, mode) { const md = mode || (typeof NET !== 'undefined' && NET.on && NET.mode) || '', br = md === 'br' || (MODES[md] && MODES[md].base === 'br');
   if (br && (!sel || sel === 'random' || sel === 'stashisle')) return 'stashisle';   // LAST TOKE plays its own island
   if (sel && MAPS[sel] && MAPS[sel].brOnly && !br) sel = 'random';
-  if (sel && MAPS[sel] && (mode === "camp" || !MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
+  if (sel && MAPS[sel] && (mode === "camp" || (sel === "crewhouse" && mode === "range") || sel === "edit_map" || !MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
 try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || (MAPS[o.map] && !MAPS[o.map].hidden))) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; if (o && Array.isArray(o.playlist)) LOBBY.playlist = o.playlist.filter(k => MODES[k] && MODES[k].online); } catch (e) {}
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
@@ -19201,7 +19388,7 @@ setInterval(growDot, 30000);
 })();
 
 /* ---------- 1.2.72 ZOMBIES SEEDS: bosses and high rounds drop seeds for the grow room (solo and co-op, everyone gets theirs) */
-const GROW_ZBOSS = { blackwell: 'sour', works: 'sour', terminal9: 'haze', mauiwowie: 'haze', maryjane: 'north', hightide: 'cure' };
+const GROW_ZBOSS = { blackwell: 'sour', works: 'sour', terminal9: 'haze', mauiwowie: 'haze', maryjane: 'north', hightide: 'cure', bayview: 'cure' };
 function growSeed(id, why) {
   const s = STRAIN[id]; if (!s) return; const g = growLoad(); g.seeds[id] = (g.seeds[id] | 0) + 1; growSave(); growDot();
   try { showBanner(`${s.name} SEED`, `${why} · it is in your GROW OP`); sfx.pickup(); } catch (e) {}
@@ -19350,7 +19537,7 @@ function chTotals() {
   const C = PROG.crew, s = chState(); if (!C || !s) return null;
   const mates = (typeof FRIENDS !== 'undefined' ? FRIENDS : []).filter(f => Array.isArray(f.cw) && f.cw[0] === C.id);
   const cp = s.cp + mates.reduce((t, f) => t + (+f.cp || 0), 0), k = s.k + mates.reduce((t, f) => t + (f.ckw === wkKey() ? +f.ck || 0 : 0), 0);
-  const story = Math.min(6, (typeof zstCard === 'function' ? zstCard()[3] : 0) + mates.reduce((t, f) => t + (Array.isArray(f.z) ? +f.z[3] || 0 : 0), 0));
+  const story = Math.min(7, (typeof zstCard === 'function' ? zstCard()[3] : 0) + mates.reduce((t, f) => t + (Array.isArray(f.z) ? +f.z[3] || 0 : 0), 0));
   const members = 1 + mates.length, goal = Math.min(600, 150 * members), lvl = CH_UPS.filter(u => cp >= u[0]).length - 1;
   return { cp, k, story, members, goal, lvl, next: CH_UPS[lvl + 1] || null };
 }
@@ -19379,7 +19566,7 @@ function chHtml() {
 ${T.next ? `<div class="gr-bar"><s style="width:${Math.min(100, (T.cp - CH_UPS[T.lvl][0]) / (T.next[0] - CH_UPS[T.lvl][0]) * 100).toFixed(1)}%;background:#7adf6a"></s></div><small>NEXT: ${T.next[1]} (${T.next[2]}) at ${T.next[0].toLocaleString()}</small>` : '<small>EVERY UPGRADE BUILT</small>'}
 <b style="margin-top:8px">WEEKLY CREW GOAL</b><span>${Math.min(T.k, T.goal)} / ${T.goal} KILLS BY THE CREW THIS WEEK · 1,000 DZ + AN ELITE BOX EACH</span><div class="gr-bar"><s style="width:${Math.min(100, T.k / T.goal * 100).toFixed(1)}%;background:#ffb03a"></s></div>
 <button class="mini" id="chClaim"${done && !claimed ? '' : ' disabled'}>${claimed ? 'CLAIMED THIS WEEK' : done ? 'CLAIM' : 'NOT YET'}</button>
-<small>crew points come from every match you play · the trophy shelf holds a trophy for every zombies story the crew has finished</small>${cwHtml()}${typeof radioHtml === 'function' ? radioHtml() : ''}</div></div>`;
+<small>crew points come from every match you play · the trophy shelf holds a trophy for every zombies story the crew has finished</small>${cwHtml()}${typeof radioHtml === 'function' ? radioHtml() : ''}<button class="btn primary" id="chWalk" style="margin-top:10px">WALK IN</button></div></div>`;
 }
 /* CREW WARS (1.2.87): this week's crews ranked by crew kills. The crews you can see (yours and every friend's crew,
    from their status cards) and a few rival AI crews, whose kills grow through the week the same for everyone. */
@@ -19400,7 +19587,7 @@ function cwHtml() {
 }
 (() => { const st = document.createElement('style'); st.textContent = `.cw-box{margin-top:10px;padding:8px 10px;border:1px solid var(--line);background:rgba(255,255,255,.03);text-align:left}.cw-box>b{display:block;font-size:12px;letter-spacing:.2em;color:var(--accent)}.cw-box>span{font-size:10px;color:var(--dim)}
 .cw-box ol{list-style:none;margin:6px 0 0;padding:0}.cw-box li{display:flex;gap:8px;align-items:center;padding:3px 4px;font-size:11px;border-bottom:1px solid rgba(255,255,255,.05)}.cw-box li.me{background:rgba(93,255,122,.12)}.cw-box li i{width:18px;font-style:normal;color:var(--dim)}.cw-box li b{width:52px;letter-spacing:.1em}.cw-box li span{flex:1;color:var(--dim)}.cw-box li em{font-style:normal;font-weight:700}`; document.head.appendChild(st); })();
-function chWire() { const cv = $('chCv'), T = chTotals(); if (cv && T) chDraw(cv, T); try { radioWire(null, renderLeaderboard); } catch (e) {} const b = $('chClaim'); if (b) b.onclick = () => { if (chClaim()) renderLeaderboard(); }; }
+function chWire() { const cv = $('chCv'), T = chTotals(); if (cv && T) chDraw(cv, T); try { radioWire(null, renderLeaderboard); } catch (e) {} const wk = $('chWalk'); if (wk) wk.onclick = () => { try { chwOpen(); } catch (e) {} }; const b = $('chClaim'); if (b) b.onclick = () => { if (chClaim()) renderLeaderboard(); }; }
 (() => { const s = document.createElement('style'); s.textContent = `.ch-wrap{display:flex;gap:14px;align-items:stretch;margin:4px 0 12px;padding:10px;border:1px solid var(--line);background:rgba(10,12,13,.7)}#chCv{width:560px;max-width:55%;height:auto;border:1px solid var(--line)}
 .ch-info{flex:1;display:flex;flex-direction:column;gap:5px}.ch-info b{letter-spacing:.2em;color:#fff;font-size:13px}.ch-info span{font-size:11px;color:#ddd;letter-spacing:.08em}.ch-info small{font-size:10px;color:var(--dim)}.ch-info .gr-bar{width:100%;height:6px;background:rgba(255,255,255,.1);border-radius:3px;overflow:hidden}.ch-info .gr-bar s{display:block;height:100%}.ch-info .mini{align-self:flex-start;width:auto;padding:0 12px;height:26px}.ch-info .mini[disabled]{opacity:.4}`; document.head.appendChild(s); })();
 /* ================================================================== RANKED PLAY, DAILY JOBS, CREWS, EVENTS
@@ -19592,7 +19779,7 @@ function ambPick() {
   if (!M || !curMap) return ''; const m = MAPS[curMap] || {};
   if (M.mode === 'range' || M.mode === 'camp' || m.indoor || (M.br && typeof LT !== 'undefined' && LT.storm)) return '';
   const ev = evActive(); if (ev && ev.id === 'winter') return 'snow'; if (ev && ev.id === '420') return 'haze';
-  if (/snow|whiteout/.test(curMap)) return 'snow';
+  if (/snow|whiteout/.test(curMap) || (curMap === 'stashisle' && typeof isleWinter === 'function' && isleWinter())) return 'snow';
   const h = ambHash(curMap + ':' + new Date().toISOString().slice(0, 13)) % 100;
   return h < 18 ? 'rain' : h < 32 ? 'mist' : h < 46 ? 'leaves' : '';
 }
@@ -19911,7 +20098,7 @@ function featAct(act) {
 MODES.zomb = { name: 'ZOMBIES', short: 'ZOMBIES', icon: 'ZMB', desc: 'Survive round after round of the dead. Start with a pistol, earn points, and buy guns from the Mystery Crate.', teams: false, respawn: 0, score: 0, time: 0, unit: 'ROUNDS' };
 const ZL = { on: false, map: 'blackwell', net: 'solo', code: '' };
 ZL.story = true; try { ZL.story = localStorage.getItem('ashfall.zstoryon') !== 'off'; } catch (e) {}
-try { const zm = localStorage.getItem('ashfall.zmap'); if (['blackwell', 'works', 'terminal9', 'mauiwowie', 'maryjane', 'hightide', 'hotbox'].includes(zm)) ZL.map = zm; } catch (e) {}
+try { const zm = localStorage.getItem('ashfall.zmap'); if (['blackwell', 'works', 'terminal9', 'mauiwowie', 'maryjane', 'hightide', 'bayview', 'hotbox'].includes(zm)) ZL.map = zm; } catch (e) {}
 try { ZL.net = localStorage.getItem('ashfall.znet') === 'coop' ? 'coop' : 'solo'; ZL.code = localStorage.getItem('ashfall.zcode') || ''; } catch (e) {}
 const Z = { zid: 0, targets: [], round: 0, toSpawn: 0, spawnT: 0, breakT: 0, active: false, guns: [], crate: null, ammo: null, boxT: 0, best: { round: 0, pts: 0 } };
 try { Object.assign(Z.best, JSON.parse(localStorage.getItem('ashfall.zbest') || '{}')); } catch (e) {}
@@ -20945,7 +21132,7 @@ function zuApply() {
 }
 function zuNear() { const s = ZU_SPOT; return ZD.up && Math.hypot(P.x - s.x, P.z - s.z) < 2.4 && Math.abs((P.y || 0) - s.y) < 1.5; }
 function zdTick(dt) {
-  zdAnim(dt); try { zuCamoTick(dt); mcTick(); } catch (e) {} try { worksTick(dt); airpTick(dt); isleTick(dt); mjTick(dt); tideTick(dt); hotboxTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); zwwCloudTick(dt); } catch (e) { reportError(e); }
+  zdAnim(dt); try { zuCamoTick(dt); mcTick(); } catch (e) {} try { worksTick(dt); airpTick(dt); isleTick(dt); mjTick(dt); tideTick(dt); bayTick(dt); hotboxTick(dt); zmapTick(dt); zlpTick(dt); zpuTick(dt); zwinTick(dt); zwwTick(dt); zwwCloudTick(dt); } catch (e) { reportError(e); }
   if (ZD.up) { const u = ZD.up, busy = u.t > 0; u.g.userData.beam.material.opacity = 0.08 + Math.sin(NOW * 3) * 0.04; if (busy) u.t -= dt;
     u.ring.rotation.y += dt * (busy ? 9 : 0.8); u.core.material.emissiveIntensity = 1.3 + Math.sin(NOW * 4) * 0.4 + (busy ? 2 : 0); u.lt.intensity = 1.4 + Math.sin(NOW * 4) * 0.3 + (busy ? 2.5 : 0); }
   if (ZD.arrows) ZD.arrows.userData.mat.opacity = 0.85 + Math.sin(NOW * 3) * 0.15;
@@ -21614,7 +21801,7 @@ function zsPower() { if (zsFuses() < 3) return; zsFlag('power'); try { tone(60, 
 // the power: the flickering lights steady and the fuse box goes green
 function zsApplyPower() {
   if (ZS.fusebox) for (const m of ZS.fusebox.slots) m.material.emissive.setHex(0x2adf4a);
-  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); if (curMap === 'mauiwowie') islePower(); if (curMap === 'maryjane') mjPower(); if (curMap === 'hightide') tidePower(); zmapPowerPads(); } catch (e) {}
+  try { if (curMap === 'works') worksPower(); if (curMap === 'terminal9') airpPower(); if (curMap === 'mauiwowie') islePower(); if (curMap === 'maryjane') mjPower(); if (curMap === 'hightide') tidePower(); if (curMap === 'bayview') bayPower(); zmapPowerPads(); } catch (e) {}
   if (curMap === 'blackwell' && typeof HOSP !== 'undefined' && HOSP.flick) for (const f of HOSP.flick) { f.l.intensity = f.i * 1.15; f.t = 1e9; f.on = true; }
 }
 const ZS_SAY = {
@@ -22599,6 +22786,124 @@ ZMAPCFG.hotbox = {
 };
 ZMAP_LIST.push('hotbox');
 try { AUD_PROF.hotbox = { len: 2.0, pow: 2.4, wet: 0.4, echo: 0.22, dark: 0.4, amb: 'hall', surf: 'concrete' }; } catch (e) {}
+/* ================================================================== ZOMBIES CHAPTER SEVEN: BAYVIEW (the finale)
+   The story ends: the Greenline tower, the Chairman who sold Nightshade to the world, and the cure sprayed over the whole
+   town from the crop duster tank. The same plan as the ships, so the doors, perks, windows and pads sit in the same places. */
+ZMAPCFG.bayview = {
+  chapter: 'CHAPTER SEVEN · FINALE', mapLine: 'start on the harbour · the guest list led here',
+  info: 'The Greenline lobby in the middle opens every way. Loop the diner, the pharmacy, the plaza fountain or the lab, turn the tower\'s power on for the LAUNCH PADS, and find the GUN UPGRADER (5000) in the server room by the helipad.',
+  doors: [
+    { name: 'GREENLINE LOBBY', cost: 1000, ax: 'x', c: 26, a: -3, b: 3, y: 0, h: 4, wide: true, path: true },
+    { name: 'BAYVIEW DINER', cost: 1250, ax: 'z', c: -10, a: 16, b: 22, y: 0, h: 4, wide: true },
+    { name: 'GREENLINE PHARMACY', cost: 1250, ax: 'z', c: 10, a: 16, b: 22, y: 0, h: 4, wide: true },
+    { name: 'THE PLAZA', cost: 2000, ax: 'x', c: 12, a: -3, b: 3, y: 0, h: 4, wide: true, path: true },
+    { name: 'DINER BACK DOOR', cost: 1500, ax: 'x', c: 12, a: -22, b: -18, y: 0, h: 4 },
+    { name: 'PHARMACY BACK DOOR', cost: 1500, ax: 'x', c: 12, a: 18, b: 22, y: 0, h: 4 },
+  ],
+  walls: [],
+  path: [[2, 34], [1.5, 30], [0, 27], [0, 24], [0, 19], [0, 15], [0, 12], [0, 9], [0, 4], [0, -1], [0, -4], [3.5, -8], [0, -12], [0, -16], [0, -21], [0, -26], [0, -31], [0, -35], [-1, -37.4]],
+  up: { x: -2.6, z: -39, y: 0 }, strips: [[-5.72, -38.5, 0.04, 6.4], [5.72, -38.5, 0.04, 6.4]],
+  perks: { revive: { x: -24.5, z: 28.5, y: 0, q: 1 }, double: { x: 9.5, z: 22.8, y: 0, q: 3 }, quick: { x: -24.5, z: 14, y: 0, q: 1 }, zoom: { x: 24.5, z: 16, y: 0, q: 3 }, tank: { x: -24.5, z: -20, y: 0, q: 1 }, munch: { x: 24.5, z: -20, y: 0, q: 3 } },
+  pads: [
+    { name: 'THE HARBOUR', x: 8, z: 34.5, y: 0, needs: null },
+    { name: 'THE DINER', x: -16.5, z: 18.5, y: 0, needs: [1] },
+    { name: 'THE HELIPAD', x: -10, z: -33, y: 0, needs: [3, 4, 5] },
+    { name: 'THE PHARMACY', x: 17.5, z: 18.5, y: 0, needs: [2] },
+  ],
+  stash: [
+    { gun: 'viper', cost: 1000, x: -16, z: 26.27, y: 0, q: 0 },
+    { gun: 'striker', cost: 1300, x: -9.73, z: 14.5, y: 0, q: 1 },
+    { gun: 'breacher', cost: 1500, x: -24.73, z: 24, y: 0, q: 1 },
+    { gun: 'marc', cost: 2000, x: 24.73, z: 22, y: 0, q: 3 },
+    { gun: 'hailstorm', cost: 2500, x: 24.73, z: -10, y: 0, q: 3 },
+  ],
+  windows: [{ x: -25, z: 19, y: 0, q: 1 }, { x: -25, z: -8, y: 0, q: 1 }, { x: 25, z: 19, y: 0, q: 3 }, { x: 25, z: -8, y: 0, q: 3 }],
+  story: {
+    items: [
+      { id: 'f1', kind: 'fuse', name: 'TOWER FUSE', at: { x: -12, z: 29, y: 0 } },
+      { id: 'f2', kind: 'fuse', name: 'TOWER FUSE', at: { x: -18.5, z: 25.2, y: 0 } },
+      { id: 'f3', kind: 'fuse', name: 'TOWER FUSE', at: { x: 21, z: 19.5, y: 0 } },
+      { id: 'card', kind: 'card', name: "THE BOARD'S KEYCARD", at: { x: 16, z: -20.8, y: 0 }, needs: 'power' },
+      { id: 'st1', kind: 'stash', look: 'pallet', name: 'NIGHTSHADE STOCK', at: { x: -2, z: -24, y: 0 } },
+      { id: 'st2', kind: 'stash', look: 'pallet', name: 'NIGHTSHADE STOCK', at: { x: 20, z: 24.6, y: 0 } },
+      { id: 'st3', kind: 'stash', look: 'pallet', name: 'NIGHTSHADE STOCK', at: { x: -11, z: -33, y: 0 } },
+      { id: 'jar', kind: 'jar', name: 'THE LAST CURE', at: { x: 7, z: 23.6, y: 0 }, needs: 'card' },
+    ],
+    panel: { x: -9.62, z: 24.2, y: 0 }, cook: { x: -21, z: -17.5, y: 0, secs: 60, need: 9 },
+    chapters: [
+      { id: 'power', name: 'LIGHTS OUT', goal: 'find 3 tower fuses and turn the Greenline tower back on in the lobby' },
+      { id: 'card', name: "THE BOARD'S KEYCARD", goal: 'take the keycard from the boardroom at the end of the long table' },
+      { id: 'stash', name: 'CLOSING DOWN SALE', goal: 'burn the 3 crates of NIGHTSHADE stock (the plaza, the pharmacy, the helipad)' },
+      { id: 'blood', name: 'THE CHAIRMAN', goal: 'kill the Chairman of Greenline and take the formula' },
+      { id: 'jar', name: 'THE SEED VAULT', goal: 'open the vault behind reception and take the last of the cure' },
+      { id: 'cure', name: 'CROP DUSTER', goal: 'load the cure into the crop duster tank in the lab and hold them off' },
+      { id: 'end', name: 'EPILOGUE', goal: 'survive' },
+    ],
+    scenes: [
+      [['sparks', 'The whole tower is dark! Somebody took the fuses! It is always the fuses!'], ['doc', 'Greenline Holdings. They owned the hospital, the works, the ships. It ends in this building.'], ['tank', 'Three fuses. The quay, the diner, the pharmacy. Go.']],
+      [['sparks', 'Power! The sign is on! It says GREENLINE in big green letters! Very green! Too green!'], ['doc', 'The board kept everything locked. Their keycard opens the vault in the lobby.'], ['tank', 'Boardroom. End of the long table. Somebody always sits at the end of the long table.']],
+      [['doc', 'The board minutes. They knew in week one. They sold it anyway. Wellness gummies. Calm pre-rolls. All Nightshade.'], ['smokes', 'Over the counter, man. In a pharmacy. With a loyalty card.'], ['tank', 'Three crates of stock left in town. The plaza, the pharmacy, the helipad. Burn them.']],
+      [['smokes', 'That is the last of it, man. No more Nightshade anywhere. Not one pre-roll.'], ['sparks', 'The lifts are moving! Somebody is coming down from the top floor! In a suit! A very nice suit!'], ['doc', 'The Chairman. He wrote the formula himself. Take it from him and we can end this.']],
+      [['tank', 'The Chairman has left the building. For good.'], ['doc', 'The formula. Nightshade, and on the back page: the Grower\'s cure. He had both all along.'], ['sparks', 'And the board\'s keycard opens the seed vault! The last vault! Last vault ever!']],
+      [['smokes', 'The last of the Grower\'s cure, man. Enough for one town. This town.'], ['doc', 'The crop duster tank in the lab is wired to the helicopter on the roof. Spray it over the whole of Bayview.'], ['tank', 'Sixty seconds to load it. Everybody to the lab. This is the last one. Make it count.']],
+    ],
+    tapes: [
+      { at: { x: 3, z: 36.5, y: 0 }, title: 'BAYVIEW TAPE 1 · THE QUAY', lines: [['tank', 'Bayview harbour. The guest list said three hundred got off here.'], ['smokes', 'And then three hundred more, man. Look at the streets.']] },
+      { at: { x: -2.5, z: 23, y: 0 }, title: 'BAYVIEW TAPE 2 · RECEPTION', lines: [['doc', 'Visitor log. The hospital director. The works manager. The ship captains. All here, all in one week.'], ['sparks', 'Everybody we met! It is like a reunion! A bad reunion!']] },
+      { at: { x: -6, z: 39.5, y: 0 }, title: 'BAYVIEW TAPE 3 · THE FISH MARKET', lines: [['smokes', 'Fresh fish, man. Very fresh. Too fresh. It moved.'], ['tank', 'Keep walking, Smokes.']] },
+      { at: { x: -12.5, z: 21, y: 0 }, title: 'BAYVIEW TAPE 4 · THE DINER', lines: [['sparks', 'Pancakes! Real pancakes! Still warm! How are they still warm!'], ['doc', 'The grill is still on, Penny. Nobody turned it off. Nobody had time.']] },
+      { at: { x: 14.5, z: 19, y: 0 }, title: 'BAYVIEW TAPE 5 · THE PHARMACY', lines: [['doc', 'Greenline Calm. Greenline Sleep. Greenline Focus. Every bottle on this shelf is Nightshade.'], ['smokes', 'They put it in a nice box with a leaf on it, man. That is the worst part.']] },
+      { at: { x: -17, z: -0.5, y: 0 }, title: 'BAYVIEW TAPE 6 · THE BUS STOP', lines: [['tank', 'Timetable says the last bus left four days ago. Full.'], ['doc', 'Then it went inland. We will deal with inland after.']] },
+      { at: { x: -21, z: -5, y: 0 }, title: 'BAYVIEW TAPE 7 · THE LAB', lines: [['sparks', 'Vats! Big purple vats! This is where they made it! I want to blow them up!'], ['doc', 'Not yet. We need the crop duster tank in one piece.']] },
+      { at: { x: 9.5, z: -12, y: 0 }, title: 'BAYVIEW TAPE 8 · THE MINUTES', lines: [['tank', 'Board minutes, week one. Item four: side effects. Item five: projected profits.'], ['smokes', 'Item six: lunch, man. They had lunch after that.']] },
+      { at: { x: 24, z: -23, y: 0 }, title: 'BAYVIEW TAPE 9 · THE PORTRAITS', lines: [['doc', 'The founders. And there, in the corner. The Grower. He worked for them once.'], ['sparks', 'He left! He made the cure instead! Good for him!']] },
+      { at: { x: 4.2, z: -11, y: 0 }, title: 'BAYVIEW TAPE 10 · THE FOUNTAIN', lines: [['smokes', 'Somebody threw coins in the fountain, man. Wishes.'], ['tank', 'Make one. We could use it.']] },
+      { at: { x: 4, z: -37, y: 0 }, title: 'BAYVIEW TAPE 11 · THE SERVER ROOM', lines: [['sparks', 'The purple machine! It has its own server room now! It is moving up in the world!'], ['doc', 'Every Greenline site, on one screen. The hospital, the works, the airport, the island, two ships. And here.']] },
+      { at: { x: 11, z: -41, y: 0 }, title: 'BAYVIEW TAPE 12 · THE HELIPAD', lines: [['tank', 'Helicopter is fuelled. The crop duster rig is fitted underneath.'], ['smokes', 'One last flight, man. Then I am sleeping for a year.']] },
+    ],
+    intro: [
+      ['doc', 'Bayview harbour. The High Tide\'s last port. And the Greenline tower, right on the water.'],
+      ['tank', 'The company that owned all of it. The hospital, the works, the ships. This is where it started.'],
+      ['sparks', 'Then this is where it ends! Big finish! Fireworks! Mostly bullets!'],
+      ['smokes', 'Seven nights, man. Seven nights of smoke and seeds. Let\'s go home after this one.'],
+    ],
+    end: [
+      ['sparks', 'The helicopter is up! The cure is spraying! It is green rain! All over Bayview!'],
+      ['doc', 'Listen. The streets are quiet. They are sitting down. All of them. It is working.'],
+      ['tank', 'Greenline is finished. The formula is ash. Nobody makes Nightshade again.'],
+      ['smokes', 'Seven chapters, man. The hospital, the works, the airport, the island, two ships and a whole town. We did it.'],
+      ['doc', 'The Grower made a cure and nobody listened. We listened.'],
+      ['tank', 'Then we go home. For real this time.'],
+    ],
+    rounds: {
+      2: [['smokes', 'Bayview has a lot of people, man. Had. Has. It is complicated.'], ['sparks', 'Complicated and chasing us!']],
+      4: [['doc', 'They come up from the water. Watch the quay.'], ['tank', 'And the windows. Board them up.']],
+      6: [['sparks', 'Zombies in suits! Office zombies! Middle management zombies!'], ['smokes', 'Still wearing their lanyards, man. Still on the clock.']],
+      8: [['tank', 'The diner is a good spot to hold. Counter on one side, one door each way.'], ['smokes', 'And pancakes.']],
+      10: [['doc', 'Round ten. Still standing. All four of us.'], ['sparks', 'All four! The band is back together!']],
+      15: [['smokes', 'Fifteen rounds in the last town on earth, man. Feels like home.'], ['tank', 'Home has fewer zombies.']],
+      20: [['doc', 'Round twenty. Whatever happens now, we got this far.'], ['tank', 'We get further. Keep moving.']],
+    },
+    say: {
+      doc: { fuse: 'A fuse. They pulled the power to hide.', card: 'The board\'s keycard. Every door in the building.', stash: 'Burn it. Every last box.', jar: 'The last of the cure. Careful.', blood: 'The formula. Both of them. It ends now.', cook: 'Load the tank. Sixty seconds. Hold the lab!' },
+      tank: { fuse: 'Fuse. Two more.', card: 'Keycard. Open their vault.', stash: 'Burn it.', jar: 'Cure in hand. To the lab.', blood: 'Chairman is done. Got the formula.', cook: 'Everybody in the lab! Hold the tank!' },
+      smokes: { fuse: 'A fuse, man. Let there be light.', card: 'A keycard with a little gold leaf on it. Of course.', stash: 'Closing down sale, man. Everything must burn.', jar: 'The good stuff, man. The last of the good stuff.', blood: 'His formula. Handwritten. In green ink. Obviously.', cook: 'Fill her up! Biggest hotbox in history, man! A whole town!' },
+      sparks: { fuse: 'A fuse! The last fuse hunt! Probably!', card: 'A keycard! The fanciest keycard! It is heavy!', stash: 'Burn the stock! Burn it all! Fire sale!', jar: 'The cure! The very last cure! Glowing!', blood: 'The formula! Two pages! One bad, one good!', cook: 'Crop duster on! Spray the town! Shoot everything!' },
+    },
+    text: {
+      title: 'THE LAST TOWN', place: 'BAYVIEW · ZOMBIES · CHAPTER SEVEN · FINALE', introSub: 'SEVEN CHAPTERS · TWELVE TAPES · LAUNCH PADS', introEm: 'the high tide\'s last port · greenline\'s tower',
+      needPower: 'IN THE BOARDROOM · TURN THE TOWER\'S POWER ON FIRST', needCard: "LOCKED IN THE SEED VAULT · YOU NEED THE BOARD'S KEYCARD", stashLocked: "NIGHTSHADE STOCK · YOU NEED THE BOARD'S KEYCARD FOR THE LIGHTER FLUID (CHAPTER 2)",
+      stashVerb: 'BURN IT', panel: 'THE TOWER FUSE BOX', parts: 'TOWER FUSES', panelDo: 'PUT IN THE FUSES AND TURN THE TOWER ON', powerOn: 'THE TOWER IS ON', powerSub: 'the lights are on · the launch pads are live',
+      partSub: 'the fuse box is in the lobby', stashSub: 'burned', jarSub: 'enough cure for one whole town', bloodSub: 'nightshade and the cure, side by side',
+      station: 'CROP DUSTER TANK', cooking: 'LOADING THE CROP DUSTER', cookDo: 'LOAD THE CURE INTO THE CROP DUSTER TANK', cookStay: 'stay in the lab', bar: 'LOADING THE CROP DUSTER',
+      boss: 'THE CHAIRMAN', bossSub: 'he wrote the formula himself · kill him and take it', bossDown: 'THE CHAIRMAN IS DOWN', bossDownSub: 'take the formula', drop: 'THE FORMULA', dropLook: 'ledger',
+      doneSub: 'chapter seven complete · the story is over · every perk · upgraded gun · 5000 points', cont: 'THE END', contSub: 'bayview breathes again · thank you for playing',
+      keyDone: 'ashfall.zstory.bayview', keyTapes: 'ashfall.ztapes.bayview', bossScale: 2.3, bossHp: 16000,
+    },
+  },
+};
+ZMAP_LIST.push('bayview');
+try { AUD_PROF.bayview = { len: 1.4, pow: 2.0, wet: 0.28, echo: 0.12, dark: 0.2, amb: 'wind', surf: 'concrete' }; } catch (e) {}
 /* ================================================================== ZOMBIES EXTRAS: power-ups and wall stashes
    POWER-UPS (themed): a zombie sometimes drops one, floating and glowing; walk through it. It blinks out after 25 s.
      RE-UP (max ammo) · HOTBOX (one hit kills, 30 s) · DOUBLE BAG (double points, 30 s) · KUSH BOMB (every zombie dies,
@@ -23405,6 +23710,7 @@ function campBehind(r) {
 function campEscortTick(dt) {
   const st = CAMP.st, a = campAllyOf(st.who);
   if (!a) { campFail(st.failDie || campChar(st.who).name + ' went down'); return; }
+  if (CAMP.escI >= st.path.length) return;   // done: the step is closing (its lines are playing)
   const p = st.path[CAMP.escI], ap = a.group.position, dP = Math.hypot(ap.x - P.x, ap.z - P.z);
   if (dP > (st.lead || 14)) { CAMP.escPt = { x: ap.x, z: ap.z, y: ap.y }; if (!CAMP.escWait) { CAMP.escWait = true; showMsg(campChar(st.who).name + ' IS WAITING FOR YOU'); } return; }
   CAMP.escWait = false;
@@ -23505,7 +23811,7 @@ function campComplete() {
   let o = $('campEndEl'); if (o) o.remove(); o = document.createElement('div'); o.id = 'campEndEl'; o.className = 'camp-end';
   o.innerHTML = `<div class="ce-box"><small>MISSION ${idx + 1} COMPLETE · ${D.name}</small><b>${m.title}</b>
     <div class="ce-grid">${[['TIME', fmtT(secs)], ['KILLS', MS.kills], ['HEADSHOTS', MS.heads], ['ACCURACY', acc + '%'], ['DEATHS', CAMP.deaths], ['STASH TINS', `${tins.size} / 3`]].map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('')}</div>
-    <div class="ce-xp">+${xp.toLocaleString()} XP${dz ? ` · +${dz} DZ` : ''}</div>${!next && CAMP_MISSIONS.length >= CAMP_PLAN.length ? '<div class="ce-next">FIRST HARVEST · THE END<br><small>THE STORY CONTINUES IN ZOMBIES · CHAPTER ONE: THE GREEN CURE</small></div>' : ''}
+    <div class="ce-xp">+${xp.toLocaleString()} XP${dz ? ` · +${dz} DZ` : ''}</div>${CAMP.m && CAMP.m.id === 'c2m3' ? '<div class="ce-next">SECOND HARVEST · THE END<br><small>THANK YOU FOR PLAYING</small></div>' : CAMP.m && CAMP_MISSIONS.indexOf(CAMP.m) === 11 ? '<div class="ce-next">FIRST HARVEST · THE END<br><small>THE STORY CONTINUES IN ZOMBIES · CHAPTER ONE · CHAPTER TWO: SECOND HARVEST PICKS UP AFTER BAYVIEW</small></div>' : ''}
     <div class="ce-btns">${next ? `<button class="btn primary" data-act="cp-next">NEXT MISSION · ${next.title}</button>` : `<button class="btn primary" data-act="cp-menu">${CAMP_MISSIONS.length < CAMP_PLAN.length ? 'MORE MISSIONS COMING SOON' : 'THE END · BACK TO THE CAMPAIGN'}</button>`}<button class="btn" data-act="cp-menu">MISSION SELECT</button>${!next && CAMP_MISSIONS.length >= CAMP_PLAN.length ? '<button class="btn" data-act="go-zombies">PLAY ZOMBIES · CHAPTER ONE</button>' : ''}</div></div>`;
   document.body.appendChild(o);
   try { sfx.streak(); } catch (e) {}
@@ -23694,7 +24000,7 @@ setTimeout(() => {
   try {
     const tiles = document.querySelector('#menu .cod-tiles'); if (!tiles || document.querySelector('.cp-tile')) return;
     const b = document.createElement('button'); b.className = 'cod-tile cp-tile'; b.dataset.act = 'campaign';
-    b.innerHTML = '<small>STORY &middot; 12 MISSIONS</small><b>CAMPAIGN</b><span>FIRST HARVEST &middot; HOW IT ALL STARTED</span>';
+    b.innerHTML = '<small>STORY &middot; ' + CAMP_MISSIONS.length + ' MISSIONS &middot; 2 CHAPTERS</small><b>CAMPAIGN</b><span>FIRST HARVEST &middot; SECOND HARVEST</span>';
     tiles.insertBefore(b, tiles.children[1] || null);
   } catch (e) {}
 }, 0);
@@ -24239,6 +24545,112 @@ CAMP_MISSIONS.push({
       say: [['tank', 'Doors are locked. We are inside with them. All of us.'], ['smokes', 'Then we do what we do. Stay together. Stay high. Stay alive.']] },
   ],
   end: [['june', 'Harold ran out through the loading dock. His truck, twelve pallets of Nightshade. North, to the Works.'], ['doc', 'And we are locked in Blackwell with a hospital full of them.'], ['smokes', 'Okay. Okay. Here is what we do. We find the generators, we find the keycard, we find the medical weed. I know every back door in this place.'], ['tank', 'Then that is the plan. Survive tonight. Then go after him.'], ['sparks', 'This is how it starts, isn\'t it? This is how everything starts.'], ['june', 'Smoke up, everybody. It is going to be a long night.']],
+});
+/* ================================================================== CAMPAIGN CHAPTER TWO: SECOND HARVEST (1.2.86)
+   After BAYVIEW (zombies chapter seven): the cure is in the air, Greenline is gone, but VANTAGE's last commander,
+   COLONEL RAKE, took the last bus inland with the last crate of Nightshade seeds. June and the survivors start the
+   co-op again at an old farm (THE TRIM HOUSE), meet a contact at the SKATE PARK, and catch Rake at BAYVIEW's
+   helipad before he flies the seeds out. Three missions after LIGHTS OUT. */
+CAMP_PLAN.push('NEW ROOTS', 'THE MEETUP', 'LAST BUS OUT');
+CCHARS.push({ id: 'driver', name: 'DEX · THE DRIVER', col: '#5ac8ff', voice: { want: ['mark', 'david', 'tom', 'male'], female: false, pitch: 0.95, rate: 1.05 } });
+
+/* ---------- 13 · NEW ROOTS (THE TRIM HOUSE) */
+CAMP_MISSIONS.push({
+  id: 'c2m1', title: 'NEW ROOTS', map: 'trimhouse', place: 'CHAPTER TWO · THE TRIM HOUSE', when: 'ONE MONTH LATER · 09:10',
+  brief: 'The cure worked. The towns are waking up. June and the crew have a new farm to start the Green Coast Collective again: an old trim house nobody wanted. Somebody wanted it.',
+  tasks: ['PLANT THE CLONES', 'HOLD THE GREENHOUSE', 'SAVE THE WATER', 'CLEAR THE YARD', 'LIEUTENANT VOSK'],
+  start: { x: 0, z: 24, y: 0, yaw: 0 }, allies: ['tank', 'sparks'], loadout: { p: 'marc', s: 'sidearm', e: 'frag', n: 2 },
+  tins: [{ x: -26, z: -24 }, { x: 26, z: 24 }, { x: -22, z: 6 }],
+  squads: {
+    n1: { alert: true, pts: [{ x: -6, z: -24 }, { x: 0, z: -25 }, { x: 6, z: -24, kind: 'smg' }] },
+    n2: { alert: true, pts: [{ x: -16, z: -22 }, { x: -12, z: -24, kind: 'shotgun' }, { x: 14, z: -22 }, { x: 18, z: -24, kind: 'smg' }] },
+    n3: { alert: true, pts: [{ x: -2, z: -25, kind: 'heavy' }, { x: 4, z: -25 }, { x: -22, z: -18, kind: 'smg' }, { x: 22, z: -18 }] },
+    barn: { pts: [{ x: -20, z: -4, look: 0, path: [[-20, -4], [-16, -4], [-16, 4], [-20, 4]] }, { x: -16, z: 5, look: Math.PI }, { x: -21, z: 2, look: Math.PI / 2 }] },
+    yard: { alert: true, pts: [{ x: 19, z: 6 }, { x: 25, z: -4, kind: 'sniper' }, { x: 18, z: -14, kind: 'shotgun' }, { x: 14, z: 12 }] },
+    vosk: { alert: true, pts: [{ x: 20, z: -18, kind: 'heavy', boss: true, name: 'LIEUTENANT VOSK', hp: 1600, gun: 'titan', scale: 1.15 }, { x: 16, z: -20, kind: 'smg' }, { x: 24, z: -20, kind: 'shotgun' }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'THE NEW FARM', secs: 1, say: [['tank', 'Glass house, a barn, a yard. Nobody has touched it in years.'], ['june', 'Mara would have loved it. We start over. Right here.'], ['sparks', 'I brought clones! Twelve little plants! I named all of them!']] },
+    { type: 'go', goal: 'GO INTO THE GREENHOUSE', at: { x: 0, z: 0, r: 4 }, say: [['june', 'Grow tables still good. Lights still work. We can do this.']] },
+    { type: 'multi', goal: 'PLANT THE CLONES', verb: 'PLANT THE CLONES', secs: 1.6, prop: 'box', spots: [{ x: -4, z: -1.6 }, { x: 0, z: 1.6 }, { x: 4, z: -1.6 }],
+      after: [['sparks', 'Planted! Grow, babies, grow!']] },
+    { type: 'talk', goal: 'LISTEN', secs: 1, say: [['radio', 'All VANTAGE units. Colonel Rake wants that farm. Nobody grows anything there. Move in.'], ['tank', 'VANTAGE. I thought we were done with VANTAGE.'], ['june', 'Not quite. Hold the glass house!']] },
+    { type: 'hold', goal: 'HOLD THE GREENHOUSE', at: { x: 0, z: 0, r: 10 }, secs: 90, cp: true,
+      waves: [{ t: 2, sq: 'n1' }, { t: 28, sq: 'n2' }, { t: 58, sq: 'n3' }],
+      say: [['tank', 'They are coming from the north gate. Glass will not stop bullets for long. Keep moving.']], after: [['sparks', 'They ran away! And the water tastes funny! Purple funny!'], ['june', 'They put something in the barn tank. Nightshade. They are poisoning the water.']] },
+    { type: 'use', goal: 'SHUT OFF THE POISONED TANK IN THE BARN', verb: 'SHUT THE VALVE', secs: 3, prop: 'panel', at: { x: -18.5, z: 6.5, r: 1.8 }, spawn: ['barn'], quiet: true, onAlarm: ['yard'], cp: true,
+      say: [['tank', 'Barn. They left men inside. Quiet if you can.']], after: [['june', 'Valve shut. The clones are safe.']] },
+    { type: 'clear', goal: 'CLEAR THE LOADING YARD', spawn: ['yard'], squads: ['yard', 'barn'], cp: true, say: [['radio', 'The barn is lost. Fall back to the yard.']] },
+    { type: 'boss', goal: 'TAKE DOWN LIEUTENANT VOSK', spawn: ['vosk'], squads: ['vosk'], cp: true,
+      say: [['radio', 'This is Vosk. You burned Greenline. You will not grow a single leaf.'], ['june', 'Watch me.']] },
+  ],
+  end: [['tank', 'Vosk had orders on him. From Colonel Rake. A meeting at the skate park downtown.'], ['june', 'Rake. The one who took the last bus inland.'], ['sparks', 'We should go to the skate park! I have always wanted to go to a skate park!']],
+});
+
+/* ---------- 14 · THE MEETUP (SKATE PARK) */
+CAMP_MISSIONS.push({
+  id: 'c2m2', title: 'THE MEETUP', map: 'skatepark', place: 'CHAPTER TWO · SKATE PARK', when: 'TWO DAYS LATER · 19:30',
+  brief: 'Vosk was meeting someone at the skate park: HAROLD\'s old driver, who knows where Rake took the seeds. Get to him before VANTAGE does, and get him out.',
+  tasks: ['MEET THE DRIVER', 'THE AMBUSH', 'GET HIM TO THE SHACK', 'HOLD THE SHACK', 'THE COURIER'],
+  start: { x: 0, z: 22, y: 0, yaw: 0 }, allies: ['smokes', 'doc', 'driver'], loadout: { p: 'striker', s: 'sidearm', e: 'frag', n: 2 },
+  tins: [{ x: -23, z: -23 }, { x: 23, z: -22 }, { x: 17, z: 2.5 }],
+  squads: {
+    amb1: { alert: true, pts: [{ x: -8, z: -20 }, { x: 0, z: -22, kind: 'smg' }, { x: 8, z: -20 }] },
+    amb2: { alert: true, pts: [{ x: 22, z: -6 }, { x: 22, z: 6, kind: 'shotgun' }, { x: 17, z: -8 }] },
+    sh1: { alert: true, pts: [{ x: -22, z: -18 }, { x: -12, z: -20, kind: 'smg' }, { x: -4, z: -14 }] },
+    sh2: { alert: true, pts: [{ x: -22, z: 18 }, { x: -12, z: 20, kind: 'shotgun' }, { x: -4, z: 14 }] },
+    sh3: { alert: true, pts: [{ x: 6, z: -4, kind: 'heavy' }, { x: 6, z: 4 }, { x: -2, z: -10, kind: 'smg' }, { x: -2, z: 10 }] },
+    courier: { alert: true, pts: [{ x: 10, z: -18, kind: 'heavy', boss: true, name: 'THE COURIER', hp: 1700, gun: 'hailstorm', scale: 1.12 }, { x: 6, z: -20, kind: 'smg' }, { x: 14, z: -20, kind: 'smg' }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'THE SKATE PARK', secs: 1, say: [['smokes', 'I used to skate here, man. Before the back. Before everything.'], ['doc', 'The driver said the funbox in the middle. Eight o\'clock.']] },
+    { type: 'go', goal: 'GO TO THE FUNBOX', at: { x: 0, z: 8.5, r: 3 }, say: [['driver', '...you are not Vosk. Good. Vosk is the reason I am hiding.'], ['june', 'You drove for Harold Voss. Where did Rake take the seeds?']] },
+    { type: 'talk', goal: 'LISTEN', secs: 1, say: [['driver', 'Not here. They followed me. Look. Look at the fence.'], ['radio', 'Target located. Take the driver. Nobody else leaves.']] },
+    { type: 'clear', goal: 'SURVIVE THE AMBUSH', spawn: ['amb1', 'amb2'], squads: ['amb1', 'amb2'], cp: true, say: [['doc', 'Behind the funbox! Use the ramps!']] },
+    { type: 'escort', goal: 'GET THE DRIVER TO THE SNACK SHACK', who: 'driver', hp: 700, lead: 10, cp: true,
+      path: [[0, 4.5], [-6, 4.5], [-11, 3.5], [-14.8, 0], [-17, 0]],
+      say: [['driver', 'The snack shack. It has a back door and a radio.']], after: [['driver', 'I can call it in from here. Give me ninety seconds.']] },
+    { type: 'defend', goal: 'HOLD THE SHACK WHILE HE RADIOS', obj: { x: -17, z: 0, hp: 100, name: 'THE DRIVER', r: 8, dps: 1.4 }, secs: 90, cp: true,
+      waves: [{ t: 2, sq: 'sh1' }, { t: 30, sq: 'sh2' }, { t: 60, sq: 'sh3' }],
+      say: [['smokes', 'Graffiti walls, man. Good cover. Stay behind them.']], after: [['driver', 'Done. Rake is at Bayview. The helipad on the Greenline tower. He flies the seeds out at dawn.']] },
+    { type: 'boss', goal: 'TAKE DOWN THE COURIER', spawn: ['courier'], squads: ['courier'], cp: true,
+      say: [['radio', 'This is the Courier. The colonel sends his regards. And his bill.'], ['doc', 'Big one by the restrooms! Spread out!']] },
+  ],
+  end: [['driver', 'Bayview. The tower. Dawn. That is all I know.'], ['june', 'Then we go back to Bayview. One more time.'], ['smokes', 'I liked Bayview, man. It had pancakes.']],
+});
+
+/* ---------- 15 · LAST BUS OUT (BAYVIEW) */
+CAMP_MISSIONS.push({
+  id: 'c2m3', title: 'LAST BUS OUT', map: 'bayview', place: 'CHAPTER TWO · BAYVIEW', when: 'DAWN',
+  brief: 'Colonel Rake has the last crate of Nightshade seeds and a helicopter on top of the Greenline tower. If those seeds leave Bayview, it all starts again. It ends here.',
+  tasks: ['THE HARBOUR', 'THE TIMETABLE', 'THE PLAZA', 'THE SEEDS', 'THE HELICOPTER', 'COLONEL RAKE'],
+  start: { x: 2, z: 34, y: 0, yaw: 0 }, allies: ['tank', 'doc', 'smokes', 'sparks'], loadout: { p: 'marc', s: 'sidearm', e: 'frag', n: 3 },
+  tins: [{ x: -20, z: 37 }, { x: 22.5, z: 15.5 }, { x: -4, z: -40 }],
+  squads: {
+    lob: { alert: true, pts: [{ x: 4, z: 22 }, { x: -6, z: 16, kind: 'smg' }, { x: 7, z: 14 }] },
+    plz1: { alert: true, pts: [{ x: -5, z: -2 }, { x: 5, z: -4, kind: 'smg' }, { x: -6, z: -14 }, { x: 6, z: -14, kind: 'shotgun' }] },
+    plz2: { alert: true, pts: [{ x: -16, z: -14, kind: 'heavy' }, { x: 16, z: -10 }, { x: 0, z: -22, kind: 'sniper' }] },
+    lab: { alert: true, pts: [{ x: -14, z: -12 }, { x: -17, z: -4, kind: 'smg' }, { x: -12, z: -22 }] },
+    h1: { alert: true, pts: [{ x: -10, z: -26 }, { x: 0, z: -28, kind: 'smg' }, { x: 10, z: -26 }] },
+    h2: { alert: true, pts: [{ x: -12, z: -36 }, { x: -8, z: -30, kind: 'shotgun' }, { x: 4, z: -32 }, { x: 14, z: -30, kind: 'smg' }] },
+    h3: { alert: true, pts: [{ x: 0, z: -30, kind: 'heavy' }, { x: -14, z: -30 }, { x: 14, z: -28 }] },
+    rake: { alert: true, pts: [{ x: 0, z: -24, kind: 'officer', boss: true, name: 'COLONEL RAKE', hp: 2200, gun: 'deadeye', scale: 1.1 }, { x: -6, z: -22, kind: 'heavy' }, { x: 6, z: -22, kind: 'heavy' }] },
+  },
+  steps: [
+    { type: 'talk', goal: 'BACK TO BAYVIEW', secs: 1, say: [['sparks', 'Bayview! It is so quiet now! Nobody is chasing us!'], ['tank', 'Yet.'], ['doc', 'The tower. Rake is on the roof. The seeds are with him or close by.']] },
+    { type: 'clear', goal: 'FIGHT INTO THE GREENLINE LOBBY', spawn: ['lob'], squads: ['lob'], cp: true, say: [['radio', 'Movement at the harbour. All units, the lobby.']] },
+    { type: 'use', goal: 'READ THE BUS TIMETABLE', verb: 'READ IT', secs: 1.5, at: { x: -2, z: 8.5, r: 2.2 },
+      say: [['june', 'The bus stop. Rake took the last bus inland. Then he came back. Why come back?']], after: [['doc', 'Somebody wrote on it. LAB. Seeds in the lab. He left them where they were made.']] },
+    { type: 'clear', goal: 'TAKE THE PLAZA', spawn: ['plz1', 'plz2'], squads: ['plz1', 'plz2'], cp: true, say: [['smokes', 'The fountain, man! Use the fountain!']] },
+    { type: 'carry', goal: 'CARRY THE SEED CRATE FROM THE LAB TO THE HELIPAD', item: 'THE LAST SEEDS', at: { x: -16, z: -9, r: 1.8 }, to: { x: 8, z: -31, r: 3 }, spawn: ['lab', 'h1'], cp: true,
+      say: [['tank', 'Grab it. We burn it where Rake can watch.']], after: [['june', 'Here. On his own helipad.']] },
+    { type: 'defend', goal: 'HOLD THE HELIPAD WHILE THE SEEDS BURN', obj: { x: 8, z: -31, hp: 100, name: 'THE FIRE', r: 9, dps: 1.6 }, secs: 75, cp: true,
+      waves: [{ t: 2, sq: 'h2' }, { t: 35, sq: 'h3' }],
+      say: [['sparks', 'Fire! Big fire! The best fire! Keep them off it!']], after: [['radio', 'This is Colonel Rake. You have burned the last of it. Then I will take it out of your hides.']] },
+    { type: 'boss', goal: 'TAKE DOWN COLONEL RAKE', spawn: ['rake'], squads: ['rake'], cp: true,
+      say: [['june', 'It is over, Rake. No seeds. No Greenline. No VANTAGE.'], ['radio', 'It is never over, Miss Alvarez. Not while people want something to make the pain stop.'], ['doc', 'They have a cure now. They have us.']] },
+  ],
+  end: [['june', 'Rake is down. The seeds are ash. The helicopter can stay where it is.'], ['tank', 'So what now?'], ['june', 'Now we grow. The Trim House. The co-op. Like Mara wanted.'], ['smokes', 'Second harvest, man. Better than the first.'], ['sparks', 'I will name every plant!']],
 });
 /* ================================================================== launch polish: error reports, save codes, blocking
    ERROR REPORTS: every red error is kept (the last 30, with the version, the mode, the map and the screen) and the red
@@ -25087,6 +25499,7 @@ function actions(act) {
     case 'cus-back': if (cusReturn === 'lobby') renderLobby(); showScreen(cusReturn); break;
     case 'cus-start': startCustom(); break;
     case 'tour': openTour(); break;
+    case 'editor': edOpen(); break;
     case 'trophies': TRO.ret = curScreen || 'menu'; openTrophies(); break;
     case 'stats': statsReturn = curScreen || 'lobby'; statOnline = !!(MODES[LOBBY.mode] && MODES[LOBBY.mode].online); renderStats(); showScreen('career'); break;
     case 'stats-back': if (statsReturn === 'lobby') renderLobby(); showScreen(statsReturn); break;
@@ -25590,7 +26003,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { ccSpawnL: n => campSpawnSquad(n, { alert: true }), ccPlayL: (a, b) => campPlay(a, b), ccStepL: () => campStepDone(), ccDmgL: (...a) => damageEnemy(...a), ccDoneL: () => campComplete(), ccJoin, ccLeave, CC_GET: () => CC, ccHost: () => ccHost(), ccClient: () => ccClient(), edOpen, edPlay, edCode, edUncode, edDefine, ED_GET: () => ED, ISLE_W, isleWinter, chwOpen, CHW_GET: () => CHW, zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
@@ -25885,6 +26298,375 @@ function clipBtns() {
   $('rpVid').textContent = RV.recVid ? '■ STOP VIDEO' : 'VIDEO';
 }
 (() => { const old = openReplay; openReplay = function (pick) { const r = old.apply(this, arguments); try { clipBtns(); } catch (e) {} return r; }; })();
+/* ================================================================== WALK-IN CREW STASH HOUSE (1.2.86)
+   CREW > THE STASH HOUSE > WALK IN: the hideout as a room you can walk around in, built from what the crew has
+   unlocked (CH_UPS): the bulb, the couch and rug, the crew tag in neon, the pool table, the grow tent, the arcade
+   cabinet, the DJ booth and the penthouse window. The trophy shelf holds a trophy for each zombies story the crew has
+   finished, and the CREW WARS board shows this week's standings.
+   Press USE at: the RADIO (changes station; the radio plays in here), the ARCADE (an AIM TRAINER drill), the CREW
+   WARS board, and the DOOR (back to the menu). It runs as a firing-range match (cfg.house), so nothing counts. */
+const CHW = { spots: [], prompt: '' };
+function chwLevel() { try { const T = chTotals(); return T ? T : { lvl: 0, story: 0, cp: 0, members: 1 }; } catch (e) { return { lvl: 0, story: 0, cp: 0, members: 1 }; } }
+function chwBoardMat() {
+  const c = document.createElement('canvas'); c.width = 512; c.height = 384; const g = c.getContext('2d');
+  g.fillStyle = '#0b0f0c'; g.fillRect(0, 0, 512, 384); g.strokeStyle = '#5dff7a'; g.lineWidth = 6; g.strokeRect(6, 6, 500, 372);
+  g.fillStyle = '#5dff7a'; g.font = 'bold 34px sans-serif'; g.fillText('CREW WARS', 24, 52); g.font = '18px sans-serif'; g.fillStyle = '#8a9a8a'; g.fillText('this week · crew kills', 24, 80);
+  let rows = []; try { rows = cwStandings().slice(0, 7); } catch (e) {}
+  rows.forEach((r, i) => { g.fillStyle = r.mine ? '#5dff7a' : '#e8e8e8'; g.font = 'bold 24px sans-serif'; g.fillText(`${i + 1}. [${r.tag}] ${String(r.n || '').slice(0, 14)}`, 24, 124 + i * 36); g.textAlign = 'right'; g.fillText(String(r.k), 488, 124 + i * 36); g.textAlign = 'left'; });
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
+}
+function chwSkyline() {
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 200; const g = c.getContext('2d');
+  const sky = g.createLinearGradient(0, 0, 0, 200); sky.addColorStop(0, '#05060f'); sky.addColorStop(1, '#2a1a3a'); g.fillStyle = sky; g.fillRect(0, 0, 1024, 200);
+  let s = 7; const r = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  for (let x = 0; x < 1024;) { const w = 30 + r() * 60, h = 50 + r() * 130; g.fillStyle = '#0b0c14'; g.fillRect(x, 200 - h, w, h);
+    for (let wy = 200 - h + 8; wy < 194; wy += 11) for (let wx = x + 5; wx < x + w - 6; wx += 9) if (r() < 0.35) { g.fillStyle = r() < 0.8 ? '#ffd27a' : '#7fd16b'; g.fillRect(wx, wy, 4, 5); }
+    x += w + 2; }
+  const t = new THREE.CanvasTexture(c); t.encoding = THREE.sRGBEncoding; return new THREE.MeshBasicMaterial({ map: t, toneMapped: false });
+}
+function buildCrewHouse() {
+  buildMap2Materials(); isleMaterials();
+  const T = chwLevel(), L = T.lvl, tag = (PROG.crew && PROG.crew.tag) || 'CREW', W = 16, D = 11, H = 3.4;
+  CHW.spots = [];
+  floorQuad(0, 0, 40, 40, -0.01, 'concrete', 8);
+  floorQuad(0, 0, W, D, 0.01, L >= 7 ? 'carpet' : 'wood', 4);
+  // the walls (the north one gets a big window at the penthouse), the door in the south wall
+  wkX(D / 2, -W / 2, W / 2, H, 'brick', [[0, 1.4, 0, 2.3]]);
+  wkX(-D / 2, -W / 2, W / 2, H, 'brick', L >= 7 ? [[0, 9, 0.6, 2.4]] : []);
+  wkZ(-W / 2, -D / 2, D / 2, H, 'brick'); wkZ(W / 2, -D / 2, D / 2, H, 'brick');
+  blk(0, 0, W + 0.5, D + 0.5, 0.25, 'dark', { y: H, noCol: true });
+  lampLight(0, H - 0.4, 0, 0xffc27a, L >= 1 ? 0.9 : 0.6, 14); CYL('glass', 0.08, 0.08, 0.16, 8, 0, H - 0.35, 0, 0, 0, 0, false);
+  CHW.spots.push({ k: 'door', x: 0, z: D / 2 - 0.6, t: 'THE DOOR · BACK TO THE MENU' });
+  // the radio on a crate by the door (always there)
+  blk(-6.6, 4.4, 0.8, 0.6, 0.6, 'wood', { walk: false }); B('dark', 0.5, 0.3, 0.25, -6.6, 0.75, 4.4, 0, 0, 0, false);
+  CHW.spots.push({ k: 'radio', x: -6.6, z: 4.4, t: 'THE RADIO · CHANGE STATION' });
+  // the CREW WARS board on the east wall
+  MAT.chwBoard = chwBoardMat(); batchAdd('chwBoard', new THREE.PlaneGeometry(2.4, 1.8), mat4(W / 2 - 0.27, 1.8, 2, 0, -Math.PI / 2, 0), false);
+  CHW.spots.push({ k: 'board', x: W / 2 - 1, z: 2, t: 'CREW WARS · THIS WEEK' });
+  // the trophy shelf (west wall): one trophy per zombies story finished
+  blk(-W / 2 + 0.35, -2, 0.4, 3, 0.08, 'wood', { y: 1.6, noCol: true });
+  if (!MAT.chwGold) MAT.chwGold = new THREE.MeshStandardMaterial({ color: C(0x7fd16b), metalness: 0.8, roughness: 0.25, emissive: C(0x1a3a10) });
+  for (let i = 0; i < Math.min(7, T.story | 0); i++) { const z = -3.2 + i * 0.48; CYL('chwGold', 0.09, 0.06, 0.18, 10, -W / 2 + 0.35, 1.77, z, 0, 0, 0, false); CYL('chwGold', 0.12, 0.05, 0.14, 10, -W / 2 + 0.35, 1.93, z, 0, 0, 0, false); }
+  if (L >= 1) { blk(-2, -3.6, 3, 1, 0.45, 'cloth2', { walk: false }); blk(-2, -4.1, 3, 0.3, 0.9, 'cloth2', { walk: false }); for (const s of [-1, 1]) blk(-2 + s * 1.4, -3.6, 0.25, 1, 0.65, 'cloth2', { walk: false }); floorQuad(-2, -2, 4, 2.6, 0.02, 'carpet', 1); blk(-2, -1.9, 1.4, 0.7, 0.42, 'wood', { walk: false }); }
+  if (L >= 2) { if (!MAT.chwNeon || MAT.chwNeon.userData.tag !== tag) { MAT.chwNeon = neonMat(tag, '#ff5ad0', 'STASH HOUSE', '#0a060a', 512, 192); MAT.chwNeon.userData.tag = tag; } batchAdd('chwNeon', new THREE.PlaneGeometry(2.6, 0.98), mat4(-6.2, 2.3, -D / 2 + 0.27, 0, 0, 0), false); lampLight(-6, 2.2, -4.4, 0xff5ad0, 0.5, 6); }
+  if (L >= 3) { blk(3.5, 0, 2.6, 1.4, 0.8, 'wood', { walk: false }); B('leafGreen', 2.4, 0.04, 1.2, 3.5, 0.82, 0, 0, 0, 0, false); lampLight(3.5, 2.4, 0, 0xfff0c0, 0.5, 5); }
+  if (L >= 4) { blk(6.3, -3.6, 2, 2, 2.1, 'dark', { walk: false }); for (let i = 0; i < 3; i++) islePlant(5.7 + i * 0.6, -2.5, 0, 1.0, 'purpleLeaf'); lampLight(6.3, 2, -2.4, 0xd27aff, 0.7, 5); }
+  if (L >= 5) { blk(-6.8, -1, 0.9, 0.8, 1.8, 'dark', { walk: false }); if (!MAT.chwScreen) MAT.chwScreen = new THREE.MeshBasicMaterial({ color: C(0x5ac8ff), toneMapped: false }); batchAdd('chwScreen', new THREE.PlaneGeometry(0.6, 0.45), mat4(-6.34, 1.4, -1, 0, Math.PI / 2, 0), false);
+    CHW.spots.push({ k: 'arcade', x: -6.2, z: -1, t: 'THE ARCADE · PLAY GRIDSHOT' }); }
+  if (L >= 6) { blk(5.5, 3.6, 2.4, 0.9, 1.0, 'dark', { walk: false }); for (const s of [-1, 1]) blk(5.5 + s * 1.6, 3.9, 0.6, 0.6, 1.4, 'dark', { walk: false }); lampLight(5.5, 2.6, 2.6, 0x5ac8ff, 0.6, 6); lampLight(3, 2.6, 3, 0xff5ad0, 0.5, 6);
+    CHW.spots.push({ k: 'radio', x: 5.5, z: 2.8, t: 'THE DJ BOOTH · CHANGE STATION' }); }
+  if (L >= 7) { if (!MAT.chwCity) MAT.chwCity = chwSkyline(); batchAdd('chwCity', new THREE.PlaneGeometry(14, 2.6), mat4(0, 1.6, -D / 2 - 3, 0, 0, 0), false); }
+}
+defineMap({
+  id: 'crewhouse', hidden: true, name: 'THE STASH HOUSE', place: "Your crew's hideout", desc: "Your crew's hideout.", play: [-8, 8, -5.5, 5.5], arena: 12, build: buildCrewHouse,
+  env: { top: 0x0a0c14, horizon: 0x1a1a24, fog: 0.01, sun: [10, 30, 10], sunCol: 0x8890a0, sunI: 0.35, skySun: 0x404858, hemiSky: 0x5a5a6a, hemiGround: 0x2a2420, exposure: 1.4 },
+  grass: { count: 0 }, spawnMaxY: 0.5,
+  layout: { spawn: [{ x: 0, z: 3.6 }, { x: 0, z: 3.6 }], hp: [{ x: 0, z: 0 }], flags: [{ x: 0, z: 3 }, { x: 0, z: -3 }], sites: [{ x: -3, z: 0, n: 'A' }, { x: 3, z: 0, n: 'B' }] },
+  menu: { x: 0, z: 0, r: 4, y: 1.8 }, views: [[0, 1.7, 4, 0, 1.4, -3]],
+});
+function chwOpen() {
+  if (!PROG.crew) return false; try { sfx.ui(); } catch (e) {}
+  if (curMap === 'crewhouse') curMap = null;   // rebuilt every visit: the crew's level may have changed
+  startMatch('range', { map: 'crewhouse', house: true }); return true;
+}
+// (from rangeStart) set the room up instead of the targets
+function chwStart() {
+  buildSpawns(); G.breakT = 1e9; G.waveActive = false; G.maxHp = G.health = 100;
+  const me = { name: 'YOU', team: 0, isPlayer: true, kills: 0, deaths: 0, score: 0, obj: 0, level: 0, alive: true }; M.entries.push(me); M.me = me;
+  placePlayer({ x: 0, z: 3.6 }); P.yaw = 0; RG.on = false; RG.spots = []; RG.dummies = [];
+  G.state = 'playing'; showScreen(null); lockPointer(); updateModeHud(true);
+  const T = chwLevel(); showBanner('THE STASH HOUSE', `${CH_UPS[T.lvl][1]} · ${T.cp.toLocaleString()} crew points`);
+}
+function chwTick(dt) {
+  if (!M || !M.cfg || !M.cfg.house || G.state !== 'playing') return;
+  let near = null; for (const s of CHW.spots) if (Math.hypot(P.x - s.x, P.z - s.z) < 1.6) { near = s; break; }
+  const u = kb('use') || pad.use;
+  if (near) { G.interactTxt = `${near.t} · ${actName('use')}`; try { showMsg(G.interactTxt); } catch (e) {} }
+  if (near && u && !CHW.uH) {
+    if (near.k === 'door') { try { sfx.ui(); leaveGame(); showScreen('menu'); } catch (e) {} }
+    else if (near.k === 'radio') { const i = RADIO.findIndex(r => r.id === radioSt().id); radioSet(RADIO[(i + 1) % RADIO.length].id); }
+    else if (near.k === 'arcade') { try { aimStart('grid'); } catch (e) {} }
+    else if (near.k === 'board') { try { const R = cwStandings(), me = R.findIndex(r => r.mine); showBanner('CREW WARS', me >= 0 ? `your crew is #${me + 1} this week` : 'make or join a crew to climb'); } catch (e) {} }
+  }
+  CHW.uH = u;
+}
+// the hooks: rangeStart / rangeTick / the range HUD hand over to the house; the radio plays in here
+(() => {
+  const s0 = rangeStart; rangeStart = function (cfg) { if (cfg && cfg.house) return chwStart(); return s0.apply(this, arguments); };
+  const t0 = rangeTick; rangeTick = function (dt) { if (M && M.cfg && M.cfg.house) return chwTick(dt); return t0.apply(this, arguments); };
+  const h0 = rangeHud; rangeHud = function () { if (M && M.cfg && M.cfg.house) { const h = $('rangeHud'); if (h) h.classList.add('hide'); return; } return h0.apply(this, arguments); };
+  const w0 = musWanted; musWanted = function () { if (M && M.cfg && M.cfg.house && inMatch() && G.state === 'playing') return 0.7; return w0.apply(this, arguments); };
+})();
+/* ================================================================== MAP EDITOR (1.2.86)
+   CUSTOM > MAP EDITOR: draw your own map from above on a 1 m grid and play it against bots.
+     WALL   - drag a line (it snaps straight, along x or z): a 3 m wall
+     LOW    - click: waist-high cover (2 x 1)        TALL - click: a 2 x 2 pillar
+     CRATE  - click: a wooden crate                  RAMP - click: a 2 m platform with a ramp up to it
+     SPAWN A / SPAWN B - click: where each team starts   POINT - click: the hardpoint / the middle
+     ERASE  - click anything to remove it
+   SIZE 40 / 48 / 60 m, a LOOK (day, night, snow, dusk), five save slots, PLAY (TDM, FFA, KILL CONFIRMED, HARDPOINT,
+   DOMINATION) and SHARE / PASTE CODE (DZM1-...) to swap maps with friends. Offline only for now (the other players
+   would need your map). Saved in ashfall.maps.v1. */
+const ED_KEY = 'ashfall.maps.v1', ED_TOOLS = [['wall', 'WALL'], ['low', 'LOW'], ['tall', 'TALL'], ['crate', 'CRATE'], ['ramp', 'RAMP'], ['spawnA', 'SPAWN A'], ['spawnB', 'SPAWN B'], ['point', 'POINT'], ['erase', 'ERASE']];
+const ED_LOOKS = {
+  day: { n: 'DAY', floor: 'concrete', wall: 'brick', env: { top: 0x4a7ac8, horizon: 0xd8e0e8, fog: 0.006, sun: [30, 60, 20], sunCol: 0xfff0d8, sunI: 1.3, skySun: 0xffe8c0, hemiSky: 0xb8d0e8, hemiGround: 0x5a5a40, exposure: 1.1 } },
+  night: { n: 'NIGHT', floor: 'asphalt', wall: 'bayTower', env: { top: 0x070b18, horizon: 0x26203a, fog: 0.012, sun: [40, 55, -30], sunCol: 0x9ab0e8, sunI: 0.85, skySun: 0x6a7aa8, hemiSky: 0x5a6a9a, hemiGround: 0x2a2018, exposure: 1.5 } },
+  snow: { n: 'SNOW', floor: 'snow', wall: 'panel', env: { top: 0xb4c0cc, horizon: 0xe8eef4, fog: 0.009, sun: [-40, 45, 30], sunCol: 0xe8f0ff, sunI: 1.4, skySun: 0xe0e8f0, hemiSky: 0xd8e4f0, hemiGround: 0x9aa4ae, exposure: 1.05 } },
+  dusk: { n: 'DUSK', floor: 'ground', wall: 'redBarn', env: { top: 0x3a4a8a, horizon: 0xff9a5a, fog: 0.007, sun: [-40, 22, -10], sunCol: 0xffb070, sunI: 1.1, skySun: 0xffa060, hemiGround: 0x5a4a40, hemiSky: 0xc0a0b0, exposure: 1.2 } },
+};
+const ED = { tool: 'wall', slot: 0, map: null, drag: null, mode: 'tdm' };
+const edBlank = () => ({ name: 'MY MAP', size: 48, look: 'day', items: [], A: { x: 0, z: 20 }, B: { x: 0, z: -20 }, P: { x: 0, z: 0 } });
+function edAll() { try { const a = JSON.parse(localStorage.getItem(ED_KEY) || 'null'); if (Array.isArray(a)) return a; } catch (e) {} return []; }
+function edSave() { const a = edAll(); a[ED.slot] = ED.map; try { localStorage.setItem(ED_KEY, JSON.stringify(a)); } catch (e) {} }
+function edLoad(i) { ED.slot = i; const a = edAll(); ED.map = a[i] ? Object.assign(edBlank(), a[i]) : edBlank(); if (!a[i]) ED.map.name = 'MY MAP ' + (i + 1); }
+// ---------- the map from the drawing
+const edH = s => s / 2 - 1;
+function edBuildFrom(m) {
+  const L = ED_LOOKS[m.look] || ED_LOOKS.day, H = m.size / 2;
+  try { buildMap2Materials(); bayMaterials(); } catch (e) {}
+  floorQuad(0, 0, m.size + 30, m.size + 30, 0, L.floor, 8);
+  for (const [x, z, w, d] of [[0, -H - 0.2, m.size + 0.8, 0.4], [0, H + 0.2, m.size + 0.8, 0.4], [-H - 0.2, 0, 0.4, m.size + 0.8], [H + 0.2, 0, 0.4, m.size + 0.8]]) blk(x, z, w, d, 4, L.wall, { walk: false });
+  for (const it of m.items) {
+    if (it.t === 'wall') { const along = Math.abs(it.z1 - it.z0) < 0.01, len = Math.hypot(it.x1 - it.x0, it.z1 - it.z0); if (len < 0.5) continue; blk((it.x0 + it.x1) / 2, (it.z0 + it.z1) / 2, along ? len : 0.4, along ? 0.4 : len, 3, L.wall, { walk: false }); }
+    else if (it.t === 'low') blk(it.x, it.z, it.r ? 1 : 2, it.r ? 2 : 1, 1.1, 'concrete', { walk: false });
+    else if (it.t === 'tall') blk(it.x, it.z, 2, 2, 3, L.wall, { walk: false });
+    else if (it.t === 'crate') crate(it.x, it.z, 1.2);
+    else if (it.t === 'ramp') { blk(it.x, it.z, 3, 3, 2, 'concrete', { walk: true }); ramp(it.x, it.z + 1.5, 's', 2, 3.6, 2, 0); }
+  }
+  for (const [p, c] of [[m.A, 0x5ab8ff], [m.B, 0xff5a5a]]) { const r = new THREE.Mesh(new THREE.RingGeometry(0.9, 1.1, 24), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.6, side: THREE.DoubleSide, depthWrite: false })); r.rotation.x = -Math.PI / 2; r.position.set(p.x, 0.03, p.z); scene.add(r); }
+  if (m.look === 'night') for (const p of [m.A, m.B, m.P]) lampLight(p.x, 4, p.z, 0xffd0a0, 0.8, 16);
+}
+function edDefine(m) {
+  const H = edH(m.size), A = m.A, B = m.B, P = m.P, mid = (a, b, k) => ({ x: a.x + (b.x - a.x) * k, z: a.z + (b.z - a.z) * k });
+  const side = (k) => { const dx = B.x - A.x, dz = B.z - A.z, L = Math.hypot(dx, dz) || 1; return { x: clamp(P.x - dz / L * k, -H + 2, H - 2), z: clamp(P.z + dx / L * k, -H + 2, H - 2) }; };
+  const map = { id: 'edit_map', hidden: true, name: String(m.name || 'MY MAP').toUpperCase().slice(0, 24), place: 'Your own map', desc: 'A map you made in the editor.', play: [-H, H, -H, H], arena: Math.ceil(m.size / 2 + 6), build: () => edBuildFrom(m),
+    env: Object.assign({}, (ED_LOOKS[m.look] || ED_LOOKS.day).env), grass: { count: 0 }, spawnMaxY: 2.5,
+    layout: { spawn: [{ x: A.x, z: A.z }, { x: B.x, z: B.z }], hp: [{ x: P.x, z: P.z }, side(H * 0.5), side(-H * 0.5)], flags: [{ x: A.x, z: A.z }, { x: B.x, z: B.z }], sites: [Object.assign(side(H * 0.45), { n: 'A' }), Object.assign(side(-H * 0.45), { n: 'B' })] },
+    menu: { x: P.x, z: P.z, r: 10, y: 2.2 }, navPts: [A, B, P, mid(A, P, 0.5), mid(B, P, 0.5)], views: [[A.x, 1.7, A.z, P.x, 1.2, P.z]] };
+  MAPS.edit_map = map; if (!MAP_ORDER.includes('edit_map')) MAP_ORDER.push('edit_map'); return map;
+}
+function edPlay() {
+  edSave(); edDefine(ED.map); if (curMap === 'edit_map') curMap = null; const o = $('edOv'); if (o) o.remove();
+  const d = MODES[ED.mode]; startMatch(ED.mode, { map: 'edit_map', custom: true, perTeam: d && d.teams ? 4 : 0, players: 6 });
+}
+// ---------- share codes: DZM1- + base64 of the JSON, made compact
+function edCode(m) { const c = { n: m.name, s: m.size, l: m.look, a: [m.A.x, m.A.z], b: [m.B.x, m.B.z], p: [m.P.x, m.P.z], i: m.items.map(it => it.t === 'wall' ? ['w', it.x0, it.z0, it.x1, it.z1] : [it.t[0] + (it.t === 'tall' ? 'a' : ''), it.x, it.z, it.r ? 1 : 0]) }; return 'DZM1-' + btoa(unescape(encodeURIComponent(JSON.stringify(c)))); }
+function edUncode(s) {
+  s = String(s || '').trim(); if (!s.startsWith('DZM1-')) return null; let c; try { c = JSON.parse(decodeURIComponent(escape(atob(s.slice(5))))); } catch (e) { return null; }
+  const T = { w: 'wall', l: 'low', ta: 'tall', c: 'crate', r: 'ramp' }, num = v => clamp(+v || 0, -40, 40);
+  const m = edBlank(); m.name = String(c.n || 'SHARED MAP').slice(0, 24); m.size = [40, 48, 60].includes(+c.s) ? +c.s : 48; m.look = ED_LOOKS[c.l] ? c.l : 'day';
+  for (const k of ['a', 'b', 'p']) if (Array.isArray(c[k])) m[k === 'a' ? 'A' : k === 'b' ? 'B' : 'P'] = { x: num(c[k][0]), z: num(c[k][1]) };
+  m.items = (Array.isArray(c.i) ? c.i : []).slice(0, 400).map(q => q[0] === 'w' ? { t: 'wall', x0: num(q[1]), z0: num(q[2]), x1: num(q[3]), z1: num(q[4]) } : T[q[0]] ? { t: T[q[0]], x: num(q[1]), z: num(q[2]), r: !!q[3] } : null).filter(Boolean);
+  return m;
+}
+// ---------- the editor screen
+function edOpen() {
+  if (!ED.map) edLoad(0); let o = $('edOv'); if (o) o.remove(); o = document.createElement('div'); o.id = 'edOv'; document.body.appendChild(o); edRender();
+}
+function edRender() {
+  const o = $('edOv'); if (!o) return; const m = ED.map, all = edAll();
+  o.innerHTML = `<div class="ed-p"><div class="ed-top"><b>MAP EDITOR</b><input id="edName" maxlength="24" value="${String(m.name).replace(/"/g, '')}"><span>${m.items.length} pieces</span></div>
+  <div class="ed-main"><canvas id="edCv" width="600" height="600"></canvas><div class="ed-side">
+    <small>TOOL</small><div class="ed-g">${ED_TOOLS.map(([k, n]) => `<button class="p2-s${ED.tool === k ? ' on' : ''}" data-ed="tool:${k}"><b>${n}</b></button>`).join('')}</div>
+    <small>SIZE</small><div class="ed-g">${[40, 48, 60].map(s => `<button class="p2-s${m.size === s ? ' on' : ''}" data-ed="size:${s}"><b>${s} M</b></button>`).join('')}</div>
+    <small>LOOK</small><div class="ed-g">${Object.entries(ED_LOOKS).map(([k, L]) => `<button class="p2-s${m.look === k ? ' on' : ''}" data-ed="look:${k}"><b>${L.n}</b></button>`).join('')}</div>
+    <small>SLOT</small><div class="ed-g">${[0, 1, 2, 3, 4].map(i => `<button class="p2-s${ED.slot === i ? ' on' : ''}" data-ed="slot:${i}"><b>${i + 1}${all[i] ? '' : ' ·'}</b></button>`).join('')}</div>
+    <small>PLAY AS</small><div class="ed-g">${['tdm', 'ffa', 'kc', 'hp', 'dom'].filter(k => MODES[k]).map(k => `<button class="p2-s${ED.mode === k ? ' on' : ''}" data-ed="mode:${k}"><b>${MODES[k].short}</b></button>`).join('')}</div>
+    <div class="ed-g ed-a"><button class="btn" data-ed="share">SHARE CODE</button><button class="btn" data-ed="paste">PASTE CODE</button><button class="btn" data-ed="clear">CLEAR</button></div>
+    <div class="ed-g ed-a"><button class="btn" data-ed="x">CLOSE</button><button class="btn primary" data-ed="play">PLAY IT</button></div>
+    <p class="ed-tip">drag for walls · click for the rest · right-click to rotate low cover</p></div></div></div>`;
+  const nm = $('edName'); nm.onkeydown = e => e.stopPropagation(); nm.oninput = () => { m.name = nm.value; edSave(); };
+  for (const b of o.querySelectorAll('[data-ed]')) b.onclick = () => { const [k, v] = b.dataset.ed.split(':'); try { sfx.ui(); } catch (e) {}
+    if (k === 'tool') ED.tool = v; else if (k === 'size') { m.size = +v; edClampAll(); } else if (k === 'look') m.look = v; else if (k === 'slot') { edSave(); edLoad(+v); } else if (k === 'mode') ED.mode = v;
+    else if (k === 'clear') { m.items = []; } else if (k === 'x') { edSave(); o.remove(); return; } else if (k === 'play') return edPlay();
+    else if (k === 'share') { const c = edCode(m); try { navigator.clipboard && navigator.clipboard.writeText(c); } catch (e) {} try { toast2('MAP CODE COPIED · ' + c.length + ' letters'); } catch (e) {} }
+    else if (k === 'paste') { lcBox(`<small>MAP EDITOR</small><b>PASTE A MAP</b><p>Paste a friend's map code (DZM1-…). It goes in slot ${ED.slot + 1}.</p><input class="lc-in" placeholder="DZM1-..." maxlength="20000"><div class="lc-err"></div><div class="onb-acts"><button class="btn primary" data-lc="go">LOAD THIS MAP</button><button class="btn" data-lc="no">CANCEL</button></div>`, (bx, close) => {
+        const i = bx.querySelector('input'); const go = () => { const n = edUncode(i.value); if (!n) { bx.querySelector('.lc-err').textContent = 'That is not a map code.'; return; } close(); ED.map = n; edSave(); edRender(); try { toast2('MAP LOADED · ' + n.name); } catch (e) {} };
+        i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') go(); }; setTimeout(() => i.focus(), 50); bx.querySelector('[data-lc="go"]').onclick = go; bx.querySelector('[data-lc="no"]').onclick = close; }); return; }
+    edSave(); edRender(); };
+  edWireCanvas(); edDraw();
+}
+function edClampAll() { const H = edH(ED.map.size), c = v => clamp(v, -H, H); for (const it of ED.map.items) { for (const k of ['x', 'z', 'x0', 'z0', 'x1', 'z1']) if (it[k] !== undefined) it[k] = c(it[k]); } for (const k of ['A', 'B', 'P']) { ED.map[k].x = c(ED.map[k].x); ED.map[k].z = c(ED.map[k].z); } }
+const edToWorld = (cv, e) => { const r = cv.getBoundingClientRect(), s = ED.map.size, k = s / r.width; return { x: Math.round((e.clientX - r.left) * k - s / 2), z: Math.round((e.clientY - r.top) * k - s / 2) }; };
+function edWireCanvas() {
+  const cv = $('edCv'); if (!cv) return; const m = ED.map, H = edH(m.size), cl = p => ({ x: clamp(p.x, -H, H), z: clamp(p.z, -H, H) });
+  cv.oncontextmenu = e => { e.preventDefault(); const p = cl(edToWorld(cv, e)); const it = m.items.find(q => q.t === 'low' && Math.hypot(q.x - p.x, q.z - p.z) < 1.5); if (it) { it.r = !it.r; edSave(); edDraw(); } };
+  cv.onpointerdown = e => { if (e.button !== 0) return; const p = cl(edToWorld(cv, e)); const t = ED.tool;
+    if (t === 'wall') { ED.drag = { a: p, b: p }; cv.setPointerCapture(e.pointerId); return; }
+    if (t === 'erase') { let best = -1, bd = 1.6; m.items.forEach((q, i) => { const d = q.t === 'wall' ? edSegDist(p, q) : Math.hypot(q.x - p.x, q.z - p.z); if (d < bd) { bd = d; best = i; } }); if (best >= 0) m.items.splice(best, 1); }
+    else if (t === 'spawnA') m.A = p; else if (t === 'spawnB') m.B = p; else if (t === 'point') m.P = p;
+    else if (m.items.length < 400) m.items.push({ t, x: p.x, z: p.z, r: false });
+    edSave(); edDraw(); };
+  cv.onpointermove = e => { if (!ED.drag) return; const p = cl(edToWorld(cv, e)), a = ED.drag.a; ED.drag.b = Math.abs(p.x - a.x) >= Math.abs(p.z - a.z) ? { x: p.x, z: a.z } : { x: a.x, z: p.z }; edDraw(); };
+  cv.onpointerup = () => { const D = ED.drag; ED.drag = null; if (D && Math.hypot(D.b.x - D.a.x, D.b.z - D.a.z) >= 1 && m.items.length < 400) { m.items.push({ t: 'wall', x0: D.a.x, z0: D.a.z, x1: D.b.x, z1: D.b.z }); edSave(); } edRender(); };
+}
+function edSegDist(p, w) { const dx = w.x1 - w.x0, dz = w.z1 - w.z0, L2 = dx * dx + dz * dz || 1, t = clamp(((p.x - w.x0) * dx + (p.z - w.z0) * dz) / L2, 0, 1); return Math.hypot(p.x - (w.x0 + t * dx), p.z - (w.z0 + t * dz)); }
+function edDraw() {
+  const cv = $('edCv'); if (!cv) return; const g = cv.getContext('2d'), m = ED.map, W = cv.width, k = W / m.size, X = x => (x + m.size / 2) * k, Z = z => (z + m.size / 2) * k;
+  g.fillStyle = { day: '#2a2e2a', night: '#0e1018', snow: '#c8d0d8', dusk: '#3a2a24' }[m.look] || '#2a2e2a'; g.fillRect(0, 0, W, W);
+  g.strokeStyle = m.look === 'snow' ? 'rgba(0,0,0,.1)' : 'rgba(255,255,255,.06)'; g.lineWidth = 1; for (let i = 0; i <= m.size; i++) { g.beginPath(); g.moveTo(i * k, 0); g.lineTo(i * k, W); g.moveTo(0, i * k); g.lineTo(W, i * k); g.stroke(); }
+  g.strokeStyle = 'rgba(255,255,255,.18)'; for (let i = 0; i <= m.size; i += 4) { g.beginPath(); g.moveTo(i * k, 0); g.lineTo(i * k, W); g.moveTo(0, i * k); g.lineTo(W, i * k); g.stroke(); }
+  const box = (x, z, w, d, c) => { g.fillStyle = c; g.fillRect(X(x - w / 2), Z(z - d / 2), w * k, d * k); };
+  for (const it of m.items) {
+    if (it.t === 'wall') { g.strokeStyle = '#d8a070'; g.lineWidth = Math.max(3, 0.4 * k); g.beginPath(); g.moveTo(X(it.x0), Z(it.z0)); g.lineTo(X(it.x1), Z(it.z1)); g.stroke(); }
+    else if (it.t === 'low') box(it.x, it.z, it.r ? 1 : 2, it.r ? 2 : 1, '#8a9a8a'); else if (it.t === 'tall') box(it.x, it.z, 2, 2, '#c87a50'); else if (it.t === 'crate') box(it.x, it.z, 1.2, 1.2, '#a07a40');
+    else if (it.t === 'ramp') { box(it.x, it.z, 3, 3, '#7a8aa0'); g.fillStyle = '#5a6a80'; g.fillRect(X(it.x - 1), Z(it.z + 1.5), 2 * k, 3.6 * k); }
+  }
+  if (ED.drag) { g.strokeStyle = '#ffd23a'; g.lineWidth = Math.max(3, 0.4 * k); g.beginPath(); g.moveTo(X(ED.drag.a.x), Z(ED.drag.a.z)); g.lineTo(X(ED.drag.b.x), Z(ED.drag.b.z)); g.stroke(); }
+  for (const [p, c, t] of [[m.A, '#5ab8ff', 'A'], [m.B, '#ff5a5a', 'B'], [m.P, '#ffd23a', '◆']]) { g.fillStyle = c; g.beginPath(); g.arc(X(p.x), Z(p.z), 0.9 * k, 0, TAU); g.fill(); g.fillStyle = '#000'; g.font = `bold ${Math.round(k)}px sans-serif`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.fillText(t, X(p.x), Z(p.z)); }
+}
+(() => { const s = document.createElement('style'); s.textContent = `#edOv{position:fixed;inset:0;z-index:92;background:rgba(0,0,0,.7);display:flex;align-items:center;justify-content:center;pointer-events:auto}
+.ed-p{padding:14px 18px;background:rgba(10,13,12,.97);border:1px solid var(--line);max-width:96vw}.ed-top{display:flex;gap:12px;align-items:center;margin-bottom:10px}.ed-top b{letter-spacing:.3em;color:var(--accent)}.ed-top input{flex:1;padding:6px 8px;background:#0b0e0d;border:1px solid var(--line);color:#fff;font:inherit;letter-spacing:.12em}.ed-top span{font-size:10px;color:var(--dim)}
+.ed-main{display:flex;gap:14px}#edCv{width:min(600px,62vh);height:min(600px,62vh);border:1px solid var(--line);cursor:crosshair;touch-action:none}.ed-side{width:300px;display:flex;flex-direction:column;gap:5px;text-align:left}.ed-side small{font-size:9px;letter-spacing:.25em;color:var(--dim);margin-top:4px}.ed-g{display:flex;flex-wrap:wrap;gap:4px}.ed-a{margin-top:8px}.ed-a .btn{flex:1;padding:7px 8px;font-size:11px;min-width:0}.ed-tip{font-size:10px;color:var(--dim)}`; document.head.appendChild(s); })();
+/* ================================================================== CAMPAIGN CO-OP (desktop app, 1.2.86): two players
+   On the CAMPAIGN screen: HOST CO-OP makes a 5-letter code; your friend types it and presses JOIN. The host picks the
+   mission and presses PLAY; both of you load in. The host runs the mission (the squads, the crew, the steps, the
+   checkpoints); the friend sees copies of the host's enemies and crew ("proxies"), hears the same lines, sees the same
+   goals, and their hits go to the host as records, which the host applies. Enemies that are hunting shoot at the friend
+   too. If the friend goes down they get back up next to the host after 6 seconds. When the host finishes the mission,
+   it is finished for both, and both get the rewards. Up to 2 players for now.
+   Presence: cc 1, n, g (game id), x y z yw, a (alive), hs hits [id, dmg, head, seq]
+   Host adds: ho, st 'wait'|'play'|'done', mi (mission), df (difficulty), si (step), en [id, x, z, y, yaw*100, team, alert, boss, hp%] */
+const CC_MAX = 2;
+const CC = { on: false, room: null, conn: 'off', err: '', me: '', code: '', gid: 0, st: 'wait', inGame: false, rem: new Map(), prox: new Map(), pend: new Map(), hs: [], hseq: 0, eid: 0, timer: null, deadT: 0, fireT: 0 };
+const ccHost = () => !!(CC.room && CC.room.host);
+const ccClient = () => CC.on && CC.inGame && !ccHost() && typeof M !== 'undefined' && M && M.mode === 'camp';
+const ccHosting = () => CC.on && CC.inGame && ccHost() && typeof M !== 'undefined' && M && M.mode === 'camp';
+const ccCode = () => { const L = 'ABCDEFGHJKLMNPQRSTUVWXYZ'; let s = ''; for (let i = 0; i < 5; i++) s += L[(Math.random() * L.length) | 0]; return s; };
+async function ccJoin(code) {
+  if (CC.on || CC.conn === 'connecting') return;
+  if (!NET.app) { CC.err = 'CO-OP NEEDS THE DESKTOP APP'; campRender(); return; }
+  code = String(code || '').toUpperCase().replace(/[^A-Z]/g, '').slice(0, 5); if (code.length !== 5) { CC.err = 'TYPE THE 5-LETTER CODE'; campRender(); return; }
+  CC.err = ''; CC.conn = 'connecting'; campRender(); let room = null;
+  try { room = await P2P.aside('code', 'camp', 'cc' + code.toLowerCase()); }
+  catch (e) { CC.conn = 'off'; CC.err = 'COULD NOT REACH THE MATCH SERVICE'; campRender(); return; }
+  Object.assign(CC, { on: true, room, conn: 'in', me: room.me, code, inGame: false, gid: 0, st: 'wait', joinedT: performance.now() });
+  CC.rem.clear(); clearInterval(CC.timer); CC.timer = setInterval(ccTick, 50); ccPublish(); campRender(); try { sfx.ui(); } catch (e) {}
+}
+function ccLeave() {
+  clearInterval(CC.timer); CC.timer = null; const r = CC.room; CC.room = null; if (r) try { r.leave(); } catch (e) {}
+  for (const R of CC.rem.values()) ccDropAvatar(R); CC.rem.clear(); ccClearProx();
+  Object.assign(CC, { on: false, conn: 'off', inGame: false, gid: 0, st: 'wait' }); try { if (curScreen === 'campaign') campRender(); } catch (e) {}
+}
+function ccTick() {
+  if (!CC.on || !CC.room) return;
+  try {
+    if (CC.room.closed) { ccLeave(); return; }
+    if (!ccHost() && performance.now() - CC.joinedT > 2500 && CC.room.order.indexOf(CC.me) >= CC_MAX) { ccLeave(); CC.err = 'THAT GAME IS FULL'; return; }
+    if (!CC.inGame && G.state !== 'menu') return;
+    if (CC.inGame && (!M || M.mode !== 'camp')) { CC.inGame = false; }
+    ccRead(); ccPublish();
+  } catch (e) { try { reportError(e); } catch (er) {} }
+}
+function ccRead() {
+  const host = ccHost(), seen = new Set(); let H = null;
+  for (const p of CC.room.peers()) {
+    if (p.sameTab) continue; const pr = p.presence || {}; if (!pr.cc) continue; seen.add(p.peer);
+    let R = CC.rem.get(p.peer); if (!R) { R = { peer: p.peer, av: null, seenHit: 0 }; CC.rem.set(p.peer, R); try { if (CC.inGame) feedLine(`<b>${cleanNick(pr.n)}</b> <span class="fw">JOINED</span>`); } catch (e) {} }
+    R.pr = pr; R.n = cleanNick(pr.n); R.ho = !!pr.ho; R.inGame = CC.inGame && pr.g === CC.gid && CC.gid;
+    R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, -5, 30); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.a = !!pr.a;
+    if (R.ho) H = pr;
+    // the host applies the friend's hits
+    if (host && R.inGame && Array.isArray(pr.hs)) for (const h of pr.hs) { const seq = +h[3] | 0; if (seq <= R.seenHit) continue; R.seenHit = seq; const e = enemies.find(q => q.ccId === (h[0] | 0)); if (e && enemies.includes(e)) try { damageEnemy(e, clamp(+h[1] || 0, 0, 400), !!h[2], null, false, ccBy(R)); } catch (er) {} }
+  }
+  for (const [k, R] of CC.rem) if (!seen.has(k)) { ccDropAvatar(R); CC.rem.delete(k); }
+  const key = [...CC.rem.values()].map(R => R.n).join(','); if (key !== CC.boxKey) { CC.boxKey = key; try { if (curScreen === 'campaign') ccLobbyBox(); } catch (e) {} }
+  if (!host && H) ccFollowHost(H);
+}
+// the friend as a killer the host's code understands (an avatar with a scoreboard entry)
+function ccBy(R) { if (!R.av) return 'world'; R.av.entry = R.av.entry || { name: R.n || 'FRIEND', team: 0, kills: 0, deaths: 0, score: 0 }; R.av.name = R.n || 'FRIEND'; R.av.team = 0; return R.av; }
+function ccPublish() {
+  const inG = CC.inGame && M && M.mode === 'camp';
+  for (const [id, h] of CC.pend) { CC.hseq++; CC.hs.push([id, Math.round(h.d), h.h ? 1 : 0, CC.hseq]); } CC.pend.clear(); while (CC.hs.length > 24) CC.hs.shift();
+  const o = { cc: 1, n: NET.nick, g: inG ? CC.gid : 0, x: r2(P.x), y: r2(P.y || 0), z: r2(P.z), yw: r3(P.yaw), a: inG && G.state === 'playing' ? 1 : 0, hs: CC.hs };
+  if (ccHost()) {
+    Object.assign(o, { ho: 1, st: CC.st, gid: CC.gid, mi: CC.mi || '', df: CC.df || 'regular', si: inG ? CAMP.i : -1 });
+    if (inG) { o.en = []; for (const e of enemies) { if (e.ccProx || !e.group || !e.entry) continue; if (!e.ccId) e.ccId = ++CC.eid; const g = e.group.position, ally = e.camp && e.camp.ally;
+      o.en.push([e.ccId, r2(g.x), r2(g.z), r2(g.y), Math.round(g.y * 0 + e.group.rotation.y * 100), ally ? 0 : 1, e.camp && e.camp.alert ? 1 : 0, e.boss ? 1 : 0, Math.round(clamp(e.hp / (e.maxHp || 100), 0, 1) * 100)]); if (o.en.length >= 40) break; } }
+  }
+  CC.room.presence(o);
+}
+// ---------- the host: start a mission for both
+function ccHostPlay(id, diff) { CC.mi = id; CC.df = diff; CC.st = 'play'; CC.gid = 1 + ((Math.random() * 1e9) | 0); CC.inGame = true; CC.eid = 0; }
+// ---------- the friend: follow the host into the mission, its steps and its end
+function ccFollowHost(H) {
+  if (H.st === 'play' && H.gid && H.gid !== CC.gid && H.mi && campMission(H.mi)) { CC.gid = H.gid; CC.inGame = true; ccClearProx(); CAMP.sel = H.mi; campPlay(H.mi, CAMP_DIFF[H.df] ? H.df : 'regular'); return; }
+  if (!ccClient()) return;
+  const si = H.si | 0; if (si >= 0 && si !== CAMP.i && CAMP.m && si < CAMP.m.steps.length) { try { campBegin(si); } catch (e) { reportError(e); } }
+  if (H.st === 'done' && !CAMP.done) { CC.inGame = false; try { CAMP.done = false; ccDone = true; campComplete(); } catch (e) {} }
+  // the host's enemies and crew as proxies
+  const live = new Set();
+  for (const q of (Array.isArray(H.en) ? H.en : []).slice(0, 40)) { const id = q[0] | 0; live.add(id); let e = CC.prox.get(id);
+    if (!e) { e = makeEnemy(q[7] ? 'heavy' : 'rifleman', +q[1] || 0, +q[2] || 0); Object.assign(e, { ccProx: true, ccId: id, team: q[5] ? 1 : 0, hp: 1e9, maxHp: 1e9, speed: 0, aim: 0, holding: true, spawnProt: 0 }); if (q[7]) e.group.scale.setScalar(1.15); if (!q[5]) try { e.group.add(friendlyMarker()); } catch (er) {} e.group.position.y = +q[3] || 0; enemies.push(e); CC.prox.set(id, e); }
+    e.tx = +q[1] || 0; e.tz = +q[2] || 0; e.ty = +q[3] || 0; e.tyaw = (+q[4] || 0) / 100; e.ccAlert = !!q[6]; e.ccHp = q[8] | 0; }
+  for (const [id, e] of CC.prox) if (!live.has(id)) ccDropProx(id, e);
+}
+let ccDone = false;
+function ccDropProx(id, e) {
+  CC.prox.delete(id); const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1);
+  if (e.team === 1 && e.ccHp > 0 && e.ccHp <= 100) { const dd = { e, t: 0, boom: false, dx: 0, dz: 0, head: false, a: [rnd(0.5, 1.4), rnd(0.5, 1.4), rnd(-0.4, 0.4), rnd(-0.4, 0.4)] }; try { dying.push(dd); } catch (er) { scene.remove(e.group); } }
+  else scene.remove(e.group);
+}
+function ccClearProx() { for (const [id, e] of CC.prox) { const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1); scene.remove(e.group); } CC.prox.clear(); }
+// every frame: move the proxies, the friend's avatar on the host, enemy fire at the friend
+function ccFrame(dt) {
+  if (!CC.on || !M || M.mode !== 'camp') return;
+  if (ccClient()) {
+    for (const e of CC.prox.values()) { const g = e.group, ox = g.position.x, oz = g.position.z, k = Math.min(1, dt * 10);
+      if (Math.hypot(e.tx - ox, e.tz - oz) > 5) g.position.set(e.tx, e.ty, e.tz); else { g.position.x += (e.tx - ox) * k; g.position.z += (e.tz - oz) * k; g.position.y += (e.ty - g.position.y) * k; }
+      let dy = e.tyaw - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 10);
+      const sp = dt > 0 ? Math.min(6, Math.hypot(g.position.x - ox, g.position.z - oz) / dt) : 0; try { animEnemy(e, dt, sp); } catch (er) {} }
+    // the hunting enemies shoot at me too (the host's game only aims at the host and the crew)
+    if (G.state === 'playing' && (CC.fireT -= dt) <= 0) { CC.fireT = 0.35;
+      const D = CAMP_DIFF[CAMP.diff] || CAMP_DIFF.regular;
+      for (const e of CC.prox.values()) { if (e.team !== 1 || !e.ccAlert) continue; const g = e.group.position, d = Math.hypot(g.x - P.x, g.z - P.z); if (d > 32) continue;
+        if (Math.random() > 0.16) continue; let los = true; try { los = hasLOS(e, d); } catch (er) {} if (!los) continue;
+        try { addTracer(new THREE.Vector3(g.x, g.y + 1.45, g.z), new THREE.Vector3(P.x + rnd(-0.4, 0.4), P.y + 1.4, P.z + rnd(-0.4, 0.4)), 0.05, 0.02); sfx.shot && sfx.shot(at(g.x, g.z, 40)); } catch (er) {}
+        if (Math.random() < 0.55 - d / 90) hurtPlayer(7 * ((D.dmg || 1)), g.x - P.x, g.z - P.z); } }
+    // down: back up next to the host after 6 s
+    if (G.state === 'campdead' || CAMP.dead) { CC.deadT += dt; if (CC.deadT > 6) { CC.deadT = 0; ccRespawn(); } } else CC.deadT = 0;
+  }
+  if (ccHosting()) for (const R of CC.rem.values()) ccAvatar(R, dt);
+}
+function ccRespawn() {
+  const o = $('campFailEl'); if (o) o.remove(); CAMP.dead = false; let H = null; for (const R of CC.rem.values()) if (R.ho) H = R;
+  const p = H ? openNear(H.x + 1.5, H.z + 1.5) : { x: P.x, z: P.z }; placePlayer({ x: p.x, z: p.z, y: H ? H.y : P.y }); G.health = G.maxHp; G.state = 'playing'; G.dc = null;
+  try { $('killcam').classList.add('hide'); vig.style.opacity = 0; hideCenter(); lockPointer(); campRefill(); showMsg('BACK IN THE FIGHT'); } catch (e) {}
+}
+function ccAvatar(R, dt) {
+  if (!R.inGame || !R.a) { ccDropAvatar(R); return; }
+  if (!R.av) { const e = makeEnemy('rifleman', R.x, R.z); e.group.position.y = R.y; try { e.group.add(friendlyMarker()); } catch (er) {} e.aim = 1; e.holding = true; e.team = 0; R.av = e; }
+  const g = R.av.group, ox = g.position.x, oz = g.position.z, k = Math.min(1, dt * 14);
+  if (Math.hypot(R.x - ox, R.z - oz) > 6) g.position.set(R.x, R.y, R.z); else { g.position.x += (R.x - ox) * k; g.position.z += (R.z - oz) * k; g.position.y += (R.y - g.position.y) * k; }
+  let dy = R.yw + Math.PI - g.rotation.y; while (dy > Math.PI) dy -= TAU; while (dy < -Math.PI) dy += TAU; g.rotation.y += dy * Math.min(1, dt * 16);
+  const sp = dt > 0 ? Math.min(9, Math.hypot(g.position.x - ox, g.position.z - oz) / dt) : 0; try { animEnemy(R.av, dt, Math.min(6, sp)); } catch (er) {}
+}
+function ccDropAvatar(R) { if (R.av) { scene.remove(R.av.group); R.av = null; } }
+// ---------- the hooks
+(() => {
+  const sq0 = campSpawnSquad; campSpawnSquad = function () { if (ccClient()) return []; return sq0.apply(this, arguments); };
+  const al0 = campAlly; campAlly = function () { if (ccClient()) return null; return al0.apply(this, arguments); };
+  const sd0 = campStepDone; campStepDone = function () { if (ccClient()) return; return sd0.apply(this, arguments); };
+  const fa0 = campFail; campFail = function (why, died) { if (ccClient() && !died) return; return fa0.apply(this, arguments); };
+  const rs0 = campRestart; campRestart = function () { if (ccClient()) { ccRespawn(); return; } return rs0.apply(this, arguments); };
+  const cm0 = campComplete; campComplete = function () { if (ccClient() && !ccDone) return; ccDone = false; if (ccHosting()) { CC.st = 'done'; try { ccPublish(); } catch (e) {} } return cm0.apply(this, arguments); };
+  const pl0 = campPlay; campPlay = function (id, diff) { if (CC.on && ccHost()) ccHostPlay(id, diff); return pl0.apply(this, arguments); };
+  const dm0 = damageEnemy; damageEnemy = function (e, dmg, head, dir, boom, by = 'player') {
+    if (e && e.ccProx) { if (by === 'player' && e.team === 1) { const h = CC.pend.get(e.ccId) || { d: 0, h: false }; h.d += dmg; h.h = h.h || !!head; CC.pend.set(e.ccId, h); e.flinch = 1; try { fbMarker(true, false, head); sfx.hit(head); } catch (er) {} } return false; }
+    return dm0.apply(this, arguments); };
+  const cr0 = campRender; campRender = function () { const r = cr0.apply(this, arguments); try { ccLobbyBox(); } catch (e) {} return r; };
+})();
+setInterval(() => { try { if (CC.on) ccFrame(0.05); } catch (e) {} }, 50);
+function ccLobbyBox() {
+  const s = $('campaign'); if (!s) return; let b = $('ccBox'); if (!b) { b = document.createElement('div'); b.id = 'ccBox'; const host = s.querySelector('.cp-main') || s; host.appendChild(b); }
+  const peers = [...CC.rem.values()].map(R => R.n).filter(Boolean);
+  b.innerHTML = !CC.on ? `<b>CO-OP · 2 PLAYERS</b><span>play the story with a friend (desktop app)</span><div class="cc-row"><button class="btn" data-cc="host">HOST CO-OP</button><input id="ccCode" maxlength="5" placeholder="CODE"><button class="btn" data-cc="join">JOIN</button></div>${CC.conn === 'connecting' ? '<small>CONNECTING…</small>' : ''}${CC.err ? `<small class="cc-err">${CC.err}</small>` : ''}`
+    : `<b>CO-OP · CODE ${CC.code}</b><span>${ccHost() ? (peers.length ? `${peers[0]} is with you · pick a mission and press PLAY` : 'give your friend this code · waiting for them…') : `in ${peers[0] || 'the host'}'s game · the host picks the mission`}</span><div class="cc-row"><button class="btn" data-cc="leave">LEAVE CO-OP</button></div>`;
+  const i = $('ccCode'); if (i) i.onkeydown = e => { e.stopPropagation(); if (e.key === 'Enter') ccJoin(i.value); };
+  for (const x of b.querySelectorAll('[data-cc]')) x.onclick = () => { try { sfx.ui(); } catch (e) {} const a = x.dataset.cc; if (a === 'host') ccJoin(ccCode()); else if (a === 'join') ccJoin(i && i.value); else if (a === 'leave') ccLeave(); };
+}
+(() => { const s = document.createElement('style'); s.textContent = `#ccBox{margin-top:12px;padding:10px 12px;border:1px solid rgba(90,200,255,.35);background:rgba(90,200,255,.05);text-align:left}#ccBox>b{display:block;font-size:12px;letter-spacing:.24em;color:#5ac8ff}#ccBox>span{font-size:11px;color:var(--dim)}#ccBox small{display:block;font-size:10px;color:var(--dim);margin-top:4px}#ccBox .cc-err{color:#ff7a6a}
+.cc-row{display:flex;gap:6px;margin-top:8px;align-items:center}.cc-row .btn{padding:7px 12px;font-size:11px}.cc-row input{width:90px;padding:7px;background:#0b0e0d;border:1px solid var(--line);color:#fff;font:inherit;letter-spacing:.3em;text-transform:uppercase}`; document.head.appendChild(s); })();
 };
 </script>
 <script>

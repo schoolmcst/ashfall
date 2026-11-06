@@ -160,7 +160,7 @@ setInterval(growDot, 30000);
 })();
 
 /* ---------- 1.2.72 ZOMBIES SEEDS: bosses and high rounds drop seeds for the grow room (solo and co-op, everyone gets theirs) */
-const GROW_ZBOSS = { blackwell: 'sour', works: 'sour', terminal9: 'haze', mauiwowie: 'haze', maryjane: 'north', hightide: 'cure' };
+const GROW_ZBOSS = { blackwell: 'sour', works: 'sour', terminal9: 'haze', mauiwowie: 'haze', maryjane: 'north', hightide: 'cure', bayview: 'cure' };
 function growSeed(id, why) {
   const s = STRAIN[id]; if (!s) return; const g = growLoad(); g.seeds[id] = (g.seeds[id] | 0) + 1; growSave(); growDot();
   try { showBanner(`${s.name} SEED`, `${why} · it is in your GROW OP`); sfx.pickup(); } catch (e) {}

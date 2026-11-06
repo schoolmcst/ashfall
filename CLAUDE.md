@@ -139,8 +139,19 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   (.dzclip files + webm video), zspecial2.js (SCREAMER/SPITTER/BRUTE, zombies TRIALS, ZOMBIES CUSTOM GAME ZCUS: Z.custom
   never sets a best), growbreed.js (6 HYBRIDS, g.breed), map_new.js THE TRIM HOUSE + SKATE PARK (6v6).
   Files loaded after ui.js (touch, lang, squadvox, clipshare) must not be named as consts in window.__A (TDZ).
-  Tests: s_weapons2, s_modes7, s_progress2, s_tools, s_batch7. Still to do from the 60: zombies chapter 7 finale, winter
-  STASH ISLAND, map editor, walkable Crew Stash House, campaign chapter 2 + online co-op.
+  Tests: s_weapons2, s_modes7, s_progress2, s_tools, s_batch7.
+- 1.2.86 TEST (batch 7b, the last of the 60): map_stashw.js WINTER STASH ISLAND (same id 'stashisle', getters on env/
+  grass/name/place; batches swapped to snow after build; by date Dec-Feb or FROSTY NUGS; ISLE_W.force for tests).
+  crewwalk.js the WALK-IN STASH HOUSE (hidden map 'crewhouse', run as mode 'range' with cfg.house; rangeStart/rangeTick/
+  rangeHud/musWanted wrapped; USE spots: door, radio, arcade = aim trainer, crew wars board). map_bay.js + zmap_bay.js
+  ZOMBIES CHAPTER 7 BAYVIEW (the finale; same plan as the two ships so doors/perks/windows match; boss THE CHAIRMAN; text
+  cont 'THE END'). editor.js MAP EDITOR (CUSTOM > MAP EDITOR; ashfall.maps.v1, 5 slots, DZM1- codes, plays as hidden
+  'edit_map', offline only). camp_story2.js CAMPAIGN CHAPTER 2 SECOND HARVEST (c2m1 trimhouse, c2m2 skatepark, c2m3
+  bayview; new CCHARS 'driver'). campcoop.js CAMPAIGN CO-OP for 2 (P2P.aside('code','camp','cc'+code); host runs the
+  mission, the friend draws proxies (e.ccProx, no entry so updateBots skips them), hits go as hs records, hunting proxies
+  shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
+  window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
+  Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
 - Poly Haven is reachable from the cloud environment `ashfall` (allowed hosts dl.polyhaven.org, api.polyhaven.com). To see
   real scans in tests, download them to a folder and run with PHCACHE=<folder>; `_texcmp.js` makes texture pictures.
 - The apps download from **main**. Work done on a claude/* branch reaches TEST APP only once it is merged into main.

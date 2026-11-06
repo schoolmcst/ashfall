@@ -44,7 +44,7 @@ function ambPick() {
   if (!M || !curMap) return ''; const m = MAPS[curMap] || {};
   if (M.mode === 'range' || M.mode === 'camp' || m.indoor || (M.br && typeof LT !== 'undefined' && LT.storm)) return '';
   const ev = evActive(); if (ev && ev.id === 'winter') return 'snow'; if (ev && ev.id === '420') return 'haze';
-  if (/snow|whiteout/.test(curMap)) return 'snow';
+  if (/snow|whiteout/.test(curMap) || (curMap === 'stashisle' && typeof isleWinter === 'function' && isleWinter())) return 'snow';
   const h = ambHash(curMap + ':' + new Date().toISOString().slice(0, 13)) % 100;
   return h < 18 ? 'rain' : h < 32 ? 'mist' : h < 46 ? 'leaves' : '';
 }
