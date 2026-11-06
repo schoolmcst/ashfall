@@ -140,7 +140,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   never sets a best), growbreed.js (6 HYBRIDS, g.breed), map_new.js THE TRIM HOUSE + SKATE PARK (6v6).
   Files loaded after ui.js (touch, lang, squadvox, clipshare) must not be named as consts in window.__A (TDZ).
   Tests: s_weapons2, s_modes7, s_progress2, s_tools, s_batch7.
-- 1.2.86 TEST (batch 7b, the last of the 60): map_stashw.js WINTER STASH ISLAND (same id 'stashisle', getters on env/
+- 1.2.86 PUBLIC (batch 7b, the last of the 60): map_stashw.js WINTER STASH ISLAND (same id 'stashisle', getters on env/
   grass/name/place; batches swapped to snow after build; by date Dec-Feb or FROSTY NUGS; ISLE_W.force for tests).
   crewwalk.js the WALK-IN STASH HOUSE (hidden map 'crewhouse', run as mode 'range' with cfg.house; rangeStart/rangeTick/
   rangeHud/musWanted wrapped; USE spots: door, radio, arcade = aim trainer, crew wars board). map_bay.js + zmap_bay.js
