@@ -1,8 +1,14 @@
 {
- "version": "1.2.91",
+ "version": "1.2.92",
  "notes": [
-  "LAST TOKE always plays STASH ISLAND now (a map picked for another mode used to carry over, so you never saw the hills, the warm-up island or the float in)"
+  "LAST TOKE loot: guns come in COMMON, RARE, EPIC and LEGENDARY - better ones hit harder, reload faster and kick less; the gun has a faint glow and its name is coloured",
+  "Floor loot that looks like it belongs: guns on tables and wall racks, heals and ammo on shelves, pallets on the roofs - each with a light strip in its rarity colour",
+  "Attachments on the ground (red dot, holo, 4x scope, suppressor, compensator, extended mag, grip, laser) snap onto every gun they fit",
+  "Ammo types: LIGHT, HEAVY, SHELLS and SNIPER - pick up the right ammo for your gun",
+  "Heals: NUG (+25), BROWNIE (+50 over 5 s), MEDICAL JOINT (full) - press 5 or D-pad up",
+  "Taking a gun puts your old one down in its place (others see it too online)",
+  "Fixed: LAST TOKE's start banner said first to 999 kills"
  ],
- "sha256": "91f70f0dd10e15d3462d5e7c791542150db01f5cd52246f8d733ccc2cd514d5a",
+ "sha256": "ad29a1e2113ffb25a230bb9b71f6e15d4a390676e10cdfb413eed8d38232d9c8",
  "minApp": "1.0.0"
 }
