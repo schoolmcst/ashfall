@@ -8,7 +8,7 @@
    names the last one standing and the round ends for all (then a fresh round, new crates). Late joiners watch. */
 const BR_PHASES_N = [[45, 30, 0.62, 3], [35, 25, 0.38, 6], [30, 20, 0.18, 10], [25, 20, 0.04, 16]];
 // STASH ISLAND (391 m) gets five longer phases: wait s, close s, radius share, damage a second
-const BR_PHASES_BIG = [[70, 50, 0.6, 2], [55, 40, 0.36, 4], [45, 35, 0.2, 7], [35, 25, 0.09, 11], [25, 20, 0.03, 16]];
+const BR_PHASES_BIG = [[45, 40, 0.6, 2], [40, 35, 0.36, 4], [35, 30, 0.2, 7], [30, 25, 0.09, 11], [20, 20, 0.03, 16]];   // (1.2.93: ~5 min for 16 players, was ~7)
 let BR_PHASES = BR_PHASES_N;   // wait s, close s, radius (of the start), damage a second
 const BR_TIERS = [{ n: 'COMMON', col: 0xe8e8e8, cats: ['smg', 'pi', 'sg'] }, { n: 'RARE', col: 0x3a9aff, cats: ['ar', 'sg', 'smg'] }, { n: 'EPIC', col: 0xb04aff, cats: ['lmg', 'mr', 'sr', 'ar'] }];
 function brSetup() {
@@ -34,7 +34,7 @@ function brSetup() {
   try { brfgSetup(); } catch (e) { reportError(e); }   // balloons, ladders (brfight.js)
   try { briSetup(); } catch (e) { reportError(e); }   // tents, sheds, tunnels, the train (brisle.js)
   try { brlSetup(); } catch (e) { reportError(e); }   // floor loot on tables, racks, shelves (brloot.js)
-  try { brsqSetup(); } catch (e) { reportError(e); }   // re-up beacons (brsquad.js)
+  try { brsqSetup(); brpSetup(); } catch (e) { reportError(e); }   // re-up beacons (brsquad.js), stats and dailies (brprog.js)
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
   try { brfStartPhase(M.br); } catch (e) { reportError(e); }   // WARM-UP, the bong and the float in (brintro.js)
@@ -86,7 +86,7 @@ function brUpdate(dt) {
   }
   B.uH = u;
   try { brlTick(dt); brlNameCol(); } catch (e) { reportError(e); }   // floor loot, ammo, heals (brloot.js)
-  try { brsqTick(dt); brbTick(dt); brfgTick(dt); briTick(dt); } catch (e) { reportError(e); }   // cards, beacons, callouts, carrying (brsquad.js)
+  try { brsqTick(dt); brbTick(dt); brfgTick(dt); briTick(dt); brpTick(dt); } catch (e) { reportError(e); }   // cards, beacons, callouts, carrying (brsquad.js)
   // the end: last one standing
   for (const e of brAliveBots()) if (!e.net && e.brTier === undefined) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; }   // bots that just came in start with a pistol too
   if (sqOn()) {   // DUOS / SQUADS: last squad standing
@@ -123,7 +123,7 @@ function brHud() {
   const B = M.br; if (!B) return ''; { const fh = brfHud(); if (fh) return fh + sqHud(); } const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
   return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
-function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); brsqMarkers(out); brbMarkers(out); briMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
+function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); brsqMarkers(out); brbMarkers(out); briMarkers(out); brpMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
 function brClear() { try { brfReset(); brlClear(); brbVaultsClear(); brfgClear(); briClear(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
 
 /* ---------- online */

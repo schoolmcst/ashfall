@@ -76,7 +76,7 @@ function featTiles() {
 }
 function featAct(act) {
   if (act === 'feat-play') { featPlay(); return true; }
-  if (act === 'br-play') { sfx.ui(); sqPicker(); return true; }
+  if (act === 'br-play') { sfx.ui(); brlobOpen(); return true; }   // the LAST TOKE lobby (brprog.js)
   if (act === 'rejoin') { sfx.ui(); rjGo(); return true; }
   return false;
 }

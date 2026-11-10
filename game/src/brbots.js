@@ -58,6 +58,7 @@ function brbVaultOpen(v, remote) {
   const j = wallMeshes.indexOf(v.doorM); if (j >= 0) wallMeshes.splice(j, 1);
   v.keypad.material = new THREE.MeshStandardMaterial({ color: 0x002200, emissive: 0x5dff7a, emissiveIntensity: 1.8 });
   try { sfx.thud({ vol: 0.9 }); tone(220, 0.4, 0.08, 'sawtooth', 120); } catch (e) {}
+  if (!remote) try { brpEvt('vault'); } catch (e) {}
   if (!remote) try { showBanner('VAULT OPEN', M.online ? 'legendary loot inside' : 'the VAULT BOSS is awake'); } catch (e) {}
   for (const e of BRB.bosses) if (e.bossBR === v) e.awake = true;
 }

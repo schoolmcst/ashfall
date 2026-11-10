@@ -74,7 +74,8 @@ let wasSprint = false;
 function updatePlayer(dt) {
   if (VH.me && vhPlayer(dt)) return { moving: false, sprint: false };   // driving a LAST TOKE vehicle
   if (typeof brfPlayer === 'function' && brfPlayer(dt)) return { moving: false, sprint: false };
-  if (typeof brfgLadder === 'function' && brfgLadder(dt)) return { moving: false, sprint: false };   // LAST TOKE ladders (brfight.js)   // LAST TOKE: the bong hit and the float in (brintro.js)
+  if (typeof brfgLadder === 'function' && brfgLadder(dt)) return { moving: false, sprint: false };
+  if (typeof brpDance === 'function' && brpDance(dt)) return { moving: false, sprint: false };   // the victory dance (brprog.js)   // LAST TOKE ladders (brfight.js)   // LAST TOKE: the bong hit and the float in (brintro.js)
   const w = WEAPONS[G.cur];
   const crouch = kb('crouch') || pad.crouch;
   const hold = typeof holding === 'function' && holding();

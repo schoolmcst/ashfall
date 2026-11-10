@@ -160,7 +160,7 @@ function brsqTick(dt) {
   // me at a beacon with a card: hold USE
   const mine = BRSQ.cards.filter(c => c.by === 'player');
   if (mine.length && playerAlive()) { const b = brsqBeacon(P.x, P.z);
-    if (b && Math.hypot(b.x - P.x, b.z - P.z) < 2.2) { if (u) { b.holdT += dt; if (b.holdT >= 3) { b.holdT = 0; for (const c of mine) brsqReup(c, b); } } else b.holdT = 0;
+    if (b && Math.hypot(b.x - P.x, b.z - P.z) < 2.2) { if (u) { b.holdT += dt; if (b.holdT >= 3) { b.holdT = 0; for (const c of mine) brsqReup(c, b); try { brpEvt('reup'); } catch (e) {} } } else b.holdT = 0;
       try { G.interactTxt = u ? `RE-UP · ${Math.round(b.holdT / 3 * 100)}%` : `HOLD ${actName('use')} TO BRING BACK ${mine.map(c => c.en.isPlayer ? 'YOU' : c.en.name).join(', ')}`; showMsgOnce(G.interactTxt); } catch (e) {} } }
   brsqCarryTick();
   // the float in: my squad's bots follow me down

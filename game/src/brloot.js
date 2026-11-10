@@ -275,7 +275,7 @@ function brlHealTick(dt) {
   if (!playerAlive() || G.downed || mouseDown || pad.fire) { BRL.heal = null; try { showMsg('HEAL CANCELLED'); } catch (e) {} return; }
   const D = BRL_HEAL[H.h]; H.t += dt; G.swapT = Math.max(G.swapT, 0.2);
   try { showMsgOnce(`USING A ${D.n} · ${Math.round(H.t / D.t * 100)}%`); } catch (e) {}
-  if (H.t >= D.t) { BRL.heal = null; BRL.heals[H.h] = Math.max(0, BRL.heals[H.h] - 1); if (D.over) BRL.regen += D.hp; else G.health = Math.min(G.maxHp || 100, G.health + D.hp); try { showMsg(`${D.n} · +${D.hp >= 999 ? 'FULL' : D.hp} HP${D.over ? ' over ' + D.over + ' s' : ''}`); sfx.pickup(); } catch (e) {} }
+  if (H.t >= D.t) { try { brpEvt('heal'); } catch (e) {} BRL.heal = null; BRL.heals[H.h] = Math.max(0, BRL.heals[H.h] - 1); if (D.over) BRL.regen += D.hp; else G.health = Math.min(G.maxHp || 100, G.health + D.hp); try { showMsg(`${D.n} · +${D.hp >= 999 ? 'FULL' : D.hp} HP${D.over ? ' over ' + D.over + ' s' : ''}`); sfx.pickup(); } catch (e) {} }
 }
 /* ---------- every frame in a LAST TOKE round (from brUpdate, after the crates) */
 function brlTick(dt) {
@@ -306,7 +306,8 @@ function brlTick(dt) {
 function brlHud() {
   if (!brlOn()) return ''; const H = BRL.heals, w = WEAPONS[G.cur], t = w && w.def ? brlAmmoOf(w.def) : 'light';
   const heals = ['nug', 'brownie', 'joint'].filter(k => H[k]).map(k => `${H[k]} ${BRL_HEAL[k].n}${H[k] > 1 && k !== 'joint' ? 'S' : ''}`).join(', ');
-  return ` · ${BRL_AMMO[t].n} AMMO ${BRL.ammo[t]}${heals ? ` · ${heals} (${actName('heal')})` : ''}`;
+  const cr = typeof brpCrown === 'function' ? brpCrown() : 0;
+  return ` · ${BRL_AMMO[t].n} AMMO ${BRL.ammo[t]}${heals ? ` · ${heals} (${actName('heal')})` : ''}${cr ? ` · 👑 STREAK ${cr}` : ''}`;
 }
 // the HUD gun name in its rarity colour
 function brlNameCol() { try { const el = $('wname'), w = WEAPONS[G.cur], t = brlOn() && w && w.def ? BRL.rar[w.def.id] | 0 : -1, c = t > 0 ? BRL_RAR[t].css : ''; if (el && el._brc !== c) { el._brc = c; el.style.color = c; } } catch (e) {} }

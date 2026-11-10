@@ -233,6 +233,7 @@ function actions(act) {
   if (/^(lk-|rw-|locker$|rewards$)/.test(act) && typeof lockerAct === 'function' && lockerAct(act)) return;
   if (/^(cp-|campaign$)/.test(act) && typeof campAct === 'function' && campAct(act)) return;
   if (/^(sv-|bk-|er-)/.test(act) && typeof lnAct === 'function' && lnAct(act)) return;
+  if (typeof brlobAct === 'function' && brlobAct(act)) return;   // the LAST TOKE lobby (brprog.js)
   if (typeof zombAct === 'function' && zombAct(act)) return;
   switch (act) {
     case 'deploy': case 'play': toLobby(); break;
@@ -327,7 +328,7 @@ function goBack() {
 // everything the controller / arrow keys can move between: the open popup if there is one (update notes, on-screen
 // keyboard, Homecoming splash), else the current screen, plus a friend-request toast if one is showing
 const NAV_SEL = 'button, .sw, input[type=range], input[type=text], input:not([type])';
-function navModal() { return document.querySelector('#oskBox, #hcSplash:not(.out), .app-notes, #boxOv, #boxSee, #lnOv, #mcPick, #presOv, #campEndEl, #bpSwOv, #mapOv, #emoteWheel, #ltBuy, #tourOv, #zcusOv, #evCal, #edOv, #hudEd, #brBox, .onb-ov'); }
+function navModal() { return document.querySelector('#oskBox, #hcSplash:not(.out), .app-notes, #boxOv, #boxSee, #lnOv, #mcPick, #presOv, #campEndEl, #bpSwOv, #mapOv, #emoteWheel, #ltBuy, #tourOv, #zcusOv, #evCal, #edOv, #hudEd, #brBox, #brPick, .onb-ov'); }
 function focusables() {
   const vis = x => !x.disabled && x.tabIndex !== -1 && x.getClientRects().length > 0 && getComputedStyle(x).visibility !== 'hidden';
   const modal = navModal(); if (modal) return [...modal.querySelectorAll(NAV_SEL)].filter(vis);

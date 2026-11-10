@@ -22,6 +22,7 @@ const LT_BUY = [
   { k: 'uav', n: 'UAV', c: 1500, d: 'enemies on your minimap for 25 s' },
   { k: 'self', n: 'SELF-REVIVE KIT', c: 2500, d: 'the next time you would go out, you get back up' },
   { k: 'squad', n: 'SQUAD REDEPLOY', c: 4000, d: 'dead squadmates come back next to you (squads)' },
+  { k: 'drop', n: 'LOADOUT DROP', c: 4000, d: 'a crate falls with the class you picked in the LAST TOKE lobby' },
 ];
 const ltOn = () => !!(M && M.br && M.mode === 'br');
 function ltSeed(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h = (Math.imul(h, 1664525) + 1013904223) >>> 0; return h / 4294967296; }; }
@@ -109,6 +110,7 @@ function ltBuy(i) {
   if (b.k === 'uav') { STK.uavT = Math.max(STK.uavT, 25); }
   if (b.k === 'self') LT.selfRev = true;
   if (b.k === 'squad') ltRedeploy();
+  if (b.k === 'drop') { try { brpDropBuy(); } catch (e) { reportError(e); } }
   try { sfx.pickup(); showMsg(b.n + ' BOUGHT'); } catch (e) {}
   return true;
 }

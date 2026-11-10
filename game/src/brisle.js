@@ -21,7 +21,7 @@ const BRI_TRAIN = { z: 134, x0: -92, x1: 61, v: 8, pause: 8, cars: [{ k: 'engine
 /* ---------- the round starts */
 function briSetup() {
   briClear(); if (!M || !M.br) return; const B = M.br, seed = (B.crates && B.crates[0] ? Math.round(B.crates[0].x * 10) : 7) >>> 0;
-  BRI.age = 0; BRI.nightK = -1; const a = (seed % 360) / 180 * Math.PI; BRI.wind = [Math.cos(a) * 3, Math.sin(a) * 3];
+  BRI.age = 0; BRI.nightK = -1; BRI.rode = false; const a = (seed % 360) / 180 * Math.PI; BRI.wind = [Math.cos(a) * 3, Math.sin(a) * 3];
   if (curMap !== 'stashisle') return;
   briTents(); briSheds(); briTunnels(); briTrainBuild();
 }
@@ -106,7 +106,7 @@ function briTentTick(dt) {
   const u = kb('use') || pad.use; let near = null;
   for (const t of BRI.tents) { if (Math.abs(t.x - P.x) > 5 || Math.abs(t.z - P.z) > 4) continue; for (const pl of t.plants) { if (!pl.ripe) continue; const w = pl.p.getWorldPosition(new THREE.Vector3()); if (Math.hypot(w.x - P.x, w.z - P.z) < 1.1) { near = pl; break; } } }
   if (!near) { BRI.harvT = 0; return; }
-  if (u) { BRI.harvT += dt; if (BRI.harvT >= 1.5) { BRI.harvT = 0; near.ripe = false; near.top.scale.set(0.35, 0.2, 0.35); LT.cash += 200; try { showMsg('+$200 · HARVESTED'); sfx.pickup(); } catch (e) {} } }
+  if (u) { BRI.harvT += dt; if (BRI.harvT >= 1.5) { BRI.harvT = 0; near.ripe = false; near.top.scale.set(0.35, 0.2, 0.35); LT.cash += 200; try { brpEvt('harvest'); } catch (e) {} try { showMsg('+$200 · HARVESTED'); sfx.pickup(); } catch (e) {} } }
   else BRI.harvT = 0;
   try { G.interactTxt = u ? `HARVESTING · ${Math.round(BRI.harvT / 1.5 * 100)}%` : `RIPE PLANT · HOLD ${actName('use')} TO HARVEST ($200)`; showMsgOnce(G.interactTxt); } catch (e) {}
 }
@@ -214,7 +214,7 @@ function briTick(dt) {
   briTentTick(dt);
   // the train
   if (BRI.train) { const t = host ? BRI.age : (B.trainAge !== undefined ? B.trainAge : BRI.age); briTrainPlace(t); const T = BRI.train;
-    if (playerAlive() && Math.abs(P.z - BRI_TRAIN.z) < 1.3) for (const c of T.cars) if (Math.abs(P.x - c.x) < c.len / 2 && Math.abs(P.y - (c.y + c.top)) < 0.15) { P.x += T.dx; break; } }
+    if (playerAlive() && Math.abs(P.z - BRI_TRAIN.z) < 1.3) for (const c of T.cars) if (Math.abs(P.x - c.x) < c.len / 2 && Math.abs(P.y - (c.y + c.top)) < 0.15) { P.x += T.dx; if (!BRI.rode) { BRI.rode = true; try { brpEvt('train'); } catch (e) {} } break; } }
   // night falls
   if ((BRI.envT -= dt) <= 0) { BRI.envT = 1; briNight(B); }
   // swimming

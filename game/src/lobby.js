@@ -40,8 +40,10 @@ function privCodeHtml() {
     `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div><div class="net-lan" id="netLan"></div></div>`;
 }
 const modeGroup = k => MODES[k].online ? 'on' : 'off';
+const brModeKey = k => k === 'br' || k === 'rbr' || /^obr/.test(k);   // LAST TOKE lives in its own lobby (brprog.js)
 function renderLobby(focusSel) {
   if (typeof ZL !== 'undefined' && ZL.on) return renderZLobby(focusSel);
+  if (typeof BRLOB !== 'undefined' && BRLOB.on) return brlobRender(focusSel);
   if (!MODES[LOBBY.mode].online || !playlist().includes(LOBBY.mode)) LOBBY.mode = playlist()[0];
   const sel = LOBBY.mode, d = MODES[sel], online = !!d.online, st = careerOf(online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   if (online) LOBBY.lastOn = sel; else LOBBY.lastOff = sel;
@@ -76,7 +78,7 @@ function rosterHtml(k) {
   return `<div class="ros-h"><span>LOBBY</span><b>${n} PLAYERS</b></div><div class="ros-team"><div class="tn">FREE-FOR-ALL</div>${p(me, 'me', 'READY')}${names.slice(0, n - 1).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` + info;
 }
 function openModes() {
-  const g = modeGroup(LOBBY.mode), list = MODE_ORDER.filter(k => modeGroup(k) === g);
+  const g = modeGroup(LOBBY.mode), list = MODE_ORDER.filter(k => modeGroup(k) === g && !brModeKey(k));
   $('modesTtl').textContent = g === 'on' ? 'ONLINE · GAME MODE' : 'GAME MODE';
   $('modeGrid').innerHTML = list.map(k => `<button class="mode-card${k === LOBBY.mode ? ' on' : ''}" data-mode="${k}"><i>${MODES[k].icon}</i><b>${MODES[k].name}</b><p>${MODES[k].desc}</p><span>${modeRules(k)}</span></button>`).join('');
   for (const b of $('modeGrid').children) b.onclick = () => { LOBBY.mode = b.dataset.mode; saveLobby(); sfx.ui(); renderLobby('.cod-go'); showScreen('lobby'); focusFirst('.cod-go'); };
@@ -90,7 +92,7 @@ function lobbyMapRow(d) {
   return `<div class="lob-map"><span>MAP${d.online && NET.app ? ' (IF YOU HOST)' : ''}</span><div class="lob-cpick"><button class="mini" data-act="map-" aria-label="Previous map">&lsaquo;</button><b>${name}</b><button class="mini" data-act="map+" aria-label="Next map">&rsaquo;</button></div><small>${sub}</small></div>`;
 }
 function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
-function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-go'); }
+function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode) && !brModeKey(k)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-go'); }
 
 /* ---------- custom game */
 const CUS_KEY = 'ashfall.custom.v1';

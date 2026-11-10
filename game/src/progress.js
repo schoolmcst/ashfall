@@ -473,6 +473,7 @@ function progMatchXP(won, partial) {
     else if (M && M.mode === 'zomb') add('ROUNDS SURVIVED', Math.max(0, (Z.round | 0) - 1) * 200);
     else { add('MATCH COMPLETE', 500); if (won === 1) add('VICTORY', 1000); else if (won === 0) add('DRAW', 400); }
   }
+  try { if (M && M.br && !partial && typeof brpXpRows === 'function') for (const r of brpXpRows()) add(r[0], r[1]); } catch (e) {}   // LAST TOKE placement (brprog.js)
   let sum = rows.reduce((s, r) => s + r[1], 0);
   if (online && sum) { const b = Math.round(sum * 0.25); rows.push(['ONLINE BONUS +25%', b]); sum += b; }
   try { if (M && M.feat && sum) { rows.push(['FEATURED · ' + M.feat.name + ' · 2× XP', sum]); sum *= 2; } } catch (e) {}

@@ -80,7 +80,7 @@ function brfgStandTick() {
   for (const s of BRFG.stands) {
     if (!s.left || Math.hypot(s.x - P.x, s.z - P.z) > 1.8 || Math.abs(s.y - P.y) > 2) continue;
     try { showMsgOnce(`WEED BALLOON · ${actName('use')} TO FLOAT · ${s.left} LEFT`); } catch (e) {}
-    if (u && !BRFG.uH) { s.left--; const b = s.bals[s.left]; if (b) { b.userData.fly = 1; } BRF.float = true; BRF.fT = 0; BRF.lift = P.y + 60; P.y += 0.6; P.vy = 6; P.onGround = false; if (scene.fog && BRF.fog0 === null) BRF.fog0 = scene.fog.density; try { showBanner('UP, UP AND AWAY', `steer · hold ${actName('crouch')} to dive`); sfx.pickup(); } catch (e) {} }
+    if (u && !BRFG.uH) { s.left--; try { brpEvt('balloon'); } catch (e) {} const b = s.bals[s.left]; if (b) { b.userData.fly = 1; } BRF.float = true; BRF.fT = 0; BRF.lift = P.y + 60; P.y += 0.6; P.vy = 6; P.onGround = false; if (scene.fog && BRF.fog0 === null) BRF.fog0 = scene.fog.density; try { showBanner('UP, UP AND AWAY', `steer · hold ${actName('crouch')} to dive`); sfx.pickup(); } catch (e) {} }
     break;
   }
   BRFG.uH = u;

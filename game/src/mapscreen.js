@@ -75,6 +75,8 @@ function mapDraw() {
   // vehicles, pings, the squad, me
   try { for (const v of VH.list) if (!v.dead) { g.fillStyle = '#d8d8d8'; g.fillRect(X(v.x) - 3, Z(v.z) - 3, 6, 6); } } catch (e) {}
   try { for (const p of PING.list) { g.fillStyle = p.kind === 'enemy' ? '#ff4a3a' : '#5dff7a'; g.beginPath(); g.arc(X(p.x), Z(p.z), 6, 0, TAU); g.fill(); } } catch (e) {}
+  try { if (typeof BRF !== 'undefined' && BRF.float && BRF.land) { g.strokeStyle = '#8fff6a'; g.lineWidth = 3; g.beginPath(); g.arc(X(BRF.land.x), Z(BRF.land.z), 9, 0, TAU); g.stroke(); g.fillStyle = '#8fff6a'; g.font = 'bold 12px sans-serif'; g.fillText('LANDING', X(BRF.land.x), Z(BRF.land.z) - 16); } } catch (e) {}   // the float in (brprog.js)
+  try { const kl = typeof BRP !== 'undefined' && BRP.kl; if (kl && !kl.isPlayer && kl.bot && kl.bot.group) { const q = kl.bot.group.position; g.fillStyle = '#ff4a3a'; g.beginPath(); g.arc(X(q.x), Z(q.z), 7, 0, TAU); g.fill(); g.fillText('KILL LEADER', X(q.x), Z(q.z) - 14); } } catch (e) {}
   for (const e of enemies) if (e.group && typeof isFriend === 'function' && isFriend(e) && (!e.entry || e.entry.alive !== false)) { g.fillStyle = '#5ac8ff'; g.beginPath(); g.arc(X(e.group.position.x), Z(e.group.position.z), 5, 0, TAU); g.fill(); }
   const px = X(P.x), pz = Z(P.z), fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
   g.fillStyle = '#ffd23a'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.moveTo(px + fx * 12, pz + fz * 12); g.lineTo(px - fz * 7 - fx * 6, pz + fx * 7 - fz * 6); g.lineTo(px + fz * 7 - fx * 6, pz - fx * 7 - fz * 6); g.closePath(); g.fill(); g.stroke();

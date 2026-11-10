@@ -3,7 +3,7 @@
    hosting; if none, you host one in a random mode from the list. Everyone waits in a pre-game lobby with the player
    list while a 15 second countdown runs (the host's clock), then the match starts for everyone at once. Players who
    find the match after it started drop straight in. */
-const ONLINE_MODES = () => MODE_ORDER.filter(k => MODES[k].online);
+const ONLINE_MODES = () => MODE_ORDER.filter(k => MODES[k].online && !(k === 'rbr' || /^obr/.test(k)));   // (LAST TOKE has its own lobby)
 function playlist() {
   const ok = ONLINE_MODES(); let L = Array.isArray(LOBBY.playlist) ? LOBBY.playlist.filter(k => ok.includes(k)) : [];
   if (!L.length) L = ['otdm', 'offa'];

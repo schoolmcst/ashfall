@@ -44,10 +44,11 @@ function brPre(dt) {
   return false;
 }
 /* ---------- 1. warm-up */
-function brWarmGun() { const d = brGun(Math.random() < 0.55 ? 1 : 2); try { equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 1; } catch (e) {} }
+function brWarmGun() { const d = (typeof brpWarmGunDef === 'function' && brpWarmGunDef()) || brGun(Math.random() < 0.55 ? 1 : 2); try { equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 1; } catch (e) {} }
 function brWarmStart() {
   const B = M.br; for (const c of B.crates) c.g.visible = false; if (B.wall) B.wall.visible = false;
   if (playerAlive()) brWarmGun();
+  try { brpWarmPick(); } catch (e) {}   // pick the kind of gun (brprog.js)
   try { showBanner('WARM-UP', `free respawns · kills don't count · the round starts in ${Math.ceil(B.t)} s${M.online ? '' : ' · ' + actName('use') + ' skips'}`); sfx.streak(); } catch (e) {}
 }
 function brWarmTick(dt) {
@@ -217,21 +218,23 @@ function brfLand() {
   for (const p of BRF.trail) if (p.parent) p.parent.remove(p); BRF.trail = [];
   camera.fov = baseFov; camera.updateProjectionMatrix(); G.spawnProt = 1;
   let name = ''; try { const p = typeof mapPoiAt === 'function' ? mapPoiAt(P.x, P.z) : null; if (p) name = p.name; } catch (e) {}
+  try { if (typeof BRP !== 'undefined') { BRP.landPoi = name || null; BRP.landKills = 0; } } catch (e) {}
   try { showBanner('LANDED', name ? name + ' · find a crate' : 'find a crate · watch the cloud'); } catch (e) {}
 }
 function brfFloatTick(dt) {
   BRF.fT += dt;
   const dive = !!(kb('crouch') || pad.crouch), fwd = clamp((kb('fwd') ? 1 : 0) - (kb('back') ? 1 : 0) - pad.my, -1, 1), str = clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
   const gy = groundAt(P.x, P.z, P.y), agl = P.y - gy, soft = agl < 14;
-  const top = dive && !soft ? 7 : soft ? 6 : 15, wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str, wl = Math.max(1, Math.hypot(wx, wz));
+  const top = dive && !soft ? 9.5 : soft ? 6 : 15, wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str, wl = Math.max(1, Math.hypot(wx, wz));
   P.vx = lerp(P.vx, wx / wl * top, clamp(dt * 1.8, 0, 1)); P.vz = lerp(P.vz, wz / wl * top, clamp(dt * 1.8, 0, 1));
   if (BRF.lift) { P.vy = lerp(P.vy, 16, clamp(dt * 3, 0, 1)); if (P.y >= BRF.lift) BRF.lift = 0; }   // a weed balloon going up (brfight.js)
-  else P.vy = lerp(P.vy, soft ? -3.2 : dive ? -24 : -6.5, clamp(dt * (soft ? 4 : 2), 0, 1));
+  else P.vy = lerp(P.vy, soft ? -3.2 : dive ? -30 : -6.5, clamp(dt * (soft ? 4 : 2), 0, 1));
   { const wd = typeof briWind === 'function' ? briWind() : [0, 0]; P.x += wd[0] * dt; P.z += wd[1] * dt; }   // the wind (brisle.js)
   P._ox = P.x; P._oz = P.z; P.x += P.vx * dt; P.z += P.vz * dt; resolve(P, 0.4, P.y, false);
   const pr = PLAYRECT, mx = (pr[1] - pr[0]) * 0.04, mz = (pr[3] - pr[2]) * 0.04; P.x = clamp(P.x, pr[0] + mx, pr[1] - mx); P.z = clamp(P.z, pr[2] + mz, pr[3] - mz);
   P.y += P.vy * dt; const g2 = groundAt(P.x, P.z, P.y + 0.5);
   if (P.y <= g2 + 0.02 || BRF.fT > 90) { P.y = Math.max(P.y, g2); if (BRF.fT > 90) P.y = g2; brfLand(); return; }
+  { const tl = Math.max(0, P.y - g2) / Math.max(1, -P.vy), lx = P.x + P.vx * tl, lz = P.z + P.vz * tl; BRF.land = { x: lx, z: lz, y: groundAt(lx, lz, P.y) }; }   // where I'll come down (brprog.js shows it)
   P.eye = 1.7; G.swapT = Math.max(G.swapT, 0.3); G.nadeHold = null; G.adsOn = false; G.reloading = false;
   try { const gun = gunObjs[G.cur]; if (gun) gun.visible = false; } catch (e) {}
   // the view: wide, a lean into the turn, thinner fog up high so you can see where to go
@@ -239,9 +242,10 @@ function brfFloatTick(dt) {
   camera.position.set(P.x, P.y + P.eye, P.z); BRF.roll = lerp(BRF.roll || 0, -str * 0.12, clamp(dt * 3, 0, 1)); camera.rotation.set(P.pitch, P.yaw, BRF.roll);
   if (scene.fog && BRF.fog0 !== null) scene.fog.density = BRF.fog0 * lerp(1, 0.35, clamp((agl - 10) / 60, 0, 1));
   // my little cloud under me and smoke streaking past
-  if (BRF.trail.length < 26 && Math.random() < dt * (dive ? 30 : 16)) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: 0xf0fff2, transparent: true, opacity: 0.5, depthWrite: false })); s.position.set(P.x + rnd(-3, 3), P.y - rnd(1.5, 4), P.z + rnd(-3, 3)); s.scale.setScalar(rnd(0.6, 1.4)); s.userData.t = 0; scene.add(s); BRF.trail.push(s); }
+  if (BRF.trail.length < 26 && Math.random() < dt * (dive ? 30 : 16)) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: typeof brpTrailCol === 'function' ? brpTrailCol() : 0xf0fff2, transparent: true, opacity: 0.5, depthWrite: false })); s.position.set(P.x + rnd(-3, 3), P.y - rnd(1.5, 4), P.z + rnd(-3, 3)); s.scale.setScalar(rnd(0.6, 1.4)); s.userData.t = 0; scene.add(s); BRF.trail.push(s); }
   for (let i = BRF.trail.length - 1; i >= 0; i--) { const s = BRF.trail[i]; s.userData.t += dt; s.material.opacity = 0.5 * (1 - s.userData.t / 1.6); if (s.userData.t > 1.6 || s.position.y > P.y + 6) { scene.remove(s); BRF.trail.splice(i, 1); } }
   if (!BRF.myPuff) { BRF.myPuff = brfPuffMesh(); scene.add(BRF.myPuff); }
+  try { const tc = brpTrailCol(); BRF.myPuff.children.forEach(s => s.material.color.setHex(tc)); } catch (e) {}
   BRF.myPuff.visible = true; BRF.myPuff.position.set(P.x, P.y - 0.15, P.z);
   if ((BRF.windT -= dt) <= 0) { BRF.windT = 0.32; try { burst(0.45, 380 + Math.abs(P.vy) * 30, 0.025 + Math.abs(P.vy) * 0.0015, 'lowpass'); } catch (e) {} }
   listener.x = P.x; listener.z = P.z; listener.yaw = P.yaw; listener.y = P.y + P.eye; listener.fy = P.y;
