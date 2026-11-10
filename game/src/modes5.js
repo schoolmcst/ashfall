@@ -31,9 +31,10 @@ function brSetup() {
     const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier, TERR.on ? TH(o.x, o.z) : 0); c.id = M.br.crates.length; M.br.crates.push(c);
   }
   try { brbVaultsBuild(); } catch (e) { reportError(e); }   // the vaults (brbots.js)
+  try { brfgSetup(); } catch (e) { reportError(e); }   // balloons, ladders (brfight.js)
+  try { briSetup(); } catch (e) { reportError(e); }   // tents, sheds, tunnels, the train (brisle.js)
   try { brlSetup(); } catch (e) { reportError(e); }   // floor loot on tables, racks, shelves (brloot.js)
   try { brsqSetup(); } catch (e) { reportError(e); }   // re-up beacons (brsquad.js)
-  try { brfgSetup(); } catch (e) { reportError(e); }   // balloons, ladders (brfight.js)
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
   try { brfStartPhase(M.br); } catch (e) { reportError(e); }   // WARM-UP, the bong and the float in (brintro.js)
@@ -85,7 +86,7 @@ function brUpdate(dt) {
   }
   B.uH = u;
   try { brlTick(dt); brlNameCol(); } catch (e) { reportError(e); }   // floor loot, ammo, heals (brloot.js)
-  try { brsqTick(dt); brbTick(dt); brfgTick(dt); } catch (e) { reportError(e); }   // cards, beacons, callouts, carrying (brsquad.js)
+  try { brsqTick(dt); brbTick(dt); brfgTick(dt); briTick(dt); } catch (e) { reportError(e); }   // cards, beacons, callouts, carrying (brsquad.js)
   // the end: last one standing
   for (const e of brAliveBots()) if (!e.net && e.brTier === undefined) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; }   // bots that just came in start with a pistol too
   if (sqOn()) {   // DUOS / SQUADS: last squad standing
@@ -122,13 +123,13 @@ function brHud() {
   const B = M.br; if (!B) return ''; { const fh = brfHud(); if (fh) return fh + sqHud(); } const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
   return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
-function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); brsqMarkers(out); brbMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
-function brClear() { try { brfReset(); brlClear(); brbVaultsClear(); brfgClear(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
+function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); brsqMarkers(out); brbMarkers(out); briMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
+function brClear() { try { brfReset(); brlClear(); brbVaultsClear(); brfgClear(); briClear(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
 
 /* ---------- online */
 function brPack() {
   const B = M.br, r1 = v => Math.round(v * 10) / 10, fr = B.from || { x: 0, z: 0, r: 0 }, to = B.to || { x: 0, z: 0, r: 0 };
-  return ['b', B.phase, r1(B.t), B.closing ? 1 : 0, r1(B.cx), r1(B.cz), r1(B.r), r1(fr.x), r1(fr.z), r1(fr.r), r1(to.x), r1(to.z), r1(to.r), B.most | 0, B.winTxt || '', B.winName || '', B.crates.length, ...B.crates.flatMap(c => [r1(c.x), r1(c.z), c.tier, c.open ? 1 : 0, r1(c.y || 0)]), BRL.seed >>> 0, brbVaultMask()];
+  return ['b', B.phase, r1(B.t), B.closing ? 1 : 0, r1(B.cx), r1(B.cz), r1(B.r), r1(fr.x), r1(fr.z), r1(fr.r), r1(to.x), r1(to.z), r1(to.r), B.most | 0, B.winTxt || '', B.winName || '', B.crates.length, ...B.crates.flatMap(c => [r1(c.x), r1(c.z), c.tier, c.open ? 1 : 0, r1(c.y || 0)]), BRL.seed >>> 0, brbVaultMask(), Math.round(BRI.age * 10) / 10];
 }
 function brApply(o) {
   const B = M.br; if (!B || netHostNow()) return; const num = i => +o[i] || 0;
@@ -138,7 +139,7 @@ function brApply(o) {
   const n = Math.min(200, o[16] | 0);
   if (B.crates.length !== n || (n && B.crates.some((c, i) => Math.abs(c.x - num(17 + i * 5)) > 0.2))) { for (const c of B.crates) if (!c.open) B.group.remove(c.g); B.crates = []; for (let i = 0; i < n; i++) { const c = brCrate(num(17 + i * 5), num(18 + i * 5), clamp(o[19 + i * 5] | 0, 0, 3), clamp(num(21 + i * 5), 0, 30)); c.id = i; if (c.tier >= 3) try { ltDropFx(c); } catch (e) {} B.crates.push(c); } }
   for (let i = 0; i < n; i++) { const c = B.crates[i]; if (o[20 + i * 5] && !c.open) { c.open = true; B.group.remove(c.g); } }
-  try { brlSeedIn(+o[17 + n * 5] || 0); brbVaultApply(+o[18 + n * 5] || 0); } catch (e) {}   // the floor loot's seed, the open vaults
+  try { brlSeedIn(+o[17 + n * 5] || 0); brbVaultApply(+o[18 + n * 5] || 0); B.trainAge = +o[19 + n * 5] || 0; } catch (e) {}   // the floor loot's seed, the open vaults
 }
 // the host: crates other players opened
 function brRemoteOpened(list) { const B = M.br; if (!B) return; for (const id of list) { const c = B.crates[id | 0]; if (c && !c.open) { c.open = true; B.group.remove(c.g); } } }

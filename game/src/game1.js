@@ -84,7 +84,7 @@ function updatePlayer(dt) {
   const prone = mvProne(dt, crouch);   // PRONE / DIVE (movement.js)
   const sprint = !G.downed && !prone && !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading) && !(typeof CAMP !== 'undefined' && CAMP.carry && M.mode === 'camp');
   if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
-  let speed = (typeof campCarrySlow === 'function' ? campCarrySlow() : 1) * (typeof brsqSlow === 'function' ? brsqSlow() : 1) * (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof mcFizz === 'function' && M && M.mode === 'zomb' && mcFizz() ? 1.25 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
+  let speed = (typeof campCarrySlow === 'function' ? campCarrySlow() : 1) * (typeof brsqSlow === 'function' ? brsqSlow() : 1) * (typeof briSwim === 'function' ? briSwim() : 1) * (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof mcFizz === 'function' && M && M.mode === 'zomb' && mcFizz() ? 1.25 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
   if (G.reloading) speed *= 0.85;
   if (G.downed) speed *= 0.22;   // LAST TOKE squads: crawling
   if (prone) speed *= 0.25;

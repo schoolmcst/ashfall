@@ -227,6 +227,7 @@ function brfFloatTick(dt) {
   P.vx = lerp(P.vx, wx / wl * top, clamp(dt * 1.8, 0, 1)); P.vz = lerp(P.vz, wz / wl * top, clamp(dt * 1.8, 0, 1));
   if (BRF.lift) { P.vy = lerp(P.vy, 16, clamp(dt * 3, 0, 1)); if (P.y >= BRF.lift) BRF.lift = 0; }   // a weed balloon going up (brfight.js)
   else P.vy = lerp(P.vy, soft ? -3.2 : dive ? -24 : -6.5, clamp(dt * (soft ? 4 : 2), 0, 1));
+  { const wd = typeof briWind === 'function' ? briWind() : [0, 0]; P.x += wd[0] * dt; P.z += wd[1] * dt; }   // the wind (brisle.js)
   P._ox = P.x; P._oz = P.z; P.x += P.vx * dt; P.z += P.vz * dt; resolve(P, 0.4, P.y, false);
   const pr = PLAYRECT, mx = (pr[1] - pr[0]) * 0.04, mz = (pr[3] - pr[2]) * 0.04; P.x = clamp(P.x, pr[0] + mx, pr[1] - mx); P.z = clamp(P.z, pr[2] + mz, pr[3] - mz);
   P.y += P.vy * dt; const g2 = groundAt(P.x, P.z, P.y + 0.5);
@@ -306,7 +307,7 @@ function brfHud() {
   const B = M.br; if (!B) return null;
   if (B.phase === -3) return `<b style="color:#8fff6a">WARM-UP</b> · ${Math.ceil(B.t)} s · free respawns · kills don't count${M.online ? '' : ' · ' + actName('use') + ': start now'}`;
   if (B.phase === -2 || BRF.cine) return 'LIGHTING UP…';
-  if (BRF.float) return `<b style="color:#8fff6a">FLOATING IN</b> · ${Math.max(0, Math.round(P.y - groundAt(P.x, P.z, P.y)))} m up · hold ${actName('crouch')} to dive`;
+  if (BRF.float) return `<b style="color:#8fff6a">FLOATING IN</b> · ${Math.max(0, Math.round(P.y - groundAt(P.x, P.z, P.y)))} m up · hold ${actName('crouch')} to dive${typeof briWindTxt === 'function' ? ' · wind ' + briWindTxt() : ''}`;
   return null;
 }
 (() => { const s = document.createElement('style'); s.textContent = `#brCine{position:fixed;inset:0;z-index:80;pointer-events:none;display:none}

@@ -9,6 +9,7 @@ const BRK_KINDS = {
   crate: { w: 1.15, d: 1.15, h: 1.05, hp: 260, mat: 'wood' },
   fence: { w: 2.4, d: 0.14, h: 1.15, hp: 120, mat: 'wood' },
   pallets: { w: 1.25, d: 1.05, h: 0.7, hp: 180, mat: 'wood' },
+  boards: { w: 2.4, d: 0.16, h: 2.3, hp: 220, mat: 'wood' },   // LAST TOKE plywood sheds (brisle.js)
 };
 function brkSeed(id) { let h = 2166136261; for (const c of String(id)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 // a free spot: nothing solid within r of it (the map's own boxes), on the ground
@@ -37,6 +38,7 @@ function brkMake(id, kind, x, z, w, d, y0 = 0) {
   const add = (bw, bh, bd, px, py, pz, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), m || mat); me.position.set(px, py, pz); me.castShadow = true; me.receiveShadow = true; me.userData.brk = id; g.add(me); return me; };
   if (kind === 'crate') { add(w, K.h * 0.55, d, 0, K.h * 0.275, 0); add(w * 0.8, K.h * 0.45, d * 0.8, 0.05, K.h * 0.775, -0.04); add(w + 0.02, 0.06, 0.08, 0, K.h * 0.3, d / 2, dark); }
   else if (kind === 'fence') { const along = w > d; for (let i = 0; i < 6; i++) { const o = -1.05 + i * 0.42; add(along ? 0.36 : d, K.h, along ? d : 0.36, along ? o : 0, K.h / 2, along ? 0 : o); } add(along ? w : 0.05, 0.08, along ? 0.05 : d, 0, K.h * 0.75, 0, dark); }
+  else if (kind === 'boards') { const along = w > d, L = along ? w : d; for (let i = 0; i < 4; i++) { const o = -L / 2 + L / 8 + i * L / 4; add(along ? L / 4 - 0.03 : d, K.h, along ? d : L / 4 - 0.03, along ? o : 0, K.h / 2, along ? 0 : o); } add(along ? L : d + 0.04, 0.1, along ? d + 0.04 : L, 0, K.h * 0.7, 0, dark); }
   else if (kind === 'shield') { add(w, K.h, d, 0, K.h / 2, 0); add(w > d ? w + 0.02 : d + 0.04, 0.12, w > d ? d + 0.04 : w + 0.02, 0, K.h * 0.82, 0, MAT.paintYellow || dark); }
   else { for (let i = 0; i < 4; i++) add(w, 0.12, d, 0, 0.08 + i * 0.17, 0); }
   g.position.set(x, y0, z); scene.add(g);   // (loadMap puts it in worldObjs with the rest of the map)

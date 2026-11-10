@@ -212,7 +212,7 @@ function brlBuild(seed) {
   spots.forEach((s, i) => { if (typeof duelIn === 'function' && duelIn(s.x, s.z, 1)) return; brlSet(s, i, brlRng(BRL.seed ^ brlHash(s.x, s.z, s.y))); });
   // six KEY CARDS for the vaults, on tables, shelves and pallets
   { const r = brlRng(BRL.seed ^ 0x51ed), cand = BRL.sets.filter(s => s.kind !== 'rack' && s.kind !== 'vault'); for (let k = 0; k < 6 && cand.length; k++) { const s = cand.splice(Math.floor(r() * cand.length), 1)[0], f = BRL.items.find(i => i.set === s); if (f) brlItem(s, 'key', {}, f.lx + (f.lx > 0 ? -0.3 : 0.3), f.ly, f.lz + 0.12); } }
-  try { brbVaultLoot(); } catch (e) { reportError(e); }   // the vaults' loot (brbots.js)
+  try { brbVaultLoot(); briTrainLoot(); } catch (e) { reportError(e); }   // the vaults' and the train's loot (brbots.js, brisle.js)
   for (const d of BRL.drops) brlDropMake(d);
   for (const id of new Set(BRL.items.filter(i => i.k === 'gun').map(i => i.gun))) try { brlGunModel(id); } catch (e) {}   // every gun model now, not when someone walks up (a stutter)
   brlVis(true);
@@ -293,7 +293,10 @@ function brlTick(dt) {
       const vy = p.y + 0.08 - ey, l3 = Math.hypot(dx, vy, dz) || 1, ang = Math.acos(clamp((dx * fx + vy * fy + dz * fz) / l3, -1, 1)); if (ang > 0.75 && d > 0.7) continue;
       const sc = ang + d * 0.12; if (sc < bs) { bs = sc; best = it; }
     }
-    if (best) { BRL.near = best; G.interactTxt = `${brlName(best)} · PRESS ${actName('use')} TO TAKE`; try { showMsgOnce(G.interactTxt); } catch (e) {} if (u && !BRL.uH) brlTake(best); }
+    if (best) { BRL.near = best; const swap = best.k === 'gun' && WEAPONS.length > 1 && WEAPONS[0] && WEAPONS[0].def && WEAPONS[0].def.id !== 'sidearm';   // a gun swap is a short hold
+      if (swap) { if (u) { if ((BRL.holdT = (BRL.holdT || 0) + dt) >= 0.45 && BRL.holdT < 5) { BRL.holdT = 9; brlTake(best); } } else BRL.holdT = 0; G.interactTxt = `${brlName(best)} · HOLD ${actName('use')} TO SWAP${BRL.holdT > 0 && BRL.holdT < 5 ? ' · ' + Math.round(BRL.holdT / 0.45 * 100) + '%' : ''}`; }
+      else { G.interactTxt = `${brlName(best)} · PRESS ${actName('use')} TO TAKE`; if (u && !BRL.uH) brlTake(best); }
+      try { showMsgOnce(G.interactTxt); } catch (e) {} }
   }
   BRL.uH = u;
   // the item I'm looking at pulses
