@@ -43,7 +43,7 @@ function briBoxDrop(en, x, y, z, items) {
   const lid = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.06, 0.64), wood); lid.position.y = 0.53; g.add(lid);
   const s = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.02), glow); s.position.set(0, 0.32, 0.31); g.add(s);
   const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.25, 5, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0x5dff7a, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide })); beam.position.y = 2.8; g.add(beam);
-  g.rotation.y = Math.random() * TAU; BRI.boxes.push({ name: en.isPlayer ? 'YOUR' : (en.name || 'A') + "'S", x, z, y: g.position.y, g, items });
+  g.rotation.y = Math.random() * TAU; const box = { name: en.isPlayer ? (M.online ? (NET.nick || 'A') + "'S" : 'YOUR') : (en.name || 'A') + "'S", x, z, y: g.position.y, g, items }; BRI.boxes.push(box); return box;
 }
 function briBoxItems(en) {
   const out = [];
@@ -63,7 +63,7 @@ function briBoxOpen(b) {
   briBoxClose(); BRI.box = b; G.menuOpen = true; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
   const o = document.createElement('div'); o.id = 'brBox'; o.className = 'onb-ov'; document.body.appendChild(o);
   const render = () => {
-    o.innerHTML = `<div class="onb-box"><small>STASH BOX</small><b>${b.name} STASH</b><div class="onb-tiles">${b.items.map((it, i) => `<button class="onb-t" data-bx="${i}"${it.k === 'gun' ? ` style="border-color:${BRL_RAR[it.tier].css}"` : ''}><b>${briItemName(it)}</b><span>${it.k === 'gun' ? (WEAPONS.length > 1 && WEAPONS[0].def.id !== 'sidearm' ? 'TAKE · yours goes in the box' : 'TAKE') : 'TAKE'}</span></button>`).join('') || '<p>EMPTY</p>'}</div><button class="btn" data-close="1">CLOSE</button></div>`;
+    o.innerHTML = `<div class="onb-box"><small>STASH BOX</small><b>${b.name} STASH</b><div class="onb-tiles">${b.items.map((it, i) => it.t ? '' : `<button class="onb-t" data-bx="${i}"${it.k === 'gun' ? ` style="border-color:${BRL_RAR[it.tier].css}"` : ''}><b>${briItemName(it)}</b><span>${it.k === 'gun' ? (WEAPONS.length > 1 && WEAPONS[0].def.id !== 'sidearm' ? 'TAKE · yours goes in the box' : 'TAKE') : 'TAKE'}</span></button>`).join('') || ''}${b.items.some(it => !it.t) ? '' : '<p>EMPTY</p>'}</div><button class="btn" data-close="1">CLOSE</button></div>`;
     for (const x of o.querySelectorAll('[data-bx]')) x.onclick = () => { briBoxTake(b, +x.dataset.bx); render(); };
     o.querySelector('[data-close]').onclick = briBoxClose;
     setTimeout(() => { const f = o.querySelector('[data-bx]') || o.querySelector('[data-close]'); if (f) f.focus(); }, 0);
@@ -75,11 +75,12 @@ function briBoxClose() {
   if (BRI.box) { BRI.box = null; G.menuOpen = false; BRI.uH = true; try { if (G.state === 'playing') lockPointer(); } catch (e) {} }
 }
 function briBoxTake(b, i) {
-  const it = b.items[i]; if (!it) return;
-  if (it.k === 'gun') { const old = WEAPONS.length > 1 && WEAPONS[0].def.id !== 'sidearm' ? { k: 'gun', gun: WEAPONS[0].def.id, tier: BRL.rar[WEAPONS[0].def.id] | 0 } : null; brlGive(ARM[it.gun], it.tier); b.items.splice(i, 1); if (old) b.items.push(old); }
-  else if (it.k === 'ammo') { const A = BRL_AMMO[it.t], room = A.max - BRL.ammo[it.t]; if (room <= 0) { showMsg('FULL'); return; } const n = Math.min(room, it.n); BRL.ammo[it.t] += n; it.n -= n; brlAmmoSync(true); if (it.n <= 0) b.items.splice(i, 1); }
-  else if (it.k === 'heal') { if (BRL.heals[it.h] >= BRL_HEAL[it.h].max) { showMsg('FULL'); return; } BRL.heals[it.h]++; b.items.splice(i, 1); }
-  else if (it.k === 'plate') { if (LT.plates >= 5) { showMsg('FULL'); return; } LT.plates++; b.items.splice(i, 1); }
+  const it = b.items[i]; if (!it || it.t) return; let done = true;
+  if (it.k === 'gun') { const old = WEAPONS.length > 1 && WEAPONS[0].def.id !== 'sidearm' ? { k: 'gun', gun: WEAPONS[0].def.id, tier: BRL.rar[WEAPONS[0].def.id] | 0 } : null; brlGive(ARM[it.gun], it.tier); if (old && !M.online) b.items.push(old); }   // (online the old gun can't go into someone else's box)
+  else if (it.k === 'ammo') { const A = BRL_AMMO[it.t], room = A.max - BRL.ammo[it.t]; if (room <= 0) { showMsg('FULL'); return; } BRL.ammo[it.t] += Math.min(room, it.n); brlAmmoSync(true); }
+  else if (it.k === 'heal') { if (BRL.heals[it.h] >= BRL_HEAL[it.h].max) { showMsg('FULL'); return; } BRL.heals[it.h]++; }
+  else if (it.k === 'plate') { if (LT.plates >= 5) { showMsg('FULL'); return; } LT.plates++; }
+  if (done) { it.t = true; try { brnTake(b, i); } catch (e) {} }
   try { sfx.pickup(); } catch (e) {}
 }
 /* ---------- grow tents */
@@ -199,15 +200,15 @@ function briTick(dt) {
   // deaths -> stash boxes (not in the warm-up)
   if (B.phase >= -1) for (const en of M.entries) {
     const e = en.bot; if (e && en.alive !== false && e.group) { en.lastGun = e.gunId; en.lastTier = e.brTier; en.lastPos = { x: e.group.position.x, y: e.group.position.y, z: e.group.position.z }; }
-    if (en.alive === false && !en.briBox) { en.briBox = true; const p = en.isPlayer ? { x: P.x, y: P.y, z: P.z } : en.lastPos; if (p && !(typeof DUEL !== 'undefined' && DUEL.on)) briBoxDrop(en, p.x, p.y, p.z, briBoxItems(en)); }
+    if (en.alive === false && !en.briBox) { en.briBox = true; const p = en.isPlayer ? { x: P.x, y: P.y, z: P.z } : en.lastPos; if (p && !(typeof DUEL !== 'undefined' && DUEL.on) && (!M.online || en.isPlayer || (netHostNow() && !en.net))) { const bx = briBoxDrop(en, p.x, p.y, p.z, briBoxItems(en)); if (bx && M.online) brnBoxMade(bx); } }   // online: my own box, and the host's bots' (brnet.js)
     else if (en.alive !== false) en.briBox = false;
   }
   // a stash box next to me: USE opens it
   const u = kb('use') || pad.use;
-  if (!BRI.box && playerAlive()) for (const b of BRI.boxes) if (b.items.length && Math.hypot(b.x - P.x, b.z - P.z) < 1.7 && Math.abs(b.y - P.y) < 1.6) { try { showMsgOnce(`${b.name} STASH BOX · ${actName('use')} TO OPEN`); } catch (e) {} if (u && !BRI.uH) briBoxOpen(b); break; }
+  if (!BRI.box && playerAlive()) for (const b of BRI.boxes) if (b.items.some(it => !it.t) && Math.hypot(b.x - P.x, b.z - P.z) < 1.7 && Math.abs(b.y - P.y) < 1.6) { try { showMsgOnce(`${b.name} STASH BOX · ${actName('use')} TO OPEN`); } catch (e) {} if (u && !BRI.uH) briBoxOpen(b); break; }
   if (BRI.box && (!playerAlive() || Math.hypot(BRI.box.x - P.x, BRI.box.z - P.z) > 2.6)) briBoxClose();
   BRI.uH = u;
-  for (const b of BRI.boxes) if (!b.items.length && b.g.visible) b.g.children[3] && (b.g.children[3].visible = false);
+  for (const b of BRI.boxes) if (!b.items.some(it => !it.t) && b.g.visible) b.g.children[3] && (b.g.children[3].visible = false);
   // the moving cloud: from the 4th circle the next one drifts while it closes
   if (host && B.closing && B.phase >= 3 && B.to && B.from) { if (!B.drift) { const a = Math.random() * TAU; B.drift = [Math.cos(a), Math.sin(a)]; } const sp = 2.2 * dt; B.to.x += B.drift[0] * sp; B.to.z += B.drift[1] * sp; if (Math.hypot(B.to.x - B.from.x, B.to.z - B.from.z) + B.to.r > B.from.r * 0.98) { B.drift = [-B.drift[0], -B.drift[1]]; B.to.x += B.drift[0] * sp * 2; B.to.z += B.drift[1] * sp * 2; } }
   if (!B.closing) B.drift = null;
@@ -227,4 +228,4 @@ function briTick(dt) {
 const briSwim = () => (BRI.swim ? 0.45 : 1);
 const briWind = () => (M && M.br ? BRI.wind : [0, 0]);
 function briWindTxt() { const w = BRI.wind, a = Math.atan2(w[0], -w[1]), arrows = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖']; return arrows[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]; }
-function briMarkers(out) { for (const b of BRI.boxes) if (b.items.length && Math.hypot(b.x - P.x, b.z - P.z) < 30) out.push({ x: b.x, y: b.y + 1.2, z: b.z, t: 'BOX', c: '#5dff7a' }); if (BRI.train && Math.hypot(BRI.train.x - P.x, BRI_TRAIN.z - P.z) < 120) out.push({ x: BRI.train.x, y: BRI.train.cars[0].y + 4.5, z: BRI_TRAIN.z, t: 'TRAIN', c: '#ffc83a' }); for (const E of BRI.tunEnds || []) if (Math.hypot(E.x - P.x, E.z - P.z) < 50) out.push({ x: E.x, y: TH(E.x, E.z) + 3.2, z: E.z, t: 'TUNNEL', c: '#d8ffc8' }); }
+function briMarkers(out) { for (const b of BRI.boxes) if (b.items.some(it => !it.t) && Math.hypot(b.x - P.x, b.z - P.z) < 30) out.push({ x: b.x, y: b.y + 1.2, z: b.z, t: 'BOX', c: '#5dff7a' }); if (BRI.train && Math.hypot(BRI.train.x - P.x, BRI_TRAIN.z - P.z) < 120) out.push({ x: BRI.train.x, y: BRI.train.cars[0].y + 4.5, z: BRI_TRAIN.z, t: 'TRAIN', c: '#ffc83a' }); for (const E of BRI.tunEnds || []) if (Math.hypot(E.x - P.x, E.z - P.z) < 50) out.push({ x: E.x, y: TH(E.x, E.z) + 3.2, z: E.z, t: 'TUNNEL', c: '#d8ffc8' }); }

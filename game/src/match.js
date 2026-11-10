@@ -263,7 +263,7 @@ const playerAlive = () => (G.state === 'playing' || pausedOnline()) && M.me && M
 function respawnPlayer() {
   if (NET.spec) { G.state = 'spectate'; G.specIdx = G.specIdx || 0; return; }   // WATCH: spectators never spawn
   const p = pickSpawnFor(M.myTeam, sideOf(M.myTeam)); placePlayer(p);
-  if (M.mode === 'gun') equipGunGame(M.me.level); else if (M.pp) ppEquipMe(); else if (M.br) { if (M.online && M.br.phase >= 1 && !M.br.winTxt && M.t > 30) { G.state = 'spectate'; G.specIdx = 0; showBanner('ROUND IN PROGRESS', 'you join the next round · watch for now'); return; } if (brWarmNow()) brWarmGun(); else { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } M.br.myTier = -1; } else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
+  if (M.mode === 'gun') equipGunGame(M.me.level); else if (M.pp) ppEquipMe(); else if (M.br) { if (M.online && M.br.phase >= 1 && !M.br.winTxt && M.t > 30 && !G.brReup) { G.state = 'spectate'; G.specIdx = 0; showBanner('ROUND IN PROGRESS', 'you join the next round · watch for now'); return; } if (brWarmNow()) brWarmGun(); else { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } M.br.myTier = -1; } else { equipClass(activeClass()); G.grenades = EQUIP[G.equip].count; }
   G.state = 'playing'; G.dc = null; G.dcHold = false; $('killcam').classList.add('hide'); $('killcam').classList.remove('kcv'); try { kcYou(null); } catch (e) {} vig.style.opacity = 0;
   camera.fov = baseFov; camera.updateProjectionMatrix(); lockPointer(); hideCenter();
 }

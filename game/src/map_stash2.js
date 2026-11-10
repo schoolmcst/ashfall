@@ -134,7 +134,19 @@ function stashNat(x, z) {
   return -2.5 + land * (2.5 + Math.max(0.6, hills + peak + ridge));
 }
 let STASH_NOISE = null;
+// THE RIVER (1.2.93 follow-up): a lake in the open ground west of OLD TOWN, a river west to the sea south of THE HOTEL
+// (found by a path search that keeps clear of every place and building), a bridge where the west road crosses it
+const STASH_RIVER = [[-100, -24], [-120, -28], [-152, -28], [-188, -32], [-210, -33]], STASH_LAKE = { x: -100, z: -24, r: 9 };
+function stashRiverD(x, z) {
+  let d = Math.hypot(x - STASH_LAKE.x, z - STASH_LAKE.z) - STASH_LAKE.r;
+  for (let i = 0; i < STASH_RIVER.length - 1; i++) { const [ax, az] = STASH_RIVER[i], [bx, bz] = STASH_RIVER[i + 1], lx = bx - ax, lz = bz - az, t = Math.max(0, Math.min(1, ((x - ax) * lx + (z - az) * lz) / (lx * lx + lz * lz))); d = Math.min(d, Math.hypot(x - ax - lx * t, z - az - lz * t)); }
+  return d;
+}
 function stashHeight(x, z) {
+  const h = stashHeight0(x, z), rd = stashRiverD(x, z); if (rd >= 17) return h;
+  const k = rd < 5 ? 1 : 1 - stashSmooth((rd - 5) / 12); return h + (Math.min(h, -2.6) - h) * k;   // the bed 2.6 m down, banks over 12 m
+}
+function stashHeight0(x, z) {
   let h = stashNat(x, z);
   const pads = STASH_POIS.concat(STASH_HOUSES.map(([hx, hz]) => ({ x: hx, z: hz, w: 18, d: 15, y: 'nat', b: 7 })), [{ x: DUEL_PEN.stashisle.x, z: DUEL_PEN.stashisle.z, w: 14, d: 18, y: 'nat', b: 5 }]);
   for (const p of pads) {
@@ -171,6 +183,15 @@ function buildStash() {
   terrDefine(stashHeight, H + 24, 2);
   terrBuildMesh(stashColour, H + 24);
   for (const [x, z, w, d] of [[0, -H - 170, 1000, 300], [0, H + 170, 1000, 300], [-H - 170, 0, 300, 1000], [H + 170, 0, 300, 1000], [0, -H + 4, H * 2 + 50, 50], [0, H - 4, H * 2 + 50, 50], [-H + 4, 0, 50, H * 2 - 40], [H - 4, 0, 50, H * 2 - 40]]) floorQuad(x, z, w, d, -0.35, 'sea', 30);   // the sea all round and over the shallows (never under the island itself)
+  // the river's water: a ribbon along it and a disc for the lake, at the sea's level
+  { const pos = [], idx = []; let n = 0; for (let i = 0; i < STASH_RIVER.length - 1; i++) { const [ax, az] = STASH_RIVER[i], [bx, bz] = STASH_RIVER[i + 1], L = Math.hypot(bx - ax, bz - az), nx = -(bz - az) / L * 11, nz = (bx - ax) / L * 11;
+      pos.push(ax + nx, -0.35, az + nz, ax - nx, -0.35, az - nz, bx + nx, -0.35, bz + nz, bx - nx, -0.35, bz - nz); idx.push(n, n + 2, n + 1, n + 1, n + 2, n + 3); n += 4; }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3)); g.setIndex(idx); g.computeVertexNormals();
+    const wm = MAT.sea || MAT.water, rv = new THREE.Mesh(g, wm); rv.receiveShadow = true; scene.add(rv);
+    const lk = new THREE.Mesh(new THREE.CircleGeometry(STASH_LAKE.r + 12, 40), wm); lk.rotation.x = -Math.PI / 2; lk.position.set(STASH_LAKE.x, -0.35, STASH_LAKE.z); lk.receiveShadow = true; scene.add(lk);
+    // the bridge where the west road crosses
+    const ya = stashHeight0(-110, -50), yb = stashHeight0(-110, 2);   // a sloped deck in 2 m pieces (small steps), following the road from bank to bank
+    for (let i = 0; i < 26; i++) { const z = -50 + i * 2 + 1, y = ya + (yb - ya) * (i + 0.5) / 26; blk(-110, z, 8, 2.02, 0.5, 'wood', { y: y - 0.5, walk: true }); for (const sd of [-1, 1]) blk(-110 + sd * 3.85, z, 0.2, 2.02, 1.0, 'wood', { y, walk: false }); if (i % 4 === 1) for (const sd of [-1, 1]) blk(-110 + sd * 3.2, z, 0.6, 0.6, y + 2.6, 'concrete', { y: -3.1, walk: false }); } }
   for (const [x, z, w, d] of [[0, -H - 1.5, H * 2 + 6, 3], [0, H + 1.5, H * 2 + 6, 3], [-H - 1.5, 0, 3, H * 2 + 6], [H + 1.5, 0, 3, H * 2 + 6]]) blk(x, z, w, d, 40, 'dark', { noDraw: true, y: -5 });
   /* ======== CENTRE: OLD TOWN, on the rise in the middle of the island */
   const townKeys = ['plaster', 'brick', 'facade', 'plaster', 'brick', 'panel'];
@@ -299,6 +320,7 @@ function buildStash() {
 // where the trees, rocks and grass don't go
 const STASH_PLACES = [[0, 0, 50], [0, -140, 40], [-132, -112, 38], [-72, -64, 14], [125, -122, 42], [172, -176, 18], [-158, 20, 30], [123, 20, 22], [164, 20, 24], [-140, 142, 40], [0, 165, 68], [128, 146, 48], [-66, 100, 36], [62, 90, 30]];
 function stashBusy(x, z, m = 0) {
+  if (stashRiverD(x, z) < 18 + m) return true;   // the river and the lake
   if (Math.abs(x) < 6 + m || Math.abs(z) < 6 + m || Math.abs(Math.abs(x) - 110) < 6 + m || Math.abs(Math.abs(z) - 110) < 6 + m) return true;
   if (Math.abs(x) > STASH_H - 12 || Math.abs(z) > STASH_H - 12) return true;
   if (STASH_PLACES.some(([px, pz, r]) => Math.abs(x - px) < r + m && Math.abs(z - pz) < r + m)) return true;

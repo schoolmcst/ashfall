@@ -61,6 +61,7 @@ function brsqCardGone(c) { if (c.g && c.g.parent) c.g.parent.remove(c.g); BRSQ.c
 // bring someone back: they float in above the beacon
 function brsqReup(c, b) {
   brsqCardGone(c); const en = c.en; brsqPuff(b.x, b.y + 1, b.z, 10);
+  if (en.lastPeer && M.online && netHostNow() && !en.isPlayer) { BRN.sru.push([en.lastPeer, BRSQ.beacons.indexOf(b), ++BRN.reupSeq]); if (BRN.sru.length > 6) BRN.sru.shift(); if (en.team === M.myTeam) try { showBanner('RE-UP', `${en.name} is floating back in`); } catch (er) {} return; }   // a real player: they bring themselves back (brnet.js)
   if (en.isPlayer) {
     try { G.dc = null; G.dcHold = false; respawnPlayer(); } catch (e) {}
     if (playerAlive()) { try { brfFloatStart(); } catch (e) {} P.x = b.x; P.z = b.z; P.y = b.y + 70; P.vx = P.vz = 0; try { showBanner('RE-UP', 'your squad brought you back · float in'); } catch (e) {} }
@@ -140,11 +141,12 @@ function brsqTick(dt) {
   for (const en of M.entries) {
     const dead = en.alive === false; if (dead && !BRSQ.dead.has(en)) {
       BRSQ.dead.add(en);
-      if (!M.online || (netHostNow() && !en.isPlayer && !en.net)) { const standing = (en.team === M.myTeam && !en.isPlayer && playerAlive()) || enemies.some(e => e.entry && e.entry !== en && e.entry.alive !== false && e.team === en.team);
+      if (!M.online || netHostNow()) {   // (online the host runs every card: its bots', its own, the players' - brnet.js)
+        const standing = (en.team === M.myTeam && !en.isPlayer && playerAlive()) || enemies.some(e => e.entry && e.entry !== en && e.entry.alive !== false && e.team === en.team);
         if (standing) { const p = en.isPlayer ? { x: P.x, y: P.y, z: P.z } : en.lastPos || (en.bot ? { x: en.bot.group.position.x, y: en.bot.group.position.y, z: en.bot.group.position.z } : null); if (p) brsqCardDrop(en, p.x, p.y, p.z); } }
     } else if (!dead) BRSQ.dead.delete(en);
   }
-  for (const e of enemies) if (e.entry && e.entry.alive !== false) e.entry.lastPos = { x: e.group.position.x, y: e.group.position.y, z: e.group.position.z };
+  for (const e of enemies) if (e.entry && e.entry.alive !== false) { e.entry.lastPos = { x: e.group.position.x, y: e.group.position.y, z: e.group.position.z }; if (e.net) e.entry.lastPeer = e.net; }
   // cards: spin, get picked up, go stale
   const u = kb('use') || pad.use;
   for (const c of BRSQ.cards.slice()) {

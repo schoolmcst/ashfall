@@ -152,6 +152,16 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.94 TEST: the follow-ups to 1.2.93. THE RIVER: map_stash2.js STASH_RIVER + STASH_LAKE (a lake at (-100,-24), west to
+  the sea south of THE HOTEL; found by a grid path search clear of every place/building); stashHeight carves the bed to
+  -2.6 with 12 m banks (stashHeight0 is the old height), a water ribbon + lake disc at -0.35, a sloped bridge in 2 m
+  pieces where the x -110 road crosses (z -50..2: the lake's banks reach the road), stashBusy keeps trees/grass out.
+  brnet.js: online STASH BOXES (each player sends their own death's box, the host its bots'; presence bn.sb/bn.st;
+  items are marked taken, not spliced, so indexes match; online a swapped gun is left behind), online STASH CARDS (the
+  host runs every card: bn.sc; players claim bn.scp, deliver bn.scr; the host re-ups bots itself and tells players with
+  bn.sru; G.brReup lets respawnPlayer through the online late-join gate), online VAULT BOSSES (the host runs them and
+  sends bn.vb; others draw stand-ins (e.proxyBoss) and send their damage as cumulative bn.vh; the boss shoots the
+  nearest player: enemyShoot for the host, botShoot for others). Tests: s_river, mp_brnet.
 - 1.2.93 PUBLIC (owner said send it): the rest of the owner's BR list (31-38, 39-44, 7, 22-30, 9-20, 45-51, 58-60, own lobby, loadout drops).
   Order in brSetup: brbVaultsBuild, brfgSetup, briSetup (before brlSetup: the vault and train loot is built inside
   brlBuild), brlSetup, brsqSetup + brpSetup, vhSetup, ltSetup. brUpdate ticks brlTick, brsqTick, brbTick, brfgTick,

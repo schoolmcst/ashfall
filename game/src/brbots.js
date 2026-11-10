@@ -45,7 +45,7 @@ function brbVaultsBuild() {
   });
   try { rebuildBoxGrid(); } catch (e) {}
   // offline: a boss in each vault
-  if (!M.online) for (const v of BRB.vaults) {
+  if (!M.online || netHostNow()) for (const v of BRB.vaults) {   // (online the host runs them; the others see stand-ins, brnet.js)
     const e = makeEnemy('heavy', v.x - (v.door.nx || 0) * 1.6, v.z - (v.door.nz || 0) * 1.6); e.group.position.y = v.y; e.team = 99; e.name = 'VAULT BOSS'; e.bossBR = v;
     try { const lmg = ARMORY.find(d => d.cat === 'lmg'); if (lmg) botApplyGun(e, lmg, {}), botGunVisual(e, lmg, {}, null); } catch (er) {}
     Object.assign(e, { hp: 650, maxHp: 650, acc: 0.3, dmg: 10, cdT: 0, awake: false, armor: 150 }); e.group.rotation.y = Math.atan2(v.door.nx, v.door.nz); enemies.push(e); BRB.bosses.push(e);
@@ -92,10 +92,14 @@ function brbTick(dt) {
   for (const e of BRB.bosses) {
     if (!enemies.includes(e)) { if (!e.downSaid) { e.downSaid = true; try { showBanner('VAULT BOSS DOWN', 'the vault is yours'); sfx.streak(); } catch (er) {} } continue; }
     try { animEnemy(e, dt, 0); } catch (er) {}
-    if (!e.awake || !playerAlive()) continue;
-    const dx = P.x - e.group.position.x, dz = P.z - e.group.position.z, dist = Math.hypot(dx, dz); if (dist > 30) continue;
-    e.group.rotation.y = Math.atan2(dx, dz); e.aim = 1; e.holding = true;
-    if ((e.cdT -= dt) <= 0) { e.cdT = 0.16; if (hasLOS(e, dist)) { if (!e.burst || e.burst <= 0) { e.burst = 5; e.cdT = 1.2; } else { e.burst--; enemyShoot(e, dist); } } }
+    if (!e.awake) continue;
+    // the nearest one in reach: me (enemyShoot) or another player online (botShoot)
+    const g0 = e.group.position; let t = null, dist = 30;
+    if (playerAlive()) { const d = Math.hypot(P.x - g0.x, P.z - g0.z); if (d < dist) { dist = d; t = 'P'; } }
+    if (M.online) for (const o of enemies) if (o.net && o.entry && o.entry.alive !== false) { const d = Math.hypot(o.group.position.x - g0.x, o.group.position.z - g0.z); if (d < dist) { dist = d; t = o; } }
+    if (!t) continue; const tx = t === 'P' ? P.x : t.group.position.x, tz = t === 'P' ? P.z : t.group.position.z;
+    e.group.rotation.y = Math.atan2(tx - g0.x, tz - g0.z); e.aim = 1; e.holding = true;
+    if ((e.cdT -= dt) <= 0) { e.cdT = 0.16; const see = t === 'P' ? hasLOS(e, dist) : brbSees(e, t, dist); if (see) { if (!e.burst || e.burst <= 0) { e.burst = 5; e.cdT = 1.2; } else { e.burst--; e.shots = (e.shots | 0) + 1; if (t === 'P') enemyShoot(e, dist); else try { botShoot(e, t, dist); } catch (er) {} } } }
   }
   // bots: sharper every phase
   if (host && B.phase !== BRB.phase) { BRB.phase = B.phase; const k = 1 + Math.max(0, B.phase) * 0.05; for (const e of enemies) if (e.entry && !e.net) { if (e.acc0 === undefined) e.acc0 = e.acc; e.acc = Math.min(0.85, e.acc0 * k); } }
@@ -109,6 +113,9 @@ function brbTick(dt) {
   }
 }
 function brbMarkers(out) { for (const v of BRB.vaults) if (Math.hypot(v.x - P.x, v.z - P.z) < ((BRL.keys | 0) ? 400 : 60)) out.push({ x: v.door.cx, y: v.y + 3.2, z: v.door.cz, t: v.open ? 'VAULT · OPEN' : 'VAULT', c: '#ffc83a' }); }
+// a straight look from the boss to another player (online)
+const _bbr = new THREE.Raycaster(), _bbv = new THREE.Vector3(), _bbd = new THREE.Vector3();
+function brbSees(e, t, dist) { _bbv.set(e.group.position.x, e.group.position.y + 1.5, e.group.position.z); _bbd.set(t.group.position.x, t.group.position.y + 1.4, t.group.position.z).sub(_bbv).normalize(); _bbr.set(_bbv, _bbd); _bbr.far = dist; return _bbr.intersectObjects(wallMeshes, false).length === 0; }
 // from brGoal: a better gun on the floor nearby (the host's bots take it like a crate)
 function brbLootGoal(e, set) {
   if (typeof brlOn !== 'function' || !brlOn() || !BRL.items.length) return null; const g = e.group.position, B = M.br, mine = e.brTier === undefined ? -1 : e.brTier;
