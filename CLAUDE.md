@@ -152,6 +152,30 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.93 TEST: the rest of the owner's BR list (31-38, 39-44, 7, 22-30, 9-20, 45-51, 58-60, own lobby, loadout drops).
+  Order in brSetup: brbVaultsBuild, brfgSetup, briSetup (before brlSetup: the vault and train loot is built inside
+  brlBuild), brlSetup, brsqSetup + brpSetup, vhSetup, ltSetup. brUpdate ticks brlTick, brsqTick, brbTick, brfgTick,
+  briTick, brpTick. The 'b' pack ends: ..crates, BRL.seed, brbVaultMask(), BRI.age (train clock).
+  brsquad.js: STASH CARDS + RE-UP BEACONS (offline / host bots), callouts on the emote wheel (wraps emoteWheel), carry a
+  downed bot (melee key; brsqSlow in the speed), SQ_REVIVE 2.4 with puffs, squad-first spectate (match.js; the spectate
+  camera now follows y). brbots.js: 4 VAULTS (BRV_SPOTS, runtime addBox walls, steel door box removed on open; KEY
+  CARDS are BRL items kind 'key'; VAULT BOSSES offline: non-entry enemies team 99, own AI in brbTick), bots take floor
+  guns (brbLootGoal), heal, hide in buildings from phase 3 (brbHideGoal), +5% acc a phase, revive 1.5x, 'spot' callout,
+  vhBotWant from 25 m. brfight.js: LADDERS (STASH_LADDERS from stashBld + the lighthouse; brfgLadder hook in
+  updatePlayer; tunnel ladders too), WEED BALLOONS (BRF.lift in brfFloatTick), DAMAGE NUMBERS (wraps damageEnemy; S.dmgNums
+  off/br/all), DEPLOYABLE COVER (BRL.covers; wraps fuUse; key 6 'deploy'), EQUIP.molotov / healsmoke (brOnly, hidden in
+  the loadout; wraps detonate and smkCloud; SMK.out kind 2/3 online), floor-loot kinds 'throw' and 'cover', sniper
+  glint, footsteps by surface (wraps sfx.step). brisle.js: STASH BOXES on death (local) with a take menu (#brBox), hold
+  USE to swap guns, the moving cloud (phase 3+), GROW TENTS, plywood SHEDS (BRK kind 'boards', ids 7100+), day to night
+  (briNight sets sky/sun/hemi/fog directly, no applyEnv rebuild), WIND in the float, TUNNELS at y -9 (groundAt: feetY
+  more than 2.5 m under TH ignores the terrain; terrSlope skips there), THE BONG EXPRESS on z 134 x -92..61 (briGround in
+  groundAt, briResolve in resolve), SWIMMING (groundAt floats you at BRI_SEA -1.15 over deeper water; briSwim speed).
+  BRI/BRI_SEA are `var` (groundAt runs before brisle.js's line executes). brprog.js: stats ashfall.lt.v1, placement XP
+  rows in progMatchXP, 3 dailies a day (brpEvt), crown (presence cr), float trails (S via stats.trail), victory dance
+  (wraps endMatch offline), kill leader (markers + map), landing marker (BRF.land), warm-up gun pick (#brPick), BIG
+  phases shorter, LOADOUT DROP (LT_BUY 'drop'), the LAST TOKE LOBBY (BRLOB; brlobAct before zombAct; renderLobby
+  defers to it; BR modes filtered out of the MP lobby and the playlist). Tests: s_brsquad, s_brbots, s_brfight,
+  s_brisle, s_brprog (+ s_brloot, mp_brloot, mp_brintro).
 - 1.2.92 PUBLIC (owner said send it): LAST TOKE LOOT 2.0 (batch 1 of the owner's BR list: items 1,2,3,5,6). brloot.js: RARITY (BRL_RAR common/rare/
   epic/legendary; dmg/reload/recoil through a computeStats wrapper; the gun gets its own material copies with a faint
   emissive sheen, hands skipped, put back outside BR via an equipClass wrapper; HUD name coloured). KIT: ground
