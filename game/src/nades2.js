@@ -54,6 +54,6 @@ function smkClear() { for (const c of SMK.clouds) for (const q of c.sprites) sce
 // online: clouds from someone else's presence
 function smkFromNet(R, list) {
   if (!Array.isArray(list)) return;
-  for (const s of list) { if (!Array.isArray(s) || (+s[0] | 0) <= (R.skSeen | 0)) continue; R.skSeen = +s[0] | 0; if (R.skFirst) smkCloud({ x: netNum(s[1], -ARENA, ARENA), y: netNum(s[2], -5, 30), z: netNum(s[3], -ARENA, ARENA) }, s[4] ? 'skunk' : 'hotbox', false); }
+  for (const s of list) { if (!Array.isArray(s) || (+s[0] | 0) <= (R.skSeen | 0)) continue; R.skSeen = +s[0] | 0; if (R.skFirst) smkCloud({ x: netNum(s[1], -ARENA, ARENA), y: netNum(s[2], -5, 30), z: netNum(s[3], -ARENA, ARENA) }, ['hotbox', 'skunk', 'molotov', 'heal'][s[4] | 0] || 'hotbox', false); }
   R.skFirst = true;   // the clouds already in their state when we first saw them are old: skip those
 }

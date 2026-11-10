@@ -18,6 +18,7 @@
    from fixed numbers and a seed, so every machine builds the same island. Loot spots (STASH_LOOT) are inside, upstairs
    and on roofs; brSetup puts most of the crates there. */
 const STASH_LOOT = [];
+const STASH_LADDERS = [];   // ladders up to the walkable roofs (+ the lighthouse), placed in LAST TOKE by brfight.js
 STASH_LOOT.push = function (...a) { for (const o of a) o.y = +((o.y || 0) + BUILD_YOFF).toFixed(2); return Array.prototype.push.apply(this, a); };
 // a slab with a rectangular hole (for a stairwell): up to four pieces round the hole
 function stashSlabHole(x0, x1, z0, z1, top, key, hole, walk = true) {
@@ -60,7 +61,10 @@ function stashBld(o) {
   // the stairs: flight k climbs to level k, switching between the two bands; each level has its hole over its flight
   for (let k = 1; k <= flights; k++) { const odd = k % 2 === 1, b = odd ? bandA : bandB; stairs(odd ? sx0 : sx1, (b[0] + b[1]) / 2, odd ? 'e' : 'w', 1.25, y0 + (k - 1) * H, y0 + k * H, 'concrete'); }
   for (let k = 1; k <= f; k++) { const hole = k <= flights ? [sx0, sx1, ...(k % 2 === 1 ? bandA : bandB)] : null; stashSlabHole(x0 + 0.15, x1 - 0.15, z0 + 0.15, z1 - 0.15, y0 + k * H, k === f ? (o.roofKey || 'concrete') : fl === 'wood' ? 'wood' : 'concrete', hole, k < f || roofWalk); }
-  if (roofWalk) { for (const [ax, az, bx, bz] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) wall(ax, az, bx, bz, 1.0, key, { y: y0 + f * H, t: 0.3 }); STASH_LOOT.push({ x: +(x1 - 1.2).toFixed(2), z: +(z1 - 1.2).toFixed(2), y: y0 + f * H + 0.01, q: 1 }); }
+  if (roofWalk) { for (const [ax, az, bx, bz] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) wall(ax, az, bx, bz, 1.0, key, { y: y0 + f * H, t: 0.3 }); STASH_LOOT.push({ x: +(x1 - 1.2).toFixed(2), z: +(z1 - 1.2).toFixed(2), y: y0 + f * H + 0.01, q: 1 });
+    const side = ['w', 'e', 's', 'n'].find(s => !doors.includes(s)) || 'w', cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;   // a ladder up an outside wall with no door
+    const L = side === 'w' ? { x: x0, z: cz + 1.5, nx: -1, nz: 0 } : side === 'e' ? { x: x1, z: cz + 1.5, nx: 1, nz: 0 } : side === 's' ? { x: cx + 2, z: z1, nx: 0, nz: 1 } : { x: cx + 2, z: z0, nx: 0, nz: -1 };
+    STASH_LADDERS.push(Object.assign(L, { y1: +(BUILD_YOFF + y0 + f * H + 0.02).toFixed(2) })); }
   return { x0, x1, z0, z1, top: y0 + f * H };
 }
 // a big hall (warehouse, barn, turbine hall): one tall room, big doors, a mezzanine along the north side with stairs
@@ -160,7 +164,7 @@ function stashAt(id, fn) { const p = stashPoi(id); BUILD_YOFF = p ? p.y : 0; try
 function buildStash() {
   buildMap2Materials(); worksMaterials(); airpMaterials(); isleMaterials();
   if (!MAT.stashGlass) MAT.stashGlass = new THREE.MeshStandardMaterial({ color: C(0xcfeedd), roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide });
-  STASH_LOOT.length = 0; BUILD_YOFF = 0;
+  STASH_LOOT.length = 0; STASH_LADDERS.length = 0; BUILD_YOFF = 0;
   const sr = stashRand(4207), H = STASH_H;
   // ---- the land and the sea
   if (MAT.sea) { MAT.sea.polygonOffset = true; MAT.sea.polygonOffsetFactor = 2; MAT.sea.polygonOffsetUnits = 8; }   // the shallows never flicker through the beach from far up
@@ -207,6 +211,7 @@ function buildStash() {
   stashAt('light', () => {
     stashBld({ x: 168, z: -170, w: 9, d: 9, f: 3, key: 'plaster', doors: ['s'], seed: 51, roofKey: 'redBarn' });
     CYL('paintWhite', 3.2, 3.6, 14, 16, 176, 7, -178); PZ(176, 0, -178, 7, 14, 7); CYL('redBarn', 3.25, 3.25, 1.4, 16, 176, 10, -178, 0, 0, 0, false); CYL('glass', 2.2, 2.2, 2.2, 12, 176, 15.1, -178, 0, 0, 0, false);
+    STASH_LADDERS.push({ x: 179.5, z: -178, nx: 1, nz: 0, y1: +(BUILD_YOFF + 14.02).toFixed(2) });   // up the tower to the gallery
   });
   /* ======== W: THE HOTEL on the west shore */
   stashAt('hotel', () => {

@@ -225,7 +225,8 @@ function brfFloatTick(dt) {
   const gy = groundAt(P.x, P.z, P.y), agl = P.y - gy, soft = agl < 14;
   const top = dive && !soft ? 7 : soft ? 6 : 15, wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str, wl = Math.max(1, Math.hypot(wx, wz));
   P.vx = lerp(P.vx, wx / wl * top, clamp(dt * 1.8, 0, 1)); P.vz = lerp(P.vz, wz / wl * top, clamp(dt * 1.8, 0, 1));
-  P.vy = lerp(P.vy, soft ? -3.2 : dive ? -24 : -6.5, clamp(dt * (soft ? 4 : 2), 0, 1));
+  if (BRF.lift) { P.vy = lerp(P.vy, 16, clamp(dt * 3, 0, 1)); if (P.y >= BRF.lift) BRF.lift = 0; }   // a weed balloon going up (brfight.js)
+  else P.vy = lerp(P.vy, soft ? -3.2 : dive ? -24 : -6.5, clamp(dt * (soft ? 4 : 2), 0, 1));
   P._ox = P.x; P._oz = P.z; P.x += P.vx * dt; P.z += P.vz * dt; resolve(P, 0.4, P.y, false);
   const pr = PLAYRECT, mx = (pr[1] - pr[0]) * 0.04, mz = (pr[3] - pr[2]) * 0.04; P.x = clamp(P.x, pr[0] + mx, pr[1] - mx); P.z = clamp(P.z, pr[2] + mz, pr[3] - mz);
   P.y += P.vy * dt; const g2 = groundAt(P.x, P.z, P.y + 0.5);

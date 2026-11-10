@@ -34,7 +34,7 @@ function brsqSetup() {
   BRSQ.cards = []; BRSQ.beacons = []; BRSQ.dead = new Set(); BRSQ.carry = null; BRSQ.lastAlone = false; BRSQ.teams = null; BRSQ.call = null; BRSQ.puffs = [];
   if (!M || !M.br || !(M.squad > 1)) return;
   const pois = typeof mapPois === 'function' ? mapPois() : [], pr = PLAYRECT, spots = [];
-  if (pois.length) for (const p of pois) { if (spots.length >= 10) break; const o = openNear(p.x + p.w * 0.3, p.z - p.d * 0.3); if (!spots.some(s => Math.hypot(s.x - o.x, s.z - o.z) < 30)) spots.push(o); }
+  if (pois.length) for (const p of pois) { if (spots.length >= 10) break; const o = typeof brfgOutdoor === 'function' ? brfgOutdoor(p.x + p.w * 0.3, p.z - p.d * 0.3) : openNear(p.x + p.w * 0.3, p.z - p.d * 0.3); if (!spots.some(s => Math.hypot(s.x - o.x, s.z - o.z) < 30)) spots.push(o); }
   else for (let i = 0; i < 6; i++) spots.push(openNear(pr[0] + (pr[1] - pr[0]) * (0.2 + 0.6 * ((i * 0.37) % 1)), pr[2] + (pr[3] - pr[2]) * (0.2 + 0.6 * ((i * 0.61) % 1))));
   const pole = new THREE.MeshStandardMaterial({ color: 0x2a2e30, roughness: 0.5, metalness: 0.6 }), glow = new THREE.MeshStandardMaterial({ color: 0x113311, emissive: 0x5dff7a, emissiveIntensity: 1.8 });
   for (const o of spots) {

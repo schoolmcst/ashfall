@@ -86,7 +86,7 @@ function brlAmmoSync(force) {
 }
 // the start of the round (brArmAll): a pistol, a little light ammo, an empty kit
 function brlStart() {
-  BRL.rar = {}; BRL.kit = {}; BRL.ammo = { light: 36, heavy: 0, shells: 0, sniper: 0 }; BRL.heals = { nug: 1, brownie: 0, joint: 0 }; BRL.keys = 0; BRL.heal = null; BRL.regen = 0;
+  BRL.rar = {}; BRL.kit = {}; BRL.ammo = { light: 36, heavy: 0, shells: 0, sniper: 0 }; BRL.heals = { nug: 1, brownie: 0, joint: 0 }; BRL.keys = 0; BRL.covers = 0; BRL.heal = null; BRL.regen = 0;
   try { WEAPONS.forEach((w, i) => brlTint(gunObjs[i], 0)); brlAmmoSync(true); } catch (e) {}
 }
 
@@ -149,6 +149,14 @@ function brlItemMesh(it) {
     else if (it.h === 'brownie') { brlMesh(g, 'box', M0.tray, 0, 0.012, 0, 0.32, 0.025, 0.24); for (let i = 0; i < 4; i++) brlMesh(g, 'box', M0.brownie, -0.06 + (i % 2) * 0.12, 0.05, -0.05 + ((i / 2) | 0) * 0.1, 0.1, 0.05, 0.08); }
     else { brlMesh(g, 'cyl', M0.paper, 0, 0.02, 0, 0.014, 0.16, 0.014, 0, 0, Math.PI / 2); brlMesh(g, 'box', M0.lens, 0.09, 0.02, 0, 0.02, 0.02, 0.02); brlMesh(g, 'box', new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff3a3a, emissiveIntensity: 0.6 }), 0, 0.005, 0.05, 0.12, 0.01, 0.06); }
     brlStrip(g, it.h === 'joint' ? 3 : it.h === 'brownie' ? 2 : 1, 0, -0.005, 0.12, 0.3, 0.02);
+  } else if (it.k === 'throw') {
+    const T = BRFG_THROW[it.eq] || BRFG_THROW.stun;
+    if (it.eq === 'molotov') { brlMesh(g, 'cyl', new THREE.MeshStandardMaterial({ color: 0x6a3a10, transparent: true, opacity: 0.8, roughness: 0.1 }), 0, 0.1, 0, 0.045, 0.2, 0.045); brlMesh(g, 'cyl', M0.paper, 0, 0.23, 0, 0.015, 0.08, 0.015); }
+    else { brlMesh(g, 'cyl', new THREE.MeshStandardMaterial({ color: T.col, roughness: 0.5, metalness: 0.3 }), 0, 0.08, 0, 0.04, 0.16, 0.04); brlMesh(g, 'cyl', M0.metal, 0, 0.17, 0, 0.02, 0.03, 0.02); }
+    brlStrip(g, 1, 0, -0.005, 0.1, 0.2, 0.02);
+  } else if (it.k === 'cover') {
+    brlMesh(g, 'box', M0.metal, 0, 0.12, 0, 0.5, 0.24, 0.12); brlMesh(g, 'box', new THREE.MeshStandardMaterial({ color: 0x2a3a2a, roughness: 0.7 }), 0, 0.25, 0, 0.52, 0.02, 0.13);
+    brlStrip(g, 2, 0, -0.005, 0.12, 0.5, 0.02);
   } else if (it.k === 'key') {
     brlMesh(g, 'box', new THREE.MeshStandardMaterial({ color: 0x221a00, emissive: 0xffc83a, emissiveIntensity: 1.2 }), 0, 0.006, 0, 0.16, 0.012, 0.1); brlMesh(g, 'box', M0.lid, 0.04, 0.014, 0, 0.04, 0.004, 0.06);
     brlStrip(g, 3, 0, -0.005, 0.09, 0.22, 0.02);
@@ -190,11 +198,11 @@ function brlSet(s, i, r) {
     const bz = set.wz - 0.2; for (const y of [0.45, 0.95, 1.45]) brlMesh(g, 'box', M0.wood, 0, y, bz, 1.25, 0.04, 0.4); for (const x of [-0.6, 0.6]) brlMesh(g, 'box', M0.dark, x, 0.85, bz, 0.04, 1.7, 0.4);
     brlItem(set, 'heal', { h: brlRollHeal(r) }, -0.35, 0.97, bz); brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.05, 0.97, bz);
     const t = ['light', 'heavy', 'shells', 'sniper'][Math.floor(r() * 4)]; brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.38, 0.97, bz);
-    brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.2, 1.47, bz); if (r() < 0.5) brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.3, 0.47, bz);
+    brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.2, 1.47, bz); const x2 = r(); if (x2 < 0.35) brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.3, 0.47, bz); else if (x2 < 0.75) brlItem(set, 'throw', { eq: ['molotov', 'stun', 'semtex', 'healsmoke'][Math.floor(r() * 4)] }, 0.3, 0.47, bz); else brlItem(set, 'cover', {}, 0.2, 0.47, bz);
   } else {
     brlMesh(g, 'box', M0.pallet, 0, 0.07, 0, 1.2, 0.03, 0.8); for (const z of [-0.33, 0, 0.33]) brlMesh(g, 'box', M0.dark, 0, 0.03, z, 1.2, 0.06, 0.1);
     const it = gunIt(-0.1, 0.09, 0.05, 'lie'); const t = brlAmmoOf(ARM[it.gun]); brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.42, 0.09, -0.22);
-    if (r() < 0.35) brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.42, 0.09, -0.25);
+    const x3 = r(); if (x3 < 0.3) brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.42, 0.09, -0.25); else if (x3 < 0.6) brlItem(set, 'throw', { eq: ['molotov', 'stun', 'semtex', 'healsmoke'][Math.floor(r() * 4)] }, -0.42, 0.09, -0.25); else if (x3 < 0.72) brlItem(set, 'cover', {}, -0.4, 0.09, -0.25);
   }
   set.kind = kind;
 }
@@ -221,7 +229,7 @@ function brlVis(force) {
 }
 const _bw = new THREE.Vector3();
 function brlWorld(it) { it.mesh.updateWorldMatrix(true, false); return it.mesh.getWorldPosition(_bw); }
-function brlName(it) { return it.k === 'gun' ? `${BRL_RAR[it.tier].n} ${ARM[it.gun].name}` : it.k === 'ammo' ? `${BRL_AMMO[it.t].n} AMMO ×${it.n}` : it.k === 'heal' ? BRL_HEAL[it.h].n : it.k === 'key' ? 'VAULT KEY CARD' : (BRL_KIT.find(a => a.id === it.a) || {}).n || 'ATTACHMENT'; }
+function brlName(it) { return it.k === 'gun' ? `${BRL_RAR[it.tier].n} ${ARM[it.gun].name}` : it.k === 'ammo' ? `${BRL_AMMO[it.t].n} AMMO ×${it.n}` : it.k === 'heal' ? BRL_HEAL[it.h].n : it.k === 'key' ? 'VAULT KEY CARD' : it.k === 'throw' ? (BRFG_THROW[it.eq] || {}).n : it.k === 'cover' ? 'DEPLOYABLE COVER' : (BRL_KIT.find(a => a.id === it.a) || {}).n || 'ATTACHMENT'; }
 function brlRemove(it) { it.gone = true; if (it.mesh && it.mesh.parent) it.mesh.parent.remove(it.mesh); if (BRL.near === it) BRL.near = null; }
 // take it
 function brlTake(it) {
@@ -233,6 +241,8 @@ function brlTake(it) {
     if (old) { const d = { id: it.id + '~' + (++BRL.dn) + (NET.me ? NET.me.slice(-3) : ''), base: it.id, gun: old.gun, tier: old.tier }; BRL.drops.push(d); BRL.dropSeen.add(d.id); brlDropMake(d); }
   } else if (it.k === 'ammo') { const A = BRL_AMMO[it.t]; if (BRL.ammo[it.t] >= A.max) ok = false; else { BRL.ammo[it.t] = Math.min(A.max, BRL.ammo[it.t] + it.n); brlAmmoSync(true); try { showMsg(`+${it.n} ${A.n} AMMO`); sfx.pickup(); } catch (e) {} } }
   else if (it.k === 'heal') { const H = BRL_HEAL[it.h]; if (BRL.heals[it.h] >= H.max) ok = false; else { BRL.heals[it.h]++; try { showMsg(`+1 ${H.n} · ${actName('heal')} TO USE`); sfx.pickup(); } catch (e) {} } }
+  else if (it.k === 'throw') { const E = EQUIP[it.eq]; G.grenades = G.equip === it.eq ? Math.min(E.max, (G.grenades | 0) + 2) : 2; G.equip = it.eq; try { showBanner(BRFG_THROW[it.eq].n, `your grenade now · ${actName('grenade')} to throw`); sfx.pickup(); } catch (e) {} }
+  else if (it.k === 'cover') { if ((BRL.covers | 0) >= 2) ok = false; else { BRL.covers = (BRL.covers | 0) + 1; try { showBanner('DEPLOYABLE COVER', `${actName('deploy')} (or the field upgrade button) to put it up`); sfx.pickup(); } catch (e) {} } }
   else if (it.k === 'key') { BRL.keys = (BRL.keys | 0) + 1; try { showBanner('VAULT KEY CARD', 'opens one of the four VAULTS (on the map) · hold ' + actName('use') + ' at the door'); sfx.pickup(); } catch (e) {} }
   else if (it.k === 'att') {
     const a = ATT_BY_ID[it.a]; BRL.kit[a.slot] = it.a; WEAPONS.forEach((w, i) => applyLoadout(i));

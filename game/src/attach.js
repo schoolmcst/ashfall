@@ -543,7 +543,7 @@ function renderLoadout(focusSel) {
       return `<button class="lo-opt${on ? ' on' : ''}" data-lo-a="${a.id}"><div class="lo-name">${a.name}${on ? '<em>EQUIPPED</em>' : a === stockFor(d, loSlot) ? '<em class="f">FACTORY</em>' : ''}</div><div class="lo-desc">${a.desc}</div>` +
         (pc.pros.length || pc.cons.length ? `<div class="lo-pc">${pc.pros.map(p => `<span class="pro">+ ${p}</span>`).join('')}${pc.cons.map(x => `<span class="con">− ${x}</span>`).join('')}</div>` : '') + '</button>';
     }).join('');
-  } else if (loRow === 'e') html = Object.keys(EQUIP).map(k => `<button class="lo-opt${k === c.e ? ' on' : ''}" data-lo-e="${k}"><div class="lo-name">${EQUIP[k].name} <small>×${EQUIP[k].count}</small>${k === c.e ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${EQUIP[k].desc}</div></button>`).join('');
+  } else if (loRow === 'e') html = Object.keys(EQUIP).filter(k => !EQUIP[k].brOnly).map(k => `<button class="lo-opt${k === c.e ? ' on' : ''}" data-lo-e="${k}"><div class="lo-name">${EQUIP[k].name} <small>×${EQUIP[k].count}</small>${k === c.e ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${EQUIP[k].desc}</div></button>`).join('');
   else { const tier = PERK_KEYS.indexOf(loRow) + 1; html = Object.keys(PERKS).filter(k => PERKS[k].t === tier).map(k => `<button class="lo-opt perk-t${tier}${k === c[loRow] ? ' on' : ''}" data-lo-k="${k}"><div class="lo-name">${PERKS[k].name}${k === c[loRow] ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${PERKS[k].desc}</div></button>`).join(''); }
   $('loOpts').innerHTML = html;
   renderLoStats();
