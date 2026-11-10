@@ -163,8 +163,8 @@ function vhRemote(R, a) {
    arrives, when a fight starts close by, or when it is stuck for good. Bots in a vehicle don't shoot. */
 function vhBotWant(e, tx, tz) {
   if (e.veh || e.net || !VH.list.length || (e.vhNoT && M.t < e.vhNoT)) return null;
-  const g = e.group.position; if (Math.hypot(tx - g.x, tz - g.z) < 35) return null;
-  let best = null, bd = 22; for (const v of VH.list) { if (v.dead || v.driver || (v.want && v.want !== e)) continue; const d = Math.hypot(v.x - g.x, v.z - g.z); if (d < bd) { bd = d; best = v; } }
+  const g = e.group.position; if (Math.hypot(tx - g.x, tz - g.z) < 25) return null;   // (1.2.93: bots take cars more: 25 m, cars up to 40 m away)
+  let best = null, bd = 40; for (const v of VH.list) { if (v.dead || v.driver || (v.want && v.want !== e)) continue; const d = Math.hypot(v.x - g.x, v.z - g.z); if (d < bd) { bd = d; best = v; } }
   if (!best) return null; best.want = e;
   if (bd < 2.4) { vhBotEnter(e, best); return null; }
   return { x: best.x, z: best.z, y: best.y || 0 };

@@ -5,6 +5,7 @@
    SETTINGS > AUDIO > SQUAD VOICE LINES turns them off. */
 const SQV = { t: 0, voices: null };
 const SQV_LINES = {
+  spot: ['Enemy spotted!', 'Contact!', 'Got eyes on one!', 'Enemy over there!'],
   down: ["I'm down!", 'Need a revive!', "I'm hit, I'm down!", 'Get me up!'],
   up: ['Thanks, I owe you.', "I'm back up.", 'Good looking out.'],
   revived: ['Got you, get up.', 'On your feet.', "You're good, go."],

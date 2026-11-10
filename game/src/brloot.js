@@ -86,7 +86,7 @@ function brlAmmoSync(force) {
 }
 // the start of the round (brArmAll): a pistol, a little light ammo, an empty kit
 function brlStart() {
-  BRL.rar = {}; BRL.kit = {}; BRL.ammo = { light: 36, heavy: 0, shells: 0, sniper: 0 }; BRL.heals = { nug: 1, brownie: 0, joint: 0 }; BRL.heal = null; BRL.regen = 0;
+  BRL.rar = {}; BRL.kit = {}; BRL.ammo = { light: 36, heavy: 0, shells: 0, sniper: 0 }; BRL.heals = { nug: 1, brownie: 0, joint: 0 }; BRL.keys = 0; BRL.heal = null; BRL.regen = 0;
   try { WEAPONS.forEach((w, i) => brlTint(gunObjs[i], 0)); brlAmmoSync(true); } catch (e) {}
 }
 
@@ -149,6 +149,9 @@ function brlItemMesh(it) {
     else if (it.h === 'brownie') { brlMesh(g, 'box', M0.tray, 0, 0.012, 0, 0.32, 0.025, 0.24); for (let i = 0; i < 4; i++) brlMesh(g, 'box', M0.brownie, -0.06 + (i % 2) * 0.12, 0.05, -0.05 + ((i / 2) | 0) * 0.1, 0.1, 0.05, 0.08); }
     else { brlMesh(g, 'cyl', M0.paper, 0, 0.02, 0, 0.014, 0.16, 0.014, 0, 0, Math.PI / 2); brlMesh(g, 'box', M0.lens, 0.09, 0.02, 0, 0.02, 0.02, 0.02); brlMesh(g, 'box', new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff3a3a, emissiveIntensity: 0.6 }), 0, 0.005, 0.05, 0.12, 0.01, 0.06); }
     brlStrip(g, it.h === 'joint' ? 3 : it.h === 'brownie' ? 2 : 1, 0, -0.005, 0.12, 0.3, 0.02);
+  } else if (it.k === 'key') {
+    brlMesh(g, 'box', new THREE.MeshStandardMaterial({ color: 0x221a00, emissive: 0xffc83a, emissiveIntensity: 1.2 }), 0, 0.006, 0, 0.16, 0.012, 0.1); brlMesh(g, 'box', M0.lid, 0.04, 0.014, 0, 0.04, 0.004, 0.06);
+    brlStrip(g, 3, 0, -0.005, 0.09, 0.22, 0.02);
   } else if (it.k === 'att') {
     brlMesh(g, 'box', M0.dark, 0, 0.06, 0, 0.32, 0.12, 0.2);
     if (/dot|holo/.test(it.a)) { brlMesh(g, 'box', M0.metal, 0, 0.16, 0, 0.08, 0.06, 0.1); brlMesh(g, 'box', M0.lens, 0, 0.17, -0.051, 0.05, 0.03, 0.004); }
@@ -199,13 +202,16 @@ function brlBuild(seed) {
   brlClear(); if (!brlOn()) return; BRL.seed = seed >>> 0; BRL.group = new THREE.Group(); scene.add(BRL.group);
   const spots = MAPS[curMap].loot.filter(brlFloorSpot);
   spots.forEach((s, i) => { if (typeof duelIn === 'function' && duelIn(s.x, s.z, 1)) return; brlSet(s, i, brlRng(BRL.seed ^ brlHash(s.x, s.z, s.y))); });
+  // six KEY CARDS for the vaults, on tables, shelves and pallets
+  { const r = brlRng(BRL.seed ^ 0x51ed), cand = BRL.sets.filter(s => s.kind !== 'rack' && s.kind !== 'vault'); for (let k = 0; k < 6 && cand.length; k++) { const s = cand.splice(Math.floor(r() * cand.length), 1)[0], f = BRL.items.find(i => i.set === s); if (f) brlItem(s, 'key', {}, f.lx + (f.lx > 0 ? -0.3 : 0.3), f.ly, f.lz + 0.12); } }
+  try { brbVaultLoot(); } catch (e) { reportError(e); }   // the vaults' loot (brbots.js)
   for (const d of BRL.drops) brlDropMake(d);
   for (const id of new Set(BRL.items.filter(i => i.k === 'gun').map(i => i.gun))) try { brlGunModel(id); } catch (e) {}   // every gun model now, not when someone walks up (a stutter)
   brlVis(true);
 }
 function brlClear() { if (BRL.group && BRL.group.parent) BRL.group.parent.remove(BRL.group); BRL.group = null; BRL.items = []; BRL.sets = []; BRL.near = null; }
 // the round starts (brSetup): a fresh seed, nothing taken
-function brlSetup() { BRL.rar = {}; BRL.kit = {}; BRL.taken = new Set(); BRL.out = []; BRL.drops = []; BRL.dropSeen = new Set(); BRL.dn = 0; BRL.seed = 0; if (netHostNow()) brlBuild((Math.random() * 4294967296) >>> 0); }
+function brlSetup() { BRL.rar = {}; BRL.kit = {}; BRL.keys = 0; BRL.vo = []; BRL.taken = new Set(); BRL.out = []; BRL.drops = []; BRL.dropSeen = new Set(); BRL.dn = 0; BRL.seed = 0; if (netHostNow()) brlBuild((Math.random() * 4294967296) >>> 0); }
 // the floor loot near me: shown, guns built (furniture far away is hidden)
 function brlVis(force) {
   if (!BRL.group || (!force && (BRL.visT -= 1 / 60) > 0)) return; BRL.visT = 0.4;
@@ -215,7 +221,7 @@ function brlVis(force) {
 }
 const _bw = new THREE.Vector3();
 function brlWorld(it) { it.mesh.updateWorldMatrix(true, false); return it.mesh.getWorldPosition(_bw); }
-function brlName(it) { return it.k === 'gun' ? `${BRL_RAR[it.tier].n} ${ARM[it.gun].name}` : it.k === 'ammo' ? `${BRL_AMMO[it.t].n} AMMO ×${it.n}` : it.k === 'heal' ? BRL_HEAL[it.h].n : (BRL_KIT.find(a => a.id === it.a) || {}).n || 'ATTACHMENT'; }
+function brlName(it) { return it.k === 'gun' ? `${BRL_RAR[it.tier].n} ${ARM[it.gun].name}` : it.k === 'ammo' ? `${BRL_AMMO[it.t].n} AMMO ×${it.n}` : it.k === 'heal' ? BRL_HEAL[it.h].n : it.k === 'key' ? 'VAULT KEY CARD' : (BRL_KIT.find(a => a.id === it.a) || {}).n || 'ATTACHMENT'; }
 function brlRemove(it) { it.gone = true; if (it.mesh && it.mesh.parent) it.mesh.parent.remove(it.mesh); if (BRL.near === it) BRL.near = null; }
 // take it
 function brlTake(it) {
@@ -227,6 +233,7 @@ function brlTake(it) {
     if (old) { const d = { id: it.id + '~' + (++BRL.dn) + (NET.me ? NET.me.slice(-3) : ''), base: it.id, gun: old.gun, tier: old.tier }; BRL.drops.push(d); BRL.dropSeen.add(d.id); brlDropMake(d); }
   } else if (it.k === 'ammo') { const A = BRL_AMMO[it.t]; if (BRL.ammo[it.t] >= A.max) ok = false; else { BRL.ammo[it.t] = Math.min(A.max, BRL.ammo[it.t] + it.n); brlAmmoSync(true); try { showMsg(`+${it.n} ${A.n} AMMO`); sfx.pickup(); } catch (e) {} } }
   else if (it.k === 'heal') { const H = BRL_HEAL[it.h]; if (BRL.heals[it.h] >= H.max) ok = false; else { BRL.heals[it.h]++; try { showMsg(`+1 ${H.n} · ${actName('heal')} TO USE`); sfx.pickup(); } catch (e) {} } }
+  else if (it.k === 'key') { BRL.keys = (BRL.keys | 0) + 1; try { showBanner('VAULT KEY CARD', 'opens one of the four VAULTS (on the map) · hold ' + actName('use') + ' at the door'); sfx.pickup(); } catch (e) {} }
   else if (it.k === 'att') {
     const a = ATT_BY_ID[it.a]; BRL.kit[a.slot] = it.a; WEAPONS.forEach((w, i) => applyLoadout(i));
     const fits = WEAPONS.some(w => attOK(a, w.def)); try { showBanner(brlName(it), fits ? 'snapped onto your gun' : 'in your kit · goes on the next gun it fits'); sfx.pickup(); } catch (e) {}
@@ -291,9 +298,10 @@ function brlHud() {
 // the HUD gun name in its rarity colour
 function brlNameCol() { try { const el = $('wname'), w = WEAPONS[G.cur], t = brlOn() && w && w.def ? BRL.rar[w.def.id] | 0 : -1, c = t > 0 ? BRL_RAR[t].css : ''; if (el && el._brc !== c) { el._brc = c; el.style.color = c; } } catch (e) {} }
 /* ---------- online */
-function brlPres() { return brlOn() && (BRL.out.length || BRL.drops.length) ? { fl: BRL.out.slice(-60), fd: BRL.drops.filter(d => d.id.endsWith(NET.me ? NET.me.slice(-3) : '')).slice(-20).map(d => [d.id, d.base, d.gun, d.tier]) } : null; }
+function brlPres() { return brlOn() && (BRL.out.length || BRL.drops.length || (BRL.vo && BRL.vo.length)) ? { vo: BRL.vo && BRL.vo.length ? BRL.vo.slice(-4) : undefined, fl: BRL.out.slice(-60), fd: BRL.drops.filter(d => d.id.endsWith(NET.me ? NET.me.slice(-3) : '')).slice(-20).map(d => [d.id, d.base, d.gun, d.tier]) } : null; }
 function brlRemote(o) {
   if (!brlOn() || !o) return;
+  if (Array.isArray(o.vo) && netHostNow()) for (const i of o.vo) { const v = BRB.vaults[i | 0]; if (v && !v.open) brbVaultOpen(v); }
   if (Array.isArray(o.fd)) for (const a of o.fd) { if (!Array.isArray(a) || BRL.dropSeen.has(String(a[0])) || !ARM[a[2]]) continue; const d = { id: String(a[0]).slice(0, 40), base: String(a[1]).slice(0, 30), gun: a[2], tier: clamp(a[3] | 0, 0, 3) }; BRL.dropSeen.add(d.id); BRL.drops.push(d); brlDropMake(d); }
   if (Array.isArray(o.fl)) for (const id0 of o.fl) { const id = String(id0).slice(0, 40); if (BRL.taken.has(id)) continue; BRL.taken.add(id); const it = BRL.items.find(i => i.id === id); if (it) brlRemove(it); }
 }

@@ -118,7 +118,7 @@ function sqBotGoal(e, set) {
   for (const o of enemies) if (o !== e && o.downed && o.team === e.team) { const d = Math.hypot(o.group.position.x - g.x, o.group.position.z - g.z); if (d < bd) { bd = d; best = { x: o.group.position.x, z: o.group.position.z, y: 0 }; } }
   if (!best) return null;
   if (bd < 1.6) {   // there: revive (a bot squadmate; me is handled in sqUpdate)
-    for (const o of enemies) if (o !== e && o.downed && o.team === e.team && Math.hypot(o.group.position.x - g.x, o.group.position.z - g.z) < 1.8) { o.revT = (o.revT || 0) + 0.3; if (o.revT >= SQ_REVIVE) sqBotUp(o, e); break; }
+    for (const o of enemies) if (o !== e && o.downed && o.team === e.team && Math.hypot(o.group.position.x - g.x, o.group.position.z - g.z) < 1.8) { o.revT = (o.revT || 0) + 0.45; if (o.revT >= SQ_REVIVE) sqBotUp(o, e); break; }
   }
   return set(best, 0.3);
 }
