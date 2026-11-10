@@ -808,14 +808,15 @@ function afterDeathInMatch() {
   G.state = 'respawning'; G.respT = 1.2; G.dcHold = !!G.dc;
 }
 function updateSpectate(dt) {
-  const mates = M.br || M.oic ? enemies.filter(e => e.entry && e.entry.alive !== false) : NET.spec ? (enemies.filter(e => e.net === NET.specPeer).length ? enemies.filter(e => e.net === NET.specPeer) : enemies.filter(e => e.net)) : enemies.filter(e => e.team === M.myTeam), sn = M.snd;
+  const mine = M.br && M.squad > 1 ? enemies.filter(e => e.team === M.myTeam && e.entry && e.entry.alive !== false) : [];   // squads: watch your own squad first
+  const mates = mine.length ? mine : M.br || M.oic ? enemies.filter(e => e.entry && e.entry.alive !== false) : NET.spec ? (enemies.filter(e => e.net === NET.specPeer).length ? enemies.filter(e => e.net === NET.specPeer) : enemies.filter(e => e.net)) : enemies.filter(e => e.team === M.myTeam), sn = M.snd;
   if (G.specNext) { G.specIdx++; G.specNext = false; }
   const m = mates.length ? mates[G.specIdx % mates.length] : null;
   if (m) {
     const g = m.group, fx = Math.sin(g.rotation.y), fz = Math.cos(g.rotation.y);
-    _bt.set(g.position.x - fx * 2.8, 2.3, g.position.z - fz * 2.8); camera.position.lerp(_bt, Math.min(1, dt * 6));
-    camera.lookAt(g.position.x + fx * 4, 1.3, g.position.z + fz * 4);
-    showCenter((NET.spec ? 'WATCHING ' : 'SPECTATING ') + m.name, NET.spec ? `${actName('jump')} next player · ESC to leave` : 'you are out until the next round');
+    _bt.set(g.position.x - fx * 2.8, g.position.y + 2.3, g.position.z - fz * 2.8); camera.position.lerp(_bt, Math.min(1, dt * 6));   // (follows the hills)
+    camera.lookAt(g.position.x + fx * 4, g.position.y + 1.3, g.position.z + fz * 4);
+    showCenter((NET.spec ? 'WATCHING ' : 'SPECTATING ') + m.name, NET.spec ? `${actName('jump')} next player · ESC to leave` : mine.length ? `your squad · ${actName('jump')} next · they can bring you back at a RE-UP BEACON` : 'you are out until the next round');
   } else { const p = sn && sn.bomb ? sn.bomb : { x: 0, z: 0 }; camera.position.lerp(_bt.set(p.x + 10, 14, p.z + 10), Math.min(1, dt * 2)); camera.lookAt(p.x, 0, p.z); showCenter('ROUND IN PROGRESS', ''); }
   if (camera.fov !== baseFov) { camera.fov = baseFov; camera.updateProjectionMatrix(); }
 }

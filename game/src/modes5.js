@@ -31,6 +31,7 @@ function brSetup() {
     const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier, TERR.on ? TH(o.x, o.z) : 0); c.id = M.br.crates.length; M.br.crates.push(c);
   }
   try { brlSetup(); } catch (e) { reportError(e); }   // floor loot on tables, racks, shelves (brloot.js)
+  try { brsqSetup(); } catch (e) { reportError(e); }   // re-up beacons (brsquad.js)
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
   try { brfStartPhase(M.br); } catch (e) { reportError(e); }   // WARM-UP, the bong and the float in (brintro.js)
@@ -82,6 +83,7 @@ function brUpdate(dt) {
   }
   B.uH = u;
   try { brlTick(dt); brlNameCol(); } catch (e) { reportError(e); }   // floor loot, ammo, heals (brloot.js)
+  try { brsqTick(dt); } catch (e) { reportError(e); }   // cards, beacons, callouts, carrying (brsquad.js)
   // the end: last one standing
   for (const e of brAliveBots()) if (!e.net && e.brTier === undefined) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; }   // bots that just came in start with a pistol too
   if (sqOn()) {   // DUOS / SQUADS: last squad standing
@@ -104,6 +106,7 @@ function brUpdate(dt) {
 function brGoal(e, keep, near, set) {
   if (brWarmNow()) return null;   // WARM-UP: just fight
   { const dg = duelGoal(e, set); if (dg) return dg; }   // the duel bot goes for me
+  { const cg = brsqBotGoal(e, set); if (cg) return cg; }   // stash cards, beacons, callouts (brsquad.js)
   { const sg = sqBotGoal(e, set); if (sg) return sg; }   // squads: pick up a downed squadmate first
   const B = M.br, g = e.group.position, d = Math.hypot(g.x - B.cx, g.z - B.cz);
   if (d > B.r * 0.85 || (B.closing && B.to && Math.hypot(g.x - B.to.x, g.z - B.to.z) > B.to.r * 0.8)) { const tx = B.to && B.closing ? B.to.x : B.cx, tz = B.to && B.closing ? B.to.z : B.cz; const car = vhBotWant(e, tx, tz); if (car) return set(car, 1.2); return set(near({ x: tx + rnd(-3, 3), z: tz + rnd(-3, 3), y: 0 }, 3), 1.5); }
@@ -115,7 +118,7 @@ function brHud() {
   const B = M.br; if (!B) return ''; { const fh = brfHud(); if (fh) return fh + sqHud(); } const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
   return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
-function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
+function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); brsqMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
 function brClear() { try { brfReset(); brlClear(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
 
 /* ---------- online */

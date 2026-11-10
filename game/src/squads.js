@@ -11,7 +11,7 @@
    player runs their own down (dn in presence), a revive is sent as rv, the host's bots reviving a player as rb; the host's
    bots go down only on the host. Saved: nothing (M.squad lives for the match). */
 const SQ = { revT: 0, revWho: null, rvOut: null, rvT: 0, rvSeq: 0, rbOut: null, rbT: 0, rbSeq: 0 };
-const SQ_BLEED = 15, SQ_REVIVE = 3.5;
+const SQ_BLEED = 15, SQ_REVIVE = 2.4;   // the bong revive (1.2.93; was 3.5)
 const sqOn = () => !!(M && M.squad > 1 && M.mode === 'br');
 // someone in this team still standing (not downed, not dead), not counting `skip`
 function sqStanding(team, skip) {
@@ -35,8 +35,8 @@ function sqBotDown(e) {
   e.group.rotation.x = -1.25;   // lying down
   return true;
 }
-function sqPlayerUp() { G.downed = false; G.bleed = 0; G.health = 40; try { showBanner('BACK ON YOUR FEET', 'your squad picked you up'); sfx.ui(); } catch (e) {} }
-function sqBotUp(e, by) { e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; if (by === 'player') try { achAdd('revives'); popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
+function sqPlayerUp() { try { brsqPuff(P.x, P.y + 1, P.z, 7); tone(320, 0.05, 0.04, 'sine', 700); } catch (e) {} G.downed = false; G.bleed = 0; G.health = 40; try { showBanner('BACK ON YOUR FEET', 'your squad picked you up'); sfx.ui(); } catch (e) {} }
+function sqBotUp(e, by) { try { brsqPuff(e.group.position.x, e.group.position.y + 1, e.group.position.z, 7); e.carried = false; if (BRSQ.carry === e) BRSQ.carry = null; } catch (er) {} e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; if (by === 'player') try { achAdd('revives'); popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
 /* ---------- every frame (from brUpdate) */
 function sqUpdate(dt) {
   if (!sqOn()) return;
@@ -102,6 +102,7 @@ function sqNetBotTeam() {
 // in the bots' loop: true while this bot is downed (it crawls toward a squadmate, no shooting)
 function sqBotDowned(e, dt) {
   if (!e.downed) return false;
+  if (e.carried) return true;   // on my shoulder (brsquad.js)
   const g = e.group.position; let tx = null, tz = null, bd = 1e9;
   if (e.team === M.myTeam && playerAlive() && !G.downed) { tx = P.x; tz = P.z; bd = Math.hypot(P.x - g.x, P.z - g.z); }
   for (const o of enemies) if (o !== e && o.team === e.team && !o.downed && o.entry && o.entry.alive !== false) { const d = Math.hypot(o.group.position.x - g.x, o.group.position.z - g.z); if (d < bd) { bd = d; tx = o.group.position.x; tz = o.group.position.z; } }
