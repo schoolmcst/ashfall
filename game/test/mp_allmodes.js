@@ -8,7 +8,7 @@ const { mpPages } = require('./mp_lib.js');
   for (const k of modes) {
     const r = { k }; const e0 = errs.length;
     try {
-      for (const p of pages) await ev(p, k => { const A_ = window.__A; try { A_.leaveGame(); } catch (e) {} for (const o of document.querySelectorAll('.onb-ov,#hcSplash')) o.remove(); A_.LOBBY.playlist = [k]; A_.LOBBY.mode = k; A_.showScreen('menu'); A_.toLobby(); }, k);
+      for (const p of pages) await ev(p, k => { const A_ = window.__A; try { A_.leaveGame(); } catch (e) {} for (const o of document.querySelectorAll('.onb-ov,#hcSplash')) o.remove(); A_.LOBBY.playlist = [k]; A_.LOBBY.mode = k; A_.showScreen('menu'); A_.actions('go-mp'); A_.showScreen('menu'); if (k === 'rbr' || /^obr/.test(k)) { A_.actions('br-play'); const L = A_.BRLOB_GET(); L.net = 'on'; L.sq = k === 'obr4' ? 4 : k === 'obr2' ? 2 : 1; L.rk = k === 'rbr'; } /* LAST TOKE has its own lobby (1.2.93) */ A_.toLobby(); }, k);
       await A.waitForTimeout(1500);
       await ev(A, () => window.__A.actions('lob-start')); await A.waitForTimeout(9000);
       await ev(B, () => window.__A.actions('lob-start')); await A.waitForTimeout(9000);

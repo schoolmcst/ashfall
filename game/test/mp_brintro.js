@@ -4,10 +4,10 @@ const { mpPages } = require('./mp_lib.js');
 (async () => {
   const { pages, errs, close, ev } = await mpPages(2), [A, B] = pages, out = {};
   const k = process.env.MODE || 'obr';
-  for (const p of pages) await ev(p, k => { const A_ = window.__A; for (const o of document.querySelectorAll('.onb-ov,#hcSplash')) o.remove(); A_.LOBBY.playlist = [k]; A_.LOBBY.mode = k; A_.showScreen('menu'); }, k);
+  for (const p of pages) await ev(p, k => { const A_ = window.__A; for (const o of document.querySelectorAll('.onb-ov,#hcSplash')) o.remove(); A_.showScreen('menu'); A_.actions('br-play'); const L = A_.BRLOB_GET(); L.net = 'on'; L.sq = k === 'obr4' ? 4 : k === 'obr2' ? 2 : 1; L.rk = k === 'rbr'; }, k);   // through the LAST TOKE lobby (1.2.93)
   await A.waitForTimeout(1500);
-  await ev(A, () => window.__A.actions('lob-start')); await A.waitForTimeout(9000);
-  await ev(B, () => window.__A.actions('lob-start')); await A.waitForTimeout(9000);
+  await ev(A, () => window.__A.actions('bl-start')); await A.waitForTimeout(9000);
+  await ev(B, () => window.__A.actions('bl-start')); await A.waitForTimeout(9000);
   for (const p of pages) await ev(p, () => { const N = window.__A.NET; if (N.priv) N.priv.lt = 0.5; });
   await A.waitForTimeout(4000);
   for (const p of pages) await ev(p, () => { const A_ = window.__A; A_.G.holdT = Math.min(A_.G.holdT, 0.3); if (A_.curScreen === 'classpick') try { A_.showScreen(null); } catch (e) {} });

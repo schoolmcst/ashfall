@@ -2,10 +2,10 @@
 const path = require('path');
 module.exports = async p => {
   const out = process.env.SHOTS || '/tmp', r = {};
-  await p.evaluate(() => { for (const o of document.querySelectorAll('.onb-ov,#hcSplash')) o.remove(); window.__A.actions('br-play'); });
-  await p.waitForTimeout(800); r.picker = await p.evaluate(() => [...document.querySelectorAll('.onb-ov [data-onb]')].map(b => b.dataset.onb).join(','));
+  await p.evaluate(() => { for (const o of document.querySelectorAll('.onb-ov,#hcSplash')) o.remove(); window.__A.actions('br-play'); });   // the LAST TOKE lobby (1.2.93)
+  await p.waitForTimeout(800); r.picker = await p.evaluate(() => { const A = window.__A, L = A.BRLOB_GET(); L.net = 'off'; L.sq = 1; const seen = []; for (let i = 0; i < 3; i++) { seen.push(L.sq); A.actions('bl-sq+'); } return seen.map(n => 's' + n).join(','); });
   await p.screenshot({ path: path.join(out, 'sq_picker.png'), timeout: 120000 });
-  await p.evaluate(() => document.querySelector('.onb-ov [data-onb="s4"]').click());
+  await p.evaluate(() => { const A = window.__A; A.BRLOB_GET().sq = 4; A.actions('bl-start'); });
   await p.waitForTimeout(5000); await p.evaluate(() => { const A = window.__A; A.G.holdT = 0.01; A.G.loadT = 0; A.G.noRender = true; });
   await p.waitForTimeout(3000);
   r.setup = await p.evaluate(() => { const A = window.__A, t = {}; for (const e of A.M.entries) t[e.team] = (t[e.team] || 0) + 1; const mates = A.enemies.filter(e => e.team === 0);

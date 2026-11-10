@@ -1,14 +1,16 @@
 {
- "version": "1.2.92",
+ "version": "1.2.93",
  "notes": [
-  "LAST TOKE loot: guns come in COMMON, RARE, EPIC and LEGENDARY - better ones hit harder, reload faster and kick less; the gun has a faint glow and its name is coloured",
-  "Floor loot that looks like it belongs: guns on tables and wall racks, heals and ammo on shelves, pallets on the roofs - each with a light strip in its rarity colour",
-  "Attachments on the ground (red dot, holo, 4x scope, suppressor, compensator, extended mag, grip, laser) snap onto every gun they fit",
-  "Ammo types: LIGHT, HEAVY, SHELLS and SNIPER - pick up the right ammo for your gun",
-  "Heals: NUG (+25), BROWNIE (+50 over 5 s), MEDICAL JOINT (full) - press 5 or D-pad up",
-  "Taking a gun puts your old one down in its place (others see it too online)",
-  "Fixed: LAST TOKE's start banner said first to 999 kills"
+  "LAST TOKE has its own lobby now (out of the multiplayer lobby): online or offline, solo / duos / squads, ranked, your loadout drop class, float trail, your stats and today's challenges",
+  "LOADOUT DROPS: $4,000 at a buy station drops a crate with a class you made",
+  "VAULTS: four locked bunkers with legendary loot and a VAULT BOSS - find a gold KEY CARD to open one",
+  "Squads: STASH CARDS and RE-UP BEACONS bring dead squadmates back, callouts on the emote wheel (bots bring ammo and heals), carry a downed mate, faster bong revive, watch your squad when you're out",
+  "Bots loot guns off the floor, heal, use cars more, hide in buildings in the last circles and get sharper every circle",
+  "LADDERS up the buildings and the lighthouse, WEED BALLOONS that float you back up, DAMAGE NUMBERS, DEPLOYABLE COVER, MOLOTOVS, HEALING SMOKE, sniper glint, footsteps that sound like the ground",
+  "STASH BOXES drop when someone dies (take what you want), hold USE to swap guns, the last circles drift, GROW TENTS to harvest for cash, plywood sheds you can shoot through, day turns to night, wind on the float in",
+  "THE TUNNELS under the island, THE BONG EXPRESS train across the north (ride it, loot it), swimming in the sea",
+  "Stats page, placement XP, 3 daily challenges, a crown for your win streak, float trails, a victory dance, the kill leader marked for everyone, a landing marker, pick your warm-up gun, a faster cloud"
  ],
- "sha256": "ad29a1e2113ffb25a230bb9b71f6e15d4a390676e10cdfb413eed8d38232d9c8",
+ "sha256": "2e539fb25df94eca2a571ec1efbd332234fe6aea8709fbcb6a8ed9df0b196e66",
  "minApp": "1.0.0"
 }
