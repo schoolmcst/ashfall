@@ -152,6 +152,17 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.92 TEST: LAST TOKE LOOT 2.0 (batch 1 of the owner's BR list: items 1,2,3,5,6). brloot.js: RARITY (BRL_RAR common/rare/
+  epic/legendary; dmg/reload/recoil through a computeStats wrapper; the gun gets its own material copies with a faint
+  emissive sheen, hands skipped, put back outside BR via an equipClass wrapper; HUD name coloured). KIT: ground
+  attachments (BRL_KIT ids from ATTS) go in BRL.kit per slot and fit every gun (computeStats / buildAttachmentVisuals
+  swap ATTS[def.id] while running). AMMO TYPES light/heavy/shells/sniper: BRL.ammo pools, brlAmmoSync makes each
+  weapon's reserve the pool (a reload's drop is taken from it). HEALS nug/brownie/medical joint: key 5 ('heal' bind),
+  D-pad up in BR when hurt (else the streak). FLOOR LOOT: brlFloorSpot = about half the loot spots by a position hash
+  (host crates skip them); brlSet puts a TABLE / WALL RACK / SHELF against the nearest wall (brlWall; racks and shelves
+  need a full-height wall), a PALLET in the open; items on them with a rarity light strip; gun models are templates
+  (userData cleared: clone() JSON-copies it and gun defs have d.base = d) built at round start. Online: seed at the end
+  of the 'b' pack (brlSeedIn), presence bl = {fl: taken ids, fd: guns put down}. Tests: s_brloot, mp_brloot.
 - 1.2.91 PUBLIC (owner said do it): pickMapFor sends every LAST TOKE match to stashisle (except edit_map); a lobby map from another mode used to carry over and the owner never saw the island.
 - 1.2.90 PUBLIC (owner said send it; includes 1.2.88 + 1.2.89): island v3 + map + controller + LAST TOKE intro.
   terrain.js: a height field (TERR, TH(x,z)) on maps that want one (only stashisle); groundAt starts from TH, buildNav uses

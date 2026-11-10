@@ -75,7 +75,7 @@ function ltTick(dt) {
   for (const c of B.crates) if (c.fall > 0) { c.fall = Math.max(0, c.fall - dt * 6); c.g.position.y = (c.y || 0) + c.fall; if (c.chute) { c.chute.visible = c.fall > 0.2; c.chute.position.y = 2.2; } if (c.fall === 0) try { sfx.thud(Object.assign({ vol: 1 }, at(c.x, c.z, 30))); } catch (e) {} }
   if (B.plane) { B.plane.t += dt; const P0 = B.plane; P0.m.position.set(P0.x0 + P0.dx * P0.t * 28, 60, P0.z0 + P0.dz * P0.t * 28); if (P0.t > 8) { B.group.remove(P0.m); B.plane = null; } }
   // the HUD
-  const el = $('ltHud'); if (el) { const txt = `$${LT.cash} · PLATES ${LT.plates} · ARMOR ${Math.round(G.armor || 0)}${LT.plateT > 0 ? ' · PLATING…' : ''}${LT.selfRev ? ' · SELF-REVIVE' : ''}${LT.contract ? ' · ' + ltContractTxt() : ''}`; if (el._t !== txt) { el._t = txt; el.innerHTML = txt; } el.style.display = alive || LT.contract ? 'block' : 'none'; }
+  const el = $('ltHud'); if (el) { const txt = `$${LT.cash} · PLATES ${LT.plates} · ARMOR ${Math.round(G.armor || 0)}${LT.plateT > 0 ? ' · PLATING…' : ''}${LT.selfRev ? ' · SELF-REVIVE' : ''}${LT.contract ? ' · ' + ltContractTxt() : ''}${typeof brlHud === 'function' ? brlHud() : ''}`; if (el._t !== txt) { el._t = txt; el.innerHTML = txt; } el.style.display = alive || LT.contract ? 'block' : 'none'; }
 }
 const ltPlating = () => LT.plateT > 0;
 /* ---------- armour: the damage plates take first */

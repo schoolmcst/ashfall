@@ -785,7 +785,7 @@ function loadSettings() {
   } catch (e) { NEED_AUTO_DERIVE = true; }
 }
 // keyboard bindings (Settings > KEYBINDS); mouse stays fire / aim
-const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab', streak: 'KeyX', ping: 'KeyZ', prone: 'KeyB', field: 'KeyT', plate: 'Digit4', emote: 'KeyJ', map: 'KeyM' };
+const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab', streak: 'KeyX', ping: 'KeyZ', prone: 'KeyB', field: 'KeyT', plate: 'Digit4', heal: 'Digit5', emote: 'KeyJ', map: 'KeyM' };
 const PAD_DEFAULT = { jump: 0, crouch: 1, reload: 2, swap: 3, grenade: 5, melee: 11, sprint: 10, streak: 12, inspect: 13, board: 8, ping: 14, field: 15, plate: 4 };
 const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', 'L3', 'R3', 'D-PAD UP', 'D-PAD DOWN', 'D-PAD LEFT', 'D-PAD RIGHT'];
 const pb = a => (S.padBinds && S.padBinds[a] !== undefined ? S.padBinds[a] : PAD_DEFAULT[a]);
@@ -10234,6 +10234,7 @@ function objSetup() {
 const netHostNow = () => !M.online || !!(NET.room && NET.room.host);
 function modeGoalText() {
   const c = M.cfg;
+  if (M.br) return M.squad > 1 ? 'last squad standing wins' : 'last one standing wins';
   if (M.mode === 'snd' || M.mode === 'gf') return `first to ${c.score} rounds`;
   if (M.mode === 'inf') return `survive ${Math.round((c.infLen || 300) / 60)} minutes`;
   if (M.mode === 'gun') return `${GUN_LADDER.length} guns to finish`;
@@ -11597,11 +11598,13 @@ function brSetup() {
   // a map with loot spots (STASH ISLAND: inside the buildings, upstairs, on the roofs) fills most of its crates there
   const spots = ((MAPS[curMap] && MAPS[curMap].loot) || []).slice().sort(() => Math.random() - 0.5);
   const hasSpots = spots.length >= want * 0.6, rollQ = q => { const r = Math.random(); return q >= 2 ? (r < 0.4 ? 2 : r < 0.85 ? 1 : 0) : q >= 1 ? (r < 0.15 ? 2 : r < 0.55 ? 1 : 0) : (r < 0.06 ? 2 : r < 0.35 ? 1 : 0); };   // better loot where it's harder to get
-  for (const s of spots) { if (M.br.crates.length >= want || !netHostNow()) break; if (used.some(u => Math.hypot(u.x - s.x, u.z - s.z) < 5 && Math.abs((u.y || 0) - (s.y || 0)) < 1)) continue; used.push(s); const c = brCrate(s.x, s.z, rollQ(s.q | 0), s.y || 0); c.id = M.br.crates.length; M.br.crates.push(c); }
+  for (const s of spots) { if (M.br.crates.length >= want || !netHostNow()) break; if (brlFloorSpot(s)) continue;   // (the other half is floor loot, brloot.js)
+    if (used.some(u => Math.hypot(u.x - s.x, u.z - s.z) < 5 && Math.abs((u.y || 0) - (s.y || 0)) < 1)) continue; used.push(s); const c = brCrate(s.x, s.z, rollQ(s.q | 0), s.y || 0); c.id = M.br.crates.length; M.br.crates.push(c); }
   for (let i = 0; i < 600 && !hasSpots && M.br.crates.length < want && netHostNow(); i++) {   // (only maps without loot spots scatter crates on open ground)   // online, only the host makes the crates (everyone else gets them in the pack)
     const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (duelIn(o.x, o.z, 1)) continue; if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
     const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier, TERR.on ? TH(o.x, o.z) : 0); c.id = M.br.crates.length; M.br.crates.push(c);
   }
+  try { brlSetup(); } catch (e) { reportError(e); }   // floor loot on tables, racks, shelves (brloot.js)
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
   try { brfStartPhase(M.br); } catch (e) { reportError(e); }   // WARM-UP, the bong and the float in (brintro.js)
@@ -11616,13 +11619,13 @@ function brCrate(x, z, tier, y = 0) {
   return { x, z, y, tier, g, open: false };
 }
 // everyone back to a pistol at the start
-function brArmAll() { if (!M.br) return; try { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } catch (e) {} for (const e of enemies) if (e.entry && !e.net) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; } M.br.myTier = -1; }
+function brArmAll() { if (!M.br) return; try { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } catch (e) {} for (const e of enemies) if (e.entry && !e.net) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; } M.br.myTier = -1; try { brlStart(); } catch (e) {} }
 function brGun(tier) { const cats = M && M.feat && M.feat.pistols ? ['pi'] : BR_TIERS[tier].cats; const pool = ARMORY.filter(d => cats.includes(d.cat) && CATS[d.cat] && (CATS[d.cat].slot === 'primary' || d.cat === 'pi')); return pool.length ? pool[(Math.random() * pool.length) | 0] : ARM.marc; }
 function brOpen(c, who) {
   if (c.open) return; c.open = true; M.br.group.remove(c.g); const d = brGun(c.tier), T = BR_TIERS[c.tier];
   if (who === 'player' && M.online && M.br.mine.indexOf(c.id) < 0) M.br.mine.push(c.id);
   try { ltCrate(c, who); } catch (e) {}
-  if (who === 'player') { try { equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 1; G.health = G.maxHp || 100; M.br.myTier = c.tier; showBanner(`${T.n} LOOT`, d.name); sfx.pickup(); } catch (e) {} }
+  if (who === 'player') { try { brlGive(d, c.tier); if (Math.random() < 0.5) BRL.heals.nug = Math.min(6, BRL.heals.nug + 1); G.grenades = 1; G.health = G.maxHp || 100; M.br.myTier = c.tier; showBanner(`${T.n} LOOT`, d.name); sfx.pickup(); } catch (e) {} }
   else { try { botGunProfile(who, d.id); who.hp = who.maxHp; who.brTier = c.tier; } catch (e) {} }
 }
 const brAliveBots = () => enemies.filter(e => e.entry && e.entry.alive !== false);
@@ -11652,6 +11655,7 @@ function brUpdate(dt) {
     else if (host) for (const e of brAliveBots()) if (!e.net && (e.brTier === undefined || e.brTier < c.tier) && Math.hypot(e.group.position.x - c.x, e.group.position.z - c.z) < 1.4 && Math.abs(e.group.position.y - (c.y || 0)) < 1.6) { brOpen(c, e); break; }
   }
   B.uH = u;
+  try { brlTick(dt); brlNameCol(); } catch (e) { reportError(e); }   // floor loot, ammo, heals (brloot.js)
   // the end: last one standing
   for (const e of brAliveBots()) if (!e.net && e.brTier === undefined) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; }   // bots that just came in start with a pistol too
   if (sqOn()) {   // DUOS / SQUADS: last squad standing
@@ -11686,12 +11690,12 @@ function brHud() {
   return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
 function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
-function brClear() { try { brfReset(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
+function brClear() { try { brfReset(); brlClear(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
 
 /* ---------- online */
 function brPack() {
   const B = M.br, r1 = v => Math.round(v * 10) / 10, fr = B.from || { x: 0, z: 0, r: 0 }, to = B.to || { x: 0, z: 0, r: 0 };
-  return ['b', B.phase, r1(B.t), B.closing ? 1 : 0, r1(B.cx), r1(B.cz), r1(B.r), r1(fr.x), r1(fr.z), r1(fr.r), r1(to.x), r1(to.z), r1(to.r), B.most | 0, B.winTxt || '', B.winName || '', B.crates.length, ...B.crates.flatMap(c => [r1(c.x), r1(c.z), c.tier, c.open ? 1 : 0, r1(c.y || 0)])];
+  return ['b', B.phase, r1(B.t), B.closing ? 1 : 0, r1(B.cx), r1(B.cz), r1(B.r), r1(fr.x), r1(fr.z), r1(fr.r), r1(to.x), r1(to.z), r1(to.r), B.most | 0, B.winTxt || '', B.winName || '', B.crates.length, ...B.crates.flatMap(c => [r1(c.x), r1(c.z), c.tier, c.open ? 1 : 0, r1(c.y || 0)]), BRL.seed >>> 0];
 }
 function brApply(o) {
   const B = M.br; if (!B || netHostNow()) return; const num = i => +o[i] || 0;
@@ -11701,6 +11705,7 @@ function brApply(o) {
   const n = Math.min(200, o[16] | 0);
   if (B.crates.length !== n || (n && B.crates.some((c, i) => Math.abs(c.x - num(17 + i * 5)) > 0.2))) { for (const c of B.crates) if (!c.open) B.group.remove(c.g); B.crates = []; for (let i = 0; i < n; i++) { const c = brCrate(num(17 + i * 5), num(18 + i * 5), clamp(o[19 + i * 5] | 0, 0, 3), clamp(num(21 + i * 5), 0, 30)); c.id = i; if (c.tier >= 3) try { ltDropFx(c); } catch (e) {} B.crates.push(c); } }
   for (let i = 0; i < n; i++) { const c = B.crates[i]; if (o[20 + i * 5] && !c.open) { c.open = true; B.group.remove(c.g); } }
+  try { brlSeedIn(+o[17 + n * 5] || 0); } catch (e) {}   // the floor loot's seed
 }
 // the host: crates other players opened
 function brRemoteOpened(list) { const B = M.br; if (!B) return; for (const id of list) { const c = B.crates[id | 0]; if (c && !c.open) { c.open = true; B.group.remove(c.g); } } }
@@ -12022,6 +12027,307 @@ function brfHud() {
 body.brcine #hud,body.brcine #cross,body.brcine #radar,body.brcine #feed{opacity:0!important}
 #brWhite{position:fixed;inset:0;z-index:79;pointer-events:none;opacity:0;background:radial-gradient(circle at 50% 55%,#f6fff6,#d8f0dc 70%,#b8d8c0)}`; document.head.appendChild(s);
   const w = document.createElement('div'); w.id = 'brWhite'; document.body.appendChild(w); })();
+/* ================================================================== LAST TOKE LOOT 2.0 (1.2.92)
+   RARITY: every gun you find is COMMON (white), RARE (blue), EPIC (purple) or LEGENDARY (gold). Better ones hit harder,
+     reload faster and kick less (BRL_RAR); the gun itself glows in its colour and its name on the HUD is coloured.
+   ATTACHMENTS ON THE GROUND: a red dot, a 4x scope, a holo, a suppressor, a compensator, an extended mag, a grip or a
+     laser. Picking one up puts it in your KIT: it snaps onto every gun it fits (now and later); one per slot.
+   AMMO TYPES: LIGHT (pistols, SMGs), HEAVY (rifles, LMGs), SHELLS (shotguns), SNIPER (snipers, marksman). Each type is
+     one shared pool (BRL.ammo); the guns' reserve is that pool. Ammo cans on the floor, crates give the gun's type.
+   HEALS (key 5 / D-pad up in LAST TOKE): a NUG (+25), a BROWNIE (+50 over 5 s), a MEDICAL JOINT (full). The best
+     one for what you're missing is used; firing cancels it.
+   FLOOR LOOT that looks like it belongs: about half the loot spots get furniture instead of a crate - a TABLE with a
+     gun on it and an ammo can, a WALL RACK with one or two guns, a SHELF with heals, ammo and an attachment, or (in the
+     open) a PALLET. Furniture backs onto the nearest wall. A thin light strip in the item's rarity colour sits under it.
+     Taking a gun puts your old one down in its place.
+   Online: the host's seed (end of the 'b' pack) builds the same floor loot everywhere; what you take goes out as presence
+     fl, the gun you put down as fd. */
+const BRL_RAR = [
+  { n: 'COMMON', col: 0xe8e8e8, css: '#e8e8e8', dmg: 1, rel: 1, rec: 1 },
+  { n: 'RARE', col: 0x3a9aff, css: '#5ab0ff', dmg: 1.07, rel: 0.95, rec: 0.95 },
+  { n: 'EPIC', col: 0xb04aff, css: '#c47aff', dmg: 1.14, rel: 0.9, rec: 0.9 },
+  { n: 'LEGENDARY', col: 0xffc83a, css: '#ffd25a', dmg: 1.22, rel: 0.82, rec: 0.84 },
+];
+const BRL_AMMO = { light: { n: 'LIGHT', col: 0xd8b03a, can: 30, max: 240 }, heavy: { n: 'HEAVY', col: 0x5a8a3a, can: 30, max: 240 }, shells: { n: 'SHELLS', col: 0xc0402a, can: 12, max: 60 }, sniper: { n: 'SNIPER', col: 0x3a6ac0, can: 10, max: 60 } };
+const BRL_KIT = [
+  { id: 'reddot', n: 'RED DOT' }, { id: 'holo', n: 'HOLO SIGHT' }, { id: 'acog4', n: '4× SCOPE' }, { id: 'suppressor', n: 'SUPPRESSOR' },
+  { id: 'comp', n: 'COMPENSATOR' }, { id: 'extmag', n: 'EXTENDED MAG' }, { id: 'vgrip', n: 'VERTICAL GRIP' }, { id: 'laser', n: 'LASER' },
+];
+const BRL_HEAL = { nug: { n: 'NUG', hp: 25, t: 1.2, max: 6 }, brownie: { n: 'BROWNIE', hp: 50, t: 2.4, max: 3, over: 5 }, joint: { n: 'MEDICAL JOINT', hp: 999, t: 4.5, max: 2 } };
+const BRL = { items: [], sets: [], group: null, seed: 0, rar: {}, kit: {}, ammo: { light: 36, heavy: 0, shells: 0, sniper: 0 }, heals: { nug: 0, brownie: 0, joint: 0 }, heal: null, regen: 0, uH: false, hH: false, taken: new Set(), out: [], drops: [], dropSeen: new Set(), visT: 0, tpl: {}, near: null };
+const brlAmmoOf = def => { const c = def && def.cat; return c === 'pi' || c === 'smg' ? 'light' : c === 'sg' ? 'shells' : c === 'sr' || c === 'mr' ? 'sniper' : 'heavy'; };
+const brlOn = () => !!(M && M.br && MAPS[curMap] && MAPS[curMap].loot);
+const brlHash = (x, z, y) => { let h = Math.imul(Math.round(x * 10) ^ 0x9e37, 2654435761) ^ Math.imul(Math.round(z * 10) + 7, 1597334677) ^ Math.imul(Math.round((y || 0) * 10) + 3, 374761393); h = Math.imul(h ^ (h >>> 15), 2246822519); return ((h ^ (h >>> 13)) >>> 0); };
+// about half of a map's loot spots are floor loot (the same half everywhere, so the host's crates skip them)
+const brlFloorSpot = s => brlOn() && brlHash(s.x, s.z, s.y) % 100 < 48;
+function brlRng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; }; }
+
+/* ---------- stats: rarity and the kit, through the attachment system */
+const _brlCompute = computeStats;
+computeStats = function (def, override, factory) {
+  if (!(factory && M && M.br && def) || override) return _brlCompute(def, override, factory);
+  const save = ATTS[def.id], map = {}; let any = false;
+  for (const slot of slotsFor(def)) { const k = BRL.kit[slot], a = k && ATT_BY_ID[k]; if (a && attOK(a, def)) { map[slot] = k; any = true; } }
+  let s; if (any) { ATTS[def.id] = map; try { s = _brlCompute(def, null, false); } finally { if (save === undefined) delete ATTS[def.id]; else ATTS[def.id] = save; } } else s = _brlCompute(def, null, true);
+  const R = BRL_RAR[BRL.rar[def.id] | 0]; if (R) { s.dmg *= R.dmg; s.reload *= R.rel; s.recoil *= R.rec; }
+  return s;
+};
+const _brlVis = buildAttachmentVisuals;
+buildAttachmentVisuals = function (wi) {
+  const w = WEAPONS[wi]; if (!(w && w.factory && M && M.br)) return _brlVis(wi);
+  const def = w.def, save = ATTS[def.id], map = {}; let any = false;
+  for (const slot of slotsFor(def)) { const k = BRL.kit[slot], a = k && ATT_BY_ID[k]; if (a && attOK(a, def)) { map[slot] = k; any = true; } }
+  if (!any) return _brlVis(wi);
+  ATTS[def.id] = map; try { attachVisuals(gunObjs[wi], def, false, w.len, null); } finally { if (save === undefined) delete ATTS[def.id]; else ATTS[def.id] = save; }
+};
+// the gun glows in its rarity colour (its own copies of the materials, put back outside LAST TOKE)
+function brlTint(g, tier) {
+  if (!g) return; const on = M && M.br && tier > 0, col = on ? new THREE.Color(BRL_RAR[tier].col) : null;
+  const skip = new Set(); for (const h of [g.userData.handL, g.userData.handR]) if (h && h.traverse) h.traverse(o => skip.add(o));   // not the hands
+  g.traverse(o => { if (/hand|arm|glove|sleeve|skin/i.test(o.name || '')) o.traverse(c => skip.add(c)); });
+  g.traverse(o => {
+    if (!o.isMesh || !o.material || o.userData.brlSkip || skip.has(o)) return;
+    if (!on) { if (o.userData.brlMat0) { o.material = o.userData.brlMat0; o.userData.brlMat0 = null; } return; }
+    if (!o.userData.brlMat0) { o.userData.brlMat0 = o.material; o.material = Array.isArray(o.material) ? o.material.map(m => m.clone()) : o.material.clone(); }
+    for (const m of Array.isArray(o.material) ? o.material : [o.material]) if (m.emissive) { m.emissive.copy(col); m.emissiveIntensity = [0, 0.07, 0.09, 0.14][tier]; }   // a sheen, not paint
+  });
+}
+const _brlEquip = equipClass;
+equipClass = function (cls, noCompile) {
+  const r = _brlEquip(cls, noCompile);
+  try { WEAPONS.forEach((w, i) => brlTint(gunObjs[i], M && M.br ? BRL.rar[w.def.id] | 0 : 0)); } catch (e) {}
+  return r;
+};
+// a gun into my hands as the primary (the pistol stays the secondary)
+function brlGive(d, tier) {
+  BRL.rar[d.id] = clamp(tier | 0, 0, 3);
+  equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = Math.max(G.grenades | 0, 1);
+  const t = brlAmmoOf(d); BRL.ammo[t] = Math.min(BRL_AMMO[t].max, BRL.ammo[t] + BRL_AMMO[t].can * 2); brlAmmoSync(true);
+  M.br.myTier = Math.max(M.br.myTier, Math.min(2, tier));
+}
+// the guns' reserve is the shared pool of their ammo type
+function brlAmmoSync(force) {
+  for (const w of WEAPONS) {
+    if (!w || !w.def) continue; const t = brlAmmoOf(w.def);
+    if (!force && w._brlRes !== undefined && w.reserve !== w._brlRes) BRL.ammo[t] = clamp(BRL.ammo[t] + (w.reserve - w._brlRes), 0, BRL_AMMO[t].max);
+  }
+  for (const w of WEAPONS) { if (!w || !w.def) continue; const t = brlAmmoOf(w.def); w.reserve = BRL.ammo[t]; w._brlRes = w.reserve; }
+}
+// the start of the round (brArmAll): a pistol, a little light ammo, an empty kit
+function brlStart() {
+  BRL.rar = {}; BRL.kit = {}; BRL.ammo = { light: 36, heavy: 0, shells: 0, sniper: 0 }; BRL.heals = { nug: 1, brownie: 0, joint: 0 }; BRL.heal = null; BRL.regen = 0;
+  try { WEAPONS.forEach((w, i) => brlTint(gunObjs[i], 0)); brlAmmoSync(true); } catch (e) {}
+}
+
+/* ---------- the floor loot */
+const BRL_G = {}; let BRL_M = null;
+function brlMats() {
+  if (BRL_M) return BRL_M;
+  BRL_G.box = new THREE.BoxGeometry(1, 1, 1); BRL_G.cyl = new THREE.CylinderGeometry(1, 1, 1, 14); BRL_G.sph = new THREE.SphereGeometry(1, 10, 8);
+  const std = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: c, roughness: 0.8 }, o || {}));
+  BRL_M = { wood: std(0x6a4a30), dark: std(0x3e2c1c), metal: std(0x3a3e42, { roughness: 0.45, metalness: 0.6 }), pallet: std(0x9a7a50, { roughness: 0.95 }),
+    glass: std(0xbfffd0, { transparent: true, opacity: 0.45, roughness: 0.05 }), bud: std(0x5aa03a, { roughness: 0.95 }), lid: std(0x2a2a2a), brownie: std(0x3a2412, { roughness: 0.95 }), tray: std(0x9a9a9a, { metalness: 0.6, roughness: 0.4 }),
+    paper: std(0xf0ece0, { roughness: 0.9 }), lens: std(0x3a8aff, { emissive: 0x1a4aaa, emissiveIntensity: 0.8 }), cans: {}, strips: {} };
+  for (const k in BRL_AMMO) BRL_M.cans[k] = std(BRL_AMMO[k].col, { roughness: 0.55, metalness: 0.35 });
+  BRL_RAR.forEach((r, i) => { BRL_M.strips[i] = new THREE.MeshStandardMaterial({ color: 0x111111, emissive: r.col, emissiveIntensity: 2.2 }); });
+  return BRL_M;
+}
+function brlMesh(parent, geo, mat, x, y, z, sx, sy, sz, rx, ry, rz) { const m = new THREE.Mesh(BRL_G[geo], mat); m.position.set(x, y, z); m.scale.set(sx, sy, sz); if (rx || ry || rz) m.rotation.set(rx || 0, ry || 0, rz || 0); m.castShadow = sy > 0.03; m.receiveShadow = true; parent.add(m); return m; }
+// the light strip in a rarity colour + a soft glow
+function brlStrip(parent, tier, x, y, z, w, d) {
+  const g = new THREE.Group(); g.position.set(x, y, z); parent.add(g);
+  brlMesh(g, 'box', BRL_M.strips[tier], 0, 0, 0, w, 0.018, d);
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: BRL_RAR[tier].col, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.35, depthWrite: false })); s.scale.set(Math.max(w, d) * 1.2, 0.35, 1); s.position.y = 0.08; g.add(s);
+  return g;
+}
+// a gun model sized to about 0.95 m, one template per gun, cloned for each item
+function brlGunModel(id) {
+  let t = BRL.tpl[id];
+  if (!t) { const d = ARM[id]; if (!d) return null; const m = buildGunModel(d, true); if (m.userData.flash) m.remove(m.userData.flash); m.traverse(o => { o.userData = {}; });   // (clone() copies userData as JSON; the gun's holds itself)
+    const bb = new THREE.Box3().setFromObject(m), sz = bb.getSize(new THREE.Vector3()); m.scale.multiplyScalar(0.95 / Math.max(0.2, sz.x, sz.y, sz.z)); t = BRL.tpl[id] = m; }
+  const c = t.clone(true); c.traverse(o => { if (o.isMesh) { o.castShadow = true; o.userData.brlSkip = false; } }); return c;
+}
+// where the nearest wall is (for the furniture to back onto): {nx, nz, d} or null
+function brlWall(x, z, y) {
+  let best = null;
+  for (const b of boxesNear(x, z)) {
+    if (b.bot > y + 1.6 || b.top < y + 0.6 || b.top - b.bot < 0.5) continue;   // a wall, or the sill under a window
+    const m = 0.45, tests = [[1, 0, b.minx - x, z > b.minz - m && z < b.maxz + m], [-1, 0, x - b.maxx, z > b.minz - m && z < b.maxz + m], [0, 1, b.minz - z, x > b.minx - m && x < b.maxx + m], [0, -1, z - b.maxz, x > b.minx - m && x < b.maxx + m]];
+    for (const [nx, nz, d, over] of tests) if (over && d >= -0.05 && d < 1.7 && (!best || d < best.d - 0.05 || (Math.abs(d - best.d) < 0.05 && b.top > best.top))) best = { nx, nz, d: Math.max(0.05, d), top: b.top, tall: b.top >= y + 1.9 };
+  }
+  return best;
+}
+// what a set holds: rolled from the round's seed and the spot
+function brlRollTier(r, q) { const p = q >= 2 ? [0.15, 0.4, 0.33] : q >= 1 ? [0.35, 0.4, 0.2] : [0.6, 0.3, 0.09], x = r(); return x < p[0] ? 0 : x < p[0] + p[1] ? 1 : x < p[0] + p[1] + p[2] ? 2 : 3; }
+function brlRollGun(r, tier) { const cats = tier >= 3 ? ['ar', 'lmg', 'sr', 'mr'] : BR_TIERS[Math.min(2, tier)].cats, pool = ARMORY.filter(d => cats.includes(d.cat) && CATS[d.cat] && (CATS[d.cat].slot === 'primary' || d.cat === 'pi')); return pool.length ? pool[Math.floor(r() * pool.length)] : ARM.marc; }
+function brlRollHeal(r) { const x = r(); return x < 0.6 ? 'nug' : x < 0.9 ? 'brownie' : 'joint'; }
+// one item on a set: k 'gun' | 'ammo' | 'heal' | 'att'; at (x, y, z) in the set's frame
+function brlItem(set, k, data, x, y, z, how) {
+  const it = Object.assign({ id: set.id + k[0] + set.n++, k, set, lx: x, ly: y, lz: z, how: how || 'lie', mesh: null }, data);
+  BRL.items.push(it); if (BRL.taken.has(it.id)) { it.gone = true; return it; } brlItemMesh(it); return it;
+}
+function brlItemMesh(it) {
+  const S0 = it.set.g, M0 = BRL_M, g = new THREE.Group(); g.position.set(it.lx, it.ly, it.lz); S0.add(g); it.mesh = g;
+  if (it.k === 'gun') {
+    it.pend = true;   // the model comes when someone is near (brlVis)
+    brlStrip(g, it.tier, 0, it.how === 'hang' ? -0.12 : -0.03, it.how === 'hang' ? -0.02 : 0.16, it.how === 'hang' ? 1.1 : 1.0, 0.03);
+  } else if (it.k === 'ammo') {
+    brlMesh(g, 'box', M0.cans[it.t], 0, 0.1, 0, 0.3, 0.2, 0.16); brlMesh(g, 'box', M0.metal, 0, 0.205, 0, 0.12, 0.02, 0.05); brlMesh(g, 'box', M0.paper, 0, 0.1, -0.081, 0.18, 0.07, 0.004);
+  } else if (it.k === 'heal') {
+    if (it.h === 'nug') { brlMesh(g, 'cyl', M0.glass, 0, 0.08, 0, 0.07, 0.16, 0.07); brlMesh(g, 'sph', M0.bud, 0, 0.06, 0, 0.05, 0.045, 0.05); brlMesh(g, 'cyl', M0.lid, 0, 0.17, 0, 0.075, 0.03, 0.075); }
+    else if (it.h === 'brownie') { brlMesh(g, 'box', M0.tray, 0, 0.012, 0, 0.32, 0.025, 0.24); for (let i = 0; i < 4; i++) brlMesh(g, 'box', M0.brownie, -0.06 + (i % 2) * 0.12, 0.05, -0.05 + ((i / 2) | 0) * 0.1, 0.1, 0.05, 0.08); }
+    else { brlMesh(g, 'cyl', M0.paper, 0, 0.02, 0, 0.014, 0.16, 0.014, 0, 0, Math.PI / 2); brlMesh(g, 'box', M0.lens, 0.09, 0.02, 0, 0.02, 0.02, 0.02); brlMesh(g, 'box', new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff3a3a, emissiveIntensity: 0.6 }), 0, 0.005, 0.05, 0.12, 0.01, 0.06); }
+    brlStrip(g, it.h === 'joint' ? 3 : it.h === 'brownie' ? 2 : 1, 0, -0.005, 0.12, 0.3, 0.02);
+  } else if (it.k === 'att') {
+    brlMesh(g, 'box', M0.dark, 0, 0.06, 0, 0.32, 0.12, 0.2);
+    if (/dot|holo/.test(it.a)) { brlMesh(g, 'box', M0.metal, 0, 0.16, 0, 0.08, 0.06, 0.1); brlMesh(g, 'box', M0.lens, 0, 0.17, -0.051, 0.05, 0.03, 0.004); }
+    else if (it.a === 'acog4') { brlMesh(g, 'cyl', M0.metal, 0, 0.16, 0, 0.035, 0.24, 0.035, Math.PI / 2, 0, 0); brlMesh(g, 'cyl', M0.lens, 0, 0.16, -0.121, 0.03, 0.004, 0.03, Math.PI / 2, 0, 0); }
+    else if (it.a === 'suppressor' || it.a === 'comp') brlMesh(g, 'cyl', M0.metal, 0, 0.15, 0, it.a === 'comp' ? 0.03 : 0.028, it.a === 'comp' ? 0.1 : 0.22, it.a === 'comp' ? 0.03 : 0.028, Math.PI / 2, 0, 0);
+    else if (it.a === 'extmag') brlMesh(g, 'box', M0.metal, 0, 0.18, 0, 0.05, 0.2, 0.08, 0.2, 0, 0);
+    else brlMesh(g, 'box', M0.metal, 0, 0.16, 0, 0.05, 0.1, 0.05);
+    brlStrip(g, 1, 0, -0.005, 0.12, 0.3, 0.02);
+  }
+}
+function brlGunPlace(it) {
+  const m = brlGunModel(it.gun); if (!m) return; it.pend = false;
+  if (it.how === 'hang') m.rotation.set(0, Math.PI / 2, 0);   // on a rack: barrel along the wall, the side facing out
+  else { m.rotation.set(0, Math.PI / 2, Math.PI / 2); m.position.y = 0.035; }   // lying on its side
+  brlTint(m, it.tier); it.mesh.add(m); it.model = m;
+}
+// the furniture: a set backs onto the wall in its +z
+function brlSet(s, i, r) {
+  const M0 = brlMats(), w = brlWall(s.x, s.z, s.y), g = new THREE.Group(), set = { id: 's' + i + '_', g, n: 0, x: s.x, z: s.z, y: s.y };
+  g.position.set(s.x, s.y, s.z); BRL.group.add(g); BRL.sets.push(set);
+  let kind;
+  if (w) { g.rotation.y = Math.atan2(w.nx, w.nz); const wz = w.d; const x = r(); kind = !w.tall || x < 0.42 ? 'table' : x < 0.72 ? 'rack' : 'shelf'; /* racks and shelves only on a full wall, not a sill or a roof's parapet */ set.wz = wz; }
+  else { g.rotation.y = r() * TAU; kind = 'pallet'; }
+  const tier = () => brlRollTier(r, s.q | 0), gunIt = (x, y, z, how) => { const t = tier(), d = brlRollGun(r, t); return brlItem(set, 'gun', { gun: d.id, tier: t }, x, y, z, how); };
+  if (kind === 'table') {
+    const cz = set.wz - 0.42; brlMesh(g, 'box', M0.wood, 0, 0.77, cz, 1.45, 0.06, 0.72); for (const [x, z] of [[-0.66, -0.3], [0.66, -0.3], [-0.66, 0.3], [0.66, 0.3]]) brlMesh(g, 'box', M0.dark, x, 0.37, cz + z, 0.06, 0.74, 0.06);
+    const it = gunIt(-0.05, 0.8, cz, 'lie'); const t = brlAmmoOf(ARM[it.gun]); brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.52, 0.8, cz - 0.15);
+    if (r() < 0.5) brlItem(set, 'heal', { h: brlRollHeal(r) }, -0.55, 0.8, cz - 0.18); else brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, -0.45, 0, cz + 0.05);
+  } else if (kind === 'rack') {
+    const bz = set.wz - 0.03; brlMesh(g, 'box', M0.wood, 0, 1.25, bz, 1.5, 1.15, 0.05);
+    for (const y of [1.55, 1.0]) for (const x of [-0.4, 0.4]) brlMesh(g, 'cyl', M0.metal, x, y - 0.06, bz - 0.06, 0.012, 0.1, 0.012, Math.PI / 2, 0, 0);
+    gunIt(0, 1.55, bz - 0.1, 'hang'); if (r() < 0.6) gunIt(0, 1.0, bz - 0.1, 'hang');
+    brlMesh(g, 'box', M0.wood, 0, 0.42, bz - 0.25, 1.2, 0.04, 0.42); brlMesh(g, 'box', M0.dark, -0.56, 0.21, bz - 0.25, 0.04, 0.42, 0.4); brlMesh(g, 'box', M0.dark, 0.56, 0.21, bz - 0.25, 0.04, 0.42, 0.4);
+    const t = ['light', 'heavy', 'shells', 'sniper'][Math.floor(r() * 4)]; brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, -0.3, 0.44, bz - 0.25); brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.25, 0.44, bz - 0.25);
+  } else if (kind === 'shelf') {
+    const bz = set.wz - 0.2; for (const y of [0.45, 0.95, 1.45]) brlMesh(g, 'box', M0.wood, 0, y, bz, 1.25, 0.04, 0.4); for (const x of [-0.6, 0.6]) brlMesh(g, 'box', M0.dark, x, 0.85, bz, 0.04, 1.7, 0.4);
+    brlItem(set, 'heal', { h: brlRollHeal(r) }, -0.35, 0.97, bz); brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.05, 0.97, bz);
+    const t = ['light', 'heavy', 'shells', 'sniper'][Math.floor(r() * 4)]; brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.38, 0.97, bz);
+    brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.2, 1.47, bz); if (r() < 0.5) brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.3, 0.47, bz);
+  } else {
+    brlMesh(g, 'box', M0.pallet, 0, 0.07, 0, 1.2, 0.03, 0.8); for (const z of [-0.33, 0, 0.33]) brlMesh(g, 'box', M0.dark, 0, 0.03, z, 1.2, 0.06, 0.1);
+    const it = gunIt(-0.1, 0.09, 0.05, 'lie'); const t = brlAmmoOf(ARM[it.gun]); brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.42, 0.09, -0.22);
+    if (r() < 0.35) brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.42, 0.09, -0.25);
+  }
+  set.kind = kind;
+}
+function brlBuild(seed) {
+  brlClear(); if (!brlOn()) return; BRL.seed = seed >>> 0; BRL.group = new THREE.Group(); scene.add(BRL.group);
+  const spots = MAPS[curMap].loot.filter(brlFloorSpot);
+  spots.forEach((s, i) => { if (typeof duelIn === 'function' && duelIn(s.x, s.z, 1)) return; brlSet(s, i, brlRng(BRL.seed ^ brlHash(s.x, s.z, s.y))); });
+  for (const d of BRL.drops) brlDropMake(d);
+  for (const id of new Set(BRL.items.filter(i => i.k === 'gun').map(i => i.gun))) try { brlGunModel(id); } catch (e) {}   // every gun model now, not when someone walks up (a stutter)
+  brlVis(true);
+}
+function brlClear() { if (BRL.group && BRL.group.parent) BRL.group.parent.remove(BRL.group); BRL.group = null; BRL.items = []; BRL.sets = []; BRL.near = null; }
+// the round starts (brSetup): a fresh seed, nothing taken
+function brlSetup() { BRL.rar = {}; BRL.kit = {}; BRL.taken = new Set(); BRL.out = []; BRL.drops = []; BRL.dropSeen = new Set(); BRL.dn = 0; BRL.seed = 0; if (netHostNow()) brlBuild((Math.random() * 4294967296) >>> 0); }
+// the floor loot near me: shown, guns built (furniture far away is hidden)
+function brlVis(force) {
+  if (!BRL.group || (!force && (BRL.visT -= 1 / 60) > 0)) return; BRL.visT = 0.4;
+  const hide = typeof brfHideLoot === 'function' && brfHideLoot(); BRL.group.visible = !hide;
+  for (const s of BRL.sets) { const d = Math.hypot(s.x - P.x, s.z - P.z); s.g.visible = d < 75; }
+  for (const it of BRL.items) if (it.k === 'gun' && it.pend && !it.gone && Math.hypot(it.set.x - P.x, it.set.z - P.z) < 45) brlGunPlace(it);
+}
+const _bw = new THREE.Vector3();
+function brlWorld(it) { it.mesh.updateWorldMatrix(true, false); return it.mesh.getWorldPosition(_bw); }
+function brlName(it) { return it.k === 'gun' ? `${BRL_RAR[it.tier].n} ${ARM[it.gun].name}` : it.k === 'ammo' ? `${BRL_AMMO[it.t].n} AMMO ×${it.n}` : it.k === 'heal' ? BRL_HEAL[it.h].n : (BRL_KIT.find(a => a.id === it.a) || {}).n || 'ATTACHMENT'; }
+function brlRemove(it) { it.gone = true; if (it.mesh && it.mesh.parent) it.mesh.parent.remove(it.mesh); if (BRL.near === it) BRL.near = null; }
+// take it
+function brlTake(it) {
+  if (it.gone) return; let ok = true;
+  if (it.k === 'gun') {
+    const old = WEAPONS.length > 1 && WEAPONS[0] && WEAPONS[0].def && WEAPONS[0].def.id !== 'sidearm' ? { gun: WEAPONS[0].def.id, tier: BRL.rar[WEAPONS[0].def.id] | 0 } : null;
+    brlGive(ARM[it.gun], it.tier);
+    try { showBanner(`${BRL_RAR[it.tier].n}`, ARM[it.gun].name); sfx.pickup(); } catch (e) {}
+    if (old) { const d = { id: it.id + '~' + (++BRL.dn) + (NET.me ? NET.me.slice(-3) : ''), base: it.id, gun: old.gun, tier: old.tier }; BRL.drops.push(d); BRL.dropSeen.add(d.id); brlDropMake(d); }
+  } else if (it.k === 'ammo') { const A = BRL_AMMO[it.t]; if (BRL.ammo[it.t] >= A.max) ok = false; else { BRL.ammo[it.t] = Math.min(A.max, BRL.ammo[it.t] + it.n); brlAmmoSync(true); try { showMsg(`+${it.n} ${A.n} AMMO`); sfx.pickup(); } catch (e) {} } }
+  else if (it.k === 'heal') { const H = BRL_HEAL[it.h]; if (BRL.heals[it.h] >= H.max) ok = false; else { BRL.heals[it.h]++; try { showMsg(`+1 ${H.n} · ${actName('heal')} TO USE`); sfx.pickup(); } catch (e) {} } }
+  else if (it.k === 'att') {
+    const a = ATT_BY_ID[it.a]; BRL.kit[a.slot] = it.a; WEAPONS.forEach((w, i) => applyLoadout(i));
+    const fits = WEAPONS.some(w => attOK(a, w.def)); try { showBanner(brlName(it), fits ? 'snapped onto your gun' : 'in your kit · goes on the next gun it fits'); sfx.pickup(); } catch (e) {}
+  }
+  if (!ok) { try { showMsg('FULL'); } catch (e) {} return; }
+  brlRemove(it); BRL.taken.add(it.id); BRL.out.push(it.id); if (BRL.out.length > 80) BRL.out.shift();
+}
+// a gun someone put down: in the place of the one they took
+function brlDropMake(d) {
+  const base = BRL.items.find(i => i.id === d.base); if (!base || BRL.items.some(i => i.id === d.id)) return;
+  const it = Object.assign({}, base, { id: d.id, gun: d.gun, tier: d.tier, gone: false, mesh: null, model: null, pend: true }); BRL.items.push(it);
+  if (BRL.taken.has(it.id)) { it.gone = true; return; } brlItemMesh(it); brlVis(true);
+}
+/* ---------- heals */
+function brlHealPick() {
+  const miss = (G.maxHp || 100) - G.health; if (miss < 1) return null; const H = BRL.heals;
+  if (miss >= 60 && H.joint) return 'joint'; if (miss >= 40 && H.brownie) return 'brownie'; if (H.nug) return 'nug'; if (H.brownie) return 'brownie'; if (H.joint) return 'joint'; return null;
+}
+function brlHealStart() {
+  if (!brlOn() || BRL.heal || !playerAlive() || G.downed) return false; const h = brlHealPick();
+  if (!h) { try { showMsg(Object.values(BRL.heals).some(n => n) ? 'HEALTH IS FULL' : 'NO HEALS · FIND NUGS, BROWNIES OR A MEDICAL JOINT'); } catch (e) {} return false; }
+  BRL.heal = { h, t: 0 }; try { sfx.ui(); } catch (e) {} return true;
+}
+// D-pad up in LAST TOKE: a heal when you have one and are hurt (else the scorestreak as before)
+function brlPadHeal() { if (!brlOn() || !brlHealPick()) return false; return brlHealStart(); }
+function brlHealTick(dt) {
+  if (BRL.regen > 0) { const a = Math.min(BRL.regen, 10 * dt); BRL.regen -= a; G.health = Math.min(G.maxHp || 100, G.health + a); }
+  const H = BRL.heal; if (!H) return;
+  if (!playerAlive() || G.downed || mouseDown || pad.fire) { BRL.heal = null; try { showMsg('HEAL CANCELLED'); } catch (e) {} return; }
+  const D = BRL_HEAL[H.h]; H.t += dt; G.swapT = Math.max(G.swapT, 0.2);
+  try { showMsgOnce(`USING A ${D.n} · ${Math.round(H.t / D.t * 100)}%`); } catch (e) {}
+  if (H.t >= D.t) { BRL.heal = null; BRL.heals[H.h] = Math.max(0, BRL.heals[H.h] - 1); if (D.over) BRL.regen += D.hp; else G.health = Math.min(G.maxHp || 100, G.health + D.hp); try { showMsg(`${D.n} · +${D.hp >= 999 ? 'FULL' : D.hp} HP${D.over ? ' over ' + D.over + ' s' : ''}`); sfx.pickup(); } catch (e) {} }
+}
+/* ---------- every frame in a LAST TOKE round (from brUpdate, after the crates) */
+function brlTick(dt) {
+  if (!brlOn()) return; const B = M.br;
+  if (!BRL.group && BRL.seed) brlBuild(BRL.seed);
+  brlVis(); brlAmmoSync(false); brlHealTick(dt);
+  const hk = kb('heal'); if (hk && !BRL.hH) brlHealStart(); BRL.hH = hk;
+  // the nearest thing I'm looking at, within reach
+  BRL.near = null; const u = kb('use') || pad.use;
+  if (playerAlive() && !(typeof BRF !== 'undefined' && BRF.float) && !(B.crates || []).some(c => !c.open && Math.hypot(P.x - c.x, P.z - c.z) < 1.8 && Math.abs((P.y || 0) - (c.y || 0)) < 1.6)) {
+    const cp = Math.cos(P.pitch), fx = -Math.sin(P.yaw) * cp, fy = Math.sin(P.pitch), fz = -Math.cos(P.yaw) * cp, ey = P.y + (P.eye || 1.7); let best = null, bs = 1e9;   // what's under the crosshair wins
+    for (const it of BRL.items) {
+      if (it.gone || !it.mesh || Math.abs(it.set.x - P.x) > 4 || Math.abs(it.set.z - P.z) > 4) continue;
+      const p = brlWorld(it), dx = p.x - P.x, dz = p.z - P.z, d = Math.hypot(dx, dz), dy = p.y - P.y; if (d > 1.9 || dy < -0.6 || dy > 2.1) continue;
+      const vy = p.y + 0.08 - ey, l3 = Math.hypot(dx, vy, dz) || 1, ang = Math.acos(clamp((dx * fx + vy * fy + dz * fz) / l3, -1, 1)); if (ang > 0.75 && d > 0.7) continue;
+      const sc = ang + d * 0.12; if (sc < bs) { bs = sc; best = it; }
+    }
+    if (best) { BRL.near = best; G.interactTxt = `${brlName(best)} · PRESS ${actName('use')} TO TAKE`; try { showMsgOnce(G.interactTxt); } catch (e) {} if (u && !BRL.uH) brlTake(best); }
+  }
+  BRL.uH = u;
+  // the item I'm looking at pulses
+  if (BRL.near && BRL.near.mesh) { const k = 1 + Math.sin(NOW * 8) * 0.04; BRL.near.mesh.scale.setScalar(k); }
+}
+// the HUD line (added to LAST TOKE's money / plates line)
+function brlHud() {
+  if (!brlOn()) return ''; const H = BRL.heals, w = WEAPONS[G.cur], t = w && w.def ? brlAmmoOf(w.def) : 'light';
+  const heals = ['nug', 'brownie', 'joint'].filter(k => H[k]).map(k => `${H[k]} ${BRL_HEAL[k].n}${H[k] > 1 && k !== 'joint' ? 'S' : ''}`).join(', ');
+  return ` · ${BRL_AMMO[t].n} AMMO ${BRL.ammo[t]}${heals ? ` · ${heals} (${actName('heal')})` : ''}`;
+}
+// the HUD gun name in its rarity colour
+function brlNameCol() { try { const el = $('wname'), w = WEAPONS[G.cur], t = brlOn() && w && w.def ? BRL.rar[w.def.id] | 0 : -1, c = t > 0 ? BRL_RAR[t].css : ''; if (el && el._brc !== c) { el._brc = c; el.style.color = c; } } catch (e) {} }
+/* ---------- online */
+function brlPres() { return brlOn() && (BRL.out.length || BRL.drops.length) ? { fl: BRL.out.slice(-60), fd: BRL.drops.filter(d => d.id.endsWith(NET.me ? NET.me.slice(-3) : '')).slice(-20).map(d => [d.id, d.base, d.gun, d.tier]) } : null; }
+function brlRemote(o) {
+  if (!brlOn() || !o) return;
+  if (Array.isArray(o.fd)) for (const a of o.fd) { if (!Array.isArray(a) || BRL.dropSeen.has(String(a[0])) || !ARM[a[2]]) continue; const d = { id: String(a[0]).slice(0, 40), base: String(a[1]).slice(0, 30), gun: a[2], tier: clamp(a[3] | 0, 0, 3) }; BRL.dropSeen.add(d.id); BRL.drops.push(d); brlDropMake(d); }
+  if (Array.isArray(o.fl)) for (const id0 of o.fl) { const id = String(id0).slice(0, 40); if (BRL.taken.has(id)) continue; BRL.taken.add(id); const it = BRL.items.find(i => i.id === id); if (it) brlRemove(it); }
+}
+// the seed travels at the end of the host's 'b' pack
+function brlSeedIn(seed) { seed = seed >>> 0; if (!seed || seed === BRL.seed) return; BRL.seed = seed; brlBuild(seed); }
 /* ================================================================== LAST TOKE, deeper (1.2.85)
    ARMOR PLATES  - up to 3 plates on (150 extra health, taken first by bullets and blasts, not by the cloud). Carry up to
                    5; crates give 1-2, a supply drop 3. PLATE (4, LB on a controller) puts one on (1 s, no shooting).
@@ -12099,7 +12405,7 @@ function ltTick(dt) {
   for (const c of B.crates) if (c.fall > 0) { c.fall = Math.max(0, c.fall - dt * 6); c.g.position.y = (c.y || 0) + c.fall; if (c.chute) { c.chute.visible = c.fall > 0.2; c.chute.position.y = 2.2; } if (c.fall === 0) try { sfx.thud(Object.assign({ vol: 1 }, at(c.x, c.z, 30))); } catch (e) {} }
   if (B.plane) { B.plane.t += dt; const P0 = B.plane; P0.m.position.set(P0.x0 + P0.dx * P0.t * 28, 60, P0.z0 + P0.dz * P0.t * 28); if (P0.t > 8) { B.group.remove(P0.m); B.plane = null; } }
   // the HUD
-  const el = $('ltHud'); if (el) { const txt = `$${LT.cash} · PLATES ${LT.plates} · ARMOR ${Math.round(G.armor || 0)}${LT.plateT > 0 ? ' · PLATING…' : ''}${LT.selfRev ? ' · SELF-REVIVE' : ''}${LT.contract ? ' · ' + ltContractTxt() : ''}`; if (el._t !== txt) { el._t = txt; el.innerHTML = txt; } el.style.display = alive || LT.contract ? 'block' : 'none'; }
+  const el = $('ltHud'); if (el) { const txt = `$${LT.cash} · PLATES ${LT.plates} · ARMOR ${Math.round(G.armor || 0)}${LT.plateT > 0 ? ' · PLATING…' : ''}${LT.selfRev ? ' · SELF-REVIVE' : ''}${LT.contract ? ' · ' + ltContractTxt() : ''}${typeof brlHud === 'function' ? brlHud() : ''}`; if (el._t !== txt) { el._t = txt; el.innerHTML = txt; } el.style.display = alive || LT.contract ? 'block' : 'none'; }
 }
 const ltPlating = () => LT.plateT > 0;
 /* ---------- armour: the damage plates take first */
@@ -16308,7 +16614,7 @@ function netPublish() {
   if (NET.spec) { NET.room.presence({ v: 1, on: 1, spec: 1, rm: netRoomName(), n: NET.nick, a: 0, ep: NET.ep }); return; }   // WATCH: a spectator only says it is there
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, cm: typeof CHAT !== 'undefined' && CHAT.mine.all.length ? CHAT.mine.all.slice() : undefined, bn: typeof bannerFor === 'function' ? bannerFor() : '', lv: typeof lvlInfo === 'function' ? lvlInfo(PROG.xp).l : 1, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
-    ph: M.ph && phMeProp() ? M.ph.kind : -1, bo: M.br && M.br.mine && M.br.mine.length ? M.br.mine.slice(-24) : undefined, vh: M.br ? vhPack() : undefined, pg: pingPack(), bk: brkPack(), em: emotePack(), fc: fuPack(), wx: M.br && NET.room && NET.room.host ? ltWx() : undefined, ...(M.squad > 1 ? sqNetPres() : {}), vb: M.br && NET.room && NET.room.host ? vhPackBots() : undefined, a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ec: typeof edNetCode === 'function' ? edNetCode() : undefined, sa: NET.sa, ct: crewTag() || undefined, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
+    ph: M.ph && phMeProp() ? M.ph.kind : -1, bo: M.br && M.br.mine && M.br.mine.length ? M.br.mine.slice(-24) : undefined, bl: M.br && typeof brlPres === 'function' ? brlPres() || undefined : undefined, vh: M.br ? vhPack() : undefined, pg: pingPack(), bk: brkPack(), em: emotePack(), fc: fuPack(), wx: M.br && NET.room && NET.room.host ? ltWx() : undefined, ...(M.squad > 1 ? sqNetPres() : {}), vb: M.br && NET.room && NET.room.host ? vhPackBots() : undefined, a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ec: typeof edNetCode === 'function' ? edNetCode() : undefined, sa: NET.sa, ct: crewTag() || undefined, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { try { potgShot(); } catch (e) {} if (NET.on) NET.sh++; if (typeof ZC !== 'undefined' && ZC.on) ZC.sh++; }
@@ -16408,7 +16714,7 @@ function netTick(dt) {
     if (!pr.bot) chatIngest('all', p.peer, R.entry.name, pr.cm);
     R.bn = typeof pr.bn === 'string' && COS[pr.bn] && COS[pr.bn].kind === 'banner' ? pr.bn : ''; R.lv = netNum(pr.lv, 1, 100, 1);
     R.cj = pr.cj ? 1 : 0; R.entry.tag = typeof pr.ct === 'string' ? pr.ct.replace(/[^A-Z0-9]/g, '').slice(0, 4) : ''; R.mv = typeof pr.mv === 'string' ? pr.mv : ''; if (pr.ho && !pr.bot && !isHost) NET.voHost = Array.isArray(pr.vo) && pr.vo.every(id => MAPS[id]) ? pr.vo.slice(0, 3) : null; try { smkFromNet(R, pr.sk); } catch (e) {} R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, -5, 260); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
-    R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep; if (isHost && M.br && Array.isArray(pr.bo) && R.ep === NET.ep) brRemoteOpened(pr.bo); if (M.br && pr.vh && R.ep === NET.ep) try { vhRemote(R, pr.vh); } catch (e) {} if (pr.pg && !pr.bot) try { pingRemote(R, pr.pg); } catch (e) {} if (pr.bk && R.ep === NET.ep) try { brkApply(pr.bk); } catch (e) {} if (!pr.bot) try { fuRemote(R, pr.fc); try { emoteRemote(R, pr.em); } catch (e) {} } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost) try { ltWxApply(pr.wx | 0); } catch (e) {} if (M.squad > 1) try { sqNetApply(R, pr); } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost && pr.vb && R.ep === NET.ep) try { vhRemoteBots(pr.vb); } catch (e) {} R.ph = Number.isInteger(pr.ph) && pr.ph >= 0 && pr.ph < PH_KINDS.length ? pr.ph : -1;
+    R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep; if (isHost && M.br && Array.isArray(pr.bo) && R.ep === NET.ep) brRemoteOpened(pr.bo); if (M.br && pr.bl && R.ep === NET.ep) try { brlRemote(pr.bl); } catch (e) {} if (M.br && pr.vh && R.ep === NET.ep) try { vhRemote(R, pr.vh); } catch (e) {} if (pr.pg && !pr.bot) try { pingRemote(R, pr.pg); } catch (e) {} if (pr.bk && R.ep === NET.ep) try { brkApply(pr.bk); } catch (e) {} if (!pr.bot) try { fuRemote(R, pr.fc); try { emoteRemote(R, pr.em); } catch (e) {} } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost) try { ltWxApply(pr.wx | 0); } catch (e) {} if (M.squad > 1) try { sqNetApply(R, pr); } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost && pr.vb && R.ep === NET.ep) try { vhRemoteBots(pr.vb); } catch (e) {} R.ph = Number.isInteger(pr.ph) && pr.ph >= 0 && pr.ph < PH_KINDS.length ? pr.ph : -1;
     R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;
     // a death since last time: drop them, credit the killer
     const ds = +pr.ds | 0;
@@ -26009,7 +26315,7 @@ const SCHEMA = {
   ],
   BUTTONS: [
     { t: 'action', name: '‹ BACK TO CONTROLLER SETTINGS', label: 'BACK', act: 'pad-back' },
-    ...['jump:JUMP', 'crouch:CROUCH / SLIDE', 'reload:RELOAD / USE', 'swap:SWITCH WEAPON', 'grenade:THROW GRENADE', 'melee:MELEE', 'sprint:SPRINT', 'streak:USE SCORESTREAK', 'inspect:INSPECT WEAPON', 'board:SCOREBOARD', 'ping:PING', 'field:FIELD UPGRADE', 'plate:ARMOR PLATE', 'emote:EMOTE WHEEL', 'map:MAP'].map(x => { const [a, n] = x.split(':'); return { a, t: 'padbind', name: n }; }),
+    ...['jump:JUMP', 'crouch:CROUCH / SLIDE', 'reload:RELOAD / USE', 'swap:SWITCH WEAPON', 'grenade:THROW GRENADE', 'melee:MELEE', 'sprint:SPRINT', 'streak:USE SCORESTREAK', 'inspect:INSPECT WEAPON', 'board:SCOREBOARD', 'ping:PING', 'field:FIELD UPGRADE', 'plate:ARMOR PLATE', 'heal:HEAL (LAST TOKE)', 'emote:EMOTE WHEEL', 'map:MAP'].map(x => { const [a, n] = x.split(':'); return { a, t: 'padbind', name: n }; }),
   ],
   CONTROLLER: [
     { t: 'action', name: 'BUTTON LAYOUT', hint: 'Change which controller button does what', label: 'EDIT CONTROLLER BUTTONS', act: 'pad-binds' },
@@ -26411,7 +26717,7 @@ function pollPad(dt) {
     if (press(pb('grenade'))) nadeHold(true); else if (!down(pb('grenade')) && prevBtn[pb('grenade')]) nadeHold(false);
     if (press(pb('inspect'))) { if (M && (M.br || TERR.on)) mapToggle(); else if (!G.reloading && !(G.inspectT > 0)) G.inspectT = 2.6; }   // D-pad down: the map in LAST TOKE, inspect elsewhere
     if (press(pb('melee'))) melee();
-    if (press(pb('streak'))) { if (!(typeof mcEat === 'function' && mcEat())) stkUse(); }
+    if (press(pb('streak'))) { if (!(typeof brlPadHeal === 'function' && brlPadHeal()) && !(typeof mcEat === 'function' && mcEat())) stkUse(); }   // LAST TOKE: a heal first
     padPingEmote(dt, down(pb('ping')));   // D-pad left: tap to ping, hold for the emote wheel (padmore.js)
     const fwdPush = -my;
     const sb = pb('sprint');
@@ -26677,7 +26983,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { BRF_GET: () => BRF, brfCineTickL: dt => brfCineTick(dt), mapToggleL: () => mapToggle(), MAPV_GET: () => MAPV, PING_GET: () => PING, TH, TERR_GET: () => TERR, stashHeightL: (x, z) => stashHeight(x, z), zwwGiveL: m => zwwGive(m), zwwFireL: w => zwwFire(w), zwwL: () => ZWWL.length, edPrivPick, edNetCode, ccCampSt: () => CAMP.st, ccSpawnL: n => campSpawnSquad(n, { alert: true }), ccPlayL: (a, b) => campPlay(a, b), ccStepL: () => campStepDone(), ccDmgL: (...a) => damageEnemy(...a), ccDoneL: () => campComplete(), ccJoin, ccLeave, CC_GET: () => CC, ccHost: () => ccHost(), ccClient: () => ccClient(), edOpen, edPlay, edCode, edUncode, edDefine, ED_GET: () => ED, ISLE_W, isleWinter, chwOpen, CHW_GET: () => CHW, zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { BRL_GET: () => BRL, brlTakeL: it => brlTake(it), brPack: () => brPack(), BRF_GET: () => BRF, brfCineTickL: dt => brfCineTick(dt), mapToggleL: () => mapToggle(), MAPV_GET: () => MAPV, PING_GET: () => PING, TH, TERR_GET: () => TERR, stashHeightL: (x, z) => stashHeight(x, z), zwwGiveL: m => zwwGive(m), zwwFireL: w => zwwFire(w), zwwL: () => ZWWL.length, edPrivPick, edNetCode, ccCampSt: () => CAMP.st, ccSpawnL: n => campSpawnSquad(n, { alert: true }), ccPlayL: (a, b) => campPlay(a, b), ccStepL: () => campStepDone(), ccDmgL: (...a) => damageEnemy(...a), ccDoneL: () => campComplete(), ccJoin, ccLeave, CC_GET: () => CC, ccHost: () => ccHost(), ccClient: () => ccClient(), edOpen, edPlay, edCode, edUncode, edDefine, ED_GET: () => ED, ISLE_W, isleWinter, chwOpen, CHW_GET: () => CHW, zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

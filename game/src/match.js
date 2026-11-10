@@ -225,6 +225,7 @@ function objSetup() {
 const netHostNow = () => !M.online || !!(NET.room && NET.room.host);
 function modeGoalText() {
   const c = M.cfg;
+  if (M.br) return M.squad > 1 ? 'last squad standing wins' : 'last one standing wins';
   if (M.mode === 'snd' || M.mode === 'gf') return `first to ${c.score} rounds`;
   if (M.mode === 'inf') return `survive ${Math.round((c.infLen || 300) / 60)} minutes`;
   if (M.mode === 'gun') return `${GUN_LADDER.length} guns to finish`;

@@ -24,11 +24,13 @@ function brSetup() {
   // a map with loot spots (STASH ISLAND: inside the buildings, upstairs, on the roofs) fills most of its crates there
   const spots = ((MAPS[curMap] && MAPS[curMap].loot) || []).slice().sort(() => Math.random() - 0.5);
   const hasSpots = spots.length >= want * 0.6, rollQ = q => { const r = Math.random(); return q >= 2 ? (r < 0.4 ? 2 : r < 0.85 ? 1 : 0) : q >= 1 ? (r < 0.15 ? 2 : r < 0.55 ? 1 : 0) : (r < 0.06 ? 2 : r < 0.35 ? 1 : 0); };   // better loot where it's harder to get
-  for (const s of spots) { if (M.br.crates.length >= want || !netHostNow()) break; if (used.some(u => Math.hypot(u.x - s.x, u.z - s.z) < 5 && Math.abs((u.y || 0) - (s.y || 0)) < 1)) continue; used.push(s); const c = brCrate(s.x, s.z, rollQ(s.q | 0), s.y || 0); c.id = M.br.crates.length; M.br.crates.push(c); }
+  for (const s of spots) { if (M.br.crates.length >= want || !netHostNow()) break; if (brlFloorSpot(s)) continue;   // (the other half is floor loot, brloot.js)
+    if (used.some(u => Math.hypot(u.x - s.x, u.z - s.z) < 5 && Math.abs((u.y || 0) - (s.y || 0)) < 1)) continue; used.push(s); const c = brCrate(s.x, s.z, rollQ(s.q | 0), s.y || 0); c.id = M.br.crates.length; M.br.crates.push(c); }
   for (let i = 0; i < 600 && !hasSpots && M.br.crates.length < want && netHostNow(); i++) {   // (only maps without loot spots scatter crates on open ground)   // online, only the host makes the crates (everyone else gets them in the pack)
     const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (duelIn(o.x, o.z, 1)) continue; if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
     const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier, TERR.on ? TH(o.x, o.z) : 0); c.id = M.br.crates.length; M.br.crates.push(c);
   }
+  try { brlSetup(); } catch (e) { reportError(e); }   // floor loot on tables, racks, shelves (brloot.js)
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
   try { brfStartPhase(M.br); } catch (e) { reportError(e); }   // WARM-UP, the bong and the float in (brintro.js)
@@ -43,13 +45,13 @@ function brCrate(x, z, tier, y = 0) {
   return { x, z, y, tier, g, open: false };
 }
 // everyone back to a pistol at the start
-function brArmAll() { if (!M.br) return; try { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } catch (e) {} for (const e of enemies) if (e.entry && !e.net) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; } M.br.myTier = -1; }
+function brArmAll() { if (!M.br) return; try { equipClass({ only: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 0; } catch (e) {} for (const e of enemies) if (e.entry && !e.net) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; } M.br.myTier = -1; try { brlStart(); } catch (e) {} }
 function brGun(tier) { const cats = M && M.feat && M.feat.pistols ? ['pi'] : BR_TIERS[tier].cats; const pool = ARMORY.filter(d => cats.includes(d.cat) && CATS[d.cat] && (CATS[d.cat].slot === 'primary' || d.cat === 'pi')); return pool.length ? pool[(Math.random() * pool.length) | 0] : ARM.marc; }
 function brOpen(c, who) {
   if (c.open) return; c.open = true; M.br.group.remove(c.g); const d = brGun(c.tier), T = BR_TIERS[c.tier];
   if (who === 'player' && M.online && M.br.mine.indexOf(c.id) < 0) M.br.mine.push(c.id);
   try { ltCrate(c, who); } catch (e) {}
-  if (who === 'player') { try { equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 1; G.health = G.maxHp || 100; M.br.myTier = c.tier; showBanner(`${T.n} LOOT`, d.name); sfx.pickup(); } catch (e) {} }
+  if (who === 'player') { try { brlGive(d, c.tier); if (Math.random() < 0.5) BRL.heals.nug = Math.min(6, BRL.heals.nug + 1); G.grenades = 1; G.health = G.maxHp || 100; M.br.myTier = c.tier; showBanner(`${T.n} LOOT`, d.name); sfx.pickup(); } catch (e) {} }
   else { try { botGunProfile(who, d.id); who.hp = who.maxHp; who.brTier = c.tier; } catch (e) {} }
 }
 const brAliveBots = () => enemies.filter(e => e.entry && e.entry.alive !== false);
@@ -79,6 +81,7 @@ function brUpdate(dt) {
     else if (host) for (const e of brAliveBots()) if (!e.net && (e.brTier === undefined || e.brTier < c.tier) && Math.hypot(e.group.position.x - c.x, e.group.position.z - c.z) < 1.4 && Math.abs(e.group.position.y - (c.y || 0)) < 1.6) { brOpen(c, e); break; }
   }
   B.uH = u;
+  try { brlTick(dt); brlNameCol(); } catch (e) { reportError(e); }   // floor loot, ammo, heals (brloot.js)
   // the end: last one standing
   for (const e of brAliveBots()) if (!e.net && e.brTier === undefined) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; }   // bots that just came in start with a pistol too
   if (sqOn()) {   // DUOS / SQUADS: last squad standing
@@ -113,12 +116,12 @@ function brHud() {
   return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
 function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
-function brClear() { try { brfReset(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
+function brClear() { try { brfReset(); brlClear(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
 
 /* ---------- online */
 function brPack() {
   const B = M.br, r1 = v => Math.round(v * 10) / 10, fr = B.from || { x: 0, z: 0, r: 0 }, to = B.to || { x: 0, z: 0, r: 0 };
-  return ['b', B.phase, r1(B.t), B.closing ? 1 : 0, r1(B.cx), r1(B.cz), r1(B.r), r1(fr.x), r1(fr.z), r1(fr.r), r1(to.x), r1(to.z), r1(to.r), B.most | 0, B.winTxt || '', B.winName || '', B.crates.length, ...B.crates.flatMap(c => [r1(c.x), r1(c.z), c.tier, c.open ? 1 : 0, r1(c.y || 0)])];
+  return ['b', B.phase, r1(B.t), B.closing ? 1 : 0, r1(B.cx), r1(B.cz), r1(B.r), r1(fr.x), r1(fr.z), r1(fr.r), r1(to.x), r1(to.z), r1(to.r), B.most | 0, B.winTxt || '', B.winName || '', B.crates.length, ...B.crates.flatMap(c => [r1(c.x), r1(c.z), c.tier, c.open ? 1 : 0, r1(c.y || 0)]), BRL.seed >>> 0];
 }
 function brApply(o) {
   const B = M.br; if (!B || netHostNow()) return; const num = i => +o[i] || 0;
@@ -128,6 +131,7 @@ function brApply(o) {
   const n = Math.min(200, o[16] | 0);
   if (B.crates.length !== n || (n && B.crates.some((c, i) => Math.abs(c.x - num(17 + i * 5)) > 0.2))) { for (const c of B.crates) if (!c.open) B.group.remove(c.g); B.crates = []; for (let i = 0; i < n; i++) { const c = brCrate(num(17 + i * 5), num(18 + i * 5), clamp(o[19 + i * 5] | 0, 0, 3), clamp(num(21 + i * 5), 0, 30)); c.id = i; if (c.tier >= 3) try { ltDropFx(c); } catch (e) {} B.crates.push(c); } }
   for (let i = 0; i < n; i++) { const c = B.crates[i]; if (o[20 + i * 5] && !c.open) { c.open = true; B.group.remove(c.g); } }
+  try { brlSeedIn(+o[17 + n * 5] || 0); } catch (e) {}   // the floor loot's seed
 }
 // the host: crates other players opened
 function brRemoteOpened(list) { const B = M.br; if (!B) return; for (const id of list) { const c = B.crates[id | 0]; if (c && !c.open) { c.open = true; B.group.remove(c.g); } } }
