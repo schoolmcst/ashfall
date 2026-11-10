@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.92 TEST: LAST TOKE LOOT 2.0 (batch 1 of the owner's BR list: items 1,2,3,5,6). brloot.js: RARITY (BRL_RAR common/rare/
+- 1.2.92 TEST (released to TEST APP): LAST TOKE LOOT 2.0 (batch 1 of the owner's BR list: items 1,2,3,5,6). brloot.js: RARITY (BRL_RAR common/rare/
   epic/legendary; dmg/reload/recoil through a computeStats wrapper; the gun gets its own material copies with a faint
   emissive sheen, hands skipped, put back outside BR via an equipClass wrapper; HUD name coloured). KIT: ground
   attachments (BRL_KIT ids from ATTS) go in BRL.kit per slot and fit every gun (computeStats / buildAttachmentVisuals
