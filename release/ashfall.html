@@ -762,7 +762,7 @@ const DEFAULTS = {
   sens: 100, adsSens: 70, adsSens2: 60, adsSens4: 50, adsSens6: 40, padAdsSens2: 62, padAdsSens4: 52, padAdsSens6: 42, padBinds: null, invertY: false, toggleAds: false,
   padSens: 100, padAdsSens: 75, padCurve: 'dynamic', padAccel: 50, padSmooth: 25, padDeadzone: 12, padOuterDz: 92, padDrift: true, padInvertY: false,
   padAssist: 'standard', padSprint: 'toggle', padCrouch: 'toggle', padTrigger: 25, padVibration: true, padRumble: 100,
-  crosshair: 'cross', crosshairColor: 'white', hitMarkers: true, ragdoll: true, killFx: true, cbFilter: 'off', cbFilterK: 100, subSize: 'normal', subBg: false, padAssistK: 100, deathCam: true, killcam: true, potg: true, cbMode: 'off', adsFov: 'affected', dmgIndicator: true, radar: true, difficulty: 'regular',
+  crosshair: 'cross', crosshairColor: 'white', hitMarkers: true, dmgNums: 'br', ragdoll: true, killFx: true, cbFilter: 'off', cbFilterK: 100, subSize: 'normal', subBg: false, padAssistK: 100, deathCam: true, killcam: true, potg: true, cbMode: 'off', adsFov: 'affected', dmgIndicator: true, radar: true, difficulty: 'regular',
 };
 const S = Object.assign({}, DEFAULTS);
 const STORE = 'ashfall.settings.v1', BEST = 'ashfall.best.v1';
@@ -785,7 +785,7 @@ function loadSettings() {
   } catch (e) { NEED_AUTO_DERIVE = true; }
 }
 // keyboard bindings (Settings > KEYBINDS); mouse stays fire / aim
-const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab', streak: 'KeyX', ping: 'KeyZ', prone: 'KeyB', field: 'KeyT', plate: 'Digit4', heal: 'Digit5', emote: 'KeyJ', map: 'KeyM' };
+const DEFAULT_BINDS = { fwd: 'KeyW', back: 'KeyS', left: 'KeyA', right: 'KeyD', jump: 'Space', crouch: 'KeyC', sprint: 'ShiftLeft', reload: 'KeyR', melee: 'KeyV', grenade: 'KeyG', use: 'KeyE', swap: 'KeyQ', prim: 'Digit1', sec: 'Digit2', inspect: 'KeyF', board: 'Tab', streak: 'KeyX', ping: 'KeyZ', prone: 'KeyB', field: 'KeyT', plate: 'Digit4', heal: 'Digit5', deploy: 'Digit6', emote: 'KeyJ', map: 'KeyM' };
 const PAD_DEFAULT = { jump: 0, crouch: 1, reload: 2, swap: 3, grenade: 5, melee: 11, sprint: 10, streak: 12, inspect: 13, board: 8, ping: 14, field: 15, plate: 4 };
 const PAD_NAMES = ['A', 'B', 'X', 'Y', 'LB', 'RB', 'LT', 'RT', 'VIEW', 'MENU', 'L3', 'R3', 'D-PAD UP', 'D-PAD DOWN', 'D-PAD LEFT', 'D-PAD RIGHT'];
 const pb = a => (S.padBinds && S.padBinds[a] !== undefined ? S.padBinds[a] : PAD_DEFAULT[a]);
@@ -968,7 +968,7 @@ function terrNoise(seed) {
 function terrSlope(pos, ox, oz, feetY) {
   if (!TERR.on) return;
   const d = Math.hypot(pos.x - ox, pos.z - oz); if (d < 1e-5 || d > 2) return;   // not moving, or a teleport
-  const hn = TH(pos.x, pos.z); if (hn <= feetY + 0.03) return;   // not climbing the terrain (going down, or on a floor above it)
+  const hn = TH(pos.x, pos.z); if (hn <= feetY + 0.03 || feetY < hn - 2.5) return;   // (under the ground: the tunnels)   // not climbing the terrain (going down, or on a floor above it)
   const ho = Math.max(TH(ox, oz), feetY - 0.05), steep = (h, dd) => dd > 1e-5 && (h - ho) / dd > 0.9 && h > feetY + 0.03;
   if (!steep(hn, d)) return;
   const hx = TH(pos.x, oz), hz = TH(ox, pos.z);
@@ -1872,6 +1872,7 @@ function boxesNear(x, z) {
 }
 function resolve(pos, r, feetY, slope) {
   if (slope && TERR.on) { if (pos._ox !== undefined) terrSlope(pos, pos._ox, pos._oz, feetY); }
+  if (BRI && BRI.train) briResolve(pos, r, feetY);
   for (const b of boxesNear(pos.x, pos.z)) {
     if (b.top <= feetY + STEP || b.bot >= feetY + HEAD) continue;
     const cx = clamp(pos.x, b.minx, b.maxx), cz = clamp(pos.z, b.minz, b.maxz);
@@ -1893,6 +1894,8 @@ function ceilingAt(x, z, feetY, r = 0.3) {
 }
 function groundAt(x, z, feetY) {
   let g = TERR.on ? TH(x, z) : 0;
+  if (TERR.on && BRI_SEA !== undefined) { if (feetY < g - 2.5) g = -60; else if (g < BRI_SEA && feetY > BRI_SEA - 1.5) g = BRI_SEA; }   // under the ground (the tunnels) / swimming in the sea (brisle.js)
+  if (BRI && BRI.train) g = Math.max(g, briGround(x, z, feetY));   // standing on the train
   for (const b of boxesNear(x, z)) if (x > b.minx - 0.25 && x < b.maxx + 0.25 && z > b.minz - 0.25 && z < b.maxz + 0.25 && b.top <= feetY + STEP) g = Math.max(g, b.top);
   return g;
 }
@@ -7212,6 +7215,7 @@ defineMap({
    from fixed numbers and a seed, so every machine builds the same island. Loot spots (STASH_LOOT) are inside, upstairs
    and on roofs; brSetup puts most of the crates there. */
 const STASH_LOOT = [];
+const STASH_LADDERS = [];   // ladders up to the walkable roofs (+ the lighthouse), placed in LAST TOKE by brfight.js
 STASH_LOOT.push = function (...a) { for (const o of a) o.y = +((o.y || 0) + BUILD_YOFF).toFixed(2); return Array.prototype.push.apply(this, a); };
 // a slab with a rectangular hole (for a stairwell): up to four pieces round the hole
 function stashSlabHole(x0, x1, z0, z1, top, key, hole, walk = true) {
@@ -7254,7 +7258,10 @@ function stashBld(o) {
   // the stairs: flight k climbs to level k, switching between the two bands; each level has its hole over its flight
   for (let k = 1; k <= flights; k++) { const odd = k % 2 === 1, b = odd ? bandA : bandB; stairs(odd ? sx0 : sx1, (b[0] + b[1]) / 2, odd ? 'e' : 'w', 1.25, y0 + (k - 1) * H, y0 + k * H, 'concrete'); }
   for (let k = 1; k <= f; k++) { const hole = k <= flights ? [sx0, sx1, ...(k % 2 === 1 ? bandA : bandB)] : null; stashSlabHole(x0 + 0.15, x1 - 0.15, z0 + 0.15, z1 - 0.15, y0 + k * H, k === f ? (o.roofKey || 'concrete') : fl === 'wood' ? 'wood' : 'concrete', hole, k < f || roofWalk); }
-  if (roofWalk) { for (const [ax, az, bx, bz] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) wall(ax, az, bx, bz, 1.0, key, { y: y0 + f * H, t: 0.3 }); STASH_LOOT.push({ x: +(x1 - 1.2).toFixed(2), z: +(z1 - 1.2).toFixed(2), y: y0 + f * H + 0.01, q: 1 }); }
+  if (roofWalk) { for (const [ax, az, bx, bz] of [[x0, z0, x1, z0], [x0, z1, x1, z1], [x0, z0, x0, z1], [x1, z0, x1, z1]]) wall(ax, az, bx, bz, 1.0, key, { y: y0 + f * H, t: 0.3 }); STASH_LOOT.push({ x: +(x1 - 1.2).toFixed(2), z: +(z1 - 1.2).toFixed(2), y: y0 + f * H + 0.01, q: 1 });
+    const side = ['w', 'e', 's', 'n'].find(s => !doors.includes(s)) || 'w', cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;   // a ladder up an outside wall with no door
+    const L = side === 'w' ? { x: x0, z: cz + 1.5, nx: -1, nz: 0 } : side === 'e' ? { x: x1, z: cz + 1.5, nx: 1, nz: 0 } : side === 's' ? { x: cx + 2, z: z1, nx: 0, nz: 1 } : { x: cx + 2, z: z0, nx: 0, nz: -1 };
+    STASH_LADDERS.push(Object.assign(L, { y1: +(BUILD_YOFF + y0 + f * H + 0.02).toFixed(2) })); }
   return { x0, x1, z0, z1, top: y0 + f * H };
 }
 // a big hall (warehouse, barn, turbine hall): one tall room, big doors, a mezzanine along the north side with stairs
@@ -7354,7 +7361,7 @@ function stashAt(id, fn) { const p = stashPoi(id); BUILD_YOFF = p ? p.y : 0; try
 function buildStash() {
   buildMap2Materials(); worksMaterials(); airpMaterials(); isleMaterials();
   if (!MAT.stashGlass) MAT.stashGlass = new THREE.MeshStandardMaterial({ color: C(0xcfeedd), roughness: 0.1, metalness: 0.1, transparent: true, opacity: 0.28, depthWrite: false, side: THREE.DoubleSide });
-  STASH_LOOT.length = 0; BUILD_YOFF = 0;
+  STASH_LOOT.length = 0; STASH_LADDERS.length = 0; BUILD_YOFF = 0;
   const sr = stashRand(4207), H = STASH_H;
   // ---- the land and the sea
   if (MAT.sea) { MAT.sea.polygonOffset = true; MAT.sea.polygonOffsetFactor = 2; MAT.sea.polygonOffsetUnits = 8; }   // the shallows never flicker through the beach from far up
@@ -7401,6 +7408,7 @@ function buildStash() {
   stashAt('light', () => {
     stashBld({ x: 168, z: -170, w: 9, d: 9, f: 3, key: 'plaster', doors: ['s'], seed: 51, roofKey: 'redBarn' });
     CYL('paintWhite', 3.2, 3.6, 14, 16, 176, 7, -178); PZ(176, 0, -178, 7, 14, 7); CYL('redBarn', 3.25, 3.25, 1.4, 16, 176, 10, -178, 0, 0, 0, false); CYL('glass', 2.2, 2.2, 2.2, 12, 176, 15.1, -178, 0, 0, 0, false);
+    STASH_LADDERS.push({ x: 179.5, z: -178, nx: 1, nz: 0, y1: +(BUILD_YOFF + 14.02).toFixed(2) });   // up the tower to the gallery
   });
   /* ======== W: THE HOTEL on the west shore */
   stashAt('hotel', () => {
@@ -7671,6 +7679,7 @@ const BRK_KINDS = {
   crate: { w: 1.15, d: 1.15, h: 1.05, hp: 260, mat: 'wood' },
   fence: { w: 2.4, d: 0.14, h: 1.15, hp: 120, mat: 'wood' },
   pallets: { w: 1.25, d: 1.05, h: 0.7, hp: 180, mat: 'wood' },
+  boards: { w: 2.4, d: 0.16, h: 2.3, hp: 220, mat: 'wood' },   // LAST TOKE plywood sheds (brisle.js)
 };
 function brkSeed(id) { let h = 2166136261; for (const c of String(id)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return h >>> 0; }
 // a free spot: nothing solid within r of it (the map's own boxes), on the ground
@@ -7699,6 +7708,7 @@ function brkMake(id, kind, x, z, w, d, y0 = 0) {
   const add = (bw, bh, bd, px, py, pz, m) => { const me = new THREE.Mesh(new THREE.BoxGeometry(bw, bh, bd), m || mat); me.position.set(px, py, pz); me.castShadow = true; me.receiveShadow = true; me.userData.brk = id; g.add(me); return me; };
   if (kind === 'crate') { add(w, K.h * 0.55, d, 0, K.h * 0.275, 0); add(w * 0.8, K.h * 0.45, d * 0.8, 0.05, K.h * 0.775, -0.04); add(w + 0.02, 0.06, 0.08, 0, K.h * 0.3, d / 2, dark); }
   else if (kind === 'fence') { const along = w > d; for (let i = 0; i < 6; i++) { const o = -1.05 + i * 0.42; add(along ? 0.36 : d, K.h, along ? d : 0.36, along ? o : 0, K.h / 2, along ? 0 : o); } add(along ? w : 0.05, 0.08, along ? 0.05 : d, 0, K.h * 0.75, 0, dark); }
+  else if (kind === 'boards') { const along = w > d, L = along ? w : d; for (let i = 0; i < 4; i++) { const o = -L / 2 + L / 8 + i * L / 4; add(along ? L / 4 - 0.03 : d, K.h, along ? d : L / 4 - 0.03, along ? o : 0, K.h / 2, along ? 0 : o); } add(along ? L : d + 0.04, 0.1, along ? d + 0.04 : L, 0, K.h * 0.7, 0, dark); }
   else if (kind === 'shield') { add(w, K.h, d, 0, K.h / 2, 0); add(w > d ? w + 0.02 : d + 0.04, 0.12, w > d ? d + 0.04 : w + 0.02, 0, K.h * 0.82, 0, MAT.paintYellow || dark); }
   else { for (let i = 0; i < 4; i++) add(w, 0.12, d, 0, 0.08 + i * 0.17, 0); }
   g.position.set(x, y0, z); scene.add(g);   // (loadMap puts it in worldObjs with the rest of the map)
@@ -8441,7 +8451,7 @@ function smkClear() { for (const c of SMK.clouds) for (const q of c.sprites) sce
 // online: clouds from someone else's presence
 function smkFromNet(R, list) {
   if (!Array.isArray(list)) return;
-  for (const s of list) { if (!Array.isArray(s) || (+s[0] | 0) <= (R.skSeen | 0)) continue; R.skSeen = +s[0] | 0; if (R.skFirst) smkCloud({ x: netNum(s[1], -ARENA, ARENA), y: netNum(s[2], -5, 30), z: netNum(s[3], -ARENA, ARENA) }, s[4] ? 'skunk' : 'hotbox', false); }
+  for (const s of list) { if (!Array.isArray(s) || (+s[0] | 0) <= (R.skSeen | 0)) continue; R.skSeen = +s[0] | 0; if (R.skFirst) smkCloud({ x: netNum(s[1], -ARENA, ARENA), y: netNum(s[2], -5, 30), z: netNum(s[3], -ARENA, ARENA) }, ['hotbox', 'skunk', 'molotov', 'heal'][s[4] | 0] || 'hotbox', false); }
   R.skFirst = true;   // the clouds already in their state when we first saw them are old: skip those
 }
 /* ================================================================== effects: sprites, sparks, decals, casings, lights */
@@ -8649,7 +8659,9 @@ function isFiring() { return !VH.me && !P.mantle && !G.downed && !(typeof ltPlat
 let wasSprint = false;
 function updatePlayer(dt) {
   if (VH.me && vhPlayer(dt)) return { moving: false, sprint: false };   // driving a LAST TOKE vehicle
-  if (typeof brfPlayer === 'function' && brfPlayer(dt)) return { moving: false, sprint: false };   // LAST TOKE: the bong hit and the float in (brintro.js)
+  if (typeof brfPlayer === 'function' && brfPlayer(dt)) return { moving: false, sprint: false };
+  if (typeof brfgLadder === 'function' && brfgLadder(dt)) return { moving: false, sprint: false };
+  if (typeof brpDance === 'function' && brpDance(dt)) return { moving: false, sprint: false };   // the victory dance (brprog.js)   // LAST TOKE ladders (brfight.js)   // LAST TOKE: the bong hit and the float in (brintro.js)
   const w = WEAPONS[G.cur];
   const crouch = kb('crouch') || pad.crouch;
   const hold = typeof holding === 'function' && holding();
@@ -8659,7 +8671,7 @@ function updatePlayer(dt) {
   const prone = mvProne(dt, crouch);   // PRONE / DIVE (movement.js)
   const sprint = !G.downed && !prone && !!(kb('sprint') || pad.sprint) && fwd > 0 && !G.adsOn && !crouch && !(isFiring() && !G.reloading) && !(typeof CAMP !== 'undefined' && CAMP.carry && M.mode === 'camp');
   if (sprint) G.sprintEnd = G.time;   // a short moment to bring the gun up after a sprint (Endurance: shorter)
-  let speed = (typeof campCarrySlow === 'function' ? campCarrySlow() : 1) * (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof mcFizz === 'function' && M && M.mode === 'zomb' && mcFizz() ? 1.25 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
+  let speed = (typeof campCarrySlow === 'function' ? campCarrySlow() : 1) * (typeof brsqSlow === 'function' ? brsqSlow() : 1) * (typeof briSwim === 'function' ? briSwim() : 1) * (sprint ? 8 * (perk('endure') ? 1.06 : 1) : crouch ? 2.6 : G.adsOn ? 3.2 * (perk('prowl') ? 1.35 : 1) : 5.2) * (w.move || 1) * (perk('light') ? 1.07 : 1) * (M && M.infMe ? 1.2 : 1) * (G.finT > 0 ? 0 : 1) * (typeof mcFizz === 'function' && M && M.mode === 'zomb' && mcFizz() ? 1.25 : 1) * (typeof zpHas === 'function' && zpHas('zoom') ? 1.15 : 1);
   if (G.reloading) speed *= 0.85;
   if (G.downed) speed *= 0.22;   // LAST TOKE squads: crawling
   if (prone) speed *= 0.25;
@@ -9733,6 +9745,21 @@ function renderStats() {
 function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(t.indexOf(statTab) + d + 3) % 3]; sfx.ui(); renderStats(); }
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
+{
+"v": "1.2.93",
+"d": "2026-11-10",
+"n": [
+"LAST TOKE has its own lobby now (out of the multiplayer lobby): online or offline, solo / duos / squads, ranked, your loadout drop class, float trail, your stats and today's challenges",
+"LOADOUT DROPS: $4,000 at a buy station drops a crate with a class you made",
+"VAULTS: four locked bunkers with legendary loot and a VAULT BOSS - find a gold KEY CARD to open one",
+"Squads: STASH CARDS and RE-UP BEACONS bring dead squadmates back, callouts on the emote wheel (bots bring ammo and heals), carry a downed mate, faster bong revive, watch your squad when you're out",
+"Bots loot guns off the floor, heal, use cars more, hide in buildings in the last circles and get sharper every circle",
+"LADDERS up the buildings and the lighthouse, WEED BALLOONS that float you back up, DAMAGE NUMBERS, DEPLOYABLE COVER, MOLOTOVS, HEALING SMOKE, sniper glint, footsteps that sound like the ground",
+"STASH BOXES drop when someone dies (take what you want), hold USE to swap guns, the last circles drift, GROW TENTS to harvest for cash, plywood sheds you can shoot through, day turns to night, wind on the float in",
+"THE TUNNELS under the island, THE BONG EXPRESS train across the north (ride it, loot it), swimming in the sea",
+"Stats page, placement XP, 3 daily challenges, a crown for your win streak, float trails, a victory dance, the kill leader marked for everyone, a landing marker, pick your warm-up gun, a faster cloud"
+]
+},
 {
 "v": "1.2.92",
 "d": "2026-11-10",
@@ -10830,14 +10857,15 @@ function afterDeathInMatch() {
   G.state = 'respawning'; G.respT = 1.2; G.dcHold = !!G.dc;
 }
 function updateSpectate(dt) {
-  const mates = M.br || M.oic ? enemies.filter(e => e.entry && e.entry.alive !== false) : NET.spec ? (enemies.filter(e => e.net === NET.specPeer).length ? enemies.filter(e => e.net === NET.specPeer) : enemies.filter(e => e.net)) : enemies.filter(e => e.team === M.myTeam), sn = M.snd;
+  const mine = M.br && M.squad > 1 ? enemies.filter(e => e.team === M.myTeam && e.entry && e.entry.alive !== false) : [];   // squads: watch your own squad first
+  const mates = mine.length ? mine : M.br || M.oic ? enemies.filter(e => e.entry && e.entry.alive !== false) : NET.spec ? (enemies.filter(e => e.net === NET.specPeer).length ? enemies.filter(e => e.net === NET.specPeer) : enemies.filter(e => e.net)) : enemies.filter(e => e.team === M.myTeam), sn = M.snd;
   if (G.specNext) { G.specIdx++; G.specNext = false; }
   const m = mates.length ? mates[G.specIdx % mates.length] : null;
   if (m) {
     const g = m.group, fx = Math.sin(g.rotation.y), fz = Math.cos(g.rotation.y);
-    _bt.set(g.position.x - fx * 2.8, 2.3, g.position.z - fz * 2.8); camera.position.lerp(_bt, Math.min(1, dt * 6));
-    camera.lookAt(g.position.x + fx * 4, 1.3, g.position.z + fz * 4);
-    showCenter((NET.spec ? 'WATCHING ' : 'SPECTATING ') + m.name, NET.spec ? `${actName('jump')} next player · ESC to leave` : 'you are out until the next round');
+    _bt.set(g.position.x - fx * 2.8, g.position.y + 2.3, g.position.z - fz * 2.8); camera.position.lerp(_bt, Math.min(1, dt * 6));   // (follows the hills)
+    camera.lookAt(g.position.x + fx * 4, g.position.y + 1.3, g.position.z + fz * 4);
+    showCenter((NET.spec ? 'WATCHING ' : 'SPECTATING ') + m.name, NET.spec ? `${actName('jump')} next player · ESC to leave` : mine.length ? `your squad · ${actName('jump')} next · they can bring you back at a RE-UP BEACON` : 'you are out until the next round');
   } else { const p = sn && sn.bomb ? sn.bomb : { x: 0, z: 0 }; camera.position.lerp(_bt.set(p.x + 10, 14, p.z + 10), Math.min(1, dt * 2)); camera.lookAt(p.x, 0, p.z); showCenter('ROUND IN PROGRESS', ''); }
   if (camera.fov !== baseFov) { camera.fov = baseFov; camera.updateProjectionMatrix(); }
 }
@@ -11595,7 +11623,7 @@ function phClear() { if (M && M.ph && M.ph.me) scene.remove(M.ph.me); const bl =
    names the last one standing and the round ends for all (then a fresh round, new crates). Late joiners watch. */
 const BR_PHASES_N = [[45, 30, 0.62, 3], [35, 25, 0.38, 6], [30, 20, 0.18, 10], [25, 20, 0.04, 16]];
 // STASH ISLAND (391 m) gets five longer phases: wait s, close s, radius share, damage a second
-const BR_PHASES_BIG = [[70, 50, 0.6, 2], [55, 40, 0.36, 4], [45, 35, 0.2, 7], [35, 25, 0.09, 11], [25, 20, 0.03, 16]];
+const BR_PHASES_BIG = [[45, 40, 0.6, 2], [40, 35, 0.36, 4], [35, 30, 0.2, 7], [30, 25, 0.09, 11], [20, 20, 0.03, 16]];   // (1.2.93: ~5 min for 16 players, was ~7)
 let BR_PHASES = BR_PHASES_N;   // wait s, close s, radius (of the start), damage a second
 const BR_TIERS = [{ n: 'COMMON', col: 0xe8e8e8, cats: ['smg', 'pi', 'sg'] }, { n: 'RARE', col: 0x3a9aff, cats: ['ar', 'sg', 'smg'] }, { n: 'EPIC', col: 0xb04aff, cats: ['lmg', 'mr', 'sr', 'ar'] }];
 function brSetup() {
@@ -11617,7 +11645,11 @@ function brSetup() {
     const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)); if (duelIn(o.x, o.z, 1)) continue; if (used.some(u => Math.hypot(u.x - o.x, u.z - o.z) < 9)) continue; used.push(o);
     const roll = Math.random(), tier = roll < 0.12 ? 2 : roll < 0.45 ? 1 : 0; const c = brCrate(o.x, o.z, tier, TERR.on ? TH(o.x, o.z) : 0); c.id = M.br.crates.length; M.br.crates.push(c);
   }
+  try { brbVaultsBuild(); } catch (e) { reportError(e); }   // the vaults (brbots.js)
+  try { brfgSetup(); } catch (e) { reportError(e); }   // balloons, ladders (brfight.js)
+  try { briSetup(); } catch (e) { reportError(e); }   // tents, sheds, tunnels, the train (brisle.js)
   try { brlSetup(); } catch (e) { reportError(e); }   // floor loot on tables, racks, shelves (brloot.js)
+  try { brsqSetup(); brpSetup(); } catch (e) { reportError(e); }   // re-up beacons (brsquad.js), stats and dailies (brprog.js)
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
   try { brfStartPhase(M.br); } catch (e) { reportError(e); }   // WARM-UP, the bong and the float in (brintro.js)
@@ -11669,6 +11701,7 @@ function brUpdate(dt) {
   }
   B.uH = u;
   try { brlTick(dt); brlNameCol(); } catch (e) { reportError(e); }   // floor loot, ammo, heals (brloot.js)
+  try { brsqTick(dt); brbTick(dt); brfgTick(dt); briTick(dt); brpTick(dt); } catch (e) { reportError(e); }   // cards, beacons, callouts, carrying (brsquad.js)
   // the end: last one standing
   for (const e of brAliveBots()) if (!e.net && e.brTier === undefined) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; }   // bots that just came in start with a pistol too
   if (sqOn()) {   // DUOS / SQUADS: last squad standing
@@ -11691,24 +11724,27 @@ function brUpdate(dt) {
 function brGoal(e, keep, near, set) {
   if (brWarmNow()) return null;   // WARM-UP: just fight
   { const dg = duelGoal(e, set); if (dg) return dg; }   // the duel bot goes for me
+  { const cg = brsqBotGoal(e, set); if (cg) return cg; }   // stash cards, beacons, callouts (brsquad.js)
   { const sg = sqBotGoal(e, set); if (sg) return sg; }   // squads: pick up a downed squadmate first
   const B = M.br, g = e.group.position, d = Math.hypot(g.x - B.cx, g.z - B.cz);
   if (d > B.r * 0.85 || (B.closing && B.to && Math.hypot(g.x - B.to.x, g.z - B.to.z) > B.to.r * 0.8)) { const tx = B.to && B.closing ? B.to.x : B.cx, tz = B.to && B.closing ? B.to.z : B.cz; const car = vhBotWant(e, tx, tz); if (car) return set(car, 1.2); return set(near({ x: tx + rnd(-3, 3), z: tz + rnd(-3, 3), y: 0 }, 3), 1.5); }
+  { const hg = brbHideGoal(e, set); if (hg) return hg; }   // the last circles: inside a building (brbots.js)
   let best = null, bd = 30; for (const c of B.crates) { if (c.open || (e.brTier !== undefined && c.tier <= e.brTier)) continue; const dd = Math.hypot(c.x - g.x, c.z - g.z); if (dd < bd && Math.hypot(c.x - B.cx, c.z - B.cz) < B.r) { bd = dd; best = c; } }
   if (best) return set({ x: best.x, z: best.z, y: best.y || 0 }, 0.8);
+  { const lg = brbLootGoal(e, set); if (lg) return lg; }   // a better gun on the floor (brbots.js)
   return null;
 }
 function brHud() {
   const B = M.br; if (!B) return ''; { const fh = brfHud(); if (fh) return fh + sqHud(); } const n = brAliveBots().length + (playerAlive() ? 1 : 0), out = playerAlive() && Math.hypot(P.x - B.cx, P.z - B.cz) > B.r;
   return `<b>${n}</b> ALIVE · ${B.phase < 0 ? 'THE CLOUD STARTS SOON' : B.closing ? 'THE CLOUD IS CLOSING' : BR_PHASES[B.phase] ? `CLOUD CLOSES IN ${Math.ceil(B.t)} s` : 'FINAL CIRCLE'}${out ? ' · <b style="color:#c070ff">GET INTO THE CIRCLE!</b>' : ''}${vhHud()}${sqHud()}${duelHud()}`;
 }
-function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
-function brClear() { try { brfReset(); brlClear(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
+function brMarkers(out) { const B = M.br; if (!B || brfHideLoot()) return; try { ltMarkers(out); brsqMarkers(out); brbMarkers(out); briMarkers(out); brpMarkers(out); } catch (e) {} for (const c of B.crates) if (!c.open && Math.hypot(c.x - P.x, c.z - P.z) < (ARENA > 44 ? 22 : 35)) out.push({ x: c.x, y: (c.y || 0) + 1.4, z: c.z, t: 'LOOT', c: '#' + BR_TIERS[c.tier].col.toString(16).padStart(6, '0') }); }
+function brClear() { try { brfReset(); brlClear(); brbVaultsClear(); brfgClear(); briClear(); } catch (e) {} try { vhClear(); ltClear(); } catch (e) {} if (M && M.br && M.br.group && M.br.group.parent) M.br.group.parent.remove(M.br.group); const cl = $('brCloud'); if (cl) cl.style.opacity = 0; }
 
 /* ---------- online */
 function brPack() {
   const B = M.br, r1 = v => Math.round(v * 10) / 10, fr = B.from || { x: 0, z: 0, r: 0 }, to = B.to || { x: 0, z: 0, r: 0 };
-  return ['b', B.phase, r1(B.t), B.closing ? 1 : 0, r1(B.cx), r1(B.cz), r1(B.r), r1(fr.x), r1(fr.z), r1(fr.r), r1(to.x), r1(to.z), r1(to.r), B.most | 0, B.winTxt || '', B.winName || '', B.crates.length, ...B.crates.flatMap(c => [r1(c.x), r1(c.z), c.tier, c.open ? 1 : 0, r1(c.y || 0)]), BRL.seed >>> 0];
+  return ['b', B.phase, r1(B.t), B.closing ? 1 : 0, r1(B.cx), r1(B.cz), r1(B.r), r1(fr.x), r1(fr.z), r1(fr.r), r1(to.x), r1(to.z), r1(to.r), B.most | 0, B.winTxt || '', B.winName || '', B.crates.length, ...B.crates.flatMap(c => [r1(c.x), r1(c.z), c.tier, c.open ? 1 : 0, r1(c.y || 0)]), BRL.seed >>> 0, brbVaultMask(), Math.round(BRI.age * 10) / 10];
 }
 function brApply(o) {
   const B = M.br; if (!B || netHostNow()) return; const num = i => +o[i] || 0;
@@ -11718,7 +11754,7 @@ function brApply(o) {
   const n = Math.min(200, o[16] | 0);
   if (B.crates.length !== n || (n && B.crates.some((c, i) => Math.abs(c.x - num(17 + i * 5)) > 0.2))) { for (const c of B.crates) if (!c.open) B.group.remove(c.g); B.crates = []; for (let i = 0; i < n; i++) { const c = brCrate(num(17 + i * 5), num(18 + i * 5), clamp(o[19 + i * 5] | 0, 0, 3), clamp(num(21 + i * 5), 0, 30)); c.id = i; if (c.tier >= 3) try { ltDropFx(c); } catch (e) {} B.crates.push(c); } }
   for (let i = 0; i < n; i++) { const c = B.crates[i]; if (o[20 + i * 5] && !c.open) { c.open = true; B.group.remove(c.g); } }
-  try { brlSeedIn(+o[17 + n * 5] || 0); } catch (e) {}   // the floor loot's seed
+  try { brlSeedIn(+o[17 + n * 5] || 0); brbVaultApply(+o[18 + n * 5] || 0); B.trainAge = +o[19 + n * 5] || 0; } catch (e) {}   // the floor loot's seed, the open vaults
 }
 // the host: crates other players opened
 function brRemoteOpened(list) { const B = M.br; if (!B) return; for (const id of list) { const c = B.crates[id | 0]; if (c && !c.open) { c.open = true; B.group.remove(c.g); } } }
@@ -11768,10 +11804,11 @@ function brPre(dt) {
   return false;
 }
 /* ---------- 1. warm-up */
-function brWarmGun() { const d = brGun(Math.random() < 0.55 ? 1 : 2); try { equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 1; } catch (e) {} }
+function brWarmGun() { const d = (typeof brpWarmGunDef === 'function' && brpWarmGunDef()) || brGun(Math.random() < 0.55 ? 1 : 2); try { equipClass({ p: d.id, s: 'sidearm', e: 'frag', k: 'none', factory: true }); G.grenades = 1; } catch (e) {} }
 function brWarmStart() {
   const B = M.br; for (const c of B.crates) c.g.visible = false; if (B.wall) B.wall.visible = false;
   if (playerAlive()) brWarmGun();
+  try { brpWarmPick(); } catch (e) {}   // pick the kind of gun (brprog.js)
   try { showBanner('WARM-UP', `free respawns · kills don't count · the round starts in ${Math.ceil(B.t)} s${M.online ? '' : ' · ' + actName('use') + ' skips'}`); sfx.streak(); } catch (e) {}
 }
 function brWarmTick(dt) {
@@ -11941,19 +11978,23 @@ function brfLand() {
   for (const p of BRF.trail) if (p.parent) p.parent.remove(p); BRF.trail = [];
   camera.fov = baseFov; camera.updateProjectionMatrix(); G.spawnProt = 1;
   let name = ''; try { const p = typeof mapPoiAt === 'function' ? mapPoiAt(P.x, P.z) : null; if (p) name = p.name; } catch (e) {}
+  try { if (typeof BRP !== 'undefined') { BRP.landPoi = name || null; BRP.landKills = 0; } } catch (e) {}
   try { showBanner('LANDED', name ? name + ' · find a crate' : 'find a crate · watch the cloud'); } catch (e) {}
 }
 function brfFloatTick(dt) {
   BRF.fT += dt;
   const dive = !!(kb('crouch') || pad.crouch), fwd = clamp((kb('fwd') ? 1 : 0) - (kb('back') ? 1 : 0) - pad.my, -1, 1), str = clamp((kb('right') ? 1 : 0) - (kb('left') ? 1 : 0) + pad.mx, -1, 1);
   const gy = groundAt(P.x, P.z, P.y), agl = P.y - gy, soft = agl < 14;
-  const top = dive && !soft ? 7 : soft ? 6 : 15, wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str, wl = Math.max(1, Math.hypot(wx, wz));
+  const top = dive && !soft ? 9.5 : soft ? 6 : 15, wx = -Math.sin(P.yaw) * fwd + Math.cos(P.yaw) * str, wz = -Math.cos(P.yaw) * fwd - Math.sin(P.yaw) * str, wl = Math.max(1, Math.hypot(wx, wz));
   P.vx = lerp(P.vx, wx / wl * top, clamp(dt * 1.8, 0, 1)); P.vz = lerp(P.vz, wz / wl * top, clamp(dt * 1.8, 0, 1));
-  P.vy = lerp(P.vy, soft ? -3.2 : dive ? -24 : -6.5, clamp(dt * (soft ? 4 : 2), 0, 1));
+  if (BRF.lift) { P.vy = lerp(P.vy, 16, clamp(dt * 3, 0, 1)); if (P.y >= BRF.lift) BRF.lift = 0; }   // a weed balloon going up (brfight.js)
+  else P.vy = lerp(P.vy, soft ? -3.2 : dive ? -30 : -6.5, clamp(dt * (soft ? 4 : 2), 0, 1));
+  { const wd = typeof briWind === 'function' ? briWind() : [0, 0]; P.x += wd[0] * dt; P.z += wd[1] * dt; }   // the wind (brisle.js)
   P._ox = P.x; P._oz = P.z; P.x += P.vx * dt; P.z += P.vz * dt; resolve(P, 0.4, P.y, false);
   const pr = PLAYRECT, mx = (pr[1] - pr[0]) * 0.04, mz = (pr[3] - pr[2]) * 0.04; P.x = clamp(P.x, pr[0] + mx, pr[1] - mx); P.z = clamp(P.z, pr[2] + mz, pr[3] - mz);
   P.y += P.vy * dt; const g2 = groundAt(P.x, P.z, P.y + 0.5);
   if (P.y <= g2 + 0.02 || BRF.fT > 90) { P.y = Math.max(P.y, g2); if (BRF.fT > 90) P.y = g2; brfLand(); return; }
+  { const tl = Math.max(0, P.y - g2) / Math.max(1, -P.vy), lx = P.x + P.vx * tl, lz = P.z + P.vz * tl; BRF.land = { x: lx, z: lz, y: groundAt(lx, lz, P.y) }; }   // where I'll come down (brprog.js shows it)
   P.eye = 1.7; G.swapT = Math.max(G.swapT, 0.3); G.nadeHold = null; G.adsOn = false; G.reloading = false;
   try { const gun = gunObjs[G.cur]; if (gun) gun.visible = false; } catch (e) {}
   // the view: wide, a lean into the turn, thinner fog up high so you can see where to go
@@ -11961,9 +12002,10 @@ function brfFloatTick(dt) {
   camera.position.set(P.x, P.y + P.eye, P.z); BRF.roll = lerp(BRF.roll || 0, -str * 0.12, clamp(dt * 3, 0, 1)); camera.rotation.set(P.pitch, P.yaw, BRF.roll);
   if (scene.fog && BRF.fog0 !== null) scene.fog.density = BRF.fog0 * lerp(1, 0.35, clamp((agl - 10) / 60, 0, 1));
   // my little cloud under me and smoke streaking past
-  if (BRF.trail.length < 26 && Math.random() < dt * (dive ? 30 : 16)) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: 0xf0fff2, transparent: true, opacity: 0.5, depthWrite: false })); s.position.set(P.x + rnd(-3, 3), P.y - rnd(1.5, 4), P.z + rnd(-3, 3)); s.scale.setScalar(rnd(0.6, 1.4)); s.userData.t = 0; scene.add(s); BRF.trail.push(s); }
+  if (BRF.trail.length < 26 && Math.random() < dt * (dive ? 30 : 16)) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: typeof brpTrailCol === 'function' ? brpTrailCol() : 0xf0fff2, transparent: true, opacity: 0.5, depthWrite: false })); s.position.set(P.x + rnd(-3, 3), P.y - rnd(1.5, 4), P.z + rnd(-3, 3)); s.scale.setScalar(rnd(0.6, 1.4)); s.userData.t = 0; scene.add(s); BRF.trail.push(s); }
   for (let i = BRF.trail.length - 1; i >= 0; i--) { const s = BRF.trail[i]; s.userData.t += dt; s.material.opacity = 0.5 * (1 - s.userData.t / 1.6); if (s.userData.t > 1.6 || s.position.y > P.y + 6) { scene.remove(s); BRF.trail.splice(i, 1); } }
   if (!BRF.myPuff) { BRF.myPuff = brfPuffMesh(); scene.add(BRF.myPuff); }
+  try { const tc = brpTrailCol(); BRF.myPuff.children.forEach(s => s.material.color.setHex(tc)); } catch (e) {}
   BRF.myPuff.visible = true; BRF.myPuff.position.set(P.x, P.y - 0.15, P.z);
   if ((BRF.windT -= dt) <= 0) { BRF.windT = 0.32; try { burst(0.45, 380 + Math.abs(P.vy) * 30, 0.025 + Math.abs(P.vy) * 0.0015, 'lowpass'); } catch (e) {} }
   listener.x = P.x; listener.z = P.z; listener.yaw = P.yaw; listener.y = P.y + P.eye; listener.fy = P.y;
@@ -12029,7 +12071,7 @@ function brfHud() {
   const B = M.br; if (!B) return null;
   if (B.phase === -3) return `<b style="color:#8fff6a">WARM-UP</b> · ${Math.ceil(B.t)} s · free respawns · kills don't count${M.online ? '' : ' · ' + actName('use') + ': start now'}`;
   if (B.phase === -2 || BRF.cine) return 'LIGHTING UP…';
-  if (BRF.float) return `<b style="color:#8fff6a">FLOATING IN</b> · ${Math.max(0, Math.round(P.y - groundAt(P.x, P.z, P.y)))} m up · hold ${actName('crouch')} to dive`;
+  if (BRF.float) return `<b style="color:#8fff6a">FLOATING IN</b> · ${Math.max(0, Math.round(P.y - groundAt(P.x, P.z, P.y)))} m up · hold ${actName('crouch')} to dive${typeof briWindTxt === 'function' ? ' · wind ' + briWindTxt() : ''}`;
   return null;
 }
 (() => { const s = document.createElement('style'); s.textContent = `#brCine{position:fixed;inset:0;z-index:80;pointer-events:none;display:none}
@@ -12128,7 +12170,7 @@ function brlAmmoSync(force) {
 }
 // the start of the round (brArmAll): a pistol, a little light ammo, an empty kit
 function brlStart() {
-  BRL.rar = {}; BRL.kit = {}; BRL.ammo = { light: 36, heavy: 0, shells: 0, sniper: 0 }; BRL.heals = { nug: 1, brownie: 0, joint: 0 }; BRL.heal = null; BRL.regen = 0;
+  BRL.rar = {}; BRL.kit = {}; BRL.ammo = { light: 36, heavy: 0, shells: 0, sniper: 0 }; BRL.heals = { nug: 1, brownie: 0, joint: 0 }; BRL.keys = 0; BRL.covers = 0; BRL.heal = null; BRL.regen = 0;
   try { WEAPONS.forEach((w, i) => brlTint(gunObjs[i], 0)); brlAmmoSync(true); } catch (e) {}
 }
 
@@ -12191,6 +12233,17 @@ function brlItemMesh(it) {
     else if (it.h === 'brownie') { brlMesh(g, 'box', M0.tray, 0, 0.012, 0, 0.32, 0.025, 0.24); for (let i = 0; i < 4; i++) brlMesh(g, 'box', M0.brownie, -0.06 + (i % 2) * 0.12, 0.05, -0.05 + ((i / 2) | 0) * 0.1, 0.1, 0.05, 0.08); }
     else { brlMesh(g, 'cyl', M0.paper, 0, 0.02, 0, 0.014, 0.16, 0.014, 0, 0, Math.PI / 2); brlMesh(g, 'box', M0.lens, 0.09, 0.02, 0, 0.02, 0.02, 0.02); brlMesh(g, 'box', new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xff3a3a, emissiveIntensity: 0.6 }), 0, 0.005, 0.05, 0.12, 0.01, 0.06); }
     brlStrip(g, it.h === 'joint' ? 3 : it.h === 'brownie' ? 2 : 1, 0, -0.005, 0.12, 0.3, 0.02);
+  } else if (it.k === 'throw') {
+    const T = BRFG_THROW[it.eq] || BRFG_THROW.stun;
+    if (it.eq === 'molotov') { brlMesh(g, 'cyl', new THREE.MeshStandardMaterial({ color: 0x6a3a10, transparent: true, opacity: 0.8, roughness: 0.1 }), 0, 0.1, 0, 0.045, 0.2, 0.045); brlMesh(g, 'cyl', M0.paper, 0, 0.23, 0, 0.015, 0.08, 0.015); }
+    else { brlMesh(g, 'cyl', new THREE.MeshStandardMaterial({ color: T.col, roughness: 0.5, metalness: 0.3 }), 0, 0.08, 0, 0.04, 0.16, 0.04); brlMesh(g, 'cyl', M0.metal, 0, 0.17, 0, 0.02, 0.03, 0.02); }
+    brlStrip(g, 1, 0, -0.005, 0.1, 0.2, 0.02);
+  } else if (it.k === 'cover') {
+    brlMesh(g, 'box', M0.metal, 0, 0.12, 0, 0.5, 0.24, 0.12); brlMesh(g, 'box', new THREE.MeshStandardMaterial({ color: 0x2a3a2a, roughness: 0.7 }), 0, 0.25, 0, 0.52, 0.02, 0.13);
+    brlStrip(g, 2, 0, -0.005, 0.12, 0.5, 0.02);
+  } else if (it.k === 'key') {
+    brlMesh(g, 'box', new THREE.MeshStandardMaterial({ color: 0x221a00, emissive: 0xffc83a, emissiveIntensity: 1.2 }), 0, 0.006, 0, 0.16, 0.012, 0.1); brlMesh(g, 'box', M0.lid, 0.04, 0.014, 0, 0.04, 0.004, 0.06);
+    brlStrip(g, 3, 0, -0.005, 0.09, 0.22, 0.02);
   } else if (it.k === 'att') {
     brlMesh(g, 'box', M0.dark, 0, 0.06, 0, 0.32, 0.12, 0.2);
     if (/dot|holo/.test(it.a)) { brlMesh(g, 'box', M0.metal, 0, 0.16, 0, 0.08, 0.06, 0.1); brlMesh(g, 'box', M0.lens, 0, 0.17, -0.051, 0.05, 0.03, 0.004); }
@@ -12229,11 +12282,11 @@ function brlSet(s, i, r) {
     const bz = set.wz - 0.2; for (const y of [0.45, 0.95, 1.45]) brlMesh(g, 'box', M0.wood, 0, y, bz, 1.25, 0.04, 0.4); for (const x of [-0.6, 0.6]) brlMesh(g, 'box', M0.dark, x, 0.85, bz, 0.04, 1.7, 0.4);
     brlItem(set, 'heal', { h: brlRollHeal(r) }, -0.35, 0.97, bz); brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.05, 0.97, bz);
     const t = ['light', 'heavy', 'shells', 'sniper'][Math.floor(r() * 4)]; brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.38, 0.97, bz);
-    brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.2, 1.47, bz); if (r() < 0.5) brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.3, 0.47, bz);
+    brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.2, 1.47, bz); const x2 = r(); if (x2 < 0.35) brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.3, 0.47, bz); else if (x2 < 0.75) brlItem(set, 'throw', { eq: ['molotov', 'stun', 'semtex', 'healsmoke'][Math.floor(r() * 4)] }, 0.3, 0.47, bz); else brlItem(set, 'cover', {}, 0.2, 0.47, bz);
   } else {
     brlMesh(g, 'box', M0.pallet, 0, 0.07, 0, 1.2, 0.03, 0.8); for (const z of [-0.33, 0, 0.33]) brlMesh(g, 'box', M0.dark, 0, 0.03, z, 1.2, 0.06, 0.1);
     const it = gunIt(-0.1, 0.09, 0.05, 'lie'); const t = brlAmmoOf(ARM[it.gun]); brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.42, 0.09, -0.22);
-    if (r() < 0.35) brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.42, 0.09, -0.25);
+    const x3 = r(); if (x3 < 0.3) brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.42, 0.09, -0.25); else if (x3 < 0.6) brlItem(set, 'throw', { eq: ['molotov', 'stun', 'semtex', 'healsmoke'][Math.floor(r() * 4)] }, -0.42, 0.09, -0.25); else if (x3 < 0.72) brlItem(set, 'cover', {}, -0.4, 0.09, -0.25);
   }
   set.kind = kind;
 }
@@ -12241,13 +12294,16 @@ function brlBuild(seed) {
   brlClear(); if (!brlOn()) return; BRL.seed = seed >>> 0; BRL.group = new THREE.Group(); scene.add(BRL.group);
   const spots = MAPS[curMap].loot.filter(brlFloorSpot);
   spots.forEach((s, i) => { if (typeof duelIn === 'function' && duelIn(s.x, s.z, 1)) return; brlSet(s, i, brlRng(BRL.seed ^ brlHash(s.x, s.z, s.y))); });
+  // six KEY CARDS for the vaults, on tables, shelves and pallets
+  { const r = brlRng(BRL.seed ^ 0x51ed), cand = BRL.sets.filter(s => s.kind !== 'rack' && s.kind !== 'vault'); for (let k = 0; k < 6 && cand.length; k++) { const s = cand.splice(Math.floor(r() * cand.length), 1)[0], f = BRL.items.find(i => i.set === s); if (f) brlItem(s, 'key', {}, f.lx + (f.lx > 0 ? -0.3 : 0.3), f.ly, f.lz + 0.12); } }
+  try { brbVaultLoot(); briTrainLoot(); } catch (e) { reportError(e); }   // the vaults' and the train's loot (brbots.js, brisle.js)
   for (const d of BRL.drops) brlDropMake(d);
   for (const id of new Set(BRL.items.filter(i => i.k === 'gun').map(i => i.gun))) try { brlGunModel(id); } catch (e) {}   // every gun model now, not when someone walks up (a stutter)
   brlVis(true);
 }
 function brlClear() { if (BRL.group && BRL.group.parent) BRL.group.parent.remove(BRL.group); BRL.group = null; BRL.items = []; BRL.sets = []; BRL.near = null; }
 // the round starts (brSetup): a fresh seed, nothing taken
-function brlSetup() { BRL.rar = {}; BRL.kit = {}; BRL.taken = new Set(); BRL.out = []; BRL.drops = []; BRL.dropSeen = new Set(); BRL.dn = 0; BRL.seed = 0; if (netHostNow()) brlBuild((Math.random() * 4294967296) >>> 0); }
+function brlSetup() { BRL.rar = {}; BRL.kit = {}; BRL.keys = 0; BRL.vo = []; BRL.taken = new Set(); BRL.out = []; BRL.drops = []; BRL.dropSeen = new Set(); BRL.dn = 0; BRL.seed = 0; if (netHostNow()) brlBuild((Math.random() * 4294967296) >>> 0); }
 // the floor loot near me: shown, guns built (furniture far away is hidden)
 function brlVis(force) {
   if (!BRL.group || (!force && (BRL.visT -= 1 / 60) > 0)) return; BRL.visT = 0.4;
@@ -12257,7 +12313,7 @@ function brlVis(force) {
 }
 const _bw = new THREE.Vector3();
 function brlWorld(it) { it.mesh.updateWorldMatrix(true, false); return it.mesh.getWorldPosition(_bw); }
-function brlName(it) { return it.k === 'gun' ? `${BRL_RAR[it.tier].n} ${ARM[it.gun].name}` : it.k === 'ammo' ? `${BRL_AMMO[it.t].n} AMMO ×${it.n}` : it.k === 'heal' ? BRL_HEAL[it.h].n : (BRL_KIT.find(a => a.id === it.a) || {}).n || 'ATTACHMENT'; }
+function brlName(it) { return it.k === 'gun' ? `${BRL_RAR[it.tier].n} ${ARM[it.gun].name}` : it.k === 'ammo' ? `${BRL_AMMO[it.t].n} AMMO ×${it.n}` : it.k === 'heal' ? BRL_HEAL[it.h].n : it.k === 'key' ? 'VAULT KEY CARD' : it.k === 'throw' ? (BRFG_THROW[it.eq] || {}).n : it.k === 'cover' ? 'DEPLOYABLE COVER' : (BRL_KIT.find(a => a.id === it.a) || {}).n || 'ATTACHMENT'; }
 function brlRemove(it) { it.gone = true; if (it.mesh && it.mesh.parent) it.mesh.parent.remove(it.mesh); if (BRL.near === it) BRL.near = null; }
 // take it
 function brlTake(it) {
@@ -12269,6 +12325,9 @@ function brlTake(it) {
     if (old) { const d = { id: it.id + '~' + (++BRL.dn) + (NET.me ? NET.me.slice(-3) : ''), base: it.id, gun: old.gun, tier: old.tier }; BRL.drops.push(d); BRL.dropSeen.add(d.id); brlDropMake(d); }
   } else if (it.k === 'ammo') { const A = BRL_AMMO[it.t]; if (BRL.ammo[it.t] >= A.max) ok = false; else { BRL.ammo[it.t] = Math.min(A.max, BRL.ammo[it.t] + it.n); brlAmmoSync(true); try { showMsg(`+${it.n} ${A.n} AMMO`); sfx.pickup(); } catch (e) {} } }
   else if (it.k === 'heal') { const H = BRL_HEAL[it.h]; if (BRL.heals[it.h] >= H.max) ok = false; else { BRL.heals[it.h]++; try { showMsg(`+1 ${H.n} · ${actName('heal')} TO USE`); sfx.pickup(); } catch (e) {} } }
+  else if (it.k === 'throw') { const E = EQUIP[it.eq]; G.grenades = G.equip === it.eq ? Math.min(E.max, (G.grenades | 0) + 2) : 2; G.equip = it.eq; try { showBanner(BRFG_THROW[it.eq].n, `your grenade now · ${actName('grenade')} to throw`); sfx.pickup(); } catch (e) {} }
+  else if (it.k === 'cover') { if ((BRL.covers | 0) >= 2) ok = false; else { BRL.covers = (BRL.covers | 0) + 1; try { showBanner('DEPLOYABLE COVER', `${actName('deploy')} (or the field upgrade button) to put it up`); sfx.pickup(); } catch (e) {} } }
+  else if (it.k === 'key') { BRL.keys = (BRL.keys | 0) + 1; try { showBanner('VAULT KEY CARD', 'opens one of the four VAULTS (on the map) · hold ' + actName('use') + ' at the door'); sfx.pickup(); } catch (e) {} }
   else if (it.k === 'att') {
     const a = ATT_BY_ID[it.a]; BRL.kit[a.slot] = it.a; WEAPONS.forEach((w, i) => applyLoadout(i));
     const fits = WEAPONS.some(w => attOK(a, w.def)); try { showBanner(brlName(it), fits ? 'snapped onto your gun' : 'in your kit · goes on the next gun it fits'); sfx.pickup(); } catch (e) {}
@@ -12300,7 +12359,7 @@ function brlHealTick(dt) {
   if (!playerAlive() || G.downed || mouseDown || pad.fire) { BRL.heal = null; try { showMsg('HEAL CANCELLED'); } catch (e) {} return; }
   const D = BRL_HEAL[H.h]; H.t += dt; G.swapT = Math.max(G.swapT, 0.2);
   try { showMsgOnce(`USING A ${D.n} · ${Math.round(H.t / D.t * 100)}%`); } catch (e) {}
-  if (H.t >= D.t) { BRL.heal = null; BRL.heals[H.h] = Math.max(0, BRL.heals[H.h] - 1); if (D.over) BRL.regen += D.hp; else G.health = Math.min(G.maxHp || 100, G.health + D.hp); try { showMsg(`${D.n} · +${D.hp >= 999 ? 'FULL' : D.hp} HP${D.over ? ' over ' + D.over + ' s' : ''}`); sfx.pickup(); } catch (e) {} }
+  if (H.t >= D.t) { try { brpEvt('heal'); } catch (e) {} BRL.heal = null; BRL.heals[H.h] = Math.max(0, BRL.heals[H.h] - 1); if (D.over) BRL.regen += D.hp; else G.health = Math.min(G.maxHp || 100, G.health + D.hp); try { showMsg(`${D.n} · +${D.hp >= 999 ? 'FULL' : D.hp} HP${D.over ? ' over ' + D.over + ' s' : ''}`); sfx.pickup(); } catch (e) {} }
 }
 /* ---------- every frame in a LAST TOKE round (from brUpdate, after the crates) */
 function brlTick(dt) {
@@ -12318,7 +12377,10 @@ function brlTick(dt) {
       const vy = p.y + 0.08 - ey, l3 = Math.hypot(dx, vy, dz) || 1, ang = Math.acos(clamp((dx * fx + vy * fy + dz * fz) / l3, -1, 1)); if (ang > 0.75 && d > 0.7) continue;
       const sc = ang + d * 0.12; if (sc < bs) { bs = sc; best = it; }
     }
-    if (best) { BRL.near = best; G.interactTxt = `${brlName(best)} · PRESS ${actName('use')} TO TAKE`; try { showMsgOnce(G.interactTxt); } catch (e) {} if (u && !BRL.uH) brlTake(best); }
+    if (best) { BRL.near = best; const swap = best.k === 'gun' && WEAPONS.length > 1 && WEAPONS[0] && WEAPONS[0].def && WEAPONS[0].def.id !== 'sidearm';   // a gun swap is a short hold
+      if (swap) { if (u) { if ((BRL.holdT = (BRL.holdT || 0) + dt) >= 0.45 && BRL.holdT < 5) { BRL.holdT = 9; brlTake(best); } } else BRL.holdT = 0; G.interactTxt = `${brlName(best)} · HOLD ${actName('use')} TO SWAP${BRL.holdT > 0 && BRL.holdT < 5 ? ' · ' + Math.round(BRL.holdT / 0.45 * 100) + '%' : ''}`; }
+      else { G.interactTxt = `${brlName(best)} · PRESS ${actName('use')} TO TAKE`; if (u && !BRL.uH) brlTake(best); }
+      try { showMsgOnce(G.interactTxt); } catch (e) {} }
   }
   BRL.uH = u;
   // the item I'm looking at pulses
@@ -12328,19 +12390,942 @@ function brlTick(dt) {
 function brlHud() {
   if (!brlOn()) return ''; const H = BRL.heals, w = WEAPONS[G.cur], t = w && w.def ? brlAmmoOf(w.def) : 'light';
   const heals = ['nug', 'brownie', 'joint'].filter(k => H[k]).map(k => `${H[k]} ${BRL_HEAL[k].n}${H[k] > 1 && k !== 'joint' ? 'S' : ''}`).join(', ');
-  return ` · ${BRL_AMMO[t].n} AMMO ${BRL.ammo[t]}${heals ? ` · ${heals} (${actName('heal')})` : ''}`;
+  const cr = typeof brpCrown === 'function' ? brpCrown() : 0;
+  return ` · ${BRL_AMMO[t].n} AMMO ${BRL.ammo[t]}${heals ? ` · ${heals} (${actName('heal')})` : ''}${cr ? ` · 👑 STREAK ${cr}` : ''}`;
 }
 // the HUD gun name in its rarity colour
 function brlNameCol() { try { const el = $('wname'), w = WEAPONS[G.cur], t = brlOn() && w && w.def ? BRL.rar[w.def.id] | 0 : -1, c = t > 0 ? BRL_RAR[t].css : ''; if (el && el._brc !== c) { el._brc = c; el.style.color = c; } } catch (e) {} }
 /* ---------- online */
-function brlPres() { return brlOn() && (BRL.out.length || BRL.drops.length) ? { fl: BRL.out.slice(-60), fd: BRL.drops.filter(d => d.id.endsWith(NET.me ? NET.me.slice(-3) : '')).slice(-20).map(d => [d.id, d.base, d.gun, d.tier]) } : null; }
+function brlPres() { return brlOn() && (BRL.out.length || BRL.drops.length || (BRL.vo && BRL.vo.length)) ? { vo: BRL.vo && BRL.vo.length ? BRL.vo.slice(-4) : undefined, fl: BRL.out.slice(-60), fd: BRL.drops.filter(d => d.id.endsWith(NET.me ? NET.me.slice(-3) : '')).slice(-20).map(d => [d.id, d.base, d.gun, d.tier]) } : null; }
 function brlRemote(o) {
   if (!brlOn() || !o) return;
+  if (Array.isArray(o.vo) && netHostNow()) for (const i of o.vo) { const v = BRB.vaults[i | 0]; if (v && !v.open) brbVaultOpen(v); }
   if (Array.isArray(o.fd)) for (const a of o.fd) { if (!Array.isArray(a) || BRL.dropSeen.has(String(a[0])) || !ARM[a[2]]) continue; const d = { id: String(a[0]).slice(0, 40), base: String(a[1]).slice(0, 30), gun: a[2], tier: clamp(a[3] | 0, 0, 3) }; BRL.dropSeen.add(d.id); BRL.drops.push(d); brlDropMake(d); }
   if (Array.isArray(o.fl)) for (const id0 of o.fl) { const id = String(id0).slice(0, 40); if (BRL.taken.has(id)) continue; BRL.taken.add(id); const it = BRL.items.find(i => i.id === id); if (it) brlRemove(it); }
 }
 // the seed travels at the end of the host's 'b' pack
 function brlSeedIn(seed) { seed = seed >>> 0; if (!seed || seed === BRL.seed) return; BRL.seed = seed; brlBuild(seed); }
+/* ================================================================== LAST TOKE SQUADS 2.0 (1.2.93)
+   RE-UP BEACONS: when someone in a squad dies while a squadmate still stands, they drop a green STASH CARD. A squadmate
+     (you or a bot) picks it up by walking over it and takes it to one of the RE-UP BEACONS (tall green towers at the
+     places on the map); hold USE there for 3 s and they float back in from the sky above it, with a pistol. Cards go
+     stale after 90 s. Offline (and the host's bots online).
+   CALLOUTS on the emote wheel (J / hold D-pad left) in duos and squads: NEED AMMO, NEED HEALS, ON ME, LET'S GO, ENEMY,
+     LOOT. Your squad's bots answer: they bring ammo or a nug, regroup on you or push to the circle. Spoken with the
+     built-in voices.
+   SQUAD WIPED: a banner when your squad finishes off the last of a squad. LAST ONE STANDING: when you are the only one
+     of your squad left, a slow heartbeat plays.
+   CARRY: press MELEE next to a downed squadmate to put them on your shoulder (slower, no shooting); MELEE again to put
+     them down. Revive while carrying.
+   THE DROP: your squad's bots follow you down in the float in (they land where you land).
+   BONG REVIVE: a revive takes 2.4 s (was 3.5) and ends in a puff of smoke.
+   SPECTATE: when you are out, you watch your own squad first (JUMP / A for the next one); the camera follows the hills. */
+const BRSQ = { cards: [], beacons: [], dead: new Set(), carry: null, mH: false, beatT: 0, lastAlone: false, teams: null, call: null, calls: [], puffs: [], fT: 0 };
+const BRSQ_CALLS = [
+  { k: 'ammo', n: 'NEED AMMO', i: '🔫', say: ['I need ammo!', "I'm low on ammo!", 'Anyone got ammo?'] },
+  { k: 'heals', n: 'NEED HEALS', i: '🍃', say: ['I need a heal!', "I'm hurt, need heals!"] },
+  { k: 'onme', n: 'ON ME', i: '📍', say: ['On me!', 'Regroup on me!', 'Group up!'] },
+  { k: 'go', n: "LET'S GO", i: '➡️', say: ["Let's go!", 'Move, move!', 'Push the circle!'] },
+  { k: 'enemy', n: 'ENEMY', i: '⚠️', say: ['Enemy there!', 'Contact!', 'Enemy spotted!'] },
+  { k: 'loot', n: 'LOOT HERE', i: '📦', say: ['Loot over here!', 'Got loot here!'] },
+];
+const BRSQ_REPLY = ['On my way!', 'Coming!', 'Got you!', 'Copy that!', 'Heading to you!'];
+const brsqOn = () => !!(M && M.br && typeof sqOn === 'function' && sqOn());
+function brsqSay(txt, who) {
+  try { showMsg(`${who || 'YOU'}: ${txt}`); } catch (e) {}
+  if (S.sqvox === false) return;
+  try { if (!window.speechSynthesis || speechSynthesis.speaking) return; const u = new SpeechSynthesisUtterance(txt), vo = typeof sqvVoice === 'function' ? sqvVoice(who ? { name: who } : null) : null; if (vo) { u.voice = vo.v; u.pitch = vo.pitch; } u.rate = 1.1; u.volume = clamp(((S.master !== undefined ? S.master : 80) / 100) * 0.75, 0, 1); speechSynthesis.speak(u); } catch (e) {}
+}
+/* ---------- the round starts: beacons at the places */
+function brsqSetup() {
+  BRSQ.cards = []; BRSQ.beacons = []; BRSQ.dead = new Set(); BRSQ.carry = null; BRSQ.lastAlone = false; BRSQ.teams = null; BRSQ.call = null; BRSQ.puffs = [];
+  if (!M || !M.br || !(M.squad > 1)) return;
+  const pois = typeof mapPois === 'function' ? mapPois() : [], pr = PLAYRECT, spots = [];
+  if (pois.length) for (const p of pois) { if (spots.length >= 10) break; const o = typeof brfgOutdoor === 'function' ? brfgOutdoor(p.x + p.w * 0.3, p.z - p.d * 0.3) : openNear(p.x + p.w * 0.3, p.z - p.d * 0.3); if (!spots.some(s => Math.hypot(s.x - o.x, s.z - o.z) < 30)) spots.push(o); }
+  else for (let i = 0; i < 6; i++) spots.push(openNear(pr[0] + (pr[1] - pr[0]) * (0.2 + 0.6 * ((i * 0.37) % 1)), pr[2] + (pr[3] - pr[2]) * (0.2 + 0.6 * ((i * 0.61) % 1))));
+  const pole = new THREE.MeshStandardMaterial({ color: 0x2a2e30, roughness: 0.5, metalness: 0.6 }), glow = new THREE.MeshStandardMaterial({ color: 0x113311, emissive: 0x5dff7a, emissiveIntensity: 1.8 });
+  for (const o of spots) {
+    const y = groundAt(o.x, o.z, (o.y || 0) + 1), g = new THREE.Group(); g.position.set(o.x, y, o.z); M.br.group.add(g);
+    const base = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.9, 0.4, 12), pole); base.position.y = 0.2; g.add(base);
+    const p = new THREE.Mesh(new THREE.CylinderGeometry(0.09, 0.12, 4.2, 8), pole); p.position.y = 2.3; g.add(p);
+    for (const yy of [1.4, 2.6, 3.8]) { const r = new THREE.Mesh(new THREE.TorusGeometry(0.32, 0.05, 6, 20), glow); r.rotation.x = Math.PI / 2; r.position.y = yy; g.add(r); }
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.4, 30, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0x5dff7a, transparent: true, opacity: 0.08, depthWrite: false, side: THREE.DoubleSide })); beam.position.y = 19; g.add(beam);
+    BRSQ.beacons.push({ x: o.x, z: o.z, y, g, holdT: 0 });
+  }
+}
+// the nearest beacon inside the cloud to a point
+function brsqBeacon(x, z) { const B = M.br; let best = null, bd = 1e9; for (const b of BRSQ.beacons) { const inC = Math.hypot(b.x - B.cx, b.z - B.cz) < B.r; const d = Math.hypot(b.x - x, b.z - z) + (inC ? 0 : 400); if (d < bd) { bd = d; best = b; } } return best; }
+/* ---------- cards */
+function brsqCardDrop(en, x, y, z) {
+  if (BRSQ.cards.some(c => c.en === en)) return;
+  const g = new THREE.Group(); g.position.set(x, y + 0.9, z); M.br.group.add(g);
+  const card = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.22, 0.02), new THREE.MeshStandardMaterial({ color: 0x113311, emissive: 0x5dff7a, emissiveIntensity: 1.4 })); g.add(card);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.3, 6, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0x5dff7a, transparent: true, opacity: 0.15, depthWrite: false, side: THREE.DoubleSide })); beam.position.y = 3; g.add(beam);
+  BRSQ.cards.push({ en, team: en.team, x, y, z, g, t: 90, by: null });
+  if (en.team === M.myTeam && !en.isPlayer) try { showMsg(`${en.name}'S STASH CARD DROPPED · TAKE IT TO A RE-UP BEACON`); } catch (e) {}
+}
+function brsqCardGone(c) { if (c.g && c.g.parent) c.g.parent.remove(c.g); BRSQ.cards = BRSQ.cards.filter(o => o !== c); if (BRSQ.carry === c) BRSQ.carry = null; }
+// bring someone back: they float in above the beacon
+function brsqReup(c, b) {
+  brsqCardGone(c); const en = c.en; brsqPuff(b.x, b.y + 1, b.z, 10);
+  if (en.isPlayer) {
+    try { G.dc = null; G.dcHold = false; respawnPlayer(); } catch (e) {}
+    if (playerAlive()) { try { brfFloatStart(); } catch (e) {} P.x = b.x; P.z = b.z; P.y = b.y + 70; P.vx = P.vz = 0; try { showBanner('RE-UP', 'your squad brought you back · float in'); } catch (e) {} }
+  } else {
+    let e = null; try { e = spawnBot(en, { x: b.x, z: b.z, y: b.y }); } catch (er) {}
+    if (e) { e.group.position.y = b.y + 60; e.brFloat = { tx: b.x + rnd(-3, 3), tz: b.z + rnd(-3, 3), t: 0 }; e.brTier = -1; try { botGunProfile(e, 'sidearm'); } catch (er) {} if (!e.brPuff && typeof brfPuffMesh === 'function') { e.brPuff = brfPuffMesh(); e.group.add(e.brPuff); } }
+    if (en.team === M.myTeam) try { showBanner('RE-UP', `${en.name} is floating back in`); sfx.streak(); } catch (er) {}
+  }
+}
+/* ---------- puffs of smoke (the bong revive, the re-up) */
+function brsqPuff(x, y, z, n) {
+  for (let i = 0; i < (n || 6); i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: 0xd8f0dc, transparent: true, opacity: 0.8, depthWrite: false })); s.position.set(x + rnd(-0.4, 0.4), y + rnd(-0.2, 0.4), z + rnd(-0.4, 0.4)); s.scale.setScalar(rnd(0.6, 1.1)); scene.add(s); BRSQ.puffs.push({ s, t: 0, vy: rnd(0.3, 0.9) }); }
+}
+function brsqPuffTick(dt) { for (let i = BRSQ.puffs.length - 1; i >= 0; i--) { const p = BRSQ.puffs[i]; p.t += dt; p.s.position.y += p.vy * dt; p.s.scale.multiplyScalar(1 + dt * 0.8); p.s.material.opacity = 0.8 * (1 - p.t / 2); if (p.t > 2) { scene.remove(p.s); BRSQ.puffs.splice(i, 1); } } }
+/* ---------- callouts (the emote wheel in squads) */
+function brsqCall(i) {
+  const C = BRSQ_CALLS[i]; if (!C || !brsqOn()) return; brsqSay(C.say[(Math.random() * C.say.length) | 0]);
+  try { if (C.k === 'enemy' || C.k === 'loot') pingDo(); } catch (e) {}
+  const mates = enemies.filter(e => !e.net && e.team === M.myTeam && e.entry && e.entry.alive !== false && !e.downed);
+  BRSQ.call = { k: C.k, t: NOW + (C.k === 'onme' ? 20 : 14), x: P.x, z: P.z };
+  if (C.k === 'ammo' || C.k === 'heals') { const b = mates.sort((a, c) => Math.hypot(a.group.position.x - P.x, a.group.position.z - P.z) - Math.hypot(c.group.position.x - P.x, c.group.position.z - P.z))[0]; BRSQ.call.who = b || null; }
+  const r = mates[0]; if (r) setTimeout(() => { try { brsqSay(BRSQ_REPLY[(Math.random() * BRSQ_REPLY.length) | 0], r.entry.name); } catch (e) {} }, 1300);
+}
+const _brsqWheel = emoteWheel;
+emoteWheel = function () {
+  _brsqWheel(); const w = $('emoteWheel'); if (!w || !brsqOn()) return;
+  const row = document.createElement('div'); row.className = 'sq-calls'; row.innerHTML = '<small>SQUAD</small>' + BRSQ_CALLS.map((c, i) => `<button data-co="${i}"><i>${c.i}</i><span>${c.n}</span></button>`).join('');
+  w.appendChild(row); for (const b of row.querySelectorAll('[data-co]')) b.onclick = () => { w.remove(); brsqCall(+b.dataset.co); };
+};
+// bots: a card to fetch, a beacon to carry it to, or an answer to a callout (called from brGoal, before the squad revive goal)
+function brsqBotGoal(e, set) {
+  if (!brsqOn() || e.downed || e.net) return null; const g = e.group.position;
+  // carrying a card: to the beacon, then wait there
+  const mine = BRSQ.cards.find(c => c.by === e);
+  if (mine) { const b = brsqBeacon(g.x, g.z); if (!b) return null; if (Math.hypot(b.x - g.x, b.z - g.z) < 1.6) { b.holdT += 0.3; if (b.holdT >= 3) { b.holdT = 0; brsqReup(mine, b); } } return set({ x: b.x, z: b.z, y: b.y }, 0.6); }
+  if (e.tgt) return null;
+  // a squadmate's card nobody has yet
+  const c = BRSQ.cards.filter(c => !c.by && c.team === e.team).sort((a, b) => Math.hypot(a.x - g.x, a.z - g.z) - Math.hypot(b.x - g.x, b.z - g.z))[0];
+  if (c && Math.hypot(c.x - g.x, c.z - g.z) < 90) return set({ x: c.x, z: c.z, y: c.y }, 0.6);
+  // my callouts
+  const C = BRSQ.call; if (C && NOW < C.t && e.team === M.myTeam) {
+    if ((C.k === 'ammo' || C.k === 'heals') && C.who === e) {
+      if (Math.hypot(P.x - g.x, P.z - g.z) < 2.2) { brsqGive(C.k, e); BRSQ.call = null; return null; }
+      return set({ x: P.x, z: P.z, y: P.y }, 1.2);
+    }
+    if (C.k === 'onme' && Math.hypot(P.x - g.x, P.z - g.z) > 5) return set({ x: P.x + rnd(-2, 2), z: P.z + rnd(-2, 2), y: P.y }, 2);
+  }
+  return null;
+}
+function brsqGive(k, e) {
+  try {
+    if (k === 'ammo') { const w = WEAPONS[G.cur], t = w && w.def ? brlAmmoOf(w.def) : 'light'; BRL.ammo[t] = Math.min(BRL_AMMO[t].max, BRL.ammo[t] + BRL_AMMO[t].can); brlAmmoSync(true); showMsg(`${e.entry.name} GAVE YOU ${BRL_AMMO[t].can} ${BRL_AMMO[t].n} AMMO`); }
+    else { BRL.heals.nug = Math.min(BRL_HEAL.nug.max, BRL.heals.nug + 1); showMsg(`${e.entry.name} GAVE YOU A NUG · ${actName('heal')} TO USE`); }
+    sfx.pickup(); brsqSay('Here you go.', e.entry.name);
+  } catch (er) {}
+}
+/* ---------- carrying a downed squadmate */
+const brsqSlow = () => (BRSQ.carry ? 0.68 : 1);
+function brsqCarryTick() {
+  const m = kb('melee') || (pad.gp && pad.gp.buttons && pad.gp.buttons[pb('melee')] && pad.gp.buttons[pb('melee')].pressed), press = m && !BRSQ.mH; BRSQ.mH = m;
+  const C = BRSQ.carry;
+  if (C && (!C.downed || !enemies.includes(C) || !playerAlive() || G.downed)) { BRSQ.carry = null; if (C) C.carried = false; }
+  else if (C && press) { BRSQ.carry = null; C.carried = false; C.group.position.set(P.x - Math.sin(P.yaw) * 0.6, groundAt(P.x, P.z, P.y + 0.5), P.z - Math.cos(P.yaw) * 0.6); try { showMsg(`PUT ${C.entry.name} DOWN`); } catch (e) {} return; }
+  else if (!C && press && playerAlive() && !G.downed) {
+    const d = enemies.find(e => e.downed && e.team === M.myTeam && !e.net && Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) < 1.9);
+    if (d) { BRSQ.carry = d; d.carried = true; G.meleeT = 0; try { showBanner(`CARRYING ${d.entry.name}`, `${actName('melee')} to put down · hold ${actName('use')} to revive`); } catch (e) {} }
+  }
+  if (BRSQ.carry) { const e = BRSQ.carry, bx = Math.sin(P.yaw), bz = Math.cos(P.yaw); e.group.position.set(P.x + bx * 0.25, P.y + 0.95, P.z + bz * 0.25); e.group.rotation.set(-1.45, P.yaw + Math.PI / 2, 0); e.bleed = Math.max(e.bleed, 3); G.swapT = Math.max(G.swapT, 0.2); }
+}
+/* ---------- every frame in a LAST TOKE round (from brUpdate) */
+function brsqTick(dt) {
+  if (!M || !M.br) return; brsqPuffTick(dt);
+  // spectating: say how to come back
+  if (G.state === 'spectate' && brsqOn() && !M.online) { const mine = BRSQ.cards.find(c => c.en === M.me); try { showMsgOnce(mine ? (mine.by ? `${mine.by === 'player' ? 'YOU' : mine.by.entry.name} HAS YOUR STASH CARD · ${Math.ceil(mine.t)} s` : `YOUR STASH CARD IS ON THE GROUND · ${Math.ceil(mine.t)} s`) : 'OUT · WATCHING YOUR SQUAD'); } catch (e) {} }
+  if (!brsqOn()) return;
+  // deaths: a card when the squad still has someone standing (offline, or the host's bots)
+  for (const en of M.entries) {
+    const dead = en.alive === false; if (dead && !BRSQ.dead.has(en)) {
+      BRSQ.dead.add(en);
+      if (!M.online || (netHostNow() && !en.isPlayer && !en.net)) { const standing = (en.team === M.myTeam && !en.isPlayer && playerAlive()) || enemies.some(e => e.entry && e.entry !== en && e.entry.alive !== false && e.team === en.team);
+        if (standing) { const p = en.isPlayer ? { x: P.x, y: P.y, z: P.z } : en.lastPos || (en.bot ? { x: en.bot.group.position.x, y: en.bot.group.position.y, z: en.bot.group.position.z } : null); if (p) brsqCardDrop(en, p.x, p.y, p.z); } }
+    } else if (!dead) BRSQ.dead.delete(en);
+  }
+  for (const e of enemies) if (e.entry && e.entry.alive !== false) e.entry.lastPos = { x: e.group.position.x, y: e.group.position.y, z: e.group.position.z };
+  // cards: spin, get picked up, go stale
+  const u = kb('use') || pad.use;
+  for (const c of BRSQ.cards.slice()) {
+    c.t -= dt; if (c.t <= 0) { if (c.team === M.myTeam) try { showMsg(`${c.en.isPlayer ? 'YOUR' : c.en.name + "'S"} STASH CARD WENT STALE`); } catch (e) {} brsqCardGone(c); continue; }
+    if (c.by === 'player') { if (!playerAlive()) c.by = null; else { c.x = P.x; c.y = P.y; c.z = P.z; } }
+    else if (c.by && c.by.group) { if (!enemies.includes(c.by) || c.by.downed || (c.by.entry && c.by.entry.alive === false)) c.by = null; else { c.x = c.by.group.position.x; c.y = c.by.group.position.y; c.z = c.by.group.position.z; } }
+    c.g.position.set(c.x, c.y + (c.by ? 2.1 : 0.9), c.z); c.g.rotation.y += dt * 2; c.g.visible = !(c.by === 'player');
+    if (!c.by) {
+      if (playerAlive() && !G.downed && c.team === M.myTeam && Math.hypot(P.x - c.x, P.z - c.z) < 1.5 && Math.abs(P.y - c.y) < 2) { c.by = 'player'; try { showBanner(`${c.en.name}'S STASH CARD`, 'take it to a RE-UP BEACON (green tower) · on the map too'); sfx.pickup(); } catch (e) {} }
+      else for (const e of enemies) if (!e.net && !e.downed && e.team === c.team && e.entry && e.entry.alive !== false && Math.hypot(e.group.position.x - c.x, e.group.position.z - c.z) < 1.5) { c.by = e; break; }
+    }
+  }
+  // me at a beacon with a card: hold USE
+  const mine = BRSQ.cards.filter(c => c.by === 'player');
+  if (mine.length && playerAlive()) { const b = brsqBeacon(P.x, P.z);
+    if (b && Math.hypot(b.x - P.x, b.z - P.z) < 2.2) { if (u) { b.holdT += dt; if (b.holdT >= 3) { b.holdT = 0; for (const c of mine) brsqReup(c, b); try { brpEvt('reup'); } catch (e) {} } } else b.holdT = 0;
+      try { G.interactTxt = u ? `RE-UP · ${Math.round(b.holdT / 3 * 100)}%` : `HOLD ${actName('use')} TO BRING BACK ${mine.map(c => c.en.isPlayer ? 'YOU' : c.en.name).join(', ')}`; showMsgOnce(G.interactTxt); } catch (e) {} } }
+  brsqCarryTick();
+  // the float in: my squad's bots follow me down
+  if (typeof BRF !== 'undefined' && BRF.float && (BRSQ.fT -= dt) <= 0) { BRSQ.fT = 0.5; for (const e of enemies) if (!e.net && e.team === M.myTeam && e.brFloat && !e.brFloat.wait) { const lead = clamp((P.y - groundAt(P.x, P.z, P.y)) / 7, 0, 12); e.brFloat.tx = P.x + P.vx * lead + rnd(-3, 3); e.brFloat.tz = P.z + P.vz * lead + rnd(-3, 3); } }
+  // squad wiped / last one standing
+  const T = typeof sqTeamsLeft === 'function' ? sqTeamsLeft() : null;
+  if (T && BRSQ.teams) for (const t of BRSQ.teams) if (!T.has(t) && t !== M.myTeam) { const by = M.entries.filter(en => en.team === t).map(en => en.lastBy).find(b => b === 'player' || (b && b.team === M.myTeam)); if (by) try { showBanner('SQUAD WIPED', `squad ${t + 1} is out · ${T.size} left`); sfx.streak(); } catch (e) {} }
+  if (T) BRSQ.teams = new Set(T);
+  const alone = playerAlive() && !enemies.some(e => e.team === M.myTeam && e.entry && e.entry.alive !== false && !e.downed);
+  if (alone && !BRSQ.lastAlone) try { showBanner('LAST ONE STANDING', 'the rest of your squad is down or out · get their cards to a beacon'); } catch (e) {}
+  BRSQ.lastAlone = alone;
+  if (alone && (BRSQ.beatT -= dt) <= 0) { BRSQ.beatT = 1.05; try { tone(52, 0.16, 0.16, 'sine', 38); setTimeout(() => { try { tone(48, 0.14, 0.11, 'sine', 36); } catch (e) {} }, 190); } catch (e) {} }
+}
+// the beacons on the map screen and as markers
+function brsqMarkers(out) { if (!brsqOn()) return; const carrying = BRSQ.cards.some(c => c.by === 'player'); for (const b of BRSQ.beacons) if (carrying || Math.hypot(b.x - P.x, b.z - P.z) < 40) out.push({ x: b.x, y: b.y + 4.5, z: b.z, t: 'RE-UP', c: '#5dff7a' }); for (const c of BRSQ.cards) if (c.team === M.myTeam && !c.by) out.push({ x: c.x, y: c.y + 1.5, z: c.z, t: 'CARD', c: '#5dff7a' }); }
+(() => { const s = document.createElement('style'); s.textContent = `#emoteWheel .sq-calls{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-top:8px;padding-top:8px;border-top:1px solid rgba(143,255,106,.3)}
+#emoteWheel .sq-calls small{width:100%;text-align:center;color:#8fff6a;letter-spacing:3px;font-size:11px}#emoteWheel .sq-calls button{min-width:92px}`; document.head.appendChild(s); })();
+/* ================================================================== LAST TOKE BOTS 2.0 + THE VAULTS (1.2.93)
+   THE VAULTS (STASH ISLAND): four small concrete bunkers with a steel door and a red keypad (at THE FARM, the bunker road,
+     THE SCHOOL and the quarry rim). Inside: a LEGENDARY gun on a table, an EPIC gun on a rack, a medical joint and an
+     attachment. KEY CARDS (gold) lie in six places on tables, shelves and pallets; walk up to a vault door with one and
+     hold USE to open it (the keypad goes green, the door slides up). Offline a VAULT BOSS waits inside (lots of health,
+     an LMG); it wakes when the door opens. Online the open doors travel at the end of the host's 'b' pack (players ask
+     with presence bl.vo).
+   BOTS: they take guns from the floor loot (a better rarity than theirs) as well as crates, eat a heal when hurt and out
+     of a fight, take vehicles more often (from 25 m, cars up to 40 m away), hide in buildings inside the last circles
+     instead of standing in the open, get sharper every phase (+5% accuracy a phase), revive each other faster and call
+     out enemies in your squad. */
+const BRV_SPOTS = [[-110, 148], [82, -38], [-2, -128], [154, 112]];
+const BRB = { vaults: [], bosses: [], open: 0, keyT: 0, phase: -9 };
+/* ---------- the vaults: built at the round start, taken away at the end */
+function brbVaultsClear() {
+  for (const v of BRB.vaults) { for (const m of v.meshes) { if (m.parent) m.parent.remove(m); const i = wallMeshes.indexOf(m); if (i >= 0) wallMeshes.splice(i, 1); } for (const b of v.boxes) { const i = boxes.indexOf(b); if (i >= 0) boxes.splice(i, 1); } }
+  BRB.vaults = []; BRB.open = 0; try { rebuildBoxGrid(); } catch (e) {}
+  for (const e of BRB.bosses) { const i = enemies.indexOf(e); if (i >= 0) { enemies.splice(i, 1); scene.remove(e.group); } } BRB.bosses = [];
+}
+function brbVaultsBuild() {
+  brbVaultsClear(); if (curMap !== 'stashisle' || !M || !M.br) return;
+  const steel = new THREE.MeshStandardMaterial({ color: 0x5a6068, roughness: 0.35, metalness: 0.8 }), red = new THREE.MeshStandardMaterial({ color: 0x220000, emissive: 0xff2a1a, emissiveIntensity: 1.6 }), gold = new THREE.MeshStandardMaterial({ color: 0x221a00, emissive: 0xffc83a, emissiveIntensity: 1.4 });
+  BRV_SPOTS.forEach(([x, z], i) => {
+    const y = TH(x, z) + 0.02, v = { i, x, z, y, meshes: [], boxes: [], open: false, openT: 0 };
+    // the door faces the middle of the island
+    const toC = Math.atan2(-x, -z), side = Math.abs(Math.sin(toC)) > Math.abs(Math.cos(toC)) ? (Math.sin(toC) > 0 ? 'e' : 'w') : (Math.cos(toC) > 0 ? 's' : 'n');
+    v.side = side; const W = 6, T = 0.3, H = 3.2, gap = 1.7, add = (cx, cz, w, d, h, y0, key) => { const n = boxes.length; const m = addBox(cx, cz, w, d, h, key || 'concrete', { y: y0 }); v.meshes.push(m); if (boxes.length > n) v.boxes.push(boxes[boxes.length - 1]); return m; };
+    const wall = (s) => {
+      const hz = s === 'n' || s === 's', off = (s === 'n' || s === 'w' ? -1 : 1) * (W / 2 - T / 2), cx = hz ? x : x + off, cz = hz ? z + off : z;
+      if (s !== side) { add(cx, cz, hz ? W : T, hz ? T : W, H, y); return; }
+      const seg = (W - gap) / 2; for (const k of [-1, 1]) { const c = k * (gap / 2 + seg / 2); add(hz ? x + c : cx, hz ? cz : z + c, hz ? seg : T, hz ? T : seg, H, y); }
+      add(cx, cz, hz ? gap : T, hz ? T : gap, H - 2.45, y + 2.45);   // above the door
+      v.door = { cx, cz, w: hz ? gap : 0.14, d: hz ? 0.14 : gap, hz, nx: hz ? 0 : Math.sign(off), nz: hz ? Math.sign(off) : 0 };
+    };
+    for (const s of ['n', 's', 'e', 'w']) wall(s);
+    add(x, z, W + 0.2, W + 0.2, 0.25, y + H, 'concrete');   // the roof
+    // the steel door and the keypad
+    const D = v.door, dm = new THREE.Mesh(new THREE.BoxGeometry(D.w, 2.4, D.d), steel); dm.position.set(D.cx, y + 1.2, D.cz); dm.castShadow = dm.receiveShadow = true; scene.add(dm); wallMeshes.push(dm); v.meshes.push(dm); v.doorM = dm;
+    const db = mkBox(D.cx, D.cz, D.hz ? D.w : 0.3, D.hz ? 0.3 : D.d, 2.4, { y }); boxes.push(db); v.boxes.push(db); v.doorB = db;
+    for (const k of [-0.5, 0.5]) { const s = new THREE.Mesh(new THREE.BoxGeometry(D.hz ? 0.05 : 0.02, 2.0, D.hz ? 0.02 : 0.05), gold); s.position.set(D.cx + (D.hz ? k * D.w * 0.8 : D.nx * 0.08), y + 1.2, D.cz + (D.hz ? D.nz * 0.08 : k * D.d * 0.8)); scene.add(s); v.meshes.push(s); }
+    const kp = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.24, 0.16), red); kp.position.set(D.cx + (D.hz ? D.w / 2 + 0.35 : D.nx * 0.22), y + 1.3, D.cz + (D.hz ? D.nz * 0.22 : D.d / 2 + 0.35)); scene.add(kp); v.meshes.push(kp); v.keypad = kp;
+    // the stencil over the door
+    const sign = new THREE.Mesh(new THREE.BoxGeometry(D.hz ? 1.4 : 0.03, 0.3, D.hz ? 0.03 : 1.4), gold); sign.position.set(D.cx + D.nx * 0.17, y + 2.75, D.cz + D.nz * 0.17); scene.add(sign); v.meshes.push(sign);
+    BRB.vaults.push(v);
+  });
+  try { rebuildBoxGrid(); } catch (e) {}
+  // offline: a boss in each vault
+  if (!M.online) for (const v of BRB.vaults) {
+    const e = makeEnemy('heavy', v.x - (v.door.nx || 0) * 1.6, v.z - (v.door.nz || 0) * 1.6); e.group.position.y = v.y; e.team = 99; e.name = 'VAULT BOSS'; e.bossBR = v;
+    try { const lmg = ARMORY.find(d => d.cat === 'lmg'); if (lmg) botApplyGun(e, lmg, {}), botGunVisual(e, lmg, {}, null); } catch (er) {}
+    Object.assign(e, { hp: 650, maxHp: 650, acc: 0.3, dmg: 10, cdT: 0, awake: false, armor: 150 }); e.group.rotation.y = Math.atan2(v.door.nx, v.door.nz); enemies.push(e); BRB.bosses.push(e);
+  }
+}
+const brbVaultMask = () => BRB.vaults.reduce((m, v, i) => m | (v.open ? 1 << i : 0), 0);
+function brbVaultApply(mask) { mask = mask | 0; BRB.vaults.forEach((v, i) => { if (mask & (1 << i) && !v.open) brbVaultOpen(v, true); }); }
+function brbVaultOpen(v, remote) {
+  if (v.open) return; v.open = true; v.openT = 0; const i = boxes.indexOf(v.doorB); if (i >= 0) boxes.splice(i, 1); try { rebuildBoxGrid(); } catch (e) {}
+  const j = wallMeshes.indexOf(v.doorM); if (j >= 0) wallMeshes.splice(j, 1);
+  v.keypad.material = new THREE.MeshStandardMaterial({ color: 0x002200, emissive: 0x5dff7a, emissiveIntensity: 1.8 });
+  try { sfx.thud({ vol: 0.9 }); tone(220, 0.4, 0.08, 'sawtooth', 120); } catch (e) {}
+  if (!remote) try { brpEvt('vault'); } catch (e) {}
+  if (!remote) try { showBanner('VAULT OPEN', M.online ? 'legendary loot inside' : 'the VAULT BOSS is awake'); } catch (e) {}
+  for (const e of BRB.bosses) if (e.bossBR === v) e.awake = true;
+}
+// the loot inside a vault (from brlBuild, so it shares the round's seed and the online ids)
+function brbVaultLoot() {
+  if (!BRB.vaults.length || typeof brlItem !== 'function') return;
+  for (const v of BRB.vaults) {
+    const g = new THREE.Group(), set = { id: 'v' + v.i + '_', g, n: 0, x: v.x, z: v.z, y: v.y, kind: 'vault' }, r = brlRng((BRL.seed ^ (v.i * 7919)) >>> 0);
+    g.position.set(v.x, v.y, v.z); g.rotation.y = Math.atan2(-v.door.nx, -v.door.nz); BRL.group.add(g); BRL.sets.push(set);
+    const M0 = brlMats(), wz = 2.55;   // the back wall (away from the door) is +z in the set's frame
+    brlMesh(g, 'box', M0.wood, -1, 0.77, wz - 0.45, 1.45, 0.06, 0.72); for (const [x, z] of [[-0.66, -0.3], [0.66, -0.3], [-0.66, 0.3], [0.66, 0.3]]) brlMesh(g, 'box', M0.dark, -1 + x, 0.37, wz - 0.45 + z, 0.06, 0.74, 0.06);
+    const leg = brlRollGun(r, 3); brlItem(set, 'gun', { gun: leg.id, tier: 3 }, -1.05, 0.8, wz - 0.45, 'lie');
+    const t = brlAmmoOf(leg); brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can * 2 }, -0.45, 0.8, wz - 0.55);
+    brlMesh(g, 'box', M0.wood, 1.2, 1.25, wz - 0.03, 1.3, 1.15, 0.05); const ep = brlRollGun(r, 2); brlItem(set, 'gun', { gun: ep.id, tier: 2 }, 1.2, 1.5, wz - 0.13, 'hang');
+    brlMesh(g, 'box', M0.wood, 1.2, 0.5, wz - 0.3, 1.1, 0.04, 0.4); brlItem(set, 'heal', { h: 'joint' }, 0.95, 0.52, wz - 0.3); brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, 1.4, 0.52, wz - 0.3);
+  }
+}
+/* ---------- every frame (from brUpdate) */
+function brbTick(dt) {
+  if (!M || !M.br) return; const B = M.br, host = netHostNow();
+  // vault doors: me with a key card, holding USE
+  for (const v of BRB.vaults) {
+    if (v.open) { if (v.openT < 1) { v.openT = Math.min(1, v.openT + dt); v.doorM.position.y = v.y + 1.2 + v.openT * 2.3; } continue; }
+    if (!playerAlive() || Math.hypot(P.x - v.door.cx, P.z - v.door.cz) > 2.4 || Math.abs(P.y - v.y) > 2) continue;
+    const keys = (BRL.keys | 0), u = kb('use') || pad.use;
+    if (!keys) { try { showMsgOnce('LOCKED VAULT · FIND A KEY CARD (gold, on tables and shelves)'); } catch (e) {} continue; }
+    if (u) { BRB.keyT += dt; if (BRB.keyT >= 1.4) { BRB.keyT = 0; BRL.keys--; if (host) brbVaultOpen(v); else { BRL.vo = (BRL.vo || []).concat(v.i); brbVaultOpen(v); } } } else BRB.keyT = 0;
+    try { G.interactTxt = u ? `OPENING · ${Math.round(BRB.keyT / 1.4 * 100)}%` : `LOCKED VAULT · HOLD ${actName('use')} TO USE A KEY CARD`; showMsgOnce(G.interactTxt); } catch (e) {}
+  }
+  // the bosses (offline)
+  for (const e of BRB.bosses) {
+    if (!enemies.includes(e)) { if (!e.downSaid) { e.downSaid = true; try { showBanner('VAULT BOSS DOWN', 'the vault is yours'); sfx.streak(); } catch (er) {} } continue; }
+    try { animEnemy(e, dt, 0); } catch (er) {}
+    if (!e.awake || !playerAlive()) continue;
+    const dx = P.x - e.group.position.x, dz = P.z - e.group.position.z, dist = Math.hypot(dx, dz); if (dist > 30) continue;
+    e.group.rotation.y = Math.atan2(dx, dz); e.aim = 1; e.holding = true;
+    if ((e.cdT -= dt) <= 0) { e.cdT = 0.16; if (hasLOS(e, dist)) { if (!e.burst || e.burst <= 0) { e.burst = 5; e.cdT = 1.2; } else { e.burst--; enemyShoot(e, dist); } } }
+  }
+  // bots: sharper every phase
+  if (host && B.phase !== BRB.phase) { BRB.phase = B.phase; const k = 1 + Math.max(0, B.phase) * 0.05; for (const e of enemies) if (e.entry && !e.net) { if (e.acc0 === undefined) e.acc0 = e.acc; e.acc = Math.min(0.85, e.acc0 * k); } }
+  if (!host) return;
+  for (const e of enemies) {
+    if (!e.entry || e.net || e.downed || e.brFloat) continue;
+    // a heal when hurt and nobody in sight
+    if (!e.tgt && e.hp < e.maxHp * 0.5 && (e.heals === undefined ? (e.heals = 2) : e.heals) > 0 && M.t - (e.hitT || -99) > 3) { e.healT = (e.healT || 0) + dt; if (e.healT > 2.5) { e.healT = 0; e.heals--; e.hp = Math.min(e.maxHp, e.hp + 50); } } else e.healT = 0;
+    // squad callouts: the first look at an enemy
+    if (e.team === M.myTeam && e.tgt && !e.spotSaid) { e.spotSaid = true; try { if (typeof SQV_LINES !== 'undefined' && SQV_LINES.spot) sqvSay(e, 'spot'); } catch (er) {} } else if (!e.tgt) e.spotSaid = false;
+  }
+}
+function brbMarkers(out) { for (const v of BRB.vaults) if (Math.hypot(v.x - P.x, v.z - P.z) < ((BRL.keys | 0) ? 400 : 60)) out.push({ x: v.door.cx, y: v.y + 3.2, z: v.door.cz, t: v.open ? 'VAULT · OPEN' : 'VAULT', c: '#ffc83a' }); }
+// from brGoal: a better gun on the floor nearby (the host's bots take it like a crate)
+function brbLootGoal(e, set) {
+  if (typeof brlOn !== 'function' || !brlOn() || !BRL.items.length) return null; const g = e.group.position, B = M.br, mine = e.brTier === undefined ? -1 : e.brTier;
+  let best = null, bd = 32;
+  for (const it of BRL.items) { if (it.gone || it.k !== 'gun' || Math.min(2, it.tier) <= mine || Math.abs(it.set.x - g.x) > bd || Math.abs(it.set.z - g.z) > bd) continue; const d = Math.hypot(it.set.x - g.x, it.set.z - g.z); if (d < bd && Math.hypot(it.set.x - B.cx, it.set.z - B.cz) < B.r && (!it.set.kind || it.set.kind !== 'vault' || BRB.vaults[+it.set.id.slice(1, 2)].open)) { bd = d; best = it; } }
+  if (!best) return null;
+  if (bd < 1.6 && Math.abs(best.set.y - g.y) < 1.6) { try { botGunProfile(e, best.gun); e.brTier = Math.min(2, best.tier); e.dmg *= BRL_RAR[best.tier].dmg; e.hp = e.maxHp; brlRemove(best); BRL.taken.add(best.id); BRL.out.push(best.id); } catch (er) {} return null; }
+  return set({ x: best.set.x, z: best.set.z, y: best.set.y }, 0.8);
+}
+// from brGoal: the last circles - into a building inside the next circle and hold there
+function brbHideGoal(e, set) {
+  const B = M.br; if (B.phase < 3 || e.tgt) return null; const to = B.to || { x: B.cx, z: B.cz, r: B.r };
+  if (e.hide && Math.hypot(e.hide.x - to.x, e.hide.z - to.z) < to.r * 0.85) return set(e.hide, 1.0);
+  const L = (MAPS[curMap] && MAPS[curMap].loot) || []; let best = null, bd = 60; const g = e.group.position;
+  for (const s of L) { if (Math.hypot(s.x - to.x, s.z - to.z) > to.r * 0.8) continue; const d = Math.hypot(s.x - g.x, s.z - g.z); if (d < bd && !enemies.some(o => o !== e && o.hide === s)) { bd = d; best = s; } }
+  if (!best) return null; e.hide = best; return set(best, 1.0);
+}
+/* ================================================================== LAST TOKE FIGHTS (1.2.93)
+   WEED BALLOONS: balloon stands (three green balloons on a post) at the places on the map. USE grabs one: it lifts you
+     about 60 m up, then you float down again like the drop (steer, CROUCH dives). Each stand has three balloons.
+   LADDERS: on the side of the walkable-roof buildings and up the lighthouse tower. Walk into one pressing forward to
+     climb, CROUCH to climb down from the top, JUMP to let go.
+   FOOTSTEPS: grass and dirt sound soft and dull, floors and roofs hard and sharp; running is louder.
+   DAMAGE NUMBERS: how much each of your hits did, floating off the target (yellow = head). Setting DAMAGE NUMBERS:
+     OFF / LAST TOKE (default) / EVERY MODE.
+   DEPLOYABLE COVER: a folded shield in the floor loot; key 6 (or the field upgrade button in LAST TOKE while you carry
+     one) puts it up in front of you (it is the field-upgrade cover, so it shows online too).
+   THROWABLES in the floor loot replace your grenade: MOLOTOV (a fire for 7 s, burns anyone in it), FLASHBANG (the
+     stun), STICKY RESIN (the semtex), HEALING SMOKE (a green cloud for 10 s that heals you and your squad inside it).
+     Molotov fire and healing smoke show online (with the other smokes).
+   SNIPER GLINT: a bot with a sniper rifle looking your way shows a bright glint from far off. */
+const BRFG = { stands: [], ladders: [], climb: null, nums: [], fires: [], heals: [], glints: new Map(), sfxT: 0, cH: false };
+const BRFG_THROW = { molotov: { n: 'MOLOTOV', col: 0xff7a1a }, stun: { n: 'FLASHBANG', col: 0xe8e8ff }, semtex: { n: 'STICKY RESIN', col: 0x6aff3a }, healsmoke: { n: 'HEALING SMOKE', col: 0x8aff9a } };
+EQUIP.molotov = { name: 'MOLOTOV', desc: 'A bottle of fire: 7 s of flames where it lands.', count: 2, max: 3, fuse: 1.0, color: 0x7a3a10, glow: 0xff7a1a, brOnly: true };
+EQUIP.healsmoke = { name: 'HEALING SMOKE', desc: 'A green cloud for 10 s that heals you and your squad inside it.', count: 2, max: 3, fuse: 1.2, color: 0x4a7a4a, glow: 0x8aff9a, brOnly: true };
+/* ---------- the round starts: balloon stands and ladders */
+// an outdoor spot near (x, z): nothing overhead, nothing in the way (balloons, beacons)
+function brfgOutdoor(x, z) {
+  for (let k = 0; k < 40; k++) { const a = k * 2.399, r = k * 1.6, o = openNear(x + Math.cos(a) * r, z + Math.sin(a) * r), y = groundAt(o.x, o.z, (o.y || TH(o.x, o.z)) + 0.5);
+    if (y - TH(o.x, o.z) > 0.6) continue; if (!boxesNear(o.x, o.z).some(b => o.x > b.minx - 1.2 && o.x < b.maxx + 1.2 && o.z > b.minz - 1.2 && o.z < b.maxz + 1.2 && b.top > y + 0.3)) return { x: o.x, z: o.z, y }; }
+  const o = openNear(x, z); return { x: o.x, z: o.z, y: groundAt(o.x, o.z, (o.y || 0) + 1) };
+}
+function brfgSetup() {
+  BRFG.stands = []; BRFG.ladders = []; BRFG.climb = null; BRFG.fires = []; BRFG.heals = []; BRFG.glints.clear();
+  if (BRFG.group && BRFG.group.parent) BRFG.group.parent.remove(BRFG.group); BRFG.group = null;
+  if (!M || !M.br) return; BRFG.group = new THREE.Group(); scene.add(BRFG.group);   // (its own group: the round's group gets thinned out)
+  const pois = typeof mapPois === 'function' ? mapPois() : [], post = new THREE.MeshStandardMaterial({ color: 0x6a4a30, roughness: 0.8 });
+  const balMat = new THREE.MeshStandardMaterial({ color: 0x5dff7a, roughness: 0.35, emissive: 0x1a4a1a, emissiveIntensity: 0.4 }), str = new THREE.LineBasicMaterial({ color: 0xdddddd });
+  for (const p of pois) {
+    const o = brfgOutdoor(p.x - p.w * 0.3, p.z + p.d * 0.3), y = o.y, g = new THREE.Group(); g.position.set(o.x, y, o.z); BRFG.group.add(g);
+    const pm = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.08, 1.4, 8), post); pm.position.y = 0.7; g.add(pm);
+    const bals = []; for (let i = 0; i < 3; i++) { const a = i / 3 * TAU, b = new THREE.Group(); b.position.set(Math.cos(a) * 0.35, 2.4 + i * 0.25, Math.sin(a) * 0.35); const s = new THREE.Mesh(new THREE.SphereGeometry(0.32, 14, 10), balMat); s.scale.y = 1.2; b.add(s);
+      const leaf = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.18, 6), new THREE.MeshStandardMaterial({ color: 0x2a6a1a })); leaf.position.y = 0.42; b.add(leaf);
+      b.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(0, -0.38, 0), new THREE.Vector3(-Math.cos(a) * 0.35, -(1.0 + i * 0.25), -Math.sin(a) * 0.35)]), str)); g.add(b); bals.push(b); }
+    BRFG.stands.push({ x: o.x, z: o.z, y, g, bals, left: 3 });
+  }
+  // ladders: the buildings with a walkable roof, and the lighthouse
+  const lad = new THREE.MeshStandardMaterial({ color: 0x8a8e92, roughness: 0.45, metalness: 0.7 });
+  for (const L of (typeof STASH_LADDERS !== 'undefined' && curMap === 'stashisle' ? STASH_LADDERS : [])) {
+    const y0 = groundAt(L.x + L.nx * 0.5, L.z + L.nz * 0.5, L.y1 - 0.5 > 0 ? Math.min(L.y1 - 2, TH(L.x, L.z) + 0.5) : 0.5), h = L.y1 - y0; if (h < 2 || h > 40) continue;
+    const g = new THREE.Group(); g.position.set(L.x + L.nx * 0.3, y0, L.z + L.nz * 0.3); g.rotation.y = Math.atan2(L.nx, L.nz); BRFG.group.add(g);   // on the outside face of the wall
+    for (const s of [-0.24, 0.24]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.05, h + 0.9, 0.05), lad); r.position.set(s, (h + 0.9) / 2, 0); g.add(r); }
+    for (let yy = 0.3; yy < h + 0.6; yy += 0.32) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.48, 6), lad); r.rotation.z = Math.PI / 2; r.position.set(0, yy, 0); g.add(r); }
+    BRFG.ladders.push({ x: L.x + L.nx * 0.62, z: L.z + L.nz * 0.62, nx: L.nx, nz: L.nz, y0, y1: L.y1, wx: L.x, wz: L.z });
+  }
+}
+/* ---------- ladders (from updatePlayer: true = I'm on one this frame) */
+function brfgLadder(dt) {
+  if (!M || !M.br || !BRFG.ladders.length || (typeof BRF !== 'undefined' && (BRF.float || BRF.cine))) { BRFG.climb = null; return false; }
+  const fwd = kb('fwd') || pad.my < -0.5, back = kb('back') || pad.my > 0.5, crouch = kb('crouch') || pad.crouch, jump = kb('jump') || pad.jump;
+  let C = BRFG.climb;
+  if (!C) {
+    if (!playerAlive() || G.downed) return false;
+    for (const L of BRFG.ladders) {
+      if (Math.abs(L.x - P.x) > 3 || Math.abs(L.z - P.z) > 3) continue; const d = Math.hypot(P.x - L.x, P.z - L.z);
+      if (d < 0.75 && fwd && P.y < L.y1 - 0.4 && P.y > L.y0 - 0.5) { C = BRFG.climb = { L, dir: 1 }; break; }   // at the bottom (or partway), pushing in
+      const tx = L.wx - L.nx * 0.7, tz = L.wz - L.nz * 0.7;   // at the top, on the roof side
+      if (Math.hypot(P.x - tx, P.z - tz) < 0.9 && Math.abs(P.y - L.y1) < 0.4 && crouch) { C = BRFG.climb = { L, dir: -1 }; P.y = L.y1 - 0.6; break; }
+    }
+    if (!C) return false;
+  }
+  const L = C.L; P.x = L.x; P.z = L.z; P.vx = P.vz = 0; P.vy = 0; P.onGround = false;
+  if (jump && !BRFG.cH) { BRFG.climb = null; P.vy = 2; P.x += L.nx * 0.4; P.z += L.nz * 0.4; BRFG.cH = true; return false; } BRFG.cH = jump;
+  const v = (fwd ? 3.2 : 0) - (back || crouch ? 3.2 : 0) || (C.dir < 0 ? -3.2 : 0); P.y += v * dt;
+  if (P.y >= L.y1 - 0.15) { BRFG.climb = null; P.y = L.y1 + 0.02; P.x = L.wx - L.nx * 0.85; P.z = L.wz - L.nz * 0.85; P.onGround = true; return false; }   // over the top
+  if (P.y <= L.y0) { BRFG.climb = null; P.y = L.y0; P.onGround = true; P.x += L.nx * 0.2; P.z += L.nz * 0.2; return false; }
+  if ((BRFG.sfxT -= dt) <= 0 && v) { BRFG.sfxT = 0.32; try { tone(rnd(900, 1200), 0.03, 0.03, 'square', 600); } catch (e) {} }
+  G.swapT = Math.max(G.swapT, 0.25); P.eye = 1.7;
+  camera.position.set(P.x, P.y + P.eye, P.z); camera.rotation.set(P.pitch, P.yaw, 0);
+  listener.x = P.x; listener.z = P.z; listener.yaw = P.yaw; listener.y = P.y + P.eye; listener.fy = P.y;
+  try { showMsgOnce(`LADDER · ${actName('fwd')} up · ${actName('crouch')} down · ${actName('jump')} let go`); } catch (e) {}
+  return true;
+}
+/* ---------- balloons */
+function brfgStandTick() {
+  const u = kb('use') || pad.use; if (!playerAlive() || G.downed || (typeof BRF !== 'undefined' && BRF.float)) { BRFG.uH = u; return; }
+  for (const s of BRFG.stands) {
+    if (!s.left || Math.hypot(s.x - P.x, s.z - P.z) > 1.8 || Math.abs(s.y - P.y) > 2) continue;
+    try { showMsgOnce(`WEED BALLOON · ${actName('use')} TO FLOAT · ${s.left} LEFT`); } catch (e) {}
+    if (u && !BRFG.uH) { s.left--; try { brpEvt('balloon'); } catch (e) {} const b = s.bals[s.left]; if (b) { b.userData.fly = 1; } BRF.float = true; BRF.fT = 0; BRF.lift = P.y + 60; P.y += 0.6; P.vy = 6; P.onGround = false; if (scene.fog && BRF.fog0 === null) BRF.fog0 = scene.fog.density; try { showBanner('UP, UP AND AWAY', `steer · hold ${actName('crouch')} to dive`); sfx.pickup(); } catch (e) {} }
+    break;
+  }
+  BRFG.uH = u;
+  for (const s of BRFG.stands) for (const b of s.bals) if (b.userData.fly) { b.position.y += 0.15; b.userData.fly++; if (b.userData.fly > 200) { b.visible = false; b.userData.fly = 0; } }
+}
+/* ---------- damage numbers */
+const brfgNumsOn = () => S.dmgNums === 'all' || ((S.dmgNums === undefined || S.dmgNums === 'br') && M && M.br);
+const _brfgDmg = damageEnemy;
+damageEnemy = function (e, dmg, head, dir, boom, by = 'player') {
+  const hp0 = e && e.hp, r = _brfgDmg(e, dmg, head, dir, boom, by);
+  try { if (by === 'player' && e && e.group && brfgNumsOn() && dmg > 0.5 && !e.brFloat) { const done = e.net ? dmg : Math.max(0, Math.min(dmg, hp0 === undefined ? dmg : hp0 + (r ? 0 : 0))); brfgNum(e.group.position.x, e.group.position.y + 1.95, e.group.position.z, Math.round(done || dmg), head); } } catch (er) {}
+  return r;
+};
+function brfgNum(x, y, z, n, head) {
+  if (!n) return; let box = $('dmgNums'); if (!box) { box = document.createElement('div'); box.id = 'dmgNums'; document.body.appendChild(box); }
+  const el = document.createElement('b'); el.textContent = n; if (head) el.className = 'hd'; box.appendChild(el);
+  BRFG.nums.push({ el, x: x + rnd(-0.3, 0.3), y, z: z + rnd(-0.3, 0.3), t: 0 }); if (BRFG.nums.length > 24) { const o = BRFG.nums.shift(); o.el.remove(); }
+}
+const _bfn = new THREE.Vector3();
+function brfgNumTick(dt) {
+  for (let i = BRFG.nums.length - 1; i >= 0; i--) { const n = BRFG.nums[i]; n.t += dt; if (n.t > 0.9) { n.el.remove(); BRFG.nums.splice(i, 1); continue; }
+    _bfn.set(n.x, n.y + n.t * 0.9, n.z).project(camera); const vis = _bfn.z < 1; n.el.style.display = vis ? 'block' : 'none';
+    if (vis) { n.el.style.left = ((_bfn.x + 1) / 2 * innerWidth) + 'px'; n.el.style.top = ((1 - _bfn.y) / 2 * innerHeight) + 'px'; n.el.style.opacity = String(1 - Math.max(0, n.t - 0.5) / 0.4); } }
+}
+/* ---------- molotov fire and healing smoke (my throws, and others' through the smoke list) */
+const _brfgSmk = smkCloud;
+smkCloud = function (p, kind, mine) {
+  if (kind === 'molotov' || kind === 'heal') { brfgCloud(p, kind, mine); if (mine) { SMK.seq++; SMK.out.push([SMK.seq, Math.round(p.x * 10) / 10, Math.round((p.y || 0) * 10) / 10, Math.round(p.z * 10) / 10, kind === 'molotov' ? 2 : 3]); while (SMK.out.length > 3) SMK.out.shift(); } return; }
+  return _brfgSmk(p, kind, mine);
+};
+function brfgCloud(p, kind, mine) {
+  const fire = kind === 'molotov', R = fire ? 3.2 : 4.2, life = fire ? 7 : 10, sp = []; const y = groundAt(p.x, p.z, (p.y || 0) + 1);
+  for (let i = 0; i < (fire ? 14 : 12); i++) { const a = Math.random() * TAU, r = Math.sqrt(Math.random()) * R * 0.85; const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: fire ? TEX.fire : TEX.smoke, color: fire ? 0xffffff : (i % 2 ? 0xb8ffc0 : 0xdcffd8), transparent: true, opacity: 0, depthWrite: false, blending: fire ? THREE.AdditiveBlending : THREE.NormalBlending }));
+    const sz = fire ? rnd(0.9, 1.6) : rnd(2.6, 3.6); s.scale.set(sz, sz * (fire ? 1.4 : 1), 1); s.position.set(p.x + Math.cos(a) * r, y + (fire ? sz * 0.6 : rnd(0.6, 2.2)), p.z + Math.sin(a) * r); scene.add(s); sp.push({ s, sz, ph: Math.random() * 6 }); }
+  (fire ? BRFG.fires : BRFG.heals).push({ x: p.x, z: p.z, y, R, t: 0, life, sp, mine });
+  if (fire) try { explode && sfx.thud({ vol: 0.6 }); burst(1.2, 900, 0.1, 'lowpass'); } catch (e) {}
+}
+function brfgCloudTick(dt) {
+  for (const L of [BRFG.fires, BRFG.heals]) for (let i = L.length - 1; i >= 0; i--) {
+    const c = L[i], fire = L === BRFG.fires; c.t += dt; const k = Math.min(1, c.t / 0.4) * (c.t > c.life - 1.5 ? Math.max(0, (c.life - c.t) / 1.5) : 1);
+    for (const q of c.sp) { q.s.material.opacity = k * (fire ? 0.85 + Math.sin(NOW * 14 + q.ph) * 0.15 : 0.55); if (fire) q.s.scale.y = q.sz * (1.3 + Math.sin(NOW * 9 + q.ph) * 0.25); }
+    if (c.t >= c.life) { for (const q of c.sp) scene.remove(q.s); L.splice(i, 1); continue; }
+    const inMe = playerAlive() && Math.hypot(P.x - c.x, P.z - c.z) < c.R && Math.abs(P.y - c.y) < 2.5;
+    if (fire) {
+      if (inMe) { G.lastHit = G.time; G.killer = G.killer || 'fire'; G.spawnProt = 0; try { hurtPlayer(14 * dt, c.x, c.z, true); } catch (e) {} }
+      if (c.mine || !M.online || netHostNow()) for (const e of enemies.slice()) if (!e.net && !e.brFloat && Math.hypot(e.group.position.x - c.x, e.group.position.z - c.z) < c.R && Math.abs(e.group.position.y - c.y) < 2.5 && !(c.mine && isFriend(e))) try { damageEnemy(e, 18 * dt, false, null, true, c.mine ? 'player' : 'world'); } catch (er) {}
+    } else {
+      if (inMe && (c.mine || M.squad > 1)) G.health = Math.min(G.maxHp || 100, G.health + 10 * dt);
+      for (const e of enemies) if (!e.net && (c.mine ? isFriend(e) : true) && e.entry && Math.hypot(e.group.position.x - c.x, e.group.position.z - c.z) < c.R) e.hp = Math.min(e.maxHp || 100, e.hp + 10 * dt);
+    }
+  }
+}
+const _brfgDet = detonate;
+detonate = function (g) {
+  if (g.kind === 'molotov') { const p = g.m.position.clone(); smkCloud(p, 'molotov', g.by === undefined || g.by === 'player'); return; }
+  if (g.kind === 'healsmoke') { const p = g.m.position.clone(); smkCloud(p, 'heal', g.by === undefined || g.by === 'player'); return; }
+  return _brfgDet(g);
+};
+/* ---------- deployable cover: the field upgrade's cover, from a floor-loot item */
+function brfgCover() {
+  if (!M || !M.br || !(BRL.covers > 0) || !playerAlive() || G.downed) return false;
+  const c = activeClass(), fu0 = c.fu, ch = FU.charge; c.fu = 'cover'; FU.charge = 1;
+  try { _brfgFu(); } finally { c.fu = fu0; FU.charge = ch; }
+  BRL.covers--; try { showMsg(`COVER UP · ${BRL.covers} LEFT`); } catch (e) {} return true;
+}
+const _brfgFu = fuUse;
+fuUse = function () { if (M && M.br && BRL.covers > 0) { brfgCover(); return; } return _brfgFu(); };
+/* ---------- sniper glint */
+function brfgGlintTick() {
+  const seen = new Set();
+  for (const e of enemies) {
+    if (!e.entry || isFriend(e) || e.downed || !e.gunId || !ARM[e.gunId] || ARM[e.gunId].cat !== 'sr') continue;
+    const g = e.group.position, d = Math.hypot(P.x - g.x, P.z - g.z); if (d < 30 || d > 220) continue;
+    const look = Math.atan2(P.x - g.x, P.z - g.z), dy = Math.abs(((e.group.rotation.y - look) % TAU + TAU + Math.PI) % TAU - Math.PI); if (dy > 0.35 || !(e.tgt === 'P' || e.aim > 0.5)) continue;
+    seen.add(e); let s = BRFG.glints.get(e); if (!s) { s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0xfff6d0, blending: THREE.AdditiveBlending, transparent: true, depthWrite: false, depthTest: true })); scene.add(s); BRFG.glints.set(e, s); }
+    s.position.set(g.x, g.y + 1.55, g.z); const k = d * 0.018 * (0.75 + Math.sin(NOW * 7) * 0.25); s.scale.set(k, k * 0.6, 1); s.material.opacity = 0.9;
+  }
+  for (const [e, s] of BRFG.glints) if (!seen.has(e)) { scene.remove(s); BRFG.glints.delete(e); }
+}
+/* ---------- footsteps by surface */
+const _brfgStep = sfx.step;
+sfx.step = function (v, o) {
+  const r = _brfgStep.apply(this, arguments);
+  try { if (!o && M && inMatch() && typeof TERR !== 'undefined') { const soft = TERR.on && P.y - TH(P.x, P.z) < 0.12; const run = Math.hypot(P.vx, P.vz) > 6.5, k = (v || 0.6) * (run ? 1.35 : 1);
+    if (soft) burst(0.07, 520, 0.05 * k, 'lowpass'); else { burst(0.03, 3200, 0.035 * k, 'highpass'); tone(rnd(140, 190), 0.03, 0.02 * k, 'triangle', 90); } } } catch (e) {}
+  return r;
+};
+/* ---------- every frame in a LAST TOKE round (from brUpdate) */
+function brfgTick(dt) {
+  if (!M || !M.br) return;
+  brfgStandTick(); brfgCloudTick(dt); brfgGlintTick();
+  const k6 = kb('deploy'); if (k6 && !BRFG.dH) brfgCover(); BRFG.dH = k6;
+}
+// the clouds and numbers go at the end of the round
+function brfgClear() { if (BRFG.group && BRFG.group.parent) BRFG.group.parent.remove(BRFG.group); BRFG.group = null; for (const L of [BRFG.fires, BRFG.heals]) { for (const c of L) for (const q of c.sp) scene.remove(q.s); L.length = 0; } for (const [, s] of BRFG.glints) scene.remove(s); BRFG.glints.clear(); for (const n of BRFG.nums) n.el.remove(); BRFG.nums = []; BRFG.climb = null; }
+{ let t0 = performance.now(); const loop = t => { const dt = Math.min(0.1, (t - t0) / 1000); t0 = t; try { if (BRFG.nums.length) brfgNumTick(dt); } catch (e) {} requestAnimationFrame(loop); }; requestAnimationFrame(loop); }   // the numbers move every frame, in any mode
+(() => { const s = document.createElement('style'); s.textContent = `#dmgNums{position:fixed;inset:0;pointer-events:none;z-index:6}#dmgNums b{position:absolute;transform:translate(-50%,-50%);font-size:17px;font-weight:800;color:#fff;text-shadow:0 1px 3px #000,0 0 6px rgba(0,0,0,.6);letter-spacing:1px}#dmgNums b.hd{color:#ffd23a;font-size:20px}`; document.head.appendChild(s); })();
+/* ================================================================== LAST TOKE ISLAND LIFE (1.2.93)
+   DEATH BOXES: whoever dies in a round drops a STASH BOX where they fell: their gun (and its rarity), ammo, heals. USE
+     opens it: a list you take from one by one (a gun swaps with yours: yours goes in the box). Offline, and on each
+     player's own screen online.
+   HOLD TO SWAP: with a gun already in your hands, a gun on the floor takes a short USE hold (a tap picks up the rest).
+   THE MOVING CLOUD: from the 4th circle the next circle drifts while the cloud closes, so the safe spot slides.
+   GROW TENTS at GREENHOUSE ROW and THE FARM: six plants under purple lights in each; hold USE on a ripe plant to harvest
+     it for $200 (yours only: everyone has their own harvest).
+   PLYWOOD SHEDS: freestanding board walls round the places that break under fire and explosions (the breakable
+     system, so they break for everyone online).
+   DAY TO NIGHT: the sun goes down as the circles close; the final circles are at night.
+   WIND: a steady wind (the same for everyone in a round) pushes you while you float in; the HUD shows which way.
+   THE TUNNELS: three hatch huts (by OLD TOWN, THE BUNKERS and the POWER STATION) with a ladder down a shaft to concrete
+     tunnels 9 m under the island that link them.
+   THE BONG EXPRESS: a little train that runs back and forth on a track across the north of the island (z 134), with a
+     station at each end. Stand on the flat cars to ride; the last car carries a stash with an EPIC gun.
+   SWIMMING: in the sea you float at the surface (slow, no shooting) instead of walking on the sea floor. */
+var BRI = { boxes: [], box: null, tents: [], sheds: [], tun: [], tunGroup: null, train: null, nightK: -1, envT: 0, wind: [0, 0], uH: false, harvT: 0, swim: false, age: 0 };
+var BRI_SEA = -1.15;   // the swimming height: the water (-0.35) less chest depth
+const BRI_TRAIN = { z: 134, x0: -92, x1: 61, v: 8, pause: 8, cars: [{ k: 'engine', len: 6 }, { k: 'flat', len: 6 }, { k: 'flat', len: 6 }] };
+/* ---------- the round starts */
+function briSetup() {
+  briClear(); if (!M || !M.br) return; const B = M.br, seed = (B.crates && B.crates[0] ? Math.round(B.crates[0].x * 10) : 7) >>> 0;
+  BRI.age = 0; BRI.nightK = -1; BRI.rode = false; const a = (seed % 360) / 180 * Math.PI; BRI.wind = [Math.cos(a) * 3, Math.sin(a) * 3];
+  if (curMap !== 'stashisle') return;
+  briTents(); briSheds(); briTunnels(); briTrainBuild();
+}
+function briClear() {
+  for (const b of BRI.boxes) if (b.g.parent) b.g.parent.remove(b.g); BRI.boxes = []; briBoxClose();
+  for (const t of BRI.tents) if (t.g.parent) t.g.parent.remove(t.g); BRI.tents = [];
+  for (const o of BRI.sheds) { try { brkBreak(o, false, true); } catch (e) {} delete BRK.list[o.id]; } BRI.sheds = [];
+  for (const t of BRI.tun) { if (t.m && t.m.parent) t.m.parent.remove(t.m); const i = wallMeshes.indexOf(t.m); if (i >= 0) wallMeshes.splice(i, 1); const j = boxes.indexOf(t.b); if (j >= 0) boxes.splice(j, 1); } BRI.tun = [];
+  if (BRI.tunGroup && BRI.tunGroup.parent) BRI.tunGroup.parent.remove(BRI.tunGroup); BRI.tunGroup = null;
+  if (BRI.train && BRI.train.g.parent) BRI.train.g.parent.remove(BRI.train.g); BRI.train = null;
+  if (BRI.nightK > 0) try { applyEnv(MAPS[curMap] && MAPS[curMap].env); } catch (e) {} BRI.nightK = -1;
+  try { rebuildBoxGrid(); } catch (e) {}
+}
+/* ---------- death boxes */
+function briBoxDrop(en, x, y, z, items) {
+  if (!items.length) return; const g = new THREE.Group(); g.position.set(x, groundAt(x, z, y + 0.5) + 0.01, z); scene.add(g);
+  const wood = new THREE.MeshStandardMaterial({ color: 0x2c3a24, roughness: 0.8 }), glow = new THREE.MeshStandardMaterial({ color: 0x113311, emissive: 0x5dff7a, emissiveIntensity: 1.3 });
+  const b = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.6), wood); b.position.y = 0.25; b.castShadow = true; g.add(b);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.94, 0.06, 0.64), wood); lid.position.y = 0.53; g.add(lid);
+  const s = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.04, 0.02), glow); s.position.set(0, 0.32, 0.31); g.add(s);
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.25, 5, 8, 1, true), new THREE.MeshBasicMaterial({ color: 0x5dff7a, transparent: true, opacity: 0.1, depthWrite: false, side: THREE.DoubleSide })); beam.position.y = 2.8; g.add(beam);
+  g.rotation.y = Math.random() * TAU; BRI.boxes.push({ name: en.isPlayer ? 'YOUR' : (en.name || 'A') + "'S", x, z, y: g.position.y, g, items });
+}
+function briBoxItems(en) {
+  const out = [];
+  if (en.isPlayer) {
+    const w = WEAPONS[0]; if (w && w.def && w.def.id !== 'sidearm' && WEAPONS.length > 1) out.push({ k: 'gun', gun: w.def.id, tier: BRL.rar[w.def.id] | 0 });
+    for (const t in BRL.ammo) if (BRL.ammo[t] > 0) out.push({ k: 'ammo', t, n: BRL.ammo[t] });
+    for (const h in BRL.heals) for (let i = 0; i < BRL.heals[h]; i++) out.push({ k: 'heal', h });
+  } else {
+    if (en.lastGun && ARM[en.lastGun] && ARM[en.lastGun].cat !== 'pi') out.push({ k: 'gun', gun: en.lastGun, tier: clamp(en.lastTier === undefined ? 0 : en.lastTier, 0, 3) });
+    const t = en.lastGun && ARM[en.lastGun] ? brlAmmoOf(ARM[en.lastGun]) : 'light'; out.push({ k: 'ammo', t, n: BRL_AMMO[t].can });
+    if (Math.random() < 0.6) out.push({ k: 'heal', h: Math.random() < 0.7 ? 'nug' : 'brownie' }); if (Math.random() < 0.3) out.push({ k: 'plate' });
+  }
+  return out;
+}
+const briItemName = it => it.k === 'gun' ? `${BRL_RAR[it.tier].n} ${ARM[it.gun].name}` : it.k === 'ammo' ? `${BRL_AMMO[it.t].n} AMMO ×${it.n}` : it.k === 'heal' ? BRL_HEAL[it.h].n : it.k === 'plate' ? 'ARMOR PLATE' : '?';
+function briBoxOpen(b) {
+  briBoxClose(); BRI.box = b; G.menuOpen = true; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
+  const o = document.createElement('div'); o.id = 'brBox'; o.className = 'onb-ov'; document.body.appendChild(o);
+  const render = () => {
+    o.innerHTML = `<div class="onb-box"><small>STASH BOX</small><b>${b.name} STASH</b><div class="onb-tiles">${b.items.map((it, i) => `<button class="onb-t" data-bx="${i}"${it.k === 'gun' ? ` style="border-color:${BRL_RAR[it.tier].css}"` : ''}><b>${briItemName(it)}</b><span>${it.k === 'gun' ? (WEAPONS.length > 1 && WEAPONS[0].def.id !== 'sidearm' ? 'TAKE · yours goes in the box' : 'TAKE') : 'TAKE'}</span></button>`).join('') || '<p>EMPTY</p>'}</div><button class="btn" data-close="1">CLOSE</button></div>`;
+    for (const x of o.querySelectorAll('[data-bx]')) x.onclick = () => { briBoxTake(b, +x.dataset.bx); render(); };
+    o.querySelector('[data-close]').onclick = briBoxClose;
+    setTimeout(() => { const f = o.querySelector('[data-bx]') || o.querySelector('[data-close]'); if (f) f.focus(); }, 0);
+  };
+  render(); BRI.boxKey = e => { if (e.code === 'Escape' || e.code === bind('use')) { e.preventDefault(); e.stopPropagation(); briBoxClose(); } }; addEventListener('keydown', BRI.boxKey, true);
+}
+function briBoxClose() {
+  const o = $('brBox'); if (o) o.remove(); if (BRI.boxKey) removeEventListener('keydown', BRI.boxKey, true); BRI.boxKey = null;
+  if (BRI.box) { BRI.box = null; G.menuOpen = false; BRI.uH = true; try { if (G.state === 'playing') lockPointer(); } catch (e) {} }
+}
+function briBoxTake(b, i) {
+  const it = b.items[i]; if (!it) return;
+  if (it.k === 'gun') { const old = WEAPONS.length > 1 && WEAPONS[0].def.id !== 'sidearm' ? { k: 'gun', gun: WEAPONS[0].def.id, tier: BRL.rar[WEAPONS[0].def.id] | 0 } : null; brlGive(ARM[it.gun], it.tier); b.items.splice(i, 1); if (old) b.items.push(old); }
+  else if (it.k === 'ammo') { const A = BRL_AMMO[it.t], room = A.max - BRL.ammo[it.t]; if (room <= 0) { showMsg('FULL'); return; } const n = Math.min(room, it.n); BRL.ammo[it.t] += n; it.n -= n; brlAmmoSync(true); if (it.n <= 0) b.items.splice(i, 1); }
+  else if (it.k === 'heal') { if (BRL.heals[it.h] >= BRL_HEAL[it.h].max) { showMsg('FULL'); return; } BRL.heals[it.h]++; b.items.splice(i, 1); }
+  else if (it.k === 'plate') { if (LT.plates >= 5) { showMsg('FULL'); return; } LT.plates++; b.items.splice(i, 1); }
+  try { sfx.pickup(); } catch (e) {}
+}
+/* ---------- grow tents */
+function briTents() {
+  const leaf = new THREE.MeshLambertMaterial({ color: 0x2a6a1a }), stem = new THREE.MeshStandardMaterial({ color: 0x4a6a2a }), pot = new THREE.MeshStandardMaterial({ color: 0x2a2a2a, roughness: 0.9 }), bud = new THREE.MeshLambertMaterial({ color: 0x6a9a3a });
+  const cloth = new THREE.MeshStandardMaterial({ color: 0xe8e8e0, transparent: true, opacity: 0.35, side: THREE.DoubleSide, roughness: 0.9, depthWrite: false }), pole = new THREE.MeshStandardMaterial({ color: 0x9a9a9a, metalness: 0.6, roughness: 0.4 }), led = new THREE.MeshStandardMaterial({ color: 0x220a33, emissive: 0xb04aff, emissiveIntensity: 2 });
+  for (const [px, pz] of [[-120, -96], [-120, 128]]) {
+    const o = brfgOutdoor(px, pz), g = new THREE.Group(); g.position.set(o.x, o.y, o.z); scene.add(g);
+    for (const [x, z] of [[-3, -2], [3, -2], [-3, 2], [3, 2]]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.05, 2.4, 0.05), pole); p.position.set(x, 1.2, z); g.add(p); }
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(6, 0.02, 4), cloth); roof.position.y = 2.4; g.add(roof);
+    for (const [x, z, w, d] of [[0, -2, 6, 0.02], [0, 2, 6, 0.02], [3, 0, 0.02, 4]]) { const s = new THREE.Mesh(new THREE.BoxGeometry(w, 2.4, d), cloth); s.position.set(x, 1.2, z); g.add(s); }
+    for (const z of [-0.8, 0.8]) { const l = new THREE.Mesh(new THREE.BoxGeometry(5, 0.05, 0.15), led); l.position.set(0, 2.3, z); g.add(l); }
+    const plants = [];
+    for (let i = 0; i < 6; i++) { const x = -2 + (i % 3) * 2, z = i < 3 ? -0.8 : 0.8, p = new THREE.Group(); p.position.set(x, 0, z); g.add(p);
+      const pt = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.18, 0.3, 10), pot); pt.position.y = 0.15; p.add(pt);
+      const top = new THREE.Group(); top.position.y = 0.3; p.add(top); const st = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.03, 1.1, 6), stem); st.position.y = 0.55; top.add(st);
+      for (let k = 0; k < 7; k++) { const lf = new THREE.Mesh(new THREE.ConeGeometry(0.06, 0.45, 4), leaf); const a = k / 7 * TAU; lf.position.set(Math.cos(a) * 0.15, 0.3 + k * 0.1, Math.sin(a) * 0.15); lf.rotation.set(Math.sin(a) * 1.1, 0, -Math.cos(a) * 1.1); top.add(lf); }
+      const b = new THREE.Mesh(new THREE.SphereGeometry(0.1, 8, 6), bud); b.scale.y = 1.6; b.position.y = 1.15; top.add(b);
+      plants.push({ p, top, ripe: true }); }
+    BRI.tents.push({ x: o.x, z: o.z, y: o.y, g, plants });
+  }
+}
+function briTentTick(dt) {
+  const u = kb('use') || pad.use; let near = null;
+  for (const t of BRI.tents) { if (Math.abs(t.x - P.x) > 5 || Math.abs(t.z - P.z) > 4) continue; for (const pl of t.plants) { if (!pl.ripe) continue; const w = pl.p.getWorldPosition(new THREE.Vector3()); if (Math.hypot(w.x - P.x, w.z - P.z) < 1.1) { near = pl; break; } } }
+  if (!near) { BRI.harvT = 0; return; }
+  if (u) { BRI.harvT += dt; if (BRI.harvT >= 1.5) { BRI.harvT = 0; near.ripe = false; near.top.scale.set(0.35, 0.2, 0.35); LT.cash += 200; try { brpEvt('harvest'); } catch (e) {} try { showMsg('+$200 · HARVESTED'); sfx.pickup(); } catch (e) {} } }
+  else BRI.harvT = 0;
+  try { G.interactTxt = u ? `HARVESTING · ${Math.round(BRI.harvT / 1.5 * 100)}%` : `RIPE PLANT · HOLD ${actName('use')} TO HARVEST ($200)`; showMsgOnce(G.interactTxt); } catch (e) {}
+}
+/* ---------- plywood sheds (breakable) */
+function briSheds() {
+  const pois = typeof mapPois === 'function' ? mapPois() : []; let id = 7100;
+  for (const p of pois) { if (BRI.sheds.length >= 36) break; const o = brfgOutdoor(p.x + p.w * 0.38, p.z + p.d * 0.05), y = o.y;
+    for (const [dx, dz, w, d] of [[-1.3, 0, 0.16, 2.4], [1.3, 0, 0.16, 2.4], [0, 1.25, 2.4, 0.16]]) BRI.sheds.push(brkMake(id++, 'boards', o.x + dx, o.z + dz, w, d, y)); }
+}
+/* ---------- the tunnels */
+function briTunnels() {
+  const T = BRI.tun, grp = BRI.tunGroup = new THREE.Group(); scene.add(grp); const FY = -9, Hh = 3.2, W = 3.2;
+  const con = MAT.concrete || new THREE.MeshStandardMaterial({ color: 0x8a8a86 }), lamp = new THREE.MeshStandardMaterial({ color: 0x223322, emissive: 0xd8ffc8, emissiveIntensity: 1.6 });
+  const add = (cx, cz, w, d, h, y0, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || con); m.position.set(cx, y0 + h / 2, cz); m.castShadow = false; m.receiveShadow = true; grp.add(m); wallMeshes.push(m); const b = mkBox(cx, cz, w, d, h, { y: y0 }); boxes.push(b); T.push({ m, b }); };
+  const A = brfgOutdoor(4, 58), Bp = brfgOutdoor(40, 96), Cp = brfgOutdoor(-34, 100), ends = [A, Bp, Cp];
+  // a straight piece along x or z (floor, walls, ceiling, lights)
+  const seg = (x0, z0, x1, z1) => { const alongX = Math.abs(x1 - x0) > Math.abs(z1 - z0), L = (alongX ? Math.abs(x1 - x0) : Math.abs(z1 - z0)) + W, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    add(cx, cz, alongX ? L : W, alongX ? W : L, 0.3, FY - 0.3); add(cx, cz, alongX ? L : W, alongX ? W : L, 0.3, FY + Hh);
+    for (const s of [-1, 1]) add(alongX ? cx : cx + s * (W / 2 + 0.15), alongX ? cz + s * (W / 2 + 0.15) : cz, alongX ? L : 0.3, alongX ? 0.3 : L, Hh, FY);
+    for (let t = -L / 2 + 3; t < L / 2 - 2; t += 7) { const m = new THREE.Mesh(new THREE.BoxGeometry(alongX ? 1.4 : 0.2, 0.06, alongX ? 0.2 : 1.4), lamp); m.position.set(alongX ? cx + t : cx, FY + Hh - 0.04, alongX ? cz : cz + t); grp.add(m); } };
+  for (const E of [Bp, Cp]) { seg(A.x, A.z, A.x, E.z); seg(A.x, E.z, E.x, E.z); }
+  // the end walls (the corridors are open-ended at the corners only)
+  // a shaft and a hatch hut at each end, with a ladder down
+  const hut = MAT.plaster || con, hatch = new THREE.MeshBasicMaterial({ color: 0x050505 });
+  for (const E of ends) {
+    const top = TH(E.x, E.z);
+    for (const [dx, dz, w, d] of [[-1, 0, 0.2, 2.2], [1, 0, 0.2, 2.2], [0, -1, 2.2, 0.2], [0, 1, 2.2, 0.2]]) add(E.x + dx * 0.95, E.z + dz * 0.95, w, d, top - FY - 0.05, FY);
+    // the hut over it: walls with a door to the east, a roof
+    const hx = E.x + 0.9; for (const [dx, dz, w, d] of [[0, -1.6, 3.6, 0.2], [0, 1.6, 3.6, 0.2], [-1.8, 0, 0.2, 3.4]]) add(hx + dx, E.z + dz, w, d, 2.5, top, hut);
+    for (const s of [-1, 1]) add(hx + 1.8, E.z + s * 1.15, 0.2, 1.1, 2.5, top, hut); add(hx, E.z, 3.8, 3.6, 0.15, top + 2.5, hut);
+    const hm = new THREE.Mesh(new THREE.PlaneGeometry(1.7, 1.7), hatch); hm.rotation.x = -Math.PI / 2; hm.position.set(E.x, top + 0.04, E.z); grp.add(hm);
+    // the ladder down the shaft (climb it like the building ladders)
+    const lad = new THREE.MeshStandardMaterial({ color: 0x8a8e92, roughness: 0.45, metalness: 0.7 }), lg = new THREE.Group(), h = top - FY; lg.position.set(E.x - 0.75, FY, E.z); lg.rotation.y = Math.PI / 2; grp.add(lg);
+    for (const s of [-0.24, 0.24]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.05, h + 0.9, 0.05), lad); r.position.set(s, (h + 0.9) / 2, 0); lg.add(r); }
+    for (let yy = 0.3; yy < h + 0.6; yy += 0.32) { const r = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.48, 6), lad); r.rotation.z = Math.PI / 2; r.position.y = yy; lg.add(r); }
+    BRFG.ladders.push({ x: E.x - 0.45, z: E.z, nx: 1, nz: 0, y0: FY, y1: top + 0.02, wx: E.x - 1.07, wz: E.z, tunnel: true });
+  }
+  BRI.tunEnds = ends; try { rebuildBoxGrid(); } catch (e) {}
+}
+/* ---------- the train */
+function briTrainBuild() {
+  const R = BRI_TRAIN, g = new THREE.Group(); scene.add(g);
+  const rail = new THREE.MeshStandardMaterial({ color: 0x6a6e72, metalness: 0.7, roughness: 0.4 }), sleeper = new THREE.MeshStandardMaterial({ color: 0x4a3420, roughness: 0.9 });
+  for (let x = R.x0 - 16; x < R.x1 + 8; x += 4) { const y0 = TH(x, R.z), y1 = TH(x + 4, R.z), a = Math.atan2(y1 - y0, 4); for (const s of [-0.72, 0.72]) { const r = new THREE.Mesh(new THREE.BoxGeometry(4.02, 0.08, 0.08), rail); r.position.set(x + 2, (y0 + y1) / 2 + 0.16, R.z + s); r.rotation.z = a; g.add(r); }
+    for (const dx of [0.6, 2.6]) { const s = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.08, 2.1), sleeper); s.position.set(x + dx, TH(x + dx, R.z) + 0.06, R.z); g.add(s); } }
+  // the stations: a platform and a sign at each end
+  for (const x of [R.x0 - 19, R.x1 + 6]) { const pl = new THREE.Mesh(new THREE.BoxGeometry(8, 0.6, 2.4), MAT.concrete || sleeper); pl.position.set(x, TH(x, R.z + 2.6) + 0.3, R.z + 2.6); g.add(pl);
+    const sg = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.6, 0.06), new THREE.MeshStandardMaterial({ color: 0x113311, emissive: 0x5dff7a, emissiveIntensity: 1.2 })); sg.position.set(x, TH(x, R.z + 2.6) + 2.6, R.z + 3.7); g.add(sg); }
+  const body = new THREE.MeshStandardMaterial({ color: 0x1f4a2a, roughness: 0.55, metalness: 0.3 }), dark = new THREE.MeshStandardMaterial({ color: 0x1a1a1a, roughness: 0.6 }), gold = new THREE.MeshStandardMaterial({ color: 0x221a00, emissive: 0xffc83a, emissiveIntensity: 1.1 });
+  const cars = R.cars.map((c, i) => { const cg = new THREE.Group(); g.add(cg);
+    const base = new THREE.Mesh(new THREE.BoxGeometry(c.len, 0.5, 2.5), dark); base.position.y = 0.75; cg.add(base);
+    for (const dx of [-c.len / 2 + 1, c.len / 2 - 1]) for (const s of [-0.75, 0.75]) { const w = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.42, 0.2, 14), dark); w.rotation.x = Math.PI / 2; w.position.set(dx, 0.45, s); cg.add(w); }
+    if (c.k === 'engine') { const cab = new THREE.Mesh(new THREE.BoxGeometry(c.len, 2.4, 2.5), body); cab.position.y = 2.2; cab.castShadow = true; cg.add(cab); const st = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.35, 1.2, 10), dark); st.position.set(c.len / 2 - 1, 3.9, 0); cg.add(st);
+      const stripe = new THREE.Mesh(new THREE.BoxGeometry(c.len + 0.02, 0.15, 2.52), gold); stripe.position.y = 2.6; cg.add(stripe); }
+    else { const deck = new THREE.Mesh(new THREE.BoxGeometry(c.len, 0.12, 2.5), new THREE.MeshStandardMaterial({ color: 0x6a4a30, roughness: 0.85 })); deck.position.y = 1.06; cg.add(deck); }
+    return { k: c.k, len: c.len, g: cg, off: -i * (c.len + 0.6), x: 0, y: 0, top: c.k === 'engine' ? 3.4 : 1.12 }; });
+  BRI.train = { g, cars, x: R.x0, dir: 1, dx: 0 };
+  briTrainPlace(0);
+}
+// where the train is at a time t (seconds into the round): back and forth with a stop at each end
+function briTrainAt(t) { const R = BRI_TRAIN, L = R.x1 - R.x0, run = L / R.v, per = 2 * (run + R.pause), u = ((t % per) + per) % per;
+  if (u < R.pause) return { x: R.x0, dir: 1 }; if (u < R.pause + run) return { x: R.x0 + (u - R.pause) * R.v, dir: 1 }; if (u < 2 * R.pause + run) return { x: R.x1, dir: -1 }; return { x: R.x1 - (u - 2 * R.pause - run) * R.v, dir: -1 }; }
+function briTrainPlace(t) {
+  const T = BRI.train; if (!T) return; const s = briTrainAt(t), R = BRI_TRAIN; T.dx = s.x - T.x; T.x = s.x;
+  for (const c of T.cars) { const cx = s.x + c.off * (s.dir > 0 ? 1 : 1) - (s.dir > 0 ? 0 : 0); c.x = cx; c.y = TH(cx, R.z) + 0.05; const sl = Math.atan2(TH(cx + 2, R.z) - TH(cx - 2, R.z), 4); c.g.position.set(cx, c.y, R.z); c.g.rotation.z = sl; }
+  if (T.set) { const c = T.cars[T.cars.length - 1]; T.set.x = c.x; T.set.z = R.z; T.set.y = c.y + c.top; }
+}
+// standing on the train (groundAt), and not walking through it (resolve)
+function briGround(x, z, feetY) { const T = BRI.train; if (!T || Math.abs(z - BRI_TRAIN.z) > 1.3) return -1e9; let g = -1e9; for (const c of T.cars) if (Math.abs(x - c.x) < c.len / 2 && feetY >= c.y + c.top - 0.6) g = Math.max(g, c.y + c.top); return g; }
+function briResolve(pos, r, feetY) { const T = BRI.train; if (!T || Math.abs(pos.z - BRI_TRAIN.z) > 1.25 + r) return; for (const c of T.cars) { if (Math.abs(pos.x - c.x) > c.len / 2 + r || feetY >= c.y + c.top - 0.4) continue; const dz = pos.z - BRI_TRAIN.z; pos.z = BRI_TRAIN.z + Math.sign(dz || 1) * (1.25 + r); } }
+// the stash on the last car (from brlBuild, so it shares the seed and the online ids)
+function briTrainLoot() {
+  const T = BRI.train; if (!T || typeof brlItem !== 'function') return; const c = T.cars[T.cars.length - 1], r = brlRng((BRL.seed ^ 0x7a17) >>> 0);
+  const g = new THREE.Group(); g.position.y = c.top; c.g.add(g); const set = { id: 'tr_', g, n: 0, x: c.x, z: BRI_TRAIN.z, y: c.y + c.top, kind: 'train' }; BRL.sets.push(set); T.set = set;
+  brlMesh(g, 'box', brlMats().dark, 0, 0.2, 0, 1.4, 0.4, 0.8); const gun = brlRollGun(r, 2); brlItem(set, 'gun', { gun: gun.id, tier: 2 }, -0.05, 0.42, 0, 'lie');
+  const t = brlAmmoOf(gun); brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 1.0, 0, 0.6); brlItem(set, 'heal', { h: 'brownie' }, -1.0, 0, 0.6);
+}
+/* ---------- day to night */
+function briNight(B) {
+  const k = clamp((Math.max(0, B.phase) + (B.closing ? 0.5 : 0)) / 4.5, 0, 1); if (Math.abs(k - BRI.nightK) < 0.04) return; BRI.nightK = k;
+  const base = Object.assign({}, ENV_DEFAULT, MAPS[curMap] && MAPS[curMap].env), night = { top: 0x0b1428, horizon: 0x2a2f48, sunCol: 0xff9a5a, hemiSky: 0x34405e, hemiGround: 0x1a1a22 };
+  const mix = (a, b, t) => new THREE.Color(a).lerp(new THREE.Color(b), t), dusk = Math.min(1, k * 1.6), dark = Math.max(0, (k - 0.45) / 0.55);
+  try { skyMat.uniforms.top.value = mix(base.top, night.top, dark); hemi.color = mix(base.hemiSky, night.hemiSky, dark); hemi.groundColor = mix(base.hemiGround, night.hemiGround, dark);
+    sun.color = mix(base.sunCol, night.sunCol, dusk); sun.intensity = base.sunI * (1 - 0.8 * dark); SUN_POS.set(base.sun[0], base.sun[1] * (1 - 0.75 * dusk) + 4, base.sun[2]); skyMat.uniforms.sunDir.value.copy(SUN_POS).normalize();
+    scene.fog.color.copy(mix(base.horizon, night.horizon, dark)); ENV_EXPOSURE = base.exposure * (1 - 0.18 * dark); renderer.toneMappingExposure = ENV_EXPOSURE * S.brightness / 100; } catch (e) {}
+}
+/* ---------- every frame (from brUpdate) */
+function briTick(dt) {
+  if (!M || !M.br) return; const B = M.br, host = netHostNow(); BRI.age += dt;
+  // deaths -> stash boxes (not in the warm-up)
+  if (B.phase >= -1) for (const en of M.entries) {
+    const e = en.bot; if (e && en.alive !== false && e.group) { en.lastGun = e.gunId; en.lastTier = e.brTier; en.lastPos = { x: e.group.position.x, y: e.group.position.y, z: e.group.position.z }; }
+    if (en.alive === false && !en.briBox) { en.briBox = true; const p = en.isPlayer ? { x: P.x, y: P.y, z: P.z } : en.lastPos; if (p && !(typeof DUEL !== 'undefined' && DUEL.on)) briBoxDrop(en, p.x, p.y, p.z, briBoxItems(en)); }
+    else if (en.alive !== false) en.briBox = false;
+  }
+  // a stash box next to me: USE opens it
+  const u = kb('use') || pad.use;
+  if (!BRI.box && playerAlive()) for (const b of BRI.boxes) if (b.items.length && Math.hypot(b.x - P.x, b.z - P.z) < 1.7 && Math.abs(b.y - P.y) < 1.6) { try { showMsgOnce(`${b.name} STASH BOX · ${actName('use')} TO OPEN`); } catch (e) {} if (u && !BRI.uH) briBoxOpen(b); break; }
+  if (BRI.box && (!playerAlive() || Math.hypot(BRI.box.x - P.x, BRI.box.z - P.z) > 2.6)) briBoxClose();
+  BRI.uH = u;
+  for (const b of BRI.boxes) if (!b.items.length && b.g.visible) b.g.children[3] && (b.g.children[3].visible = false);
+  // the moving cloud: from the 4th circle the next one drifts while it closes
+  if (host && B.closing && B.phase >= 3 && B.to && B.from) { if (!B.drift) { const a = Math.random() * TAU; B.drift = [Math.cos(a), Math.sin(a)]; } const sp = 2.2 * dt; B.to.x += B.drift[0] * sp; B.to.z += B.drift[1] * sp; if (Math.hypot(B.to.x - B.from.x, B.to.z - B.from.z) + B.to.r > B.from.r * 0.98) { B.drift = [-B.drift[0], -B.drift[1]]; B.to.x += B.drift[0] * sp * 2; B.to.z += B.drift[1] * sp * 2; } }
+  if (!B.closing) B.drift = null;
+  briTentTick(dt);
+  // the train
+  if (BRI.train) { const t = host ? BRI.age : (B.trainAge !== undefined ? B.trainAge : BRI.age); briTrainPlace(t); const T = BRI.train;
+    if (playerAlive() && Math.abs(P.z - BRI_TRAIN.z) < 1.3) for (const c of T.cars) if (Math.abs(P.x - c.x) < c.len / 2 && Math.abs(P.y - (c.y + c.top)) < 0.15) { P.x += T.dx; if (!BRI.rode) { BRI.rode = true; try { brpEvt('train'); } catch (e) {} } break; } }
+  // night falls
+  if ((BRI.envT -= dt) <= 0) { BRI.envT = 1; briNight(B); }
+  // swimming
+  const sw = typeof TERR !== 'undefined' && TERR.on && P.y < BRI_SEA + 0.05 && TH(P.x, P.z) < BRI_SEA - 0.05 && playerAlive();
+  if (sw && !BRI.swim) try { showMsg('SWIMMING · no shooting'); } catch (e) {}
+  BRI.swim = sw; if (sw) G.swapT = Math.max(G.swapT, 0.2);
+  // in the tunnels
+  const under = typeof TERR !== 'undefined' && TERR.on && P.y < TH(P.x, P.z) - 3; if (under && !BRI.under) try { showBanner('THE TUNNELS', 'under STASH ISLAND · ladders up at the hatch huts'); } catch (e) {} BRI.under = under;
+}
+const briSwim = () => (BRI.swim ? 0.45 : 1);
+const briWind = () => (M && M.br ? BRI.wind : [0, 0]);
+function briWindTxt() { const w = BRI.wind, a = Math.atan2(w[0], -w[1]), arrows = ['↑', '↗', '→', '↘', '↓', '↙', '←', '↖']; return arrows[((Math.round(a / (Math.PI / 4)) % 8) + 8) % 8]; }
+function briMarkers(out) { for (const b of BRI.boxes) if (b.items.length && Math.hypot(b.x - P.x, b.z - P.z) < 30) out.push({ x: b.x, y: b.y + 1.2, z: b.z, t: 'BOX', c: '#5dff7a' }); if (BRI.train && Math.hypot(BRI.train.x - P.x, BRI_TRAIN.z - P.z) < 120) out.push({ x: BRI.train.x, y: BRI.train.cars[0].y + 4.5, z: BRI_TRAIN.z, t: 'TRAIN', c: '#ffc83a' }); for (const E of BRI.tunEnds || []) if (Math.hypot(E.x - P.x, E.z - P.z) < 50) out.push({ x: E.x, y: TH(E.x, E.z) + 3.2, z: E.z, t: 'TUNNEL', c: '#d8ffc8' }); }
+/* ================================================================== LAST TOKE PROGRESS, ITS OWN LOBBY, LOADOUT DROPS (1.2.93)
+   STATS (ashfall.lt.v1): matches, wins, top 5s, kills, average place, best place, win streak (now / best), per team size.
+     The LAST TOKE lobby shows them; STATS opens the full page.
+   PLACEMENT XP: on the results, +60 XP for every place above 17th, +1500 for the win, +150 for each squadmate still
+     standing at the end.
+   DAILY CHALLENGES: three a day (the same for everyone on a date), +2500 XP each: land somewhere and get kills, kills,
+     kills with an EPIC+ gun, open a vault, top 5, harvest plants, ride the train, use heals, ride a balloon, re-up a mate.
+   THE CROWN: win a round and you start the next one crowned (a gold crown over your head for everyone online, and on
+     your HUD); it stays while the streak lasts.
+   FLOAT TRAILS: the smoke you float in on - CLASSIC (start), PURPLE HAZE (5 rounds), GOLD (a win), GREEN KUSH (10 top
+     5s), RAINBOW (3 wins). Pick it in the LAST TOKE lobby.
+   THE VICTORY DANCE: win offline and you dance on THE HOTBOX CLOUD before the results.
+   THE KILL LEADER: whoever has the most kills (3+) is marked for everyone, on screen and on the map.
+   FLOAT IN: a LANDING marker shows where you'll come down (on screen and on the map); diving is a bit faster.
+   WARM-UP: pick the kind of gun you get (rifle, SMG, shotgun, sniper, LMG or random).
+   THE CLOUD on STASH ISLAND: shorter waits for 16 players (~5 min instead of ~7).
+   ITS OWN LOBBY: LAST TOKE is out of the multiplayer lobby and the playlist; the menu tile opens the LAST TOKE lobby
+     (online or offline, solo / duos / squads, ranked, the loadout drop's class, the float trail, your stats, today's
+     challenges).
+   LOADOUT DROPS: $4,000 at a buy station: a crate falls next to you with the class you picked (your own guns and
+     attachments, your equipment). */
+const BRP = { place: 0, done: false, landPoi: null, killsAt: 0, kl: null, klSaid: false, dance: null, drop: null, warmCat: null };
+const BRP_TRAILS = [
+  { id: 'classic', n: 'CLASSIC', col: 0xf0fff2, need: () => true, how: 'from the start' },
+  { id: 'purple', n: 'PURPLE HAZE', col: 0xc08aff, need: s => s.m >= 5, how: 'play 5 rounds' },
+  { id: 'gold', n: 'GOLD', col: 0xffd25a, need: s => s.w >= 1, how: 'win a round' },
+  { id: 'kush', n: 'GREEN KUSH', col: 0x5dff7a, need: s => s.t5 >= 10, how: '10 top-5 finishes' },
+  { id: 'rainbow', n: 'RAINBOW', col: -1, need: s => s.w >= 3, how: 'win 3 rounds' },
+];
+const BRP_DAILY = [
+  { k: 'land', n: p => `LAND AT ${p} AND GET 2 KILLS`, goal: 1 }, { k: 'kills', n: () => 'GET 6 KILLS IN LAST TOKE', goal: 6 }, { k: 'epic', n: () => 'GET 2 KILLS WITH AN EPIC OR LEGENDARY GUN', goal: 2 },
+  { k: 'vault', n: () => 'OPEN A VAULT', goal: 1 }, { k: 'top5', n: () => 'FINISH IN THE TOP 5', goal: 1 }, { k: 'harvest', n: () => 'HARVEST 3 PLANTS', goal: 3 }, { k: 'train', n: () => 'RIDE THE BONG EXPRESS', goal: 1 },
+  { k: 'heal', n: () => 'USE 4 HEALS', goal: 4 }, { k: 'balloon', n: () => 'FLOAT ON A WEED BALLOON', goal: 1 }, { k: 'reup', n: () => 'BRING A SQUADMATE BACK AT A RE-UP BEACON', goal: 1 },
+];
+/* ---------- the saved stats */
+function brpLoad() { let s = null; try { s = JSON.parse(localStorage.getItem('ashfall.lt.v1') || 'null'); } catch (e) {} return Object.assign({ m: 0, w: 0, t5: 0, k: 0, d: 0, ps: 0, best: 0, streak: 0, bestStreak: 0, by: {}, trail: 'classic', cls: 0, daily: null }, s || {}); }
+function brpSave(s) { try { localStorage.setItem('ashfall.lt.v1', JSON.stringify(s)); } catch (e) {} }
+const brpTrail = () => { const s = brpLoad(), t = BRP_TRAILS.find(x => x.id === s.trail); return t && t.need(s) ? t : BRP_TRAILS[0]; };
+function brpTrailCol() { const t = brpTrail(); return t.col >= 0 ? t.col : new THREE.Color().setHSL((NOW * 0.25) % 1, 0.9, 0.7).getHex(); }
+// the round is over for me: count it (once)
+function brpRecord(place) {
+  if (BRP.done || !place) return; BRP.done = true; BRP.place = place; const s = brpLoad(), n = M.entries.length, sq = M.squad > 1 ? (M.squad === 2 ? 'duos' : 'squads') : 'solo';
+  s.m++; s.k += M.me.kills | 0; s.d += place > 1 ? 1 : 0; s.ps += place; if (!s.best || place < s.best) s.best = place;
+  if (place <= 5) s.t5++; if (place === 1) { s.w++; s.streak++; s.bestStreak = Math.max(s.bestStreak, s.streak); } else s.streak = 0;
+  const b = s.by[sq] || (s.by[sq] = { m: 0, w: 0 }); b.m++; if (place === 1) b.w++;
+  brpSave(s); if (place <= 5) brpEvt('top5');
+  for (const t of BRP_TRAILS) if (t.need(s) && !(s.unl || []).includes(t.id)) { s.unl = (s.unl || []).concat(t.id); brpSave(s); if (t.id !== 'classic') try { showBanner('FLOAT TRAIL UNLOCKED', t.n); } catch (e) {} }
+}
+// placement XP rows (progMatchXP)
+function brpXpRows() {
+  if (!M || !M.br || !BRP.place) return []; const p = BRP.place, out = [[`PLACED #${p}`, Math.max(0, 17 - p) * 60]];
+  if (p === 1) out.push(['LAST ONE STANDING', 1500]);
+  if (M.squad > 1) { const n = enemies.filter(e => e.team === M.myTeam && e.entry && e.entry.alive !== false).length + (playerAlive() ? 1 : 0); if (n) out.push([`SQUAD STANDING ×${n}`, n * 150]); }
+  return out;
+}
+/* ---------- daily challenges */
+function brpDailyToday() {
+  const s = brpLoad(), day = new Date().toISOString().slice(0, 10);
+  if (!s.daily || s.daily.day !== day) {
+    let h = 0; for (const c of day) h = (h * 31 + c.charCodeAt(0)) >>> 0; const pool = BRP_DAILY.slice(), pick = []; while (pick.length < 3) { h = (Math.imul(h, 1664525) + 1013904223) >>> 0; pick.push(pool.splice(h % pool.length, 1)[0]); }
+    const pois = typeof STASH_POIS !== 'undefined' ? STASH_POIS.filter(p => p.name) : [{ name: 'OLD TOWN' }], poi = pois[h % pois.length].name;
+    s.daily = { day, list: pick.map(c => ({ k: c.k, n: c.n(poi), goal: c.goal, poi, have: 0, done: false })) }; brpSave(s);
+  }
+  return s.daily;
+}
+function brpEvt(k, n = 1) {
+  if (!M || !M.br) return; const s = brpLoad(); if (!s.daily || s.daily.day !== new Date().toISOString().slice(0, 10)) return;
+  for (const c of s.daily.list) { if (c.k !== k || c.done) continue; c.have = Math.min(c.goal, c.have + n); if (c.have >= c.goal) { c.done = true; brpSave(s); brpXP(2500, 'DAILY CHALLENGE · ' + c.n); return; } }
+  brpSave(s);
+}
+function brpXP(n, why) { try { const before = PROG.xp; PROG.xp = Math.min(XP_AT[MAXLVL], PROG.xp + n); grantLevels(before, PROG.xp); saveProg(); showBanner(`+${n.toLocaleString()} XP`, why); sfx.streak(); } catch (e) {} }
+/* ---------- the victory dance (offline wins) */
+const _brpEnd = endMatch;
+endMatch = function (winner) {
+  if (M && M.br && !M.online && winner === M.me && !BRP.danced && typeof brfStageBuild === 'function') { BRP.danced = true; brpRecord(1); brpDanceStart(() => _brpEnd(winner)); return; }
+  return _brpEnd.apply(this, arguments);
+};
+function brpDanceStart(done) {
+  try { brfCineEnd(true); } catch (e) {}
+  const st = brfStageBuild(), r = cloneSoldier('scout'); if (r.gun) r.gun.visible = false; st.g.add(r.root); r.root.position.set(0, 0, 0.9);
+  BRP.dance = { t: 0, st, r, done, puffs: [] }; for (const e of enemies) if (e.group) e.group.visible = false;
+  document.body.classList.add('brcine'); const c = $('brCine'); if (c) { c.style.display = 'block'; c.querySelector('.skip').textContent = `${actName('jump')} · SKIP`; }
+  try { brfCaption('LAST TOKE', 'winner winner, munchie dinner'); sfx.streak(); } catch (e) {}
+}
+// from updatePlayer: true while dancing
+function brpDance(dt) {
+  const D = BRP.dance; if (!D) return false; D.t += dt; const T = D.t, r = D.r, W = D.st.g.position;
+  const b = Math.sin(T * 7) * 0.5 + 0.5; r.root.position.y = Math.abs(Math.sin(T * 7)) * 0.12; r.root.rotation.y = Math.sin(T * 1.5) * 0.8;
+  r.armL.rotation.set(-2.6 + Math.sin(T * 7) * 0.4, 0, 0.3); r.armR.rotation.set(-2.6 + Math.cos(T * 7) * 0.4, 0, -0.3); r.elL.rotation.x = -0.4 * b; r.elR.rotation.x = -0.4 * (1 - b);
+  r.torso.rotation.set(0.05, Math.sin(T * 3.5) * 0.25, Math.sin(T * 7) * 0.08); r.head.rotation.set(-0.2, Math.sin(T * 3.5) * 0.3, 0); r.legL.rotation.x = Math.sin(T * 7) * 0.3; r.legR.rotation.x = -Math.sin(T * 7) * 0.3;
+  if (Math.random() < dt * 14) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: new THREE.Color().setHSL(Math.random(), 0.8, 0.7), transparent: true, opacity: 0.8, depthWrite: false })); s.position.set(W.x + rnd(-3, 3), W.y + rnd(2, 4), W.z + rnd(-3, 3)); s.scale.setScalar(rnd(0.4, 0.9)); scene.add(s); D.puffs.push(s); }
+  for (const s of D.puffs) { s.position.y -= dt * 0.8; s.material.opacity = Math.max(0, s.material.opacity - dt * 0.25); }
+  const a = T * 0.45; camera.position.set(W.x + Math.cos(a) * 4.2, W.y + 1.9, W.z + 0.9 + Math.sin(a) * 4.2); camera.lookAt(W.x, W.y + 1.1, W.z + 0.9);
+  if (Math.abs(camera.fov - 55) > 0.05) { camera.fov = 55; camera.updateProjectionMatrix(); }
+  try { const g = gunObjs[G.cur]; if (g) g.visible = false; } catch (e) {}
+  const skip = kb('jump') || pad.jump; if (!skip) D.armed = true;
+  if (T > 7 || (D.armed && skip && T > 0.6)) { BRP.dance = null; for (const s of D.puffs) scene.remove(s); if (D.st.g.parent) D.st.g.parent.remove(D.st.g); document.body.classList.remove('brcine'); const c = $('brCine'); if (c) c.style.display = 'none'; camera.fov = baseFov; camera.updateProjectionMatrix(); try { D.done(); } catch (e) { reportError(e); } }
+  return true;
+}
+/* ---------- warm-up: pick your gun */
+const BRP_CATS = [['ar', 'RIFLE'], ['smg', 'SMG'], ['sg', 'SHOTGUN'], ['sr', 'SNIPER'], ['lmg', 'LMG'], [null, 'RANDOM']];
+function brpWarmPick() {
+  if ($('brPick') || !M || !M.br) return; const o = document.createElement('div'); o.id = 'brPick'; o.className = 'onb-ov br-pick';
+  o.innerHTML = `<div class="onb-box"><small>WARM-UP</small><b>PICK YOUR GUN</b><div class="onb-tiles">${BRP_CATS.map((c, i) => `<button class="onb-t${BRP.warmCat === c[0] ? ' on' : ''}" data-wp="${i}"><b>${c[1]}</b></button>`).join('')}</div><button class="btn" data-close="1">KEEP IT</button></div>`;
+  document.body.appendChild(o); G.menuOpen = true; try { document.exitPointerLock && document.exitPointerLock(); } catch (e) {}
+  const close = () => { o.remove(); G.menuOpen = false; try { if (G.state === 'playing') lockPointer(); } catch (e) {} };
+  for (const b of o.querySelectorAll('[data-wp]')) b.onclick = () => { BRP.warmCat = BRP_CATS[+b.dataset.wp][0]; close(); if (typeof brWarmNow === 'function' && brWarmNow() && playerAlive()) brWarmGun(); };
+  o.querySelector('[data-close]').onclick = close; setTimeout(() => { if (o.isConnected) close(); }, 9000);
+  setTimeout(() => { const f = o.querySelector('[data-wp]'); if (f) f.focus(); }, 0);
+}
+function brpWarmGunDef() { if (!BRP.warmCat) return null; const pool = ARMORY.filter(d => d.cat === BRP.warmCat && CATS[d.cat]); return pool.length ? pool[(Math.random() * pool.length) | 0] : null; }
+/* ---------- loadout drops */
+function brpDropBuy() {
+  const s = brpLoad(), c = CLASSES[s.cls] || activeClass(); if (!playerAlive()) return false;
+  const fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), o = openNear(P.x + fx * 5, P.z + fz * 5), y = groundAt(o.x, o.z, (o.y || P.y) + 1);
+  const g = new THREE.Group(); g.position.set(o.x, y + 60, o.z); scene.add(g);
+  const box = new THREE.Mesh(new THREE.BoxGeometry(1.1, 0.8, 0.8), new THREE.MeshStandardMaterial({ color: 0x1f3a24, roughness: 0.6, metalness: 0.3 })); box.position.y = 0.4; box.castShadow = true; g.add(box);
+  const stripe = new THREE.Mesh(new THREE.BoxGeometry(1.12, 0.1, 0.82), new THREE.MeshStandardMaterial({ color: 0x221a00, emissive: 0xffc83a, emissiveIntensity: 1.3 })); stripe.position.y = 0.55; g.add(stripe);
+  const chute = new THREE.Mesh(new THREE.SphereGeometry(1.4, 12, 6, 0, TAU, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0x5dff7a, side: THREE.DoubleSide, roughness: 0.8 })); chute.position.y = 3.2; g.add(chute);
+  BRP.drop = { g, x: o.x, z: o.z, y, cls: c, landed: false, chute };
+  try { showBanner('LOADOUT DROP', `${c.name || 'YOUR CLASS'} · it lands in a few seconds`); } catch (e) {} return true;
+}
+function brpDropTick(dt) {
+  const D = BRP.drop; if (!D) return;
+  if (!D.landed) { D.g.position.y = Math.max(D.y, D.g.position.y - 14 * dt); D.g.rotation.y += dt * 0.5; if (D.g.position.y <= D.y + 0.01) { D.landed = true; D.g.remove(D.chute); try { sfx.thud({ vol: 0.9 }); } catch (e) {} } return; }
+  if (!playerAlive() || Math.hypot(P.x - D.x, P.z - D.z) > 1.8) return;
+  try { showMsgOnce(`LOADOUT DROP · ${actName('use')} TO TAKE ${D.cls.name || 'YOUR CLASS'}`); } catch (e) {}
+  const u = kb('use') || pad.use; if (u && !BRP.uH) {
+    const c = D.cls; equipClass({ p: c.p, s: c.s, e: c.e, k: c.k, perks: c.perks, fu: c.fu, name: c.name }); G.grenades = EQUIP[G.equip] ? EQUIP[G.equip].count : 1;
+    try { BRL.rar[c.p] = 1; for (const w of WEAPONS) { const t = brlAmmoOf(w.def); BRL.ammo[t] = Math.min(BRL_AMMO[t].max, BRL.ammo[t] + BRL_AMMO[t].can * 2); } brlAmmoSync(true); } catch (e) {}
+    if (D.g.parent) D.g.parent.remove(D.g); BRP.drop = null; try { showBanner('YOUR LOADOUT', c.name || ''); sfx.pickup(); } catch (e) {}
+  }
+  BRP.uH = u;
+}
+/* ---------- every frame (from brUpdate) */
+function brpTick(dt) {
+  if (!M || !M.br) return; const B = M.br;
+  if (B.place && !BRP.done) brpRecord(B.place);
+  if (M.online && B.winTxt && !BRP.done) brpRecord(B.winTxt === NET.me || B.winTxt === 'SQ:' + M.myTeam ? 1 : (B.place || 2));
+  brpDropTick(dt);
+  // daily progress: kills (and with an EPIC+ gun), the landing spot
+  const k = M.me.kills | 0; if (k > BRP.killsAt) { const n = k - BRP.killsAt; brpEvt('kills', n); const w = WEAPONS[G.cur]; if (w && w.def && (BRL.rar[w.def.id] | 0) >= 2) brpEvt('epic', n);
+    if (BRP.landPoi) { BRP.landKills = (BRP.landKills | 0) + n; const d = brpDailyToday().list.find(c => c.k === 'land' && !c.done); if (d && BRP.landPoi === d.poi && BRP.landKills >= 2) brpEvt('land'); } }
+  BRP.killsAt = k;
+  // the kill leader
+  if ((BRP.klT = (BRP.klT || 0) - dt) <= 0) { BRP.klT = 1; let best = null; for (const en of M.entries) if (en.alive !== false && (en.kills | 0) >= 3 && (!best || en.kills > best.kills)) best = en; if (best !== BRP.kl) { BRP.kl = best; if (best) try { showMsg(best.isPlayer ? 'YOU ARE THE KILL LEADER · everyone can see you' : `${best.name} IS THE KILL LEADER · ${best.kills} kills`); } catch (e) {} } }
+}
+function brpMarkers(out) {
+  const L = BRP.kl; if (L && !L.isPlayer && L.bot && L.bot.group) out.push({ x: L.bot.group.position.x, y: L.bot.group.position.y + 2.4, z: L.bot.group.position.z, t: `KILL LEADER · ${L.kills}`, c: '#ff4a3a' });
+  if (typeof BRF !== 'undefined' && BRF.float && BRF.land) out.push({ x: BRF.land.x, y: BRF.land.y + 0.5, z: BRF.land.z, t: 'LANDING', c: '#8fff6a' });
+  if (BRP.drop && BRP.drop.landed) out.push({ x: BRP.drop.x, y: BRP.drop.y + 1.4, z: BRP.drop.z, t: 'LOADOUT', c: '#ffc83a' });
+}
+// the round starts
+function brpSetup() { BRP.place = 0; BRP.done = false; BRP.landPoi = null; BRP.landKills = 0; BRP.killsAt = 0; BRP.kl = null; BRP.danced = false; if (BRP.drop && BRP.drop.g.parent) BRP.drop.g.parent.remove(BRP.drop.g); BRP.drop = null; try { brpDailyToday(); } catch (e) {} }
+function brpCrown() { const s = brpLoad(); return s.streak > 0 ? s.streak : 0; }
+// a crown over a crowned player's head (online, from presence cr)
+function brpCrownOn(e, on) { if (!e || !e.group) return; if (on && !e.brpCrown) { const g = new THREE.Group(), m = new THREE.MeshStandardMaterial({ color: 0x332200, emissive: 0xffc83a, emissiveIntensity: 1.2, metalness: 0.6 }); const ring = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.18, 0.1, 10, 1, true), m); g.add(ring); for (let i = 0; i < 5; i++) { const p = new THREE.Mesh(new THREE.ConeGeometry(0.035, 0.1, 4), m); const a = i / 5 * TAU; p.position.set(Math.cos(a) * 0.16, 0.09, Math.sin(a) * 0.16); g.add(p); } g.position.y = 2.15; e.group.add(g); e.brpCrown = g; } if (e.brpCrown) e.brpCrown.visible = !!on; }
+/* ================================================================== the LAST TOKE lobby */
+const BRLOB = { on: false, net: 'off', sq: 1, rk: false };
+try { const o = JSON.parse(localStorage.getItem('ashfall.brlob') || 'null'); if (o) Object.assign(BRLOB, { net: o.net || 'off', sq: o.sq || 1, rk: !!o.rk }); } catch (e) {}
+const brlobSave = () => { try { localStorage.setItem('ashfall.brlob', JSON.stringify({ net: BRLOB.net, sq: BRLOB.sq, rk: BRLOB.rk })); } catch (e) {} };
+const brlobMode = () => BRLOB.net !== 'on' ? null : BRLOB.rk && BRLOB.sq === 1 ? 'rbr' : BRLOB.sq === 4 ? 'obr4' : BRLOB.sq === 2 ? 'obr2' : 'obr';
+function brlobOpen() { BRLOB.on = true; try { ZL.on = false; } catch (e) {} if (G.state !== 'menu') leaveGame(); brlobRender('.cod-go'); showScreen('lobby'); }
+function brlobOff() { BRLOB.on = false; const L = $('lobby'); if (L) L.classList.remove('zl', 'brl'); }
+function brlobRender(focusSel) {
+  const s = brpLoad(), st = careerOf(BRLOB.net === 'on'), c = CLASSES[s.cls] || activeClass(), d = brpDailyToday(), tr = brpTrail();
+  $('lobKind').textContent = 'LAST TOKE'; $('lobby').classList.add('zl', 'brl'); $('lobPlayer').innerHTML = playerCard(st); cardBanner($('lobPlayer'));
+  const ph = document.querySelector('#lobby .cod-foot .padhint'); if (ph) ph.innerHTML = 'START  PLAY';
+  const row = (sm, b, sp, act, wide) => `<div class="cod-row${wide ? ' wide' : ''}"><small>${sm}</small><b>${b}</b><span>${sp}</span>${act ? `<div class="arw"><button class="mini" data-act="${act}-" aria-label="Previous">&lsaquo;</button><button class="mini" data-act="${act}+" aria-label="Next">&rsaquo;</button></div>` : ''}</div>`;
+  const avg = s.m ? (s.ps / s.m).toFixed(1) : '-', kd = (s.k / Math.max(1, s.m - s.w)).toFixed(2);
+  $('lobSel').innerHTML = `<div class="cod-play"><button class="btn primary lob-go cod-go" data-act="bl-start"><small>${BRLOB.net === 'on' ? 'ONLINE · QUICK PLAY' : 'OFFLINE · VS 15 BOTS'}</small><b>${BRLOB.net === 'on' ? 'FIND A MATCH' : 'PLAY'}</b></button></div>` +
+    row('PLAY', BRLOB.net === 'on' ? 'ONLINE' : 'OFFLINE', BRLOB.net === 'on' ? 'real players, bots fill to 16' : 'you against 15 bots', 'bl-net') +
+    row('TEAM SIZE', ['', 'SOLO', 'DUOS', '', 'SQUADS'][BRLOB.sq], 'SOLO · DUOS · SQUADS', 'bl-sq') +
+    (BRLOB.net === 'on' && BRLOB.sq === 1 ? row('RANKED', BRLOB.rk ? 'ON' : 'OFF', 'your placement and kills move your rank', 'bl-rk') : '') +
+    row('LOADOUT DROP', c.name || 'CLASS', `${ARM[c.p] ? ARM[c.p].name : ''} + ${ARM[c.s] ? ARM[c.s].name : ''} · $4,000 at a buy station`, 'bl-cls') +
+    row('FLOAT TRAIL', tr.n, BRP_TRAILS.map(t => t.need(s) ? t.n : `${t.n} (${t.how})`).join(' · '), 'bl-tr') +
+    `<div class="cod-row"><small>YOUR LAST TOKE</small><b>${s.w} WINS · ${s.t5} TOP 5 · ${kd} K/D</b><span>${s.m} rounds · average place ${avg} · ${s.streak ? `👑 win streak ${s.streak}` : `best streak ${s.bestStreak}`}</span><div class="arw"><button class="mini" data-act="bl-stats" aria-label="Stats">STATS</button></div></div>` +
+    `<div class="cod-row wide"><small>TODAY · +2,500 XP EACH</small><b>${d.list.filter(x => x.done).length} / 3 DONE</b><span>${d.list.map(x => `${x.done ? '✓' : '○'} ${x.n} (${x.have}/${x.goal})`).join('<br>')}</span></div>`;
+  $('lobRoster').innerHTML = `<div class="ros-info"><b>LAST TOKE</b>Sixteen players on STASH ISLAND. Warm up, take the bong hit on THE HOTBOX CLOUD and float in. Loot guns off tables, racks and shelves (common, rare, epic, legendary), ammo for your gun type, heals and attachments. Find a key card for a VAULT, ride the BONG EXPRESS, take the TUNNELS, grab a WEED BALLOON. The NIGHTSHADE CLOUD closes five times - the last one standing wins.${M && M.squad ? '' : ''}</div>`;
+  if (focusSel) focusFirst(focusSel);
+}
+function brlobStats() {
+  const s = brpLoad(), row = (a, b) => `<span>${a}<b>${b}</b></span>`, by = k => s.by[k] ? `${s.by[k].w} / ${s.by[k].m}` : '0 / 0';
+  onbCard(`<small>LAST TOKE</small><b>YOUR STATS</b><div class="pg-res-rows" style="display:grid;grid-template-columns:1fr 1fr;gap:6px 22px;margin:12px 0">${row('ROUNDS', s.m)}${row('WINS', s.w)}${row('TOP 5', s.t5)}${row('KILLS', s.k)}${row('K/D', (s.k / Math.max(1, s.m - s.w)).toFixed(2))}${row('AVERAGE PLACE', s.m ? (s.ps / s.m).toFixed(1) : '-')}${row('BEST PLACE', s.best ? '#' + s.best : '-')}${row('WIN STREAK', s.streak + ' (best ' + s.bestStreak + ')')}${row('SOLO WINS', by('solo'))}${row('DUOS WINS', by('duos'))}${row('SQUADS WINS', by('squads'))}</div>`, { ok: () => {} });
+}
+function brlobAct(act) {
+  if (act === 'br-play') { sfx.ui(); brlobOpen(); return true; }
+  if (/^(go-on|go-mp|deploy|play|go-zombies)$/.test(act)) { brlobOff(); return false; }
+  if (!BRLOB.on || curScreen !== 'lobby') return false;
+  const s = brpLoad(), re = sel => { brlobSave(); sfx.ui(); brlobRender(sel); };
+  if (act === 'bl-start' || act === 'lob-start') {
+    const m = brlobMode(); if (!m) { startMatch('br', BRLOB.sq > 1 ? { map: 'random', squad: BRLOB.sq } : { map: 'random' }); return true; }
+    LOBBY.mode = m; try { quickPlay([m]); } catch (e) { reportError(e); } return true;
+  }
+  if (act === 'bl-net-' || act === 'bl-net+') { BRLOB.net = BRLOB.net === 'on' ? 'off' : 'on'; re('[data-act="bl-net+"]'); return true; }
+  if (act === 'bl-sq-' || act === 'bl-sq+') { const L = [1, 2, 4], i = L.indexOf(BRLOB.sq); BRLOB.sq = L[(i + (act.endsWith('+') ? 1 : 2)) % 3]; re('[data-act="bl-sq+"]'); return true; }
+  if (act === 'bl-rk-' || act === 'bl-rk+') { BRLOB.rk = !BRLOB.rk; re('[data-act="bl-rk+"]'); return true; }
+  if (act === 'bl-cls-' || act === 'bl-cls+') { s.cls = ((s.cls | 0) + (act.endsWith('+') ? 1 : CLASSES.length - 1)) % CLASSES.length; brpSave(s); re('[data-act="bl-cls+"]'); return true; }
+  if (act === 'bl-tr-' || act === 'bl-tr+') { const ok = BRP_TRAILS.filter(t => t.need(s)), i = Math.max(0, ok.findIndex(t => t.id === s.trail)); s.trail = ok[(i + (act.endsWith('+') ? 1 : ok.length - 1)) % ok.length].id; brpSave(s); re('[data-act="bl-tr+"]'); return true; }
+  if (act === 'bl-stats') { sfx.ui(); brlobStats(); return true; }
+  return false;
+}
+(() => { const s = document.createElement('style'); s.textContent = `#lobby.brl .cod-row .arw .mini{min-width:28px}#lobby.brl .cod-row.wide span{line-height:1.6}.br-pick .onb-t.on{border-color:#8fff6a}`; document.head.appendChild(s); })();
 /* ================================================================== LAST TOKE, deeper (1.2.85)
    ARMOR PLATES  - up to 3 plates on (150 extra health, taken first by bullets and blasts, not by the cloud). Carry up to
                    5; crates give 1-2, a supply drop 3. PLATE (4, LB on a controller) puts one on (1 s, no shooting).
@@ -12365,6 +13350,7 @@ const LT_BUY = [
   { k: 'uav', n: 'UAV', c: 1500, d: 'enemies on your minimap for 25 s' },
   { k: 'self', n: 'SELF-REVIVE KIT', c: 2500, d: 'the next time you would go out, you get back up' },
   { k: 'squad', n: 'SQUAD REDEPLOY', c: 4000, d: 'dead squadmates come back next to you (squads)' },
+  { k: 'drop', n: 'LOADOUT DROP', c: 4000, d: 'a crate falls with the class you picked in the LAST TOKE lobby' },
 ];
 const ltOn = () => !!(M && M.br && M.mode === 'br');
 function ltSeed(s) { let h = 2166136261; for (const c of String(s)) { h ^= c.charCodeAt(0); h = Math.imul(h, 16777619); } return () => { h = (Math.imul(h, 1664525) + 1013904223) >>> 0; return h / 4294967296; }; }
@@ -12452,6 +13438,7 @@ function ltBuy(i) {
   if (b.k === 'uav') { STK.uavT = Math.max(STK.uavT, 25); }
   if (b.k === 'self') LT.selfRev = true;
   if (b.k === 'squad') ltRedeploy();
+  if (b.k === 'drop') { try { brpDropBuy(); } catch (e) { reportError(e); } }
   try { sfx.pickup(); showMsg(b.n + ' BOUGHT'); } catch (e) {}
   return true;
 }
@@ -13103,8 +14090,8 @@ function vhRemote(R, a) {
    arrives, when a fight starts close by, or when it is stuck for good. Bots in a vehicle don't shoot. */
 function vhBotWant(e, tx, tz) {
   if (e.veh || e.net || !VH.list.length || (e.vhNoT && M.t < e.vhNoT)) return null;
-  const g = e.group.position; if (Math.hypot(tx - g.x, tz - g.z) < 35) return null;
-  let best = null, bd = 22; for (const v of VH.list) { if (v.dead || v.driver || (v.want && v.want !== e)) continue; const d = Math.hypot(v.x - g.x, v.z - g.z); if (d < bd) { bd = d; best = v; } }
+  const g = e.group.position; if (Math.hypot(tx - g.x, tz - g.z) < 25) return null;   // (1.2.93: bots take cars more: 25 m, cars up to 40 m away)
+  let best = null, bd = 40; for (const v of VH.list) { if (v.dead || v.driver || (v.want && v.want !== e)) continue; const d = Math.hypot(v.x - g.x, v.z - g.z); if (d < bd) { bd = d; best = v; } }
   if (!best) return null; best.want = e;
   if (bd < 2.4) { vhBotEnter(e, best); return null; }
   return { x: best.x, z: best.z, y: best.y || 0 };
@@ -13153,7 +14140,7 @@ function vhRemoteBots(list) { if (!Array.isArray(list)) return; for (const a of 
    player runs their own down (dn in presence), a revive is sent as rv, the host's bots reviving a player as rb; the host's
    bots go down only on the host. Saved: nothing (M.squad lives for the match). */
 const SQ = { revT: 0, revWho: null, rvOut: null, rvT: 0, rvSeq: 0, rbOut: null, rbT: 0, rbSeq: 0 };
-const SQ_BLEED = 15, SQ_REVIVE = 3.5;
+const SQ_BLEED = 15, SQ_REVIVE = 2.4;   // the bong revive (1.2.93; was 3.5)
 const sqOn = () => !!(M && M.squad > 1 && M.mode === 'br');
 // someone in this team still standing (not downed, not dead), not counting `skip`
 function sqStanding(team, skip) {
@@ -13177,8 +14164,8 @@ function sqBotDown(e) {
   e.group.rotation.x = -1.25;   // lying down
   return true;
 }
-function sqPlayerUp() { G.downed = false; G.bleed = 0; G.health = 40; try { showBanner('BACK ON YOUR FEET', 'your squad picked you up'); sfx.ui(); } catch (e) {} }
-function sqBotUp(e, by) { e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; if (by === 'player') try { achAdd('revives'); popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
+function sqPlayerUp() { try { brsqPuff(P.x, P.y + 1, P.z, 7); tone(320, 0.05, 0.04, 'sine', 700); } catch (e) {} G.downed = false; G.bleed = 0; G.health = 40; try { showBanner('BACK ON YOUR FEET', 'your squad picked you up'); sfx.ui(); } catch (e) {} }
+function sqBotUp(e, by) { try { brsqPuff(e.group.position.x, e.group.position.y + 1, e.group.position.z, 7); e.carried = false; if (BRSQ.carry === e) BRSQ.carry = null; } catch (er) {} e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; if (by === 'player') try { achAdd('revives'); popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
 /* ---------- every frame (from brUpdate) */
 function sqUpdate(dt) {
   if (!sqOn()) return;
@@ -13244,6 +14231,7 @@ function sqNetBotTeam() {
 // in the bots' loop: true while this bot is downed (it crawls toward a squadmate, no shooting)
 function sqBotDowned(e, dt) {
   if (!e.downed) return false;
+  if (e.carried) return true;   // on my shoulder (brsquad.js)
   const g = e.group.position; let tx = null, tz = null, bd = 1e9;
   if (e.team === M.myTeam && playerAlive() && !G.downed) { tx = P.x; tz = P.z; bd = Math.hypot(P.x - g.x, P.z - g.z); }
   for (const o of enemies) if (o !== e && o.team === e.team && !o.downed && o.entry && o.entry.alive !== false) { const d = Math.hypot(o.group.position.x - g.x, o.group.position.z - g.z); if (d < bd) { bd = d; tx = o.group.position.x; tz = o.group.position.z; } }
@@ -13259,7 +14247,7 @@ function sqBotGoal(e, set) {
   for (const o of enemies) if (o !== e && o.downed && o.team === e.team) { const d = Math.hypot(o.group.position.x - g.x, o.group.position.z - g.z); if (d < bd) { bd = d; best = { x: o.group.position.x, z: o.group.position.z, y: 0 }; } }
   if (!best) return null;
   if (bd < 1.6) {   // there: revive (a bot squadmate; me is handled in sqUpdate)
-    for (const o of enemies) if (o !== e && o.downed && o.team === e.team && Math.hypot(o.group.position.x - g.x, o.group.position.z - g.z) < 1.8) { o.revT = (o.revT || 0) + 0.3; if (o.revT >= SQ_REVIVE) sqBotUp(o, e); break; }
+    for (const o of enemies) if (o !== e && o.downed && o.team === e.team && Math.hypot(o.group.position.x - g.x, o.group.position.z - g.z) < 1.8) { o.revT = (o.revT || 0) + 0.45; if (o.revT >= SQ_REVIVE) sqBotUp(o, e); break; }
   }
   return set(best, 0.3);
 }
@@ -14067,8 +15055,10 @@ function privCodeHtml() {
     `<div class="net-form"><label>PRIVATE MATCH CODE<input id="netCode" maxlength="20" value="${NET.code === 'public' ? '' : NET.code}" placeholder="e.g. squad7" autocomplete="off" spellcheck="false"></label><button class="btn net-codebtn" id="netCodeGo">HOST / JOIN</button></div><div class="net-lan" id="netLan"></div></div>`;
 }
 const modeGroup = k => MODES[k].online ? 'on' : 'off';
+const brModeKey = k => k === 'br' || k === 'rbr' || /^obr/.test(k);   // LAST TOKE lives in its own lobby (brprog.js)
 function renderLobby(focusSel) {
   if (typeof ZL !== 'undefined' && ZL.on) return renderZLobby(focusSel);
+  if (typeof BRLOB !== 'undefined' && BRLOB.on) return brlobRender(focusSel);
   if (!MODES[LOBBY.mode].online || !playlist().includes(LOBBY.mode)) LOBBY.mode = playlist()[0];
   const sel = LOBBY.mode, d = MODES[sel], online = !!d.online, st = careerOf(online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   if (online) LOBBY.lastOn = sel; else LOBBY.lastOff = sel;
@@ -14103,7 +15093,7 @@ function rosterHtml(k) {
   return `<div class="ros-h"><span>LOBBY</span><b>${n} PLAYERS</b></div><div class="ros-team"><div class="tn">FREE-FOR-ALL</div>${p(me, 'me', 'READY')}${names.slice(0, n - 1).map(x => p(x.toUpperCase(), '', 'READY')).join('')}</div>` + info;
 }
 function openModes() {
-  const g = modeGroup(LOBBY.mode), list = MODE_ORDER.filter(k => modeGroup(k) === g);
+  const g = modeGroup(LOBBY.mode), list = MODE_ORDER.filter(k => modeGroup(k) === g && !brModeKey(k));
   $('modesTtl').textContent = g === 'on' ? 'ONLINE · GAME MODE' : 'GAME MODE';
   $('modeGrid').innerHTML = list.map(k => `<button class="mode-card${k === LOBBY.mode ? ' on' : ''}" data-mode="${k}"><i>${MODES[k].icon}</i><b>${MODES[k].name}</b><p>${MODES[k].desc}</p><span>${modeRules(k)}</span></button>`).join('');
   for (const b of $('modeGrid').children) b.onclick = () => { LOBBY.mode = b.dataset.mode; saveLobby(); sfx.ui(); renderLobby('.cod-go'); showScreen('lobby'); focusFirst('.cod-go'); };
@@ -14117,7 +15107,7 @@ function lobbyMapRow(d) {
   return `<div class="lob-map"><span>MAP${d.online && NET.app ? ' (IF YOU HOST)' : ''}</span><div class="lob-cpick"><button class="mini" data-act="map-" aria-label="Previous map">&lsaquo;</button><b>${name}</b><button class="mini" data-act="map+" aria-label="Next map">&rsaquo;</button></div><small>${sub}</small></div>`;
 }
 function cycleMap(dir) { const L = MAP_CHOICES(), i = Math.max(0, L.indexOf(LOBBY.map)); LOBBY.map = L[(i + dir + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-map [data-act="map' + (dir > 0 ? '+' : '-') + '"]'); }
-function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-go'); }
+function lobbyTab(d) { const L = MODE_ORDER.filter(k => modeGroup(k) === modeGroup(LOBBY.mode) && !brModeKey(k)), i = L.indexOf(LOBBY.mode); LOBBY.mode = L[(i + d + L.length) % L.length]; saveLobby(); sfx.ui(); renderLobby('.cod-go'); }
 
 /* ---------- custom game */
 const CUS_KEY = 'ashfall.custom.v1';
@@ -16147,7 +17137,7 @@ function renderLoadout(focusSel) {
       return `<button class="lo-opt${on ? ' on' : ''}" data-lo-a="${a.id}"><div class="lo-name">${a.name}${on ? '<em>EQUIPPED</em>' : a === stockFor(d, loSlot) ? '<em class="f">FACTORY</em>' : ''}</div><div class="lo-desc">${a.desc}</div>` +
         (pc.pros.length || pc.cons.length ? `<div class="lo-pc">${pc.pros.map(p => `<span class="pro">+ ${p}</span>`).join('')}${pc.cons.map(x => `<span class="con">− ${x}</span>`).join('')}</div>` : '') + '</button>';
     }).join('');
-  } else if (loRow === 'e') html = Object.keys(EQUIP).map(k => `<button class="lo-opt${k === c.e ? ' on' : ''}" data-lo-e="${k}"><div class="lo-name">${EQUIP[k].name} <small>×${EQUIP[k].count}</small>${k === c.e ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${EQUIP[k].desc}</div></button>`).join('');
+  } else if (loRow === 'e') html = Object.keys(EQUIP).filter(k => !EQUIP[k].brOnly).map(k => `<button class="lo-opt${k === c.e ? ' on' : ''}" data-lo-e="${k}"><div class="lo-name">${EQUIP[k].name} <small>×${EQUIP[k].count}</small>${k === c.e ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${EQUIP[k].desc}</div></button>`).join('');
   else { const tier = PERK_KEYS.indexOf(loRow) + 1; html = Object.keys(PERKS).filter(k => PERKS[k].t === tier).map(k => `<button class="lo-opt perk-t${tier}${k === c[loRow] ? ' on' : ''}" data-lo-k="${k}"><div class="lo-name">${PERKS[k].name}${k === c[loRow] ? '<em>EQUIPPED</em>' : ''}</div><div class="lo-desc">${PERKS[k].desc}</div></button>`).join(''); }
   $('loOpts').innerHTML = html;
   renderLoStats();
@@ -16627,7 +17617,7 @@ function netPublish() {
   if (NET.spec) { NET.room.presence({ v: 1, on: 1, spec: 1, rm: netRoomName(), n: NET.nick, a: 0, ep: NET.ep }); return; }   // WATCH: a spectator only says it is there
   const w = WEAPONS[G.cur], alive = !!(M.me && M.me.alive && (G.state === 'playing' || pausedOnline()));
   NET.room.presence({ v: 1, on: 1, rm: netRoomName(), n: NET.nick, cm: typeof CHAT !== 'undefined' && CHAT.mine.all.length ? CHAT.mine.all.slice() : undefined, bn: typeof bannerFor === 'function' ? bannerFor() : '', lv: typeof lvlInfo === 'function' ? lvlInfo(PROG.xp).l : 1, tm: M.myTeam, x: r2(P.x), y: r2(P.y), z: r2(P.z), yw: r3(P.yaw), pt: r3(P.pitch), cr: P.eye < 1.4 ? 1 : 0, sl: perk('dead') ? 1 : 0, gh: perk('ghost') ? 1 : 0,
-    ph: M.ph && phMeProp() ? M.ph.kind : -1, bo: M.br && M.br.mine && M.br.mine.length ? M.br.mine.slice(-24) : undefined, bl: M.br && typeof brlPres === 'function' ? brlPres() || undefined : undefined, vh: M.br ? vhPack() : undefined, pg: pingPack(), bk: brkPack(), em: emotePack(), fc: fuPack(), wx: M.br && NET.room && NET.room.host ? ltWx() : undefined, ...(M.squad > 1 ? sqNetPres() : {}), vb: M.br && NET.room && NET.room.host ? vhPackBots() : undefined, a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ec: typeof edNetCode === 'function' ? edNetCode() : undefined, sa: NET.sa, ct: crewTag() || undefined, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
+    ph: M.ph && phMeProp() ? M.ph.kind : -1, bo: M.br && M.br.mine && M.br.mine.length ? M.br.mine.slice(-24) : undefined, bl: M.br && typeof brlPres === 'function' ? brlPres() || undefined : undefined, cr: M.br && typeof brpCrown === 'function' ? brpCrown() || undefined : undefined, vh: M.br ? vhPack() : undefined, pg: pingPack(), bk: brkPack(), em: emotePack(), fc: fuPack(), wx: M.br && NET.room && NET.room.host ? ltWx() : undefined, ...(M.squad > 1 ? sqNetPres() : {}), vb: M.br && NET.room && NET.room.host ? vhPackBots() : undefined, a: alive ? 1 : 0, wu: NET.room && NET.room.host ? Math.ceil(warmLeft()) : 0, wn: w ? w.name : '', k: NET.k, d: NET.d, ds: NET.ds, kb: NET.kb, kh: NET.kh, sh: NET.sh, hs: NET.hs, ep: NET.ep, mp: curMap, ec: typeof edNetCode === 'function' ? edNetCode() : undefined, sa: NET.sa, ct: crewTag() || undefined, mv: NET.mv || undefined, vo: NET.room && NET.room.host && MV.opts && NET.endT > 0 ? MV.opts : undefined, sk: SMK.out.length ? SMK.out : undefined, cj: STK.jamT > 0 ? 1 : 0, ho: NET.room && NET.room.host ? 1 : 0, ob: NET.room && NET.room.host ? netObjPack() : undefined, pc: NET.priv && NET.room && NET.room.host ? privPack() : undefined }).catch(() => {});
 }
 // called by shoot(): one per trigger pull, for the others' muzzle flashes
 function netShot() { try { potgShot(); } catch (e) {} if (NET.on) NET.sh++; if (typeof ZC !== 'undefined' && ZC.on) ZC.sh++; }
@@ -16727,7 +17717,7 @@ function netTick(dt) {
     if (!pr.bot) chatIngest('all', p.peer, R.entry.name, pr.cm);
     R.bn = typeof pr.bn === 'string' && COS[pr.bn] && COS[pr.bn].kind === 'banner' ? pr.bn : ''; R.lv = netNum(pr.lv, 1, 100, 1);
     R.cj = pr.cj ? 1 : 0; R.entry.tag = typeof pr.ct === 'string' ? pr.ct.replace(/[^A-Z0-9]/g, '').slice(0, 4) : ''; R.mv = typeof pr.mv === 'string' ? pr.mv : ''; if (pr.ho && !pr.bot && !isHost) NET.voHost = Array.isArray(pr.vo) && pr.vo.every(id => MAPS[id]) ? pr.vo.slice(0, 3) : null; try { smkFromNet(R, pr.sk); } catch (e) {} R.sl = pr.sl ? 1 : 0; R.gh = pr.gh ? 1 : 0; if (R.bot) { R.bot.silent = !!R.sl; R.bot.ghost = !!R.gh; } R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, -5, 260); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.pt = netNum(pr.pt, -1.6, 1.6);
-    R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep; if (isHost && M.br && Array.isArray(pr.bo) && R.ep === NET.ep) brRemoteOpened(pr.bo); if (M.br && pr.bl && R.ep === NET.ep) try { brlRemote(pr.bl); } catch (e) {} if (M.br && pr.vh && R.ep === NET.ep) try { vhRemote(R, pr.vh); } catch (e) {} if (pr.pg && !pr.bot) try { pingRemote(R, pr.pg); } catch (e) {} if (pr.bk && R.ep === NET.ep) try { brkApply(pr.bk); } catch (e) {} if (!pr.bot) try { fuRemote(R, pr.fc); try { emoteRemote(R, pr.em); } catch (e) {} } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost) try { ltWxApply(pr.wx | 0); } catch (e) {} if (M.squad > 1) try { sqNetApply(R, pr); } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost && pr.vb && R.ep === NET.ep) try { vhRemoteBots(pr.vb); } catch (e) {} R.ph = Number.isInteger(pr.ph) && pr.ph >= 0 && pr.ph < PH_KINDS.length ? pr.ph : -1;
+    R.ep = +pr.ep || 0; if (R.ep > maxEp) maxEp = R.ep; if (isHost && M.br && Array.isArray(pr.bo) && R.ep === NET.ep) brRemoteOpened(pr.bo); if (M.br && pr.bl && R.ep === NET.ep) try { brlRemote(pr.bl); } catch (e) {} if (M.br && R.bot) try { brpCrownOn(R.bot, +pr.cr > 0); } catch (e) {} if (M.br && pr.vh && R.ep === NET.ep) try { vhRemote(R, pr.vh); } catch (e) {} if (pr.pg && !pr.bot) try { pingRemote(R, pr.pg); } catch (e) {} if (pr.bk && R.ep === NET.ep) try { brkApply(pr.bk); } catch (e) {} if (!pr.bot) try { fuRemote(R, pr.fc); try { emoteRemote(R, pr.em); } catch (e) {} } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost) try { ltWxApply(pr.wx | 0); } catch (e) {} if (M.squad > 1) try { sqNetApply(R, pr); } catch (e) {} if (M.br && pr.ho && !pr.bot && !isHost && pr.vb && R.ep === NET.ep) try { vhRemoteBots(pr.vb); } catch (e) {} R.ph = Number.isInteger(pr.ph) && pr.ph >= 0 && pr.ph < PH_KINDS.length ? pr.ph : -1;
     R.entry.kills = R.ep === NET.ep ? (+pr.k | 0) : 0; R.entry.deaths = R.ep === NET.ep ? (+pr.d | 0) : 0; R.entry.score = R.entry.kills * 100;
     // a death since last time: drop them, credit the killer
     const ds = +pr.ds | 0;
@@ -17119,7 +18109,7 @@ function renderPlobby(full) {
    hosting; if none, you host one in a random mode from the list. Everyone waits in a pre-game lobby with the player
    list while a 15 second countdown runs (the host's clock), then the match starts for everyone at once. Players who
    find the match after it started drop straight in. */
-const ONLINE_MODES = () => MODE_ORDER.filter(k => MODES[k].online);
+const ONLINE_MODES = () => MODE_ORDER.filter(k => MODES[k].online && !(k === 'rbr' || /^obr/.test(k)));   // (LAST TOKE has its own lobby)
 function playlist() {
   const ok = ONLINE_MODES(); let L = Array.isArray(LOBBY.playlist) ? LOBBY.playlist.filter(k => ok.includes(k)) : [];
   if (!L.length) L = ['otdm', 'offa'];
@@ -18634,6 +19624,7 @@ function progMatchXP(won, partial) {
     else if (M && M.mode === 'zomb') add('ROUNDS SURVIVED', Math.max(0, (Z.round | 0) - 1) * 200);
     else { add('MATCH COMPLETE', 500); if (won === 1) add('VICTORY', 1000); else if (won === 0) add('DRAW', 400); }
   }
+  try { if (M && M.br && !partial && typeof brpXpRows === 'function') for (const r of brpXpRows()) add(r[0], r[1]); } catch (e) {}   // LAST TOKE placement (brprog.js)
   let sum = rows.reduce((s, r) => s + r[1], 0);
   if (online && sum) { const b = Math.round(sum * 0.25); rows.push(['ONLINE BONUS +25%', b]); sum += b; }
   try { if (M && M.feat && sum) { rows.push(['FEATURED · ' + M.feat.name + ' · 2× XP', sum]); sum *= 2; } } catch (e) {}
@@ -21067,7 +22058,7 @@ function featTiles() {
 }
 function featAct(act) {
   if (act === 'feat-play') { featPlay(); return true; }
-  if (act === 'br-play') { sfx.ui(); sqPicker(); return true; }
+  if (act === 'br-play') { sfx.ui(); brlobOpen(); return true; }   // the LAST TOKE lobby (brprog.js)
   if (act === 'rejoin') { sfx.ui(); rjGo(); return true; }
   return false;
 }
@@ -26328,7 +27319,7 @@ const SCHEMA = {
   ],
   BUTTONS: [
     { t: 'action', name: '‹ BACK TO CONTROLLER SETTINGS', label: 'BACK', act: 'pad-back' },
-    ...['jump:JUMP', 'crouch:CROUCH / SLIDE', 'reload:RELOAD / USE', 'swap:SWITCH WEAPON', 'grenade:THROW GRENADE', 'melee:MELEE', 'sprint:SPRINT', 'streak:USE SCORESTREAK', 'inspect:INSPECT WEAPON', 'board:SCOREBOARD', 'ping:PING', 'field:FIELD UPGRADE', 'plate:ARMOR PLATE', 'heal:HEAL (LAST TOKE)', 'emote:EMOTE WHEEL', 'map:MAP'].map(x => { const [a, n] = x.split(':'); return { a, t: 'padbind', name: n }; }),
+    ...['jump:JUMP', 'crouch:CROUCH / SLIDE', 'reload:RELOAD / USE', 'swap:SWITCH WEAPON', 'grenade:THROW GRENADE', 'melee:MELEE', 'sprint:SPRINT', 'streak:USE SCORESTREAK', 'inspect:INSPECT WEAPON', 'board:SCOREBOARD', 'ping:PING', 'field:FIELD UPGRADE', 'plate:ARMOR PLATE', 'heal:HEAL (LAST TOKE)', 'deploy:DEPLOY COVER (LAST TOKE)', 'emote:EMOTE WHEEL', 'map:MAP'].map(x => { const [a, n] = x.split(':'); return { a, t: 'padbind', name: n }; }),
   ],
   CONTROLLER: [
     { t: 'action', name: 'BUTTON LAYOUT', hint: 'Change which controller button does what', label: 'EDIT CONTROLLER BUTTONS', act: 'pad-binds' },
@@ -26369,6 +27360,7 @@ const SCHEMA = {
     { k: 'potg', t: 'toggle', name: 'PLAY OF THE GAME', hint: 'Your best multi-kill of the match plays before the scoreboard' },
     { k: 'killcam', t: 'toggle', name: 'KILLCAM', hint: 'With the death cam on: see your death over the killer\'s shoulder first' },
     { k: 'hitMarkers', t: 'toggle', name: 'HIT MARKERS' },
+    { k: 'dmgNums', t: 'seg', name: 'DAMAGE NUMBERS', hint: 'How much each hit did, floating off the target', opts: [['off', 'OFF'], ['br', 'LAST TOKE'], ['all', 'EVERY MODE']] },
     { k: 'killFx', t: 'toggle', name: 'KILL EFFECTS', hint: 'A confirm sound on every kill (sharper on headshots) and a glow round the screen that grows with your streak' },
     { k: 'dmgIndicator', t: 'toggle', name: 'DAMAGE DIRECTION INDICATOR' },
     { k: 'radar', t: 'toggle', name: 'RADAR' },
@@ -26469,6 +27461,7 @@ function actions(act) {
   if (/^(lk-|rw-|locker$|rewards$)/.test(act) && typeof lockerAct === 'function' && lockerAct(act)) return;
   if (/^(cp-|campaign$)/.test(act) && typeof campAct === 'function' && campAct(act)) return;
   if (/^(sv-|bk-|er-)/.test(act) && typeof lnAct === 'function' && lnAct(act)) return;
+  if (typeof brlobAct === 'function' && brlobAct(act)) return;   // the LAST TOKE lobby (brprog.js)
   if (typeof zombAct === 'function' && zombAct(act)) return;
   switch (act) {
     case 'deploy': case 'play': toLobby(); break;
@@ -26563,7 +27556,7 @@ function goBack() {
 // everything the controller / arrow keys can move between: the open popup if there is one (update notes, on-screen
 // keyboard, Homecoming splash), else the current screen, plus a friend-request toast if one is showing
 const NAV_SEL = 'button, .sw, input[type=range], input[type=text], input:not([type])';
-function navModal() { return document.querySelector('#oskBox, #hcSplash:not(.out), .app-notes, #boxOv, #boxSee, #lnOv, #mcPick, #presOv, #campEndEl, #bpSwOv, #mapOv, #emoteWheel, #ltBuy, #tourOv, #zcusOv, #evCal, #edOv, #hudEd, .onb-ov'); }
+function navModal() { return document.querySelector('#oskBox, #hcSplash:not(.out), .app-notes, #boxOv, #boxSee, #lnOv, #mcPick, #presOv, #campEndEl, #bpSwOv, #mapOv, #emoteWheel, #ltBuy, #tourOv, #zcusOv, #evCal, #edOv, #hudEd, #brBox, #brPick, .onb-ov'); }
 function focusables() {
   const vis = x => !x.disabled && x.tabIndex !== -1 && x.getClientRects().length > 0 && getComputedStyle(x).visibility !== 'hidden';
   const modal = navModal(); if (modal) return [...modal.querySelectorAll(NAV_SEL)].filter(vis);
@@ -26996,7 +27989,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { BRL_GET: () => BRL, brlTakeL: it => brlTake(it), brPack: () => brPack(), BRF_GET: () => BRF, brfCineTickL: dt => brfCineTick(dt), mapToggleL: () => mapToggle(), MAPV_GET: () => MAPV, PING_GET: () => PING, TH, TERR_GET: () => TERR, stashHeightL: (x, z) => stashHeight(x, z), zwwGiveL: m => zwwGive(m), zwwFireL: w => zwwFire(w), zwwL: () => ZWWL.length, edPrivPick, edNetCode, ccCampSt: () => CAMP.st, ccSpawnL: n => campSpawnSquad(n, { alert: true }), ccPlayL: (a, b) => campPlay(a, b), ccStepL: () => campStepDone(), ccDmgL: (...a) => damageEnemy(...a), ccDoneL: () => campComplete(), ccJoin, ccLeave, CC_GET: () => CC, ccHost: () => ccHost(), ccClient: () => ccClient(), edOpen, edPlay, edCode, edUncode, edDefine, ED_GET: () => ED, ISLE_W, isleWinter, chwOpen, CHW_GET: () => CHW, zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { BRP_GET: () => BRP, BRLOB_GET: () => BRLOB, brpLoadL: () => brpLoad(), brpDropBuyL: () => brpDropBuy(), endMatchL: w => endMatch(w), brpXpRowsL: () => brpXpRows(), BRI_GET: () => BRI, LT_GET: () => LT, BRFG_GET: () => BRFG, smkCloudL: (p, k, m) => smkCloud(p, k, m), BRB_GET: () => BRB, BRSQ_GET: () => BRSQ, brsqCallL: i => brsqCall(i), emoteWheelL: () => emoteWheel(), BRL_GET: () => BRL, brlTakeL: it => brlTake(it), brPack: () => brPack(), BRF_GET: () => BRF, brfCineTickL: dt => brfCineTick(dt), mapToggleL: () => mapToggle(), MAPV_GET: () => MAPV, PING_GET: () => PING, TH, TERR_GET: () => TERR, stashHeightL: (x, z) => stashHeight(x, z), zwwGiveL: m => zwwGive(m), zwwFireL: w => zwwFire(w), zwwL: () => ZWWL.length, edPrivPick, edNetCode, ccCampSt: () => CAMP.st, ccSpawnL: n => campSpawnSquad(n, { alert: true }), ccPlayL: (a, b) => campPlay(a, b), ccStepL: () => campStepDone(), ccDmgL: (...a) => damageEnemy(...a), ccDoneL: () => campComplete(), ccJoin, ccLeave, CC_GET: () => CC, ccHost: () => ccHost(), ccClient: () => ccClient(), edOpen, edPlay, edCode, edUncode, edDefine, ED_GET: () => ED, ISLE_W, isleWinter, chwOpen, CHW_GET: () => CHW, zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}
@@ -27196,6 +28189,7 @@ setInterval(() => { try { langApply(); } catch (e) {} }, 1000);
    SETTINGS > AUDIO > SQUAD VOICE LINES turns them off. */
 const SQV = { t: 0, voices: null };
 const SQV_LINES = {
+  spot: ['Enemy spotted!', 'Contact!', 'Got eyes on one!', 'Enemy over there!'],
   down: ["I'm down!", 'Need a revive!', "I'm hit, I'm down!", 'Get me up!'],
   up: ['Thanks, I owe you.', "I'm back up.", 'Good looking out.'],
   revived: ['Got you, get up.', 'On your feet.', "You're good, go."],
@@ -27791,6 +28785,8 @@ function mapDraw() {
   // vehicles, pings, the squad, me
   try { for (const v of VH.list) if (!v.dead) { g.fillStyle = '#d8d8d8'; g.fillRect(X(v.x) - 3, Z(v.z) - 3, 6, 6); } } catch (e) {}
   try { for (const p of PING.list) { g.fillStyle = p.kind === 'enemy' ? '#ff4a3a' : '#5dff7a'; g.beginPath(); g.arc(X(p.x), Z(p.z), 6, 0, TAU); g.fill(); } } catch (e) {}
+  try { if (typeof BRF !== 'undefined' && BRF.float && BRF.land) { g.strokeStyle = '#8fff6a'; g.lineWidth = 3; g.beginPath(); g.arc(X(BRF.land.x), Z(BRF.land.z), 9, 0, TAU); g.stroke(); g.fillStyle = '#8fff6a'; g.font = 'bold 12px sans-serif'; g.fillText('LANDING', X(BRF.land.x), Z(BRF.land.z) - 16); } } catch (e) {}   // the float in (brprog.js)
+  try { const kl = typeof BRP !== 'undefined' && BRP.kl; if (kl && !kl.isPlayer && kl.bot && kl.bot.group) { const q = kl.bot.group.position; g.fillStyle = '#ff4a3a'; g.beginPath(); g.arc(X(q.x), Z(q.z), 7, 0, TAU); g.fill(); g.fillText('KILL LEADER', X(q.x), Z(q.z) - 14); } } catch (e) {}
   for (const e of enemies) if (e.group && typeof isFriend === 'function' && isFriend(e) && (!e.entry || e.entry.alive !== false)) { g.fillStyle = '#5ac8ff'; g.beginPath(); g.arc(X(e.group.position.x), Z(e.group.position.z), 5, 0, TAU); g.fill(); }
   const px = X(P.x), pz = Z(P.z), fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw);
   g.fillStyle = '#ffd23a'; g.strokeStyle = '#000'; g.lineWidth = 2; g.beginPath(); g.moveTo(px + fx * 12, pz + fz * 12); g.lineTo(px - fz * 7 - fx * 6, pz + fx * 7 - fz * 6); g.lineTo(px + fz * 7 - fx * 6, pz - fx * 7 - fz * 6); g.closePath(); g.fill(); g.stroke();

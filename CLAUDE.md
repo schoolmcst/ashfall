@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.93 TEST (released to TEST APP): the rest of the owner's BR list (31-38, 39-44, 7, 22-30, 9-20, 45-51, 58-60, own lobby, loadout drops).
+- 1.2.93 PUBLIC (owner said send it): the rest of the owner's BR list (31-38, 39-44, 7, 22-30, 9-20, 45-51, 58-60, own lobby, loadout drops).
   Order in brSetup: brbVaultsBuild, brfgSetup, briSetup (before brlSetup: the vault and train loot is built inside
   brlBuild), brlSetup, brsqSetup + brpSetup, vhSetup, ltSetup. brUpdate ticks brlTick, brsqTick, brbTick, brfgTick,
   briTick, brpTick. The 'b' pack ends: ..crates, BRL.seed, brbVaultMask(), BRI.age (train clock).
