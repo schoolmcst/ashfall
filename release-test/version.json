@@ -1,14 +1,11 @@
 {
- "version": "1.2.107",
+ "version": "1.2.108",
  "notes": [
-  "HOTBOX HORDE batch F (heroes and crew): HERO LEVELS 1-20 and a SKILL TREE (ARMOUR, FIREPOWER, SCAVENGER) in the lobby",
-  "HERO ABILITIES on T: BUILDER instant wall, GUNNER burst, SCRAPPER ground pound, MEDIC heal bomb",
-  "New guns: CROSSBOW, THE TRIMMER DMR, SEED SPITTER and the wonder weapon THE BONG - crafted guns roll a PERK and can be REPAIRED",
-  "MELEE weapons to craft: BAT, MACHETE, SCYTHE",
-  "SURVIVORS: rescued growers move into your base (+5% buds each)",
-  "CREW ORDERS on X: GUARD, FOLLOW, HARVEST, REPAIR (at home they also water dry plants) - your crew keeps its names and levels up",
-  "Fixed: the crew never actually followed HOTBOX HORDE orders (they just wandered) - now they guard the plant"
+  "HOTBOX HORDE CO-OP: up to 4 players - HOST CO-OP / JOIN a code in the HOTBOX HORDE lobby; friends follow you into missions, raids and your HOMESTEAD (desktop app)",
+  "HORDE tab on the LEADERBOARD: cash earned, hardest win, missions cleared",
+  "New HOTBOX HORDE sounds: cash register, build clunks per material, trap snaps, wave horn, plant alarm, level-up jingle",
+  "FIRST STEPS: a welcome card and a checklist in THE HOMESTEAD (plant, harvest, sell, build, craft, mission) worth $500"
  ],
- "sha256": "c975c618a032f3d34a67ef7a277ec5c96120cb5328bbeaa20f88ca3d56e369cb",
+ "sha256": "651222c0ce9f5d24452ff36e2c76a4c929c67adddc0c1f824b4f1ab7391688c9",
  "minApp": "1.0.0"
 }
