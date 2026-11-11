@@ -497,13 +497,13 @@ function hhSpit(e, T) {
   const H = M.hh, g = e.group.position, from = new THREE.Vector3(g.x, g.y + 1.6 * e.K.sc, g.z); let hit = null; const to = new THREE.Vector3(T.x, (T.y || 0) + 1.1, T.z);
   for (let k = 1; k <= 12 && !hit; k++) { const f = k / 12, x = from.x + (to.x - from.x) * f, z = from.z + (to.z - from.z) * f, y = from.y + (to.y - from.y) * f + Math.sin(f * Math.PI) * 2; for (const p of H.pieces) if (!p.trap && Math.abs(x - p.cx) < p.w / 2 + 0.1 && Math.abs(z - p.cz) < p.d / 2 + 0.1 && y > p.y && y < p.y + p.h) { hit = p; to.set(x, y, z); break; } }
   const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: 0x9aff3a, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.9, depthWrite: false })); s.scale.setScalar(0.5); s.position.copy(from); scene.add(s);
-  H.spits.push({ s, from, to, t: 0, T: 0.9, hit, tg: e.tg, dmg: e.K.dmg }); try { burst(0.2, 700, 0.06, 'bandpass', at(g.x, g.z, 20)); } catch (er) {}
+  H.spits.push({ s, from, to, t: 0, T: 0.9, hit, tg: e.tg, dmg: e.K.dmg, pdmg: e.K.throw ? e.K.bdmg : 20, rock: !!e.K.throw }); try { burst(0.2, 700, 0.06, 'bandpass', at(g.x, g.z, 20)); } catch (er) {}
 }
 function hhSpitTick(dt) {
   const H = M.hh;
   for (let i = H.spits.length - 1; i >= 0; i--) { const q = H.spits[i]; q.t += dt; const f = Math.min(1, q.t / q.T); q.s.position.lerpVectors(q.from, q.to, f); q.s.position.y += Math.sin(f * Math.PI) * 2;
     if (f >= 1) { scene.remove(q.s); H.spits.splice(i, 1); try { chunks('dust', q.to.clone(), 5, 2, 0.5); } catch (e) {}
-      if (q.hit) hhPieceHit(q.hit, 20); else if (q.tg === 'P') { if (playerAlive() && Math.hypot(P.x - q.to.x, P.z - q.to.z) < 1.6) try { hurtPlayer(q.dmg, q.from.x, q.from.z); } catch (e) {} } else if (q.tg && enemies.includes(q.tg)) { if (Math.hypot(q.tg.group.position.x - q.to.x, q.tg.group.position.z - q.to.z) < 1.6) try { damageEnemy(q.tg, q.dmg, false, null, false, 'world'); } catch (e) {} } else if (H.plant && Math.hypot(q.to.x - H.plant.x, q.to.z - H.plant.z) < 2.5) hhPlantHit(q.dmg); } }
+      if (q.hit) hhPieceHit(q.hit, q.pdmg || 20); else if (q.tg === 'P') { if (playerAlive() && Math.hypot(P.x - q.to.x, P.z - q.to.z) < 1.6) try { hurtPlayer(q.dmg, q.from.x, q.from.z); } catch (e) {} } else if (q.tg && enemies.includes(q.tg)) { if (Math.hypot(q.tg.group.position.x - q.to.x, q.tg.group.position.z - q.to.z) < 1.6) try { damageEnemy(q.tg, q.dmg, false, null, false, 'world'); } catch (e) {} } else if (H.plant && Math.hypot(q.to.x - H.plant.x, q.to.z - H.plant.z) < 2.5) hhPlantHit(q.dmg); } }
 }
 function hhTrapTick(dt) {
   const H = M.hh, tk = 1 + 0.2 * (H.lv.trap | 0), on = (g, p, r) => Math.abs(g.x - p.cx) < (r || 1.5) && Math.abs(g.z - p.cz) < (r || 1.5) && Math.abs(g.y - p.y) < 0.9;
@@ -625,7 +625,7 @@ function hhTick(dt) {
     if (near && !HH.build) { if (u) { H.ready = (H.ready || 0) + dt; showMsgOnce(`STARTING WAVE ${H.wave + 1} · ${Math.min(100, Math.round(H.ready / 1.2 * 100))}%`); if (H.ready >= 1.2) H.t = 0; } else { H.ready = 0; showMsgOnce(`THE MOTHER PLANT · HOLD ${actName('use')} TO START WAVE ${H.wave + 1} NOW`); } }
     if (H.t <= 0) hhStartWave();
   } else if (H.phase === 'wave') {
-    if (H.toSpawn > 0 && (H.spawnT -= dt) <= 0 && H.mobs.length < 26) { const R = H.rifts[(H.toSpawn + H.wave) % H.rifts.length], k = H.queue[H.queue.length - H.toSpawn]; hhMob(k, R.x + rnd(-1, 1), R.z + rnd(-1, 1), R.y); H.toSpawn--; H.spawnT = Math.max(0.45, 1.1 - H.wave * 0.1); }
+    if (H.toSpawn > 0 && (H.spawnT -= dt) <= 0 && H.mobs.length < 26) { const R = typeof hhPickRift === 'function' ? hhPickRift(H) : H.rifts[(H.toSpawn + H.wave) % H.rifts.length], k = H.queue[H.queue.length - H.toSpawn]; if (R) hhMob(k, R.x + rnd(-1, 1), R.z + rnd(-1, 1), R.y); H.toSpawn--; H.spawnT = Math.max(0.45, 1.1 - H.wave * 0.1); }
     if (H.toSpawn <= 0 && !H.mobs.length) hhWaveDone();
   }
   if (H.base) hhBaseTick(dt, u);

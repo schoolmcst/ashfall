@@ -152,6 +152,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.105 TEST (batch D = 29-35): hhmobs2.js. HH_KINDS shield (damageEnemy wrapper: x0.15 from the front), thrower (spit
+  with q.rock / q.pdmg), bigbaked + cougher (mini: waves 3/4 via a hhWaveList wrapper; cough in a hhTick wrapper), rootking
+  (raid to lv 5: roots slow, calls burnouts). Elites e.elite fast/armor/regen (10% from wave 2). NESTS: fake enemies
+  {nest, rig:{hits:[pod]}} on each rift in defend + raids (hhSetup/hhRaidStart wrappers); hhNestHit intercepts damageEnemy;
+  closed rifts skipped by hhPickRift (horde spawn line). Loot orbs dropped in the damageEnemy wrapper (hhLootDrop), picked
+  up in the hhTick wrapper. Test s_horde6.
 - 1.2.104 TEST (batch C = 21-28): hhtraps2.js. HH_TRAPS pusher/ceilzap (hhSpec+hhValid wrappers: needs floor f(ix,iz,lv+1))/
   gas/turret (HH_TUSES uses, own timers p.cd2 in a hhTrapTick wrapper; turret uses gridClear LOS + addTracer) and barricade
   (wall-like piece from crafted stock, mat wood, removed after 12 s, never saved). hhTrapDmg(e, dmg, p) * (1 + 0.35 * s.tlv[id])

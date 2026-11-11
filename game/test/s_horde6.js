@@ -1,0 +1,26 @@
+// HOTBOX HORDE batch D (owner's 29-35): shield bearers, throwers, nests, mini-bosses, elites, the root king, loot orbs
+module.exports = async p => {
+  const r = {}, SH = process.env.SHOTS || '/tmp', shot = async (n, ms) => { await p.evaluate(() => { window.__A.G.noRender = false; }); await p.waitForTimeout(ms || 1800); await p.screenshot({ path: SH + '/hh6_' + n + '.png' }); await p.evaluate(() => { window.__A.G.noRender = true; }); };
+  const boot = async () => { await p.waitForTimeout(9000); await p.evaluate(() => { const A = window.__A; A.G.holdT = 0.01; A.G.loadT = 0; A.G.health = A.G.maxHp = 1e6; for (const e of A.enemies) if (e.entry) { e.acc = 0; e.dmg = 0; } }); await p.waitForTimeout(1500); };
+  await p.evaluate(() => { for (const o of document.querySelectorAll('.onb-ov,#hcSplash')) o.remove(); try { localStorage.removeItem('ashfall.hh.v1'); } catch (e) {} const A = window.__A, s = A.hhL.load(); s.mis = 0; A.hhL.save(s); A.G.noRender = true; A.actions('hh-play'); A.actions('hh-start'); });
+  await boot();
+  r.nests = await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(); return { kind: H.kind, nests: H.rifts.filter(R => R.nest).length, inEnemies: A.enemies.filter(e => e.nest).length }; });
+  await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(), n = H.rifts[0].nest.group.position; A.P.x = n.x + 5; A.P.z = n.z + 3; A.P.y = n.y; A.P.yaw = Math.atan2(5, 3); A.P.pitch = 0.05; });
+  await shot('nest', 2000);
+  r.kill = await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(), n = H.rifts[0].nest; A.damageEnemy(n, 300, false, null, false, 'player'); const hp = n.hp; A.damageEnemy(n, 1e5, false, null, false, 'player'); return { hpAfter300: hp, closed: H.rifts[0].closed, open: H.rifts.filter(R => !R.closed).length, scrap: H.s.inv.scrap }; });
+  r.waves = await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(); H.wave = 3; const w3 = A.hhWaveL(3), w4 = A.hhWaveL(4); const cnt = l => l.reduce((o, k) => (o[k] = (o[k] | 0) + 1, o), {}); return { w3: cnt(w3), w4: cnt(w4) }; });
+  r.shield = await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(); const s = A.hhL.mob('shield', H.plant.x + 10, H.plant.z, H.by); s.speed = 0; s.group.rotation.y = 0; s.hp = 1000; A.P.x = s.group.position.x; A.P.z = s.group.position.z + 6; A.damageEnemy(s, 100, false, null, false, 'player'); const front = 1000 - s.hp; A.P.z = s.group.position.z - 6; A.damageEnemy(s, 100, false, null, false, 'player'); return { front, back: 1000 - front - s.hp }; });
+  r.elites = await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(); H.wave = 3; const list = []; for (let i = 0; i < 60; i++) list.push(A.hhL.mob('burnout', H.plant.x + 30, H.plant.z + 20, H.by)); const n = list.filter(e => e.elite).length; for (const e of list) A.damageEnemy(e, 1e6, false, null, false, 'world'); return n; });
+  await p.waitForTimeout(800);
+  r.loot = await p.evaluate(async () => { const A = window.__A, H = A.HHM_GET(); const n = (H.loot || []).length; const L = H.loot[0]; const inv0 = JSON.stringify(H.s.inv); if (L) for (const o of H.loot) o.m.position.set(A.P.x + 0.3, o.m.position.y, A.P.z); await new Promise(r => setTimeout(r, 4000)); return { orbs: n, left: H.loot.length, changed: JSON.stringify(H.s.inv) !== inv0 || Object.keys(H.got).some(k => k.startsWith('seed')), alive: A.playerAliveL ? A.playerAliveL() : null, d: L ? Math.hypot(L.m.position.x - A.P.x, L.m.position.z - A.P.z).toFixed(2) : -1, st: A.G.state, t: A.M.t }; });
+  // the big ones, a thrower and a shield bearer, for a picture
+  await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(); for (const e of H.mobs.slice()) A.damageEnemy(e, 1e6, false, null, false, 'world'); const x = H.plant.x + 10, z = H.plant.z; for (const [k, dz] of [['bigbaked', -3], ['cougher', 1], ['shield', 4], ['thrower', 6.5]]) { const e = A.hhL.mob(k, x, z + dz, H.by); e.speed = 0; e.group.rotation.y = -Math.PI / 2; } A.P.x = H.plant.x + 1; A.P.z = H.plant.z + 1.5; A.P.y = H.by; A.P.yaw = -Math.PI / 2 + 0.05; A.P.pitch = 0.12; });
+  await shot('bosses', 2000);
+  r.cough = await p.evaluate(async () => { const A = window.__A, H = A.HHM_GET(), c = H.mobs.find(e => e.K.cough); c.coughT = 0.01; const hp0 = H.plant.hp; c.group.position.set(H.plant.x + 2, H.by, H.plant.z); await new Promise(r => setTimeout(r, 1200)); return { plantHit: hp0 - H.plant.hp }; });
+  // the ROOT KING: a raid from base level 4 to 5
+  await p.evaluate(async () => { const A = window.__A; A.leaveGame(); await new Promise(r => setTimeout(r, 400)); const s = A.hhL.load(); s.base.lv = 4; s.cash = 50000; A.hhL.save(s); A.G.noRender = true; A.actions('hh-play'); A.actions('hh-base'); }); await boot();
+  r.root = await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(); A.hhL.raid(); const last = A.hhWaveL(H.waves); return { raid: !!H.raid, to: H.raid && H.raid.to, waves: H.waves, root: last.includes('rootking'), nests: H.rifts.filter(R => R.nest).length }; });
+  await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(); const k = A.hhL.mob('rootking', H.plant.x + 9, H.plant.z + 2, H.by); k.speed = 0; k.group.rotation.y = -Math.PI / 2; A.P.x = H.plant.x - 1; A.P.z = H.plant.z + 4; A.P.y = H.by; A.P.yaw = Math.atan2(-10, 2); A.P.pitch = 0.18; });
+  await shot('rootking', 2200);
+  return r;
+};
