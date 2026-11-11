@@ -69,7 +69,7 @@ module.exports = async p => {
   r.supplyRes = await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(); return H ? { over: H.over, res: H.res, state: A.G.state } : 'cleared'; });
   await p.evaluate(() => { window.__A.G.noRender = false; }); await p.waitForTimeout(1200); await p.screenshot({ path: SH + '/hh_results.png' });
   // a DEFEND THE GROW mission, won by force
-  await p.evaluate(async () => { const A = window.__A; A.leaveGame(); await new Promise(r => setTimeout(r, 400)); const s = A.hhL.load(); s.mis = 3; A.hhL.save(s); A.G.noRender = true; A.actions('hh-play'); A.actions('hh-start'); }); await boot();
+  await p.evaluate(async () => { const A = window.__A; A.leaveGame(); await new Promise(r => setTimeout(r, 400)); const s = A.hhL.load(); s.mis = 7; A.hhL.save(s); A.G.noRender = true; A.actions('hh-play'); A.actions('hh-start'); }); await boot();
   r.defend = await p.evaluate(async () => { const A = window.__A, H = A.HHM_GET(); const st = { kind: H.kind, map: A.curMap, gun: H.gunId, plant: !!H.plant }; for (const e of A.enemies) if (e.entry) { e.acc = 0; e.dmg = 0; }
     for (let w = 0; w < 8 && !H.over; w++) { if (H.phase === 'prep') A.hhL.wave(); await new Promise(r => setTimeout(r, 1200)); for (const e of H.mobs.slice()) A.damageEnemy(e, 1e6, false, null, false, 'world'); H.toSpawn = 0; await new Promise(r => setTimeout(r, 600)); }
     await new Promise(r => setTimeout(r, 2500)); st.over = H.over; st.res = H.res && { won: H.res.won, pay: H.res.pay }; st.gunAfter = A.hhL.load().arsenal; return st; });

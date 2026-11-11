@@ -152,6 +152,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.106 TEST (batch E = 36-44): hhmis2.js. HH_MISSIONS is 28 (per map: defend, supply, wild, rescue, truck, signal,
+  nests; stackyard defend = 7). hhHunt(kind) (horde.js) = no plant, phase 'run'; mobs use e.obj (target object with its own
+  field) and hhObjHit. rescue (H.growers follow via navDir), truck (H.truck rolls on its field while you are within 12 m;
+  mobs within 3.2 m hurt it), signal (H.boxes, 4 min), nests (hhNestMake at 4 spots). hhHuntSpawn trickle. H.mod daily
+  modifier (hhModOf), daily mission (hhDailyMi, s.dailyDone), s.nightMis (hhNight), weekly s.wk (hhWk/hhWkAdd, claim in the
+  lobby), mission map overlay (hhMissionMap, lobby MAP button). Test s_horde7.
 - 1.2.105 TEST (batch D = 29-35): hhmobs2.js. HH_KINDS shield (damageEnemy wrapper: x0.15 from the front), thrower (spit
   with q.rock / q.pdmg), bigbaked + cougher (mini: waves 3/4 via a hhWaveList wrapper; cough in a hhTick wrapper), rootking
   (raid to lv 5: roots slow, calls burnouts). Elites e.elite fast/armor/regen (10% from wave 2). NESTS: fake enemies

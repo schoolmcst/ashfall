@@ -13,6 +13,7 @@ const HH_MAPS = [
 ];
 const HH_TYPES = { defend: { n: 'DEFEND THE GROW', d: 'guard a plant through five waves' }, supply: { n: 'SUPPLY RUN', d: 'search the caches, then get to the extraction van' }, wild: { n: 'WILD HARVEST', d: 'cut the wild weed growing out there, then get to the van' } };
 const hhRun = k => k === 'supply' || k === 'wild';   // the run-and-extract missions
+const hhHunt = k => hhRun(k) || k === 'rescue' || k === 'truck' || k === 'signal' || k === 'nests';   // no MOTHER PLANT (hhmis2.js)
 const HH_MISSIONS = []; for (const m of HH_MAPS) for (const t of ['defend', 'supply', 'wild']) HH_MISSIONS.push({ map: m.map, n: m.n, type: t });
 const HH_DIFF = [{ n: 'CHILL', hp: 0.7, cnt: 0.8, pay: 1, col: '#7adf6a' }, { n: 'BAKED', hp: 1, cnt: 1, pay: 1.6, col: '#ffd24a' }, { n: 'FRIED', hp: 1.5, cnt: 1.25, pay: 2.4, col: '#ff8a3a' }, { n: 'COOKED', hp: 2.2, cnt: 1.5, pay: 3.5, col: '#ff4a6a' }];
 const HH_HEROES = [
@@ -205,12 +206,12 @@ function hhSetup() {
   hhClear(); const s = hhLoad(), kind = (M.cfg && M.cfg.hhKind) || (curMap === 'homestead' ? 'base' : HH.lastKind && HH.lastKind !== 'base' ? HH.lastKind : 'defend'), base = kind === 'base'; HH.lastKind = kind;
   const mi = base ? -1 : HH_MISSIONS.findIndex(m => m.map === curMap && m.type === kind), di = base ? Math.min(3, s.base.lv - 1) : Math.min(s.diff | 0, hhUnl(s, Math.max(0, mi)));
   const c = base ? { x: 0, z: 0 } : hhSpot(), by = groundAt(c.x, c.z, 0.6), grp = new THREE.Group(); scene.add(grp);
-  const H = M.hh = HH.cur = { grp, kind, base, mi, di, D: HH_DIFF[di], hero: s.hero, lv: s.lv, s, mats: s.inv, wave: 0, waves: HH_WAVES, phase: base ? 'free' : hhRun(kind) ? 'run' : 'prep', t: base ? 0 : 90, toSpawn: 0, spawnT: 0, mobs: [], pieces: [], slots: new Map(), res: new Set(), traps: [], nodes: [], spits: [], rifts: [], sboxes: [], kills: 0, built: 0, crateT: 0, placed: false, over: false, wavesWon: 0, found: 0, by, org: { x: c.x, z: c.z, y: by }, got: {} };
+  const H = M.hh = HH.cur = { grp, kind, base, mi, di, D: HH_DIFF[di], hero: s.hero, lv: s.lv, s, mats: s.inv, wave: 0, waves: HH_WAVES, phase: base ? 'free' : hhHunt(kind) ? 'run' : 'prep', t: base ? 0 : 90, toSpawn: 0, spawnT: 0, mobs: [], pieces: [], slots: new Map(), res: new Set(), traps: [], nodes: [], spits: [], rifts: [], sboxes: [], kills: 0, built: 0, crateT: 0, placed: false, over: false, wavesWon: 0, found: 0, by, org: { x: c.x, z: c.z, y: by }, got: {} };
   const pmax = Math.round(1500 * (1 + 0.2 * (s.lv.plant | 0)));
   if (base) { H.pmax = pmax; hhBaseSetup(H); }   // the plant, the crate, the stations and plots are props you place (hhbase.js)
-  if (!hhRun(kind) && !base) { H.plant = { x: c.x, z: c.z, y: by, hp: pmax, max: pmax, g: hhPlantMesh(), hitT: 0 }; H.plant.g.position.set(c.x, by, c.z); grp.add(H.plant.g); H.plantBox = mkBox(c.x, c.z, 2.4, 2.4, 1.1, { y: by }); boxes.push(H.plantBox); H.res.add('0,0'); }
+  if (!hhHunt(kind) && !base) { H.plant = { x: c.x, z: c.z, y: by, hp: pmax, max: pmax, g: hhPlantMesh(), hitT: 0 }; H.plant.g.position.set(c.x, by, c.z); grp.add(H.plant.g); H.plantBox = mkBox(c.x, c.z, 2.4, 2.4, 1.1, { y: by }); boxes.push(H.plantBox); H.res.add('0,0'); }
   const g = s.arsenal[s.eq]; if (g && !base) { H.gun = g; H.gunId = hhGunDef(HH_GUNS.find(x => x.id === g.id)).id; }
-  if (!hhRun(kind) && !base) { const cr = openNear(c.x + 4.6, c.z + 1.5); H.crate = { x: cr.x, z: cr.z, y: groundAt(cr.x, cr.z, by + 0.6) };
+  if (!hhHunt(kind) && !base) { const cr = openNear(c.x + 4.6, c.z + 1.5); H.crate = { x: cr.x, z: cr.z, y: groundAt(cr.x, cr.z, by + 0.6) };
     const cg = new THREE.Group(), m = hhStd({ color: 0x3a4a2a, roughness: 0.8 }), st = hhStd({ color: 0x111111, emissive: 0x7aff6a, emissiveIntensity: 1.4 }); const b = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.7, 0.8), m); b.position.y = 0.35; cg.add(b); const s1 = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.08, 0.82), st); s1.position.y = 0.55; cg.add(s1); cg.position.set(H.crate.x, H.crate.y, H.crate.z); grp.add(cg); H.crate.g = cg; }
   try { H.field = H.plant ? flowField(H.plant.x, H.plant.z, H.plant.y) : null; } catch (e) { H.field = null; }
   const reach = (x, z, y) => { if (!H.field) return true; const n = nodeOf(x, z, y); return n >= 0 && H.field[n] >= 0; };
@@ -449,7 +450,7 @@ function hhWaveDone() {
   try { showBanner(`WAVE ${H.wave} HELD`, `+30 of each material · wave ${H.wave + 1} in 45 s · build!`); sfx.streak(); } catch (e) {}
 }
 function hhMobTick(e, dt, i) {
-  const H = M.hh, g = e.group.position, pl = H.plant, K = e.K, hunt = !pl;   // on a supply run they hunt you
+  const H = M.hh, g = e.group.position, pl = e.obj && e.obj.hp > 0 ? e.obj : H.plant, K = e.K, hunt = !pl, FLD = pl && pl.field ? pl.field : H.field;   // on a supply run they hunt you
   if (K.fly) { hhFlyTick(e, dt); return; }
   if ((e.tgtT -= dt) <= 0) {
     e.tgtT = 0.4; e.tg = null; const R = hunt ? 90 : K.spit ? 13 : 7; let bd = R;
@@ -466,14 +467,14 @@ function hhMobTick(e, dt, i) {
   else if (e.bash) hitting = 'piece';
   else if (dist < reach) hitting = 'tgt';
   else if (e.tg === 'P' && hunt && !gridClear(g.x, g.z, T.x, T.z, g.y, T.y)) { const d = navDir(g.x, g.z, g.y); if (d) { mx = d[0]; mz = d[1]; } else { mx = nx; mz = nz; } }
-  else if (e.tg || dist < 4 || !H.field) { mx = nx; mz = nz; if (!e.tg && !gridClear(g.x, g.z, T.x, T.z, g.y, T.y) && H.field) { const d = flowDir(H.field, g.x, g.z, g.y); if (d) { mx = d[0]; mz = d[1]; } } }
-  else { const d = flowDir(H.field, g.x, g.z, g.y); if (d) { mx = d[0]; mz = d[1]; } else { mx = nx; mz = nz; } }
+  else if (e.tg || dist < 4 || !FLD) { mx = nx; mz = nz; if (!e.tg && !gridClear(g.x, g.z, T.x, T.z, g.y, T.y) && FLD) { const d = flowDir(FLD, g.x, g.z, g.y); if (d) { mx = d[0]; mz = d[1]; } } }
+  else { const d = flowDir(FLD, g.x, g.z, g.y); if (d) { mx = d[0]; mz = d[1]; } else { mx = nx; mz = nz; } }
   if (hitting) {
     if (e.atkT > 0) { e.atkT -= dt; if (!e.hitDone && e.atkT < 0.3) { e.hitDone = true;
       if (hitting === 'piece') hhPieceHit(e.bash, K.bdmg * (H.D.hp > 1 ? 1.15 : 1));
       else if (e.tg === 'P') { if (dist < reach + 0.4) try { hurtPlayer(K.dmg, g.x, g.z); sfx.melee && sfx.melee(); } catch (er) {} }
       else if (e.tg) { if (dist < reach + 0.4) try { damageEnemy(e.tg, K.dmg, false, null, false, 'world'); } catch (er) {} }
-      else hhPlantHit(K.dmg * (K.boss ? 2 : 1)); } }
+      else if (pl && pl !== H.plant) hhObjHit(pl, K.dmg * (K.boss ? 2 : 1)); else hhPlantHit(K.dmg * (K.boss ? 2 : 1)); } }
     else if (K.bloat) { hhBloat(e); return; }
     else if ((e.atkCd -= dt) <= 0) { e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.6, 1.0) * (K.boss ? 1.3 : 1); if (Math.random() < 0.5) try { sfx.zscreech(at(g.x, g.z, 14, g.y)); } catch (er) {} }
   }
@@ -591,7 +592,7 @@ showResults = function (winner, won) {
   try { const H = M && M.hh, R = H && H.res; if (R) { $('resTitle').textContent = R.won ? 'MISSION DONE' : 'MISSION FAILED'; $('resTitle').className = 'res-title ' + (R.won ? 'win' : 'lose'); $('resSub').textContent = `HOTBOX HORDE · ${HH_TYPES[H.kind].n} · ${(HH_MISSIONS[Math.max(0, H.mi)] || {}).n || ''} · ${H.D.n}`;
     const items = [], all = Object.assign({}, R.got); for (const k in R.pay) if (k !== 'broke' && k !== 'cash') all[k] = (all[k] | 0) + R.pay[k];
     for (const k in all) items.push([k.startsWith('seed:') ? HH_STR(k.slice(5)).n + ' SEEDS' : k.startsWith('bud:') ? HH_STR(k.slice(4)).n + ' BUDS' : HH_ALLN(k), '+' + all[k]]);
-    const head = [[hhRun(H.kind) ? (H.kind === 'wild' ? 'PLANTS CUT' : 'CACHES') : 'WAVES HELD', hhRun(H.kind) ? `${R.found} / 8` : `${R.waves} / ${HH_WAVES}`], ['BURNOUTS DOWN', R.kills], ['CASH', '+$' + (R.pay.cash | 0).toLocaleString()]];
+    const head = [[H.kind === 'defend' ? 'WAVES HELD' : H.kind === 'wild' ? 'PLANTS CUT' : hhRun(H.kind) ? 'CACHES' : 'OBJECTIVE', H.kind === 'defend' ? `${R.waves} / ${HH_WAVES}` : hhRun(H.kind) ? `${R.found} / 8` : (H.objTxt || '-')], ['BURNOUTS DOWN', R.kills], ['CASH', '+$' + (R.pay.cash | 0).toLocaleString()]];
     $('resBoard').insertAdjacentHTML('afterbegin', `<div class="hh-res">${head.map(([a, b]) => `<div><small>${a}</small><b>${b}</b></div>`).join('')}</div><div class="hh-loot"><small>BROUGHT HOME</small>${items.map(([a, b]) => `<span>${a} <b>${b}</b></span>`).join('')}${R.pay.broke ? '<span style="color:#ff6a6a">YOUR CRAFTED GUN BROKE</span>' : ''}</div>`); } } catch (e) {}
   return r;
 };

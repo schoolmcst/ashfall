@@ -79,8 +79,8 @@ function hhBpBuild(slot) {
 }
 function hhNight(on) {
   const base = Object.assign({}, ENV_DEFAULT, MAPS[curMap] && MAPS[curMap].env), k = on ? 1 : 0, mix = (a, b) => new THREE.Color(a).lerp(new THREE.Color(b), k);
-  try { skyMat.uniforms.top.value = mix(base.top, 0x0b1428); hemi.color = mix(base.hemiSky, 0x34405e); hemi.groundColor = mix(base.hemiGround, 0x1a1a22); sun.color = mix(base.sunCol, 0x9ab0ff); sun.intensity = base.sunI * (1 - 0.82 * k);
-    scene.fog.color.copy(mix(base.horizon, 0x1a2038)); ENV_EXPOSURE = base.exposure * (1 - 0.2 * k); renderer.toneMappingExposure = ENV_EXPOSURE * S.brightness / 100; } catch (e) {}
+  try { skyMat.uniforms.top.value = mix(base.top, 0x0b1428); hemi.color = mix(base.hemiSky, 0x4a5a80); hemi.groundColor = mix(base.hemiGround, 0x1a1a22); sun.color = mix(base.sunCol, 0x9ab0ff); sun.intensity = base.sunI * (1 - 0.68 * k);
+    scene.fog.color.copy(mix(base.horizon, 0x1a2038)); ENV_EXPOSURE = base.exposure * (1 - 0.1 * k); renderer.toneMappingExposure = ENV_EXPOSURE * S.brightness / 100; } catch (e) {}
   HH.night = on;
 }
 const _hhRS = hhRaidStart;

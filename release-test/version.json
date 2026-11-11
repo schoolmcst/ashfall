@@ -1,12 +1,12 @@
 {
- "version": "1.2.105",
+ "version": "1.2.106",
  "notes": [
-  "HOTBOX HORDE batch D (burnouts): SHIELD BEARERS (flank them), THROWERS (rocks at your walls), NESTS on the rifts in DEFEND missions and raids - shoot them to close the rift",
-  "Mini-bosses: THE BIG BAKED (wave 3) and THE COUGHER (wave 4)",
-  "ELITE burnouts (gold smoke): FAST, ARMOURED or REGEN",
-  "THE ROOT KING: the boss of the raid to base level 5",
-  "LOOT ORBS: killed burnouts sometimes drop crafting materials or a seed packet - walk over them"
+  "HOTBOX HORDE batch E (missions): RESCUE THE GROWERS, DELIVER THE TRUCK, HOLD THE SIGNAL, DESTROY THE NESTS - 28 missions now",
+  "MISSION MAP: pick missions from cards (MAP button in the lobby)",
+  "NIGHT MISSIONS switch (darker, tougher, +40% pay), a daily MODIFIER on every mission (BIG HEADS, DOUBLE DRIFTERS, FAST, EXPLOSIVE, RICH)",
+  "DAILY MISSION: double pay on its first win of the day",
+  "WEEKLY CHALLENGES: 3 a week, ,000 + rare seeds each"
  ],
- "sha256": "ae2dd5b81dae2aac2a918d63fbf1824a243bf69115815ad1e55fad19852aa763",
+ "sha256": "b0b711617b9309b416108311f4ee732502196cc39cd396fded5612b24181c5ea",
  "minApp": "1.0.0"
 }
