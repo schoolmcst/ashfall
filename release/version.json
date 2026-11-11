@@ -1,11 +1,11 @@
 {
- "version": "1.2.95",
+ "version": "1.2.97",
  "notes": [
-  "WEED DECOY in the LAST TOKE loot: a see-through smoke copy of a soldier runs off and the bots shoot at it",
-  "End-of-round AWARDS on the LAST TOKE results: MOST DAMAGE, BEST LANDING, LOOT GOBLIN and PACIFIST",
-  "Reviving a squadmate: you hold out a lit joint, they take a hit and blow out a cloud as they get up (and when a bot gets you up, the screen goes green and hazy)",
-  "Fixed: a bot shoved into a cliff could fall under the island (the tunnels' rule now only works over the tunnels)"
+  "NIGHTBLOOM REVIVE, MORE REAL: a proper gloved hand with jointed fingers slowly closes and crushes the flower",
+  "Petals break off and fall, fine pollen dust drifts from your palm to your mate",
+  "Your mate breathes it in, coughs, props up on their elbows and staggers back up",
+  "When a bot revives you: the screen comes back from dark and blurry, a weak heartbeat gets stronger, then a deep gasp"
  ],
- "sha256": "0c6697ad11f7e34bfab8465e8ab62ed4c409f874d6afb0da27d9c5397dd64a54",
+ "sha256": "a4199c7b246ff7b3961b4130a7d48e1f64c2220eed158cb728906d03b56f7b44",
  "minApp": "1.0.0"
 }
