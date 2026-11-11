@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.101 TEST (owner: "add in more things"): hhmore.js. Build categories HH.cat (SWAP/Q in build mode, base only): BUILD /
+- 1.2.101 PUBLIC (owner said send it) (owner: "add in more things"): hhmore.js. Build categories HH.cat (SWAP/Q in build mode, base only): BUILD /
   GROW (HH_GROWP: plot, sprinkler st.sp 1.3, lamp st.yb 1.3 within 3.5 m - set every 0.5 s in the hhBaseTick wrapper and
   used by hhGrowK/hhPlotUse; compost: rec.t0, hhCompostN, USE empties it via a hhMenuOpen wrapper; trimmer: hhPlotUse on
   ready plots within 5 m every 5 s) / DECOR (HH_DECOR, cost {cash}; hhPay/hhHas handle 'cash'). Bought props can be removed
@@ -161,13 +161,13 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   Mission type 'wild' (WILD HARVEST; hhRun(kind) covers supply + wild; caches are hhWeed plants, 2 s to cut, buds + seeds).
   HH_MISSIONS is now 12 (per map: defend, supply, wild). THE BUYER's daily order (hhOrder by date; s.orderDone). Tests:
   s_horde2 (all of it), s_horde (plots are in category 1 now; defend mission index 3).
-- 1.2.100 TEST (owner: everything movable, smaller plots placeable anywhere, smaller stations): hhbase.js PROPS (HH_PROPS
+- 1.2.100 PUBLIC (owner said send it) (owner: everything movable, smaller plots placeable anywhere, smaller stations): hhbase.js PROPS (HH_PROPS
   plant/buyer/bench/plans/crate/plot; save base.props [{id,k,x,z,y,r}], plots keyed 'p<id>'; 1.2.99 grid plots migrate in
   hhBaseSetup). Props are free-placed (hhPropAim snaps 25 cm, on ground or floors; hhPropValid checks base radius, plot
   limit, every box, the player) with a walkable mkBox each (hhPropSet moves it, recomputes H.field for the plant). In build
   mode INSPECT (F, pad LB) = hhPickUp of what you look at (prop or grid piece) -> HH.carry; click hhCarryDrop, F/leaving
   build mode hhCarryCancel; R turns a carried/new prop. Grid pieces may not overlap props (hhPropHit). THE BUYER is a cart.
-- 1.2.99 TEST: HOTBOX HORDE 2.0 (owner: base on an open map with no fences; goal = grow weed and sell it to expand the base;
+- 1.2.99 PUBLIC (owner said send it): HOTBOX HORDE 2.0 (owner: base on an open map with no fences; goal = grow weed and sell it to expand the base;
   separate missions for materials and crafting mats for traps and weapons; lots of ideas from that genre). map_homestead.js
   'homestead' (hidden, open field, pickMapFor lets mode hh load it). horde.js: save ashfall.hh.v1 now holds cash, inv
   (wood/stone/metal + scrap/wire/battery/nutri/sap), seeds/buds per HH_STRAINS, crafted traps (placing one uses one), arsenal
@@ -178,7 +178,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   hhGrowK real time, HH.growK for tests, R picks the strain near an empty plot); RAID (hhRaidStart/hhRaidEnd: 2+lv waves,
   win = cash paid + base lv up; HH_BASELV radius/plots). Mission pay in hhEnd (fail = 35%), results card .hh-loot. Test
   s_horde (whole loop) + _hhd-style defend check.
-- 1.2.98 TEST: HOTBOX HORDE (horde.js; mode 'hh', def.squad 4 = me + 3 crew bots, players 4): co-op build-and-defend in the style
+- 1.2.98 PUBLIC (owner said send it): HOTBOX HORDE (horde.js; mode 'hh', def.squad 4 = me + 3 crew bots, players 4): co-op build-and-defend in the style
   the owner asked for ("like fortnite save the world", original names/look). Own lobby (HHL, hhRender/hhAct; renderLobby
   defers; menu tile #hhTile via a featTiles wrapper; actions -> hhAct before brlobAct). Save ashfall.hh.v1 (seeds, lv
   plant/trap/mats, hero, mis, diff, unl, stats). HH_MISSIONS on greenhouse/stackyard/dustwater/ruins_night. hhSpot puts

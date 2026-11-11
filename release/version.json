@@ -1,11 +1,14 @@
 {
- "version": "1.2.97",
+ "version": "1.2.101",
  "notes": [
-  "NIGHTBLOOM REVIVE, MORE REAL: a proper gloved hand with jointed fingers slowly closes and crushes the flower",
-  "Petals break off and fall, fine pollen dust drifts from your palm to your mate",
-  "Your mate breathes it in, coughs, props up on their elbows and staggers back up",
-  "When a bot revives you: the screen comes back from dark and blurry, a weak heartbeat gets stronger, then a deep gasp"
+  "HOTBOX HORDE: build mode has 3 categories (Q switches): BUILD, GROW, DECOR",
+  "GROW gear: SPRINKLER (plants nearby grow 30% faster), GROW LIGHT (30% more buds), COMPOST BIN (free nutrients every 8 min), AUTO-TRIMMER (harvests ready plants for you)",
+  "DECOR for your base (bought with cash): couch, picnic table, giant bong, neon sign, string lights, drying rack, tiki torch, flag",
+  "G in build mode: repair a damaged piece, or upgrade it wood > stone > metal",
+  "New burnouts: DRIFTERS float over your walls, BLOATERS blow up on them",
+  "New mission: WILD HARVEST - cut the wild weed out there and get to the van (12 missions now)",
+  "THE BUYER has a DAILY ORDER: deliver the strain he wants for double pay plus crafting materials"
  ],
- "sha256": "a4199c7b246ff7b3961b4130a7d48e1f64c2220eed158cb728906d03b56f7b44",
+ "sha256": "77bf5067fb87f70f5c622dd97841048ea3e0bb9cdfb7f6ad2eeb3f0a1cbf7082",
  "minApp": "1.0.0"
 }
