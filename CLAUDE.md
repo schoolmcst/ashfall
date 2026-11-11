@@ -152,6 +152,17 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.108 TEST (batch G = 56-60, the last of the 60): hhcoop.js HOTBOX HORDE CO-OP (up to 4; HOST CO-OP / JOIN code box in the HH
+  lobby, P2P.aside('code','horde','hh'+code)). The host runs everything; a startMatch wrapper publishes st/gid/k/mp; friends
+  follow with cfg.hcClient (H.client, phase 'client': no spawning, waves, raids, stations, plots or moving things). Host sends
+  en (burnouts + nests as [id,x,z,y,yaw,kind,hp%]), pc/pv (piece records, synced by hcSyncPieces), ui (the top bar), bl (base
+  props; a visit loads them through a hhLoad wrapper, H.noSave). Friends' hits = hs records, their builds = br requests (the
+  friend pays). Avatars of friends on the host are makeEnemy + entry + e.net (bots skip them), pushed into enemies so burnouts
+  target them; damageEnemy on an avatar becomes ht -> hurtPlayer on that friend. Friends replace crew bots. hhEnd on the host
+  -> st 'done' -> friends run hhEnd for their own pay. hhpolish.js: LEADERBOARD tab HORDE (friend card hz = [earn, best diff,
+  cleared, wins, kills]; s.earn counted in a hhSave wrapper), sounds (cash register, build clunks per material, trap snaps,
+  wave horn, plant alarm, level-up jingle), FIRST STEPS card on first hhOpen (s.tutSeen) + #hhTut checklist in the base
+  (s.tut, s.tutDone = +$500). Tests: s_horde9, mp_hhcoop (real WebRTC, 2 players).
 - 1.2.107 TEST (batch F = 45-55): hhhero.js. s.hx hero XP (hhHLv), s.sk[hero] armor/fire/craft (lobby hh-sk-*), abilities on
   FIELD (T) hhAbility (HH.abT, HH.burstT), crew orders on STREAK (X) HH.order -> hhGoal wrapper sets e.hhTask, hhCrewWork does
   harvest/fix/water. HH_GUNS gid (xbow/dmr/gl/bong; launchers equip as secondary), g.perk, repair, s.melee (HH_MELEE). Survivors
