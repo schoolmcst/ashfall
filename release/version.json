@@ -1,16 +1,11 @@
 {
- "version": "1.2.93",
+ "version": "1.2.94",
  "notes": [
-  "LAST TOKE has its own lobby now (out of the multiplayer lobby): online or offline, solo / duos / squads, ranked, your loadout drop class, float trail, your stats and today's challenges",
-  "LOADOUT DROPS: $4,000 at a buy station drops a crate with a class you made",
-  "VAULTS: four locked bunkers with legendary loot and a VAULT BOSS - find a gold KEY CARD to open one",
-  "Squads: STASH CARDS and RE-UP BEACONS bring dead squadmates back, callouts on the emote wheel (bots bring ammo and heals), carry a downed mate, faster bong revive, watch your squad when you're out",
-  "Bots loot guns off the floor, heal, use cars more, hide in buildings in the last circles and get sharper every circle",
-  "LADDERS up the buildings and the lighthouse, WEED BALLOONS that float you back up, DAMAGE NUMBERS, DEPLOYABLE COVER, MOLOTOVS, HEALING SMOKE, sniper glint, footsteps that sound like the ground",
-  "STASH BOXES drop when someone dies (take what you want), hold USE to swap guns, the last circles drift, GROW TENTS to harvest for cash, plywood sheds you can shoot through, day turns to night, wind on the float in",
-  "THE TUNNELS under the island, THE BONG EXPRESS train across the north (ride it, loot it), swimming in the sea",
-  "Stats page, placement XP, 3 daily challenges, a crown for your win streak, float trails, a victory dance, the kill leader marked for everyone, a landing marker, pick your warm-up gun, a faster cloud"
+  "STASH ISLAND has a RIVER: a lake in the open ground west of OLD TOWN and a river out to the sea south of THE HOTEL - swim it, or cross the new wooden bridge on the west road",
+  "Online LAST TOKE: stash boxes now show for everyone (take what you want; what you take goes for everyone)",
+  "Online squads: STASH CARDS and RE-UP BEACONS work for real players too - carry a squadmate's card to a beacon and they float back in",
+  "Online VAULT BOSSES: the boss guards the vault for everyone and fights whoever is closest"
  ],
- "sha256": "2e539fb25df94eca2a571ec1efbd332234fe6aea8709fbcb6a8ed9df0b196e66",
+ "sha256": "efb6281313da133a4a187289aa4bd658efeaaac6a0dc817c11b231783cec3bf0",
  "minApp": "1.0.0"
 }

@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.94 TEST: the follow-ups to 1.2.93. THE RIVER: map_stash2.js STASH_RIVER + STASH_LAKE (a lake at (-100,-24), west to
+- 1.2.94 PUBLIC (owner said send it): the follow-ups to 1.2.93. THE RIVER: map_stash2.js STASH_RIVER + STASH_LAKE (a lake at (-100,-24), west to
   the sea south of THE HOTEL; found by a grid path search clear of every place/building); stashHeight carves the bed to
   -2.6 with 12 m banks (stashHeight0 is the old height), a water ribbon + lake disc at -0.35, a sloped bridge in 2 m
   pieces where the x -110 road crosses (z -50..2: the lake's banks reach the road), stashBusy keeps trees/grass out.

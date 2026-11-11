@@ -144,7 +144,8 @@ function stashRiverD(x, z) {
 }
 function stashHeight(x, z) {
   const h = stashHeight0(x, z), rd = stashRiverD(x, z); if (rd >= 17) return h;
-  const k = rd < 5 ? 1 : 1 - stashSmooth((rd - 5) / 12); return h + (Math.min(h, -2.6) - h) * k;   // the bed 2.6 m down, banks over 12 m
+  let pw = 0; for (const p of STASH_POIS) { const dx = Math.max(0, Math.abs(x - p.x) - p.w / 2), dz = Math.max(0, Math.abs(z - p.z) - p.d / 2), dd = Math.hypot(dx, dz); if (dd < p.b) pw = Math.max(pw, 1 - stashSmooth(dd / p.b)); }
+  const k = (rd < 5 ? 1 : 1 - stashSmooth((rd - 5) / 12)) * (1 - pw); return h + (Math.min(h, -2.6) - h) * k;   // the bed 2.6 m down, banks over 12 m (not on a place's flat ground)
 }
 function stashHeight0(x, z) {
   let h = stashNat(x, z);
