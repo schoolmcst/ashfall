@@ -1,14 +1,10 @@
 {
- "version": "1.2.101",
+ "version": "1.2.109",
  "notes": [
-  "HOTBOX HORDE: build mode has 3 categories (Q switches): BUILD, GROW, DECOR",
-  "GROW gear: SPRINKLER (plants nearby grow 30% faster), GROW LIGHT (30% more buds), COMPOST BIN (free nutrients every 8 min), AUTO-TRIMMER (harvests ready plants for you)",
-  "DECOR for your base (bought with cash): couch, picnic table, giant bong, neon sign, string lights, drying rack, tiki torch, flag",
-  "G in build mode: repair a damaged piece, or upgrade it wood > stone > metal",
-  "New burnouts: DRIFTERS float over your walls, BLOATERS blow up on them",
-  "New mission: WILD HARVEST - cut the wild weed out there and get to the van (12 missions now)",
-  "THE BUYER has a DAILY ORDER: deliver the strain he wants for double pay plus crafting materials"
+  "HOTBOX HORDE on a controller: every action has a button (LB ability, D-PAD UP crew orders, build mode: D-PAD LEFT category, Y material / turn, RB repair / upgrade, LT door / window, B paint, VIEW undo, hold RT to drag)",
+  "Controller: B closes the HORDE station menus, the mission map and the welcome card; menus keep your place",
+  "Fixed: button prompts said BUTTON undefined on a controller for USE and BUILD"
  ],
- "sha256": "77bf5067fb87f70f5c622dd97841048ea3e0bb9cdfb7f6ad2eeb3f0a1cbf7082",
+ "sha256": "2e6e54e250212a3cb67b25afd67d5c7af46b44d68b2bd5f286424b7e064b31e2",
  "minApp": "1.0.0"
 }

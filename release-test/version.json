@@ -1,11 +1,10 @@
 {
- "version": "1.2.108",
+ "version": "1.2.109",
  "notes": [
-  "HOTBOX HORDE CO-OP: up to 4 players - HOST CO-OP / JOIN a code in the HOTBOX HORDE lobby; friends follow you into missions, raids and your HOMESTEAD (desktop app)",
-  "HORDE tab on the LEADERBOARD: cash earned, hardest win, missions cleared",
-  "New HOTBOX HORDE sounds: cash register, build clunks per material, trap snaps, wave horn, plant alarm, level-up jingle",
-  "FIRST STEPS: a welcome card and a checklist in THE HOMESTEAD (plant, harvest, sell, build, craft, mission) worth $500"
+  "HOTBOX HORDE on a controller: every action has a button (LB ability, D-PAD UP crew orders, build mode: D-PAD LEFT category, Y material / turn, RB repair / upgrade, LT door / window, B paint, VIEW undo, hold RT to drag)",
+  "Controller: B closes the HORDE station menus, the mission map and the welcome card; menus keep your place",
+  "Fixed: button prompts said BUTTON undefined on a controller for USE and BUILD"
  ],
- "sha256": "651222c0ce9f5d24452ff36e2c76a4c929c67adddc0c1f824b4f1ab7391688c9",
+ "sha256": "2e6e54e250212a3cb67b25afd67d5c7af46b44d68b2bd5f286424b7e064b31e2",
  "minApp": "1.0.0"
 }

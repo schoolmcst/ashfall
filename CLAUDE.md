@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.108 TEST (batch G = 56-60, the last of the 60): hhcoop.js HOTBOX HORDE CO-OP (up to 4; HOST CO-OP / JOIN code box in the HH
+- 1.2.108 + 1.2.109 PUBLIC (owner said send it; 1.2.102-1.2.107 too) (batch G = 56-60, the last of the 60): hhcoop.js HOTBOX HORDE CO-OP (up to 4; HOST CO-OP / JOIN code box in the HH
   lobby, P2P.aside('code','horde','hh'+code)). The host runs everything; a startMatch wrapper publishes st/gid/k/mp; friends
   follow with cfg.hcClient (H.client, phase 'client': no spawning, waves, raids, stations, plots or moving things). Host sends
   en (burnouts + nests as [id,x,z,y,yaw,kind,hp%]), pc/pv (piece records, synced by hcSyncPieces), ui (the top bar), bl (base
@@ -169,35 +169,35 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   station menus keep focus on redraw; B closes hhMenu / mission map / first-time card (padCloseBtn). core.js actName had
   'BUTTON undefined' on a pad for use/build/prone/heal: PAD_ALIAS maps them. Test s_hhpad (fake gamepad; taps must be long
   in this container, and aiming at new pieces needs rendering on).
-- 1.2.107 TEST (batch F = 45-55): hhhero.js. s.hx hero XP (hhHLv), s.sk[hero] armor/fire/craft (lobby hh-sk-*), abilities on
+- 1.2.107 PUBLIC (batch F = 45-55): hhhero.js. s.hx hero XP (hhHLv), s.sk[hero] armor/fire/craft (lobby hh-sk-*), abilities on
   FIELD (T) hhAbility (HH.abT, HH.burstT), crew orders on STREAK (X) HH.order -> hhGoal wrapper sets e.hhTask, hhCrewWork does
   harvest/fix/water. HH_GUNS gid (xbow/dmr/gl/bong; launchers equip as secondary), g.perk, repair, s.melee (HH_MELEE). Survivors
   s.surv (+3 per rescue win, NPCs at base, +5% buds each). Crew names s.crewN / levels s.crew. FIXED in match.js botGoal: M.hh was
   missing from the m2Goal condition, so crew bots never used hhGoal before. Supply extraction radius 6.5 m. Test s_horde8.
-- 1.2.106 TEST (batch E = 36-44): hhmis2.js. HH_MISSIONS is 28 (per map: defend, supply, wild, rescue, truck, signal,
+- 1.2.106 PUBLIC (batch E = 36-44): hhmis2.js. HH_MISSIONS is 28 (per map: defend, supply, wild, rescue, truck, signal,
   nests; stackyard defend = 7). hhHunt(kind) (horde.js) = no plant, phase 'run'; mobs use e.obj (target object with its own
   field) and hhObjHit. rescue (H.growers follow via navDir), truck (H.truck rolls on its field while you are within 12 m;
   mobs within 3.2 m hurt it), signal (H.boxes, 4 min), nests (hhNestMake at 4 spots). hhHuntSpawn trickle. H.mod daily
   modifier (hhModOf), daily mission (hhDailyMi, s.dailyDone), s.nightMis (hhNight), weekly s.wk (hhWk/hhWkAdd, claim in the
   lobby), mission map overlay (hhMissionMap, lobby MAP button). Test s_horde7.
-- 1.2.105 TEST (batch D = 29-35): hhmobs2.js. HH_KINDS shield (damageEnemy wrapper: x0.15 from the front), thrower (spit
+- 1.2.105 PUBLIC (batch D = 29-35): hhmobs2.js. HH_KINDS shield (damageEnemy wrapper: x0.15 from the front), thrower (spit
   with q.rock / q.pdmg), bigbaked + cougher (mini: waves 3/4 via a hhWaveList wrapper; cough in a hhTick wrapper), rootking
   (raid to lv 5: roots slow, calls burnouts). Elites e.elite fast/armor/regen (10% from wave 2). NESTS: fake enemies
   {nest, rig:{hits:[pod]}} on each rift in defend + raids (hhSetup/hhRaidStart wrappers); hhNestHit intercepts damageEnemy;
   closed rifts skipped by hhPickRift (horde spawn line). Loot orbs dropped in the damageEnemy wrapper (hhLootDrop), picked
   up in the hhTick wrapper. Test s_horde6.
-- 1.2.104 TEST (batch C = 21-28): hhtraps2.js. HH_TRAPS pusher/ceilzap (hhSpec+hhValid wrappers: needs floor f(ix,iz,lv+1))/
+- 1.2.104 PUBLIC (batch C = 21-28): hhtraps2.js. HH_TRAPS pusher/ceilzap (hhSpec+hhValid wrappers: needs floor f(ix,iz,lv+1))/
   gas/turret (HH_TUSES uses, own timers p.cd2 in a hhTrapTick wrapper; turret uses gridClear LOS + addTracer) and barricade
   (wall-like piece from crafted stock, mat wood, removed after 12 s, never saved). hhTrapDmg(e, dmg, p) * (1 + 0.35 * s.tlv[id])
   (WORKBENCH TRAP LEVELS). Combo: damageEnemy wrapper x1.5 when e.slowT > 0 or e.inResin. Build-mode uses tags (hhMarkers).
   Closing a menu in the headless test leaves the game paused (no pointer lock): tests set G.state = 'playing' after it.
   Test s_horde5.
-- 1.2.103 TEST (batch B = 11-20): hhbuild2.js. Pieces half/rail (wall slots, h 1.5 / 1.0) and roof (thin walkable steps hidden
+- 1.2.103 PUBLIC (batch B = 11-20): hhbuild2.js. Pieces half/rail (wall slots, h 1.5 / 1.0) and roof (thin walkable steps hidden
   under a sloped slab); horde.js hhPieceMake/hhSpec/hhAim/ghost know them. Wall rec.v (1 doorway, 2 window: hhWallParts),
   rec.c paint (HH_PAINT) via a hhPieceMake wrapper; build-mode keys STREAK=edit, PRONE=paint, U=undo (HH.undo from a hhPlace
   wrapper); drag = HH.drag (set in horde's mousedown) + hhTick wrapper. PLANS: blueprints s.bp[1-3] (hhBpSave/hhBpBuild),
   s.nightRaid (hhNight, 25% off), hhDefScore (also in the base HUD). Decor lamppost. Test s_horde4.
-- 1.2.102 TEST (owner: "think of 60 things" -> "do it all"; batch A = 1-10): hhgrow2.js. Plots grow step by step (st.p/lt,
+- 1.2.102 PUBLIC (owner: "think of 60 things" -> "do it all"; batch A = 1-10): hhgrow2.js. Plots grow step by step (st.p/lt,
   hhRate: sprinkler sp, greenhouse gh 1.4, wet wt 10 min else x0.5, bug x0.5, fed x1.5; hhGrowStep every 0.5 s), USE order:
   harvest / spray (1 sap) / water / feed. Stars hhStars -> s.bq. Hybrids 'x:a+b' (hhHybrid registers into HH_STRAINS; hhLoad
   wrapper). Props cure (s.cure, s.cbud), kitchen (s.brownie, s.eat -> 130 hp at mission start via hhTick wrapper), prices
