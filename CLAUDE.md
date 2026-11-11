@@ -152,6 +152,15 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.101 TEST (owner: "add in more things"): hhmore.js. Build categories HH.cat (SWAP/Q in build mode, base only): BUILD /
+  GROW (HH_GROWP: plot, sprinkler st.sp 1.3, lamp st.yb 1.3 within 3.5 m - set every 0.5 s in the hhBaseTick wrapper and
+  used by hhGrowK/hhPlotUse; compost: rec.t0, hhCompostN, USE empties it via a hhMenuOpen wrapper; trimmer: hhPlotUse on
+  ready plots within 5 m every 5 s) / DECOR (HH_DECOR, cost {cash}; hhPay/hhHas handle 'cash'). Bought props can be removed
+  for half back (hhPropRemove wrapper). GRENADE (G) in build mode = hhFixLook: repair (5 of its material) or upgrade wood ->
+  stone -> metal (piece remade). HH_KINDS drifter (fly: hhFlyTick, ignores walls) and bloater (hhBloat explodes on contact).
+  Mission type 'wild' (WILD HARVEST; hhRun(kind) covers supply + wild; caches are hhWeed plants, 2 s to cut, buds + seeds).
+  HH_MISSIONS is now 12 (per map: defend, supply, wild). THE BUYER's daily order (hhOrder by date; s.orderDone). Tests:
+  s_horde2 (all of it), s_horde (plots are in category 1 now; defend mission index 3).
 - 1.2.100 TEST (owner: everything movable, smaller plots placeable anywhere, smaller stations): hhbase.js PROPS (HH_PROPS
   plant/buyer/bench/plans/crate/plot; save base.props [{id,k,x,z,y,r}], plots keyed 'p<id>'; 1.2.99 grid plots migrate in
   hhBaseSetup). Props are free-placed (hhPropAim snaps 25 cm, on ground or floors; hhPropValid checks base radius, plot

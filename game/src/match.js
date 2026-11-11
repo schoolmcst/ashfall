@@ -226,7 +226,7 @@ function objSetup() {
 const netHostNow = () => !M.online || !!(NET.room && NET.room.host);
 function modeGoalText() {
   const c = M.cfg;
-  if (M.hh) return 'defend THE MOTHER PLANT for five waves';
+  if (M.hh) return M.hh.base ? 'grow · sell · build · defend' : M.hh.kind === 'defend' ? 'defend THE MOTHER PLANT for five waves' : HH_TYPES[M.hh.kind].d;
   if (M.br) return M.squad > 1 ? 'last squad standing wins' : 'last one standing wins';
   if (M.mode === 'snd' || M.mode === 'gf') return `first to ${c.score} rounds`;
   if (M.mode === 'inf') return `survive ${Math.round((c.infLen || 300) / 60)} minutes`;

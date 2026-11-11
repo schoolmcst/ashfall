@@ -16,7 +16,7 @@ const HH_PROPS = {
   plot: { n: 'GROW PLOT', w: 1.2, d: 1.2, h: 0.3, col: '#c8e8c0' },
 };
 const HH_PROP_DEF = [{ k: 'plant', x: 0, z: 0 }, { k: 'buyer', x: 7.5, z: 0, r: 1 }, { k: 'bench', x: -7, z: 0, r: 1 }, { k: 'plans', x: 0, z: -6.5 }, { k: 'crate', x: 2.5, z: 2.5 }];
-function hhGrowK(st) { if (!st || !st.st) return 0; const S0 = HH_STR(st.st); return clamp((Date.now() - st.t0) * (HH.growK || 1) / (S0.min * 60000) * (st.fed ? 1.5 : 1), 0, 1); }
+function hhGrowK(st) { if (!st || !st.st) return 0; const S0 = HH_STR(st.st); return clamp((Date.now() - st.t0) * (HH.growK || 1) * (st.sp || 1) / (S0.min * 60000) * (st.fed ? 1.5 : 1), 0, 1); }
 const hhPropWD = (k, r) => { const D = HH_PROPS[k]; return r % 2 ? [D.d, D.w] : [D.w, D.d]; };
 // the meshes, all small
 function hhPropMesh(k) {
@@ -143,7 +143,7 @@ function hhNearPlot() { const H = M.hh; let best = null, bd = 1.6; for (const pr
 function hhPlotUse(p) {
   const H = M.hh, s = H.s, st = s.base.plots[p.key], k = hhGrowK(st);
   if (!st || !st.st) { const sd = H.sel && (s.seeds[H.sel] | 0) > 0 ? H.sel : hhBestSeed(s); if (!sd) { showMsg('NO SEEDS · BUY THEM FROM THE BUYER'); return; } s.seeds[sd]--; s.base.plots[p.key] = { st: sd, t0: Date.now(), fed: false }; hhPlotVis(p); try { showBanner(`PLANTED ${HH_STR(sd).n}`, `ready in about ${HH_STR(sd).min} minutes · feed it NUTRIENTS to speed it up`); burst(0.2, 600, 0.12, 'lowpass'); } catch (e) {} }
-  else if (k >= 1) { const S0 = HH_STR(st.st), n = Math.round(S0.yld * (st.fed ? 1.5 : 1) * (1 + 0.2 * (H.lv.yield | 0))); s.buds[st.st] = (s.buds[st.st] | 0) + n; s.grown = (s.grown | 0) + 1; delete s.base.plots[p.key]; hhPlotVis(p); try { showBanner(`+${n} ${S0.n} BUDS`, `worth about $${Math.round(n * S0.price * hhMarket()).toLocaleString()} at THE BUYER today`); sfx.pickup(); chunks('wood', new THREE.Vector3(p.x, p.y + 0.8, p.z), 10, 3, 0.6); } catch (e) {} }
+  else if (k >= 1) { const S0 = HH_STR(st.st), n = Math.round(S0.yld * (st.fed ? 1.5 : 1) * (1 + 0.2 * (H.lv.yield | 0)) * (st.yb || 1)); s.buds[st.st] = (s.buds[st.st] | 0) + n; s.grown = (s.grown | 0) + 1; delete s.base.plots[p.key]; hhPlotVis(p); try { showBanner(`+${n} ${S0.n} BUDS`, `worth about $${Math.round(n * S0.price * hhMarket()).toLocaleString()} at THE BUYER today`); sfx.pickup(); chunks('wood', new THREE.Vector3(p.x, p.y + 0.8, p.z), 10, 3, 0.6); } catch (e) {} }
   else if (!st.fed && (s.inv.nutri | 0) > 0) { s.inv.nutri--; const done = (Date.now() - st.t0) / (HH_STR(st.st).min * 60000); st.t0 = Date.now() - done * HH_STR(st.st).min * 60000 / 1.5; st.fed = true; try { showMsg('FED · +50% SPEED AND BUDS'); tone(660, 0.15, 0.05, 'sine', 990); } catch (e) {} }
   else { showMsg(st.fed ? 'STILL GROWING · ALREADY FED' : 'STILL GROWING · NO NUTRIENTS (MISSIONS OR THE BUYER)'); return; }
   hhSave(s);

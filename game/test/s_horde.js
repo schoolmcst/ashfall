@@ -12,7 +12,7 @@ module.exports = async p => {
   // build: walls round a yard, four plots, traps; then plant, grow, harvest
   r.build = await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(), HH = A.HH_GET(), s = H.s; s.inv.wood += 600; s.inv.stone += 400; s.inv.metal += 300; s.seeds.og = 4; s.seeds.haze = 2; s.seeds.north = 1; A.hhL.build(true); let ok = 0;
     const L = A.hhL.pieces(), idx = id => L.findIndex(x => x.id === id);
-    const at = (x, z, yaw, piece, mat) => { A.P.x = H.org.x + x; A.P.z = H.org.z + z; A.P.y = H.by; A.P.yaw = yaw; A.P.pitch = 0; HH.piece = idx(piece); HH.mat = mat || 'wood'; const n = H.pieces.length; A.hhL.place(); if (H.pieces.length > n) ok++; };
+    const at = (x, z, yaw, piece, mat) => { A.P.x = H.org.x + x; A.P.z = H.org.z + z; A.P.y = H.by; A.P.yaw = yaw; A.P.pitch = 0; HH.cat = piece === 'plot' ? 1 : 0; HH.piece = A.hhL.pieces().findIndex(q => q.id === piece); HH.mat = mat || 'wood'; const n = H.pieces.length; A.hhL.place(); if (H.pieces.length > n) ok++; };
     for (const [x, z] of [[-3.5, 5], [-2, 5], [-0.5, 5], [1, 5], [2.5, 6.5]]) at(x, z - 2.0, Math.PI, 'plot');   // small plots anywhere (looking +z = yaw PI)
     for (const ix of [-2, -1, 0, 1, 2]) at(ix * 3, 9, Math.PI, 'wall', 'stone');
     for (const iz of [-1, 0, 1]) { at(-12, iz * 3, Math.PI / 2, 'wall', 'wood'); }
@@ -69,7 +69,7 @@ module.exports = async p => {
   r.supplyRes = await p.evaluate(() => { const A = window.__A, H = A.HHM_GET(); return H ? { over: H.over, res: H.res, state: A.G.state } : 'cleared'; });
   await p.evaluate(() => { window.__A.G.noRender = false; }); await p.waitForTimeout(1200); await p.screenshot({ path: SH + '/hh_results.png' });
   // a DEFEND THE GROW mission, won by force
-  await p.evaluate(async () => { const A = window.__A; A.leaveGame(); await new Promise(r => setTimeout(r, 400)); const s = A.hhL.load(); s.mis = 2; A.hhL.save(s); A.G.noRender = true; A.actions('hh-play'); A.actions('hh-start'); }); await boot();
+  await p.evaluate(async () => { const A = window.__A; A.leaveGame(); await new Promise(r => setTimeout(r, 400)); const s = A.hhL.load(); s.mis = 3; A.hhL.save(s); A.G.noRender = true; A.actions('hh-play'); A.actions('hh-start'); }); await boot();
   r.defend = await p.evaluate(async () => { const A = window.__A, H = A.HHM_GET(); const st = { kind: H.kind, map: A.curMap, gun: H.gunId, plant: !!H.plant }; for (const e of A.enemies) if (e.entry) { e.acc = 0; e.dmg = 0; }
     for (let w = 0; w < 8 && !H.over; w++) { if (H.phase === 'prep') A.hhL.wave(); await new Promise(r => setTimeout(r, 1200)); for (const e of H.mobs.slice()) A.damageEnemy(e, 1e6, false, null, false, 'world'); H.toSpawn = 0; await new Promise(r => setTimeout(r, 600)); }
     await new Promise(r => setTimeout(r, 2500)); st.over = H.over; st.res = H.res && { won: H.res.won, pay: H.res.pay }; st.gunAfter = A.hhL.load().arsenal; return st; });
