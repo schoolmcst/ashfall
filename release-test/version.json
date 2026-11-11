@@ -1,14 +1,12 @@
 {
- "version": "1.2.101",
+ "version": "1.2.102",
  "notes": [
-  "HOTBOX HORDE: build mode has 3 categories (Q switches): BUILD, GROW, DECOR",
-  "GROW gear: SPRINKLER (plants nearby grow 30% faster), GROW LIGHT (30% more buds), COMPOST BIN (free nutrients every 8 min), AUTO-TRIMMER (harvests ready plants for you)",
-  "DECOR for your base (bought with cash): couch, picnic table, giant bong, neon sign, string lights, drying rack, tiki torch, flag",
-  "G in build mode: repair a damaged piece, or upgrade it wood > stone > metal",
-  "New burnouts: DRIFTERS float over your walls, BLOATERS blow up on them",
-  "New mission: WILD HARVEST - cut the wild weed out there and get to the van (12 missions now)",
-  "THE BUYER has a DAILY ORDER: deliver the strain he wants for double pay plus crafting materials"
+  "HOTBOX HORDE batch A (growing): WATER your plants (dry = half speed, sprinklers keep them wet), BUGS show up - spray them with tree sap",
+  "QUALITY STARS 1-5 from good care - more stars, better price",
+  "BREEDING: harvest next to a different ready strain for a chance at a HYBRID seed",
+  "GREENHOUSE (+40% speed under it), CURING SHELF (cured buds +50%), KITCHEN (brownies: eat one on a mission for 130 health, or sell them)",
+  "THREE BUYERS (THE BUYER, DOC GREEN, AUNTIE KUSH) with their own favourites, prices that move through the day, a PRICE BOARD, and BIG CONTRACTS"
  ],
- "sha256": "77bf5067fb87f70f5c622dd97841048ea3e0bb9cdfb7f6ad2eeb3f0a1cbf7082",
+ "sha256": "c8f7fbbba06847f56f6fab6652b3eb14929742050ddde636020140207c22b27b",
  "minApp": "1.0.0"
 }

@@ -70,7 +70,7 @@ function hhPropSet(pr, x, z, y, r) {
   Object.assign(pr.rec, { x: +x.toFixed(2), z: +z.toFixed(2), y: +y.toFixed(2), r }); Object.assign(pr, { x, z, y, r, w, d, cx: x, cz: z });
   pr.g.position.set(x, y, z); pr.g.rotation.y = r * Math.PI / 2;
   if (pr.box) { const i = boxes.indexOf(pr.box); if (i >= 0) boxes.splice(i, 1); }
-  pr.box = mkBox(x, z, w, d, pr.h, { y, walk: true }); boxes.push(pr.box); try { rebuildBoxGrid(); } catch (e) {}
+  pr.box = HH_PROPS[pr.k].noBox ? null : mkBox(x, z, w, d, pr.h, { y, walk: true }); if (pr.box) boxes.push(pr.box); try { rebuildBoxGrid(); } catch (e) {}
   if (H.plant && H.plant.pr === pr) { Object.assign(H.plant, { x, z, y }); try { H.field = flowField(x, z, y); } catch (e) {} }
   if (H.crate && H.crate.pr === pr) Object.assign(H.crate, { x, z, y });
 }
@@ -93,7 +93,7 @@ function hhPropValid(a) {
   if (Math.abs(a.cx - H.org.x) > R || Math.abs(a.cz - H.org.z) > R) return false;
   if (a.k === 'plot' && !carried && H.props.filter(p => p.k === 'plot').length >= HH_BASELV[H.s.base.lv - 1].plots) return false;
   const x0 = a.cx - a.w / 2 + 0.03, x1 = a.cx + a.w / 2 - 0.03, z0 = a.cz - a.d / 2 + 0.03, z1 = a.cz + a.d / 2 - 0.03;
-  for (const b of boxes) { if (carried && b === carried.box) continue; if (b.maxx <= x0 || b.minx >= x1 || b.maxz <= z0 || b.minz >= z1) continue; if (b.top <= a.y + 0.06 || b.bot >= a.y + a.h) continue; return false; }
+  if (!HH_PROPS[a.k].over) for (const b of boxes) { if (carried && b === carried.box) continue; if (b.maxx <= x0 || b.minx >= x1 || b.maxz <= z0 || b.minz >= z1) continue; if (b.top <= a.y + 0.06 || b.bot >= a.y + a.h) continue; return false; }
   if (P.x > x0 - 0.3 && P.x < x1 + 0.3 && P.z > z0 - 0.3 && P.z < z1 + 0.3 && Math.abs((P.y || 0) - a.y) < 1.6) return false;
   return true;
 }

@@ -152,6 +152,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.102 TEST (owner: "think of 60 things" -> "do it all"; batch A = 1-10): hhgrow2.js. Plots grow step by step (st.p/lt,
+  hhRate: sprinkler sp, greenhouse gh 1.4, wet wt 10 min else x0.5, bug x0.5, fed x1.5; hhGrowStep every 0.5 s), USE order:
+  harvest / spray (1 sap) / water / feed. Stars hhStars -> s.bq. Hybrids 'x:a+b' (hhHybrid registers into HH_STRAINS; hhLoad
+  wrapper). Props cure (s.cure, s.cbud), kitchen (s.brownie, s.eat -> 130 hp at mission start via hhTick wrapper), prices
+  (canvas board), greenhouse (noBox/over). HH_BUYERS + hhPrice (day wobble, likes x1.4, stars, cured x1.5); buyer menu sell
+  section replaced; hhContract (s.contract, 3 days). Test s_horde3. Batches B-G (11-60) follow.
 - 1.2.101 PUBLIC (owner said send it) (owner: "add in more things"): hhmore.js. Build categories HH.cat (SWAP/Q in build mode, base only): BUILD /
   GROW (HH_GROWP: plot, sprinkler st.sp 1.3, lamp st.yb 1.3 within 3.5 m - set every 0.5 s in the hhBaseTick wrapper and
   used by hhGrowK/hhPlotUse; compost: rec.t0, hhCompostN, USE empties it via a hhMenuOpen wrapper; trimmer: hhPlotUse on
