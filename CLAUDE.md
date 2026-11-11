@@ -152,6 +152,17 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.99 TEST: HOTBOX HORDE 2.0 (owner: base on an open map with no fences; goal = grow weed and sell it to expand the base;
+  separate missions for materials and crafting mats for traps and weapons; lots of ideas from that genre). map_homestead.js
+  'homestead' (hidden, open field, pickMapFor lets mode hh load it). horde.js: save ashfall.hh.v1 now holds cash, inv
+  (wood/stone/metal + scrap/wire/battery/nutri/sap), seeds/buds per HH_STRAINS, crafted traps (placing one uses one), arsenal
+  (HH_GUNS, tier from bench level, dur 6 missions, eq), base {lv, pieces (records rebuilt by hhPieceMake(rec, quiet)),
+  plots{key:{st,t0,fed}}, bench}. Kinds: cfg.hhKind 'base' | 'defend' | 'supply' (HH.lastKind for PLAY NOW). H.org = grid
+  origin, H.plant can be null (supply). hhSpec(id,ix,iz,lv,dir,up) shared by ghost/place/load. hhbase.js: HH_STATIONS (THE
+  BUYER van, WORKBENCH, THE PLANS) reserve cells; menus #hhMenu (hhMenuOpen/hhMenuDo, G.menuOpen); grow plots (piece 'plot',
+  hhGrowK real time, HH.growK for tests, R picks the strain near an empty plot); RAID (hhRaidStart/hhRaidEnd: 2+lv waves,
+  win = cash paid + base lv up; HH_BASELV radius/plots). Mission pay in hhEnd (fail = 35%), results card .hh-loot. Test
+  s_horde (whole loop) + _hhd-style defend check.
 - 1.2.98 TEST: HOTBOX HORDE (horde.js; mode 'hh', def.squad 4 = me + 3 crew bots, players 4): co-op build-and-defend in the style
   the owner asked for ("like fortnite save the world", original names/look). Own lobby (HHL, hhRender/hhAct; renderLobby
   defers; menu tile #hhTile via a featTiles wrapper; actions -> hhAct before brlobAct). Save ashfall.hh.v1 (seeds, lv
