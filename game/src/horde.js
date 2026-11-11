@@ -278,6 +278,8 @@ const hhCellPos = (ix, iz) => ({ x: M.hh.org.x + ix * HH_C, z: M.hh.org.z + iz *
 // a piece's box from its record (the same for a ghost, a placed piece and a piece loaded from the save)
 function hhSpec(id, ix, iz, lv, dir, up) {
   const H = M.hh, base = H.by + lv * HH_LV, c = hhCellPos(ix, iz);
+  if (id === 'half' || id === 'rail') { const ex = [0, 1, 0, -1][dir], ez = [-1, 0, 1, 0][dir], t = id === 'rail' ? 0.1 : 0.25; return { id, ix, iz, lv, dir, key: `w${ix},${iz},${lv},${dir}|w${ix + ex},${iz + ez},${lv},${(dir + 2) % 4}`, cx: c.x + ex * HH_C / 2, cz: c.z + ez * HH_C / 2, w: ex ? t : HH_C, d: ex ? HH_C : t, y: base, h: id === 'rail' ? 1.0 : 1.5 }; }
+  if (id === 'roof') return { id, ix, iz, lv, dir, key: `c${ix},${iz},${lv}`, cx: c.x, cz: c.z, w: HH_C, d: HH_C, y: base, h: HH_LV };
   if (id === 'wall') { const ex = [0, 1, 0, -1][dir], ez = [-1, 0, 1, 0][dir]; return { id, ix, iz, lv, dir, key: `w${ix},${iz},${lv},${dir}|w${ix + ex},${iz + ez},${lv},${(dir + 2) % 4}`, cx: c.x + ex * HH_C / 2, cz: c.z + ez * HH_C / 2, w: ex ? 0.25 : HH_C, d: ex ? HH_C : 0.25, y: base, h: HH_LV }; }
   if (id === 'floor') { const top = base + (up ? HH_LV : 0); return { id, ix, iz, lv, up, key: `f${ix},${iz},${lv + (up ? 1 : 0)}`, cx: c.x, cz: c.z, w: HH_C, d: HH_C, y: top - 0.25, h: 0.25, bad: top - H.by < 1 }; }
   if (id === 'ramp') return { id, ix, iz, lv, dir, key: `c${ix},${iz},${lv}`, cx: c.x, cz: c.z, w: HH_C, d: HH_C, y: base, h: HH_LV };
@@ -290,7 +292,7 @@ function hhAim() {
   if (!HH.carry && P0.prop) return hhPropAim(P0.id, HH.rot | 0);
   const pid = HH.carry && HH.carry.rec ? HH.carry.rec.id : P0.id;
   const fl = Math.max(0, Math.round(((P.y || 0) - H.by) / HH_LV)), dir = Math.abs(fx) > Math.abs(fz) ? (fx > 0 ? 1 : 3) : (fz > 0 ? 2 : 0), cellOf = (x, z) => [Math.round((x - o.x) / HH_C), Math.round((z - o.z) / HH_C)];
-  if (pid === 'wall') { const [ix, iz] = cellOf(P.x, P.z); return hhSpec('wall', ix, iz, fl, dir); }
+  if (pid === 'wall' || pid === 'half' || pid === 'rail') { const [ix, iz] = cellOf(P.x, P.z); return hhSpec(pid, ix, iz, fl, dir); }
   const [ix, iz] = cellOf(P.x + fx * 2.6, P.z + fz * 2.6);
   return hhSpec(pid, ix, iz, fl, dir, P.pitch > 0.3);
 }
@@ -310,7 +312,7 @@ function hhGhostTick() {
   const a = hhAim(), L = hhPieceList(); HH.gspec = a; HH.gok = hhValid(a) && (HH.carry ? true : hhCan(L[HH.piece] || L[0]));
   if (HH.carry && HH.carry.pr) { const g0 = HH.carry.pr.g; g0.position.set(a.cx, a.y, a.cz); g0.rotation.y = a.r * Math.PI / 2; }
   g.visible = true; g.material.color.setHex(HH.gok ? 0x5aff8a : 0xff4a4a); g.scale.set(a.w, Math.max(a.h, 0.1), a.d); g.position.set(a.cx, a.y + a.h / 2, a.cz); g.rotation.set(0, 0, 0);
-  if (a.id === 'ramp') { const Lr = Math.hypot(HH_C, HH_LV); g.scale.set(a.dir % 2 ? Lr : HH_C, 0.2, a.dir % 2 ? HH_C : Lr); const t = Math.atan2(HH_LV, HH_C); if (a.dir === 0) g.rotation.x = t; else if (a.dir === 2) g.rotation.x = -t; else if (a.dir === 1) g.rotation.z = t; else g.rotation.z = -t; }
+  if (a.id === 'ramp' || a.id === 'roof') { const Lr = Math.hypot(HH_C, HH_LV); g.scale.set(a.dir % 2 ? Lr : HH_C, 0.2, a.dir % 2 ? HH_C : Lr); const t = Math.atan2(HH_LV, HH_C); if (a.dir === 0) g.rotation.x = t; else if (a.dir === 2) g.rotation.x = -t; else if (a.dir === 1) g.rotation.z = t; else g.rotation.z = -t; }
   HH.look = hhLookPiece();
   if (M.hh.base) { const R = HH_BASELV[M.hh.s.base.lv - 1].r; if (Math.max(Math.abs(a.ix), Math.abs(a.iz)) > R) showMsgOnce('OUTSIDE YOUR BASE · EXPAND IT AT THE PLANS BOARD'); }
 }
@@ -338,7 +340,9 @@ function hhPieceMake(rec, quiet) {
   const H = M.hh, a = hhSpec(rec.id, rec.ix, rec.iz, rec.lv, rec.dir, rec.up), mx = rec.mat ? HH_MAT[rec.mat] : null, hpK = H.hero === 'builder' ? 1.5 : 1;
   const p = Object.assign({}, a, { rec, mat: rec.mat, hp: (mx ? mx.hp : 1) * hpK, max: (mx ? mx.hp : 1) * hpK, meshes: [], boxes: [], t: quiet ? 1 : 0, uses: a.id === 'spikes' ? 50 : a.id === 'zapper' ? 40 : a.id === 'launcher' ? 30 : 1e9, cd: 0 });
   const add = (cx, cz, w, d, h, y, o) => { const n = boxes.length, m = addBox(cx, cz, w, d, h, mx.key, Object.assign({ y }, o || {})); m.material = m.material.clone(); p.meshes.push(m); if (boxes.length > n) p.boxes.push(boxes[boxes.length - 1]); return m; };
-  if (a.id === 'wall' || a.id === 'floor') add(a.cx, a.cz, a.w, a.d, a.h, a.y);
+  if (a.id === 'wall' && rec.v) hhWallParts(a, rec.v, add);   // a doorway or a window (hhbuild2.js)
+  else if (a.id === 'wall' || a.id === 'floor' || a.id === 'half' || a.id === 'rail') add(a.cx, a.cz, a.w, a.d, a.h, a.y);
+  else if (a.id === 'roof') { const N = 10; for (let k = 0; k < N; k++) { const f = (k + 0.5) / N - 0.5, sx = [0, 1, 0, -1][a.dir], sz = [-1, 0, 1, 0][a.dir]; add(a.cx + sx * f * HH_C, a.cz + sz * f * HH_C, sx ? HH_C / N : HH_C, sz ? HH_C / N : HH_C, 0.22, a.y + (k + 1) * HH_LV / N - 0.22, { stair: ['n', 'e', 's', 'w'][a.dir] }); } }
   else if (a.id === 'ramp') { const N = 10, st = ['n', 'e', 's', 'w'][a.dir]; for (let k = 0; k < N; k++) { const f = (k + 0.5) / N - 0.5, sx = [0, 1, 0, -1][a.dir], sz = [-1, 0, 1, 0][a.dir]; add(a.cx + sx * f * HH_C, a.cz + sz * f * HH_C, sx ? HH_C / N : HH_C, sz ? HH_C / N : HH_C, (k + 1) * HH_LV / N, a.y, { stair: st }); } }
   else if (a.id === 'plot') { add(a.cx, a.cz, a.w, a.d, a.h, a.y); const soil = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.04, 2.3), hhPlantMats().soil); soil.position.set(a.cx, a.y + a.h + 0.01, a.cz); H.grp.add(soil); p.meshes.push(soil); p.plot = { soil }; }
   else hhTrapMesh(p);
@@ -394,7 +398,7 @@ addEventListener('keydown', e => {
 }, true);
 addEventListener('mousedown', e => {
   if (!M || !M.hh || !HH.build || G.state !== 'playing' || curScreen || HH.menu || !document.pointerLockElement) return;
-  if (e.button === 0) { e.stopImmediatePropagation(); hhPlace(); }
+  if (e.button === 0) { e.stopImmediatePropagation(); hhPlace(); HH.drag = true; HH.dragKey = null; }
 }, true);
 addEventListener('wheel', e => { if (!M || !M.hh || !HH.build || G.state !== 'playing') return; e.stopImmediatePropagation(); const n = hhPieceList().length; HH.piece = (HH.piece + (e.deltaY > 0 ? 1 : n - 1)) % n; }, true);
 function hhPadTick() {

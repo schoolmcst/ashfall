@@ -152,6 +152,11 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.103 TEST (batch B = 11-20): hhbuild2.js. Pieces half/rail (wall slots, h 1.5 / 1.0) and roof (thin walkable steps hidden
+  under a sloped slab); horde.js hhPieceMake/hhSpec/hhAim/ghost know them. Wall rec.v (1 doorway, 2 window: hhWallParts),
+  rec.c paint (HH_PAINT) via a hhPieceMake wrapper; build-mode keys STREAK=edit, PRONE=paint, U=undo (HH.undo from a hhPlace
+  wrapper); drag = HH.drag (set in horde's mousedown) + hhTick wrapper. PLANS: blueprints s.bp[1-3] (hhBpSave/hhBpBuild),
+  s.nightRaid (hhNight, 25% off), hhDefScore (also in the base HUD). Decor lamppost. Test s_horde4.
 - 1.2.102 TEST (owner: "think of 60 things" -> "do it all"; batch A = 1-10): hhgrow2.js. Plots grow step by step (st.p/lt,
   hhRate: sprinkler sp, greenhouse gh 1.4, wet wt 10 min else x0.5, bug x0.5, fed x1.5; hhGrowStep every 0.5 s), USE order:
   harvest / spray (1 sap) / water / feed. Stars hhStars -> s.bq. Hybrids 'x:a+b' (hhHybrid registers into HH_STRAINS; hhLoad

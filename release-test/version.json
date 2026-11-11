@@ -1,12 +1,11 @@
 {
- "version": "1.2.102",
+ "version": "1.2.103",
  "notes": [
-  "HOTBOX HORDE batch A (growing): WATER your plants (dry = half speed, sprinklers keep them wet), BUGS show up - spray them with tree sap",
-  "QUALITY STARS 1-5 from good care - more stars, better price",
-  "BREEDING: harvest next to a different ready strain for a chance at a HYBRID seed",
-  "GREENHOUSE (+40% speed under it), CURING SHELF (cured buds +50%), KITCHEN (brownies: eat one on a mission for 130 health, or sell them)",
-  "THREE BUYERS (THE BUYER, DOC GREEN, AUNTIE KUSH) with their own favourites, prices that move through the day, a PRICE BOARD, and BIG CONTRACTS"
+  "HOTBOX HORDE batch B (building): HALF WALLS, RAILINGS and sloped ROOFS",
+  "In build mode: X turns a wall into a DOORWAY or a WINDOW, B PAINTS it (7 colours), U UNDOES your last placements (cost back), hold click to DRAG a line",
+  "THE PLANS: 3 BLUEPRINT slots (save your layout, rebuild what a raid broke), NIGHT RAIDS (darker, 25% off the expansion) and your DEFENCE SCORE",
+  "New decor: LAMP POST"
  ],
- "sha256": "c8f7fbbba06847f56f6fab6652b3eb14929742050ddde636020140207c22b27b",
+ "sha256": "22a5f7d770dce7682584912882123ae5c74acc5ed25f20bd300378aa217e1c98",
  "minApp": "1.0.0"
 }
