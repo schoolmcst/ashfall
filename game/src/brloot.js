@@ -198,11 +198,11 @@ function brlSet(s, i, r) {
     const bz = set.wz - 0.2; for (const y of [0.45, 0.95, 1.45]) brlMesh(g, 'box', M0.wood, 0, y, bz, 1.25, 0.04, 0.4); for (const x of [-0.6, 0.6]) brlMesh(g, 'box', M0.dark, x, 0.85, bz, 0.04, 1.7, 0.4);
     brlItem(set, 'heal', { h: brlRollHeal(r) }, -0.35, 0.97, bz); brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.05, 0.97, bz);
     const t = ['light', 'heavy', 'shells', 'sniper'][Math.floor(r() * 4)]; brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.38, 0.97, bz);
-    brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.2, 1.47, bz); const x2 = r(); if (x2 < 0.35) brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.3, 0.47, bz); else if (x2 < 0.75) brlItem(set, 'throw', { eq: ['molotov', 'stun', 'semtex', 'healsmoke'][Math.floor(r() * 4)] }, 0.3, 0.47, bz); else brlItem(set, 'cover', {}, 0.2, 0.47, bz);
+    brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.2, 1.47, bz); const x2 = r(); if (x2 < 0.35) brlItem(set, 'heal', { h: brlRollHeal(r) }, 0.3, 0.47, bz); else if (x2 < 0.75) brlItem(set, 'throw', { eq: ['molotov', 'stun', 'semtex', 'healsmoke', 'puppet'][Math.floor(r() * 5)] }, 0.3, 0.47, bz); else brlItem(set, 'cover', {}, 0.2, 0.47, bz);
   } else {
     brlMesh(g, 'box', M0.pallet, 0, 0.07, 0, 1.2, 0.03, 0.8); for (const z of [-0.33, 0, 0.33]) brlMesh(g, 'box', M0.dark, 0, 0.03, z, 1.2, 0.06, 0.1);
     const it = gunIt(-0.1, 0.09, 0.05, 'lie'); const t = brlAmmoOf(ARM[it.gun]); brlItem(set, 'ammo', { t, n: BRL_AMMO[t].can }, 0.42, 0.09, -0.22);
-    const x3 = r(); if (x3 < 0.3) brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.42, 0.09, -0.25); else if (x3 < 0.6) brlItem(set, 'throw', { eq: ['molotov', 'stun', 'semtex', 'healsmoke'][Math.floor(r() * 4)] }, -0.42, 0.09, -0.25); else if (x3 < 0.72) brlItem(set, 'cover', {}, -0.4, 0.09, -0.25);
+    const x3 = r(); if (x3 < 0.3) brlItem(set, 'att', { a: BRL_KIT[Math.floor(r() * BRL_KIT.length)].id }, -0.42, 0.09, -0.25); else if (x3 < 0.6) brlItem(set, 'throw', { eq: ['molotov', 'stun', 'semtex', 'healsmoke', 'puppet'][Math.floor(r() * 5)] }, -0.42, 0.09, -0.25); else if (x3 < 0.72) brlItem(set, 'cover', {}, -0.4, 0.09, -0.25);
   }
   set.kind = kind;
 }

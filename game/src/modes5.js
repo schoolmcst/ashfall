@@ -34,7 +34,7 @@ function brSetup() {
   try { brfgSetup(); } catch (e) { reportError(e); }   // balloons, ladders (brfight.js)
   try { briSetup(); } catch (e) { reportError(e); }   // tents, sheds, tunnels, the train (brisle.js)
   try { brlSetup(); } catch (e) { reportError(e); }   // floor loot on tables, racks, shelves (brloot.js)
-  try { brsqSetup(); brpSetup(); } catch (e) { reportError(e); }   // re-up beacons (brsquad.js), stats and dailies (brprog.js)
+  try { brsqSetup(); brpSetup(); brxSetup(); } catch (e) { reportError(e); }   // re-up beacons (brsquad.js), stats and dailies (brprog.js)
   try { vhSetup(); } catch (e) {}
   try { ltSetup(); } catch (e) { reportError(e); }   // plates, cash, buy stations, contracts, storm (lasttoke2.js)
   try { brfStartPhase(M.br); } catch (e) { reportError(e); }   // WARM-UP, the bong and the float in (brintro.js)
@@ -86,7 +86,7 @@ function brUpdate(dt) {
   }
   B.uH = u;
   try { brlTick(dt); brlNameCol(); } catch (e) { reportError(e); }   // floor loot, ammo, heals (brloot.js)
-  try { brsqTick(dt); brbTick(dt); brfgTick(dt); briTick(dt); brpTick(dt); brnTick(dt); } catch (e) { reportError(e); }   // cards, beacons, callouts, carrying (brsquad.js)
+  try { brsqTick(dt); brbTick(dt); brfgTick(dt); briTick(dt); brpTick(dt); brnTick(dt); brxTick(dt); } catch (e) { reportError(e); }   // cards, beacons, callouts, carrying (brsquad.js)
   // the end: last one standing
   for (const e of brAliveBots()) if (!e.net && e.brTier === undefined) { try { botGunProfile(e, 'sidearm'); } catch (er) {} e.brTier = -1; }   // bots that just came in start with a pistol too
   if (sqOn()) {   // DUOS / SQUADS: last squad standing

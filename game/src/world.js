@@ -151,7 +151,7 @@ function ceilingAt(x, z, feetY, r = 0.3) {
 }
 function groundAt(x, z, feetY) {
   let g = TERR.on ? TH(x, z) : 0;
-  if (TERR.on && BRI_SEA !== undefined) { if (feetY < g - 2.5) g = -60; else if (g < BRI_SEA && feetY > BRI_SEA - 1.5) g = BRI_SEA; }   // under the ground (the tunnels) / swimming in the sea (brisle.js)
+  if (TERR.on && BRI_SEA !== undefined) { if (feetY < g - 2.5 && BRI && briUnder(x, z)) g = -60; else if (g < BRI_SEA && feetY > BRI_SEA - 1.5) g = BRI_SEA; }   // under the ground (the tunnels) / swimming in the sea (brisle.js)
   if (BRI && BRI.train) g = Math.max(g, briGround(x, z, feetY));   // standing on the train
   for (const b of boxesNear(x, z)) if (x > b.minx - 0.25 && x < b.maxx + 0.25 && z > b.minz - 0.25 && z < b.maxz + 0.25 && b.top <= feetY + STEP) g = Math.max(g, b.top);
   return g;

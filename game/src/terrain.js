@@ -36,7 +36,7 @@ function terrNoise(seed) {
 function terrSlope(pos, ox, oz, feetY) {
   if (!TERR.on) return;
   const d = Math.hypot(pos.x - ox, pos.z - oz); if (d < 1e-5 || d > 2) return;   // not moving, or a teleport
-  const hn = TH(pos.x, pos.z); if (hn <= feetY + 0.03 || feetY < hn - 2.5) return;   // (under the ground: the tunnels)   // not climbing the terrain (going down, or on a floor above it)
+  const hn = TH(pos.x, pos.z); if (hn <= feetY + 0.03 || (feetY < hn - 2.5 && typeof briUnder === 'function' && briUnder(pos.x, pos.z))) return;   // (under the ground: the tunnels)   // not climbing the terrain (going down, or on a floor above it)
   const ho = Math.max(TH(ox, oz), feetY - 0.05), steep = (h, dd) => dd > 1e-5 && (h - ho) / dd > 0.9 && h > feetY + 0.03;
   if (!steep(hn, d)) return;
   const hx = TH(pos.x, oz), hz = TH(ox, pos.z);

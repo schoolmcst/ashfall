@@ -152,6 +152,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.95 TEST: brextra.js WEED DECOY (EQUIP.puppet, brOnly; a see-through soldier clone runs 8 s, bots near it turn and fire
+  tracers at it), AWARDS on the BR results (wraps showResults; damage from a damageEnemy wrapper, loot from brOpen/brlTake/
+  briBoxTake wrappers, en.landT from brfLand/brfBot, en.firstKillT), THE JOINT REVIVE (a joint mesh on the viewmodel while
+  SQ.revT runs or a bot revives me, the downed rig lifts its head/arm, #brxHaze). The owner asked for a heroin/cocaine
+  revive: declined, did the joint instead. Fixed: groundAt's underground rule (and terrSlope's skip) only over the
+  tunnels now (briUnder / BRI.tunRects) - before, anything pushed 2.5 m under the terrain fell through. Test: s_brextra.
 - 1.2.94 PUBLIC (owner said send it): the follow-ups to 1.2.93. THE RIVER: map_stash2.js STASH_RIVER + STASH_LAKE (a lake at (-100,-24), west to
   the sea south of THE HOTEL; found by a grid path search clear of every place/building); stashHeight carves the bed to
   -2.6 with 12 m banks (stashHeight0 is the old height), a water ribbon + lake disc at -0.35, a sloped bridge in 2 m

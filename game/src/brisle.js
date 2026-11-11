@@ -16,7 +16,9 @@
      station at each end. Stand on the flat cars to ride; the last car carries a stash with an EPIC gun.
    SWIMMING: in the sea you float at the surface (slow, no shooting) instead of walking on the sea floor. */
 var BRI = { boxes: [], box: null, tents: [], sheds: [], tun: [], tunGroup: null, train: null, nightK: -1, envT: 0, wind: [0, 0], uH: false, harvT: 0, swim: false, age: 0 };
-var BRI_SEA = -1.15;   // the swimming height: the water (-0.35) less chest depth
+var BRI_SEA = -1.15;
+// is (x, z) over the tunnels (only there does the ground stop being the floor when you're under it)
+function briUnder(x, z) { const R = BRI.tunRects; if (!R) return false; for (const r of R) if (x > r[0] && x < r[1] && z > r[2] && z < r[3]) return true; return false; }   // the swimming height: the water (-0.35) less chest depth
 const BRI_TRAIN = { z: 134, x0: -92, x1: 61, v: 8, pause: 8, cars: [{ k: 'engine', len: 6 }, { k: 'flat', len: 6 }, { k: 'flat', len: 6 }] };
 /* ---------- the round starts */
 function briSetup() {
@@ -29,7 +31,7 @@ function briClear() {
   for (const b of BRI.boxes) if (b.g.parent) b.g.parent.remove(b.g); BRI.boxes = []; briBoxClose();
   for (const t of BRI.tents) if (t.g.parent) t.g.parent.remove(t.g); BRI.tents = [];
   for (const o of BRI.sheds) { try { brkBreak(o, false, true); } catch (e) {} delete BRK.list[o.id]; } BRI.sheds = [];
-  for (const t of BRI.tun) { if (t.m && t.m.parent) t.m.parent.remove(t.m); const i = wallMeshes.indexOf(t.m); if (i >= 0) wallMeshes.splice(i, 1); const j = boxes.indexOf(t.b); if (j >= 0) boxes.splice(j, 1); } BRI.tun = [];
+  for (const t of BRI.tun) { if (t.m && t.m.parent) t.m.parent.remove(t.m); const i = wallMeshes.indexOf(t.m); if (i >= 0) wallMeshes.splice(i, 1); const j = boxes.indexOf(t.b); if (j >= 0) boxes.splice(j, 1); } BRI.tun = []; BRI.tunRects = null;
   if (BRI.tunGroup && BRI.tunGroup.parent) BRI.tunGroup.parent.remove(BRI.tunGroup); BRI.tunGroup = null;
   if (BRI.train && BRI.train.g.parent) BRI.train.g.parent.remove(BRI.train.g); BRI.train = null;
   if (BRI.nightK > 0) try { applyEnv(MAPS[curMap] && MAPS[curMap].env); } catch (e) {} BRI.nightK = -1;
@@ -124,7 +126,9 @@ function briTunnels() {
   const add = (cx, cz, w, d, h, y0, mat) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat || con); m.position.set(cx, y0 + h / 2, cz); m.castShadow = false; m.receiveShadow = true; grp.add(m); wallMeshes.push(m); const b = mkBox(cx, cz, w, d, h, { y: y0 }); boxes.push(b); T.push({ m, b }); };
   const A = brfgOutdoor(4, 58), Bp = brfgOutdoor(40, 96), Cp = brfgOutdoor(-34, 100), ends = [A, Bp, Cp];
   // a straight piece along x or z (floor, walls, ceiling, lights)
+  BRI.tunRects = [];
   const seg = (x0, z0, x1, z1) => { const alongX = Math.abs(x1 - x0) > Math.abs(z1 - z0), L = (alongX ? Math.abs(x1 - x0) : Math.abs(z1 - z0)) + W, cx = (x0 + x1) / 2, cz = (z0 + z1) / 2;
+    BRI.tunRects.push([cx - (alongX ? L : W) / 2 - 0.5, cx + (alongX ? L : W) / 2 + 0.5, cz - (alongX ? W : L) / 2 - 0.5, cz + (alongX ? W : L) / 2 + 0.5]);
     add(cx, cz, alongX ? L : W, alongX ? W : L, 0.3, FY - 0.3); add(cx, cz, alongX ? L : W, alongX ? W : L, 0.3, FY + Hh);
     for (const s of [-1, 1]) add(alongX ? cx : cx + s * (W / 2 + 0.15), alongX ? cz + s * (W / 2 + 0.15) : cz, alongX ? L : 0.3, alongX ? 0.3 : L, Hh, FY);
     for (let t = -L / 2 + 3; t < L / 2 - 2; t += 7) { const m = new THREE.Mesh(new THREE.BoxGeometry(alongX ? 1.4 : 0.2, 0.06, alongX ? 0.2 : 1.4), lamp); m.position.set(alongX ? cx + t : cx, FY + Hh - 0.04, alongX ? cz : cz + t); grp.add(m); } };
@@ -133,7 +137,7 @@ function briTunnels() {
   // a shaft and a hatch hut at each end, with a ladder down
   const hut = MAT.plaster || con, hatch = new THREE.MeshBasicMaterial({ color: 0x050505 });
   for (const E of ends) {
-    const top = TH(E.x, E.z);
+    const top = TH(E.x, E.z); BRI.tunRects.push([E.x - 1.2, E.x + 1.2, E.z - 1.2, E.z + 1.2]);   // the shaft
     for (const [dx, dz, w, d] of [[-1, 0, 0.2, 2.2], [1, 0, 0.2, 2.2], [0, -1, 2.2, 0.2], [0, 1, 2.2, 0.2]]) add(E.x + dx * 0.95, E.z + dz * 0.95, w, d, top - FY - 0.05, FY);
     // the hut over it: walls with a door to the east, a roof
     const hx = E.x + 0.9; for (const [dx, dz, w, d] of [[0, -1.6, 3.6, 0.2], [0, 1.6, 3.6, 0.2], [-1.8, 0, 0.2, 3.4]]) add(hx + dx, E.z + dz, w, d, 2.5, top, hut);
@@ -223,7 +227,7 @@ function briTick(dt) {
   if (sw && !BRI.swim) try { showMsg('SWIMMING · no shooting'); } catch (e) {}
   BRI.swim = sw; if (sw) G.swapT = Math.max(G.swapT, 0.2);
   // in the tunnels
-  const under = typeof TERR !== 'undefined' && TERR.on && P.y < TH(P.x, P.z) - 3; if (under && !BRI.under) try { showBanner('THE TUNNELS', 'under STASH ISLAND · ladders up at the hatch huts'); } catch (e) {} BRI.under = under;
+  const under = typeof TERR !== 'undefined' && TERR.on && P.y < -5 && briUnder(P.x, P.z); if (under && !BRI.under) try { showBanner('THE TUNNELS', 'under STASH ISLAND · ladders up at the hatch huts'); } catch (e) {} BRI.under = under;
 }
 const briSwim = () => (BRI.swim ? 0.45 : 1);
 const briWind = () => (M && M.br ? BRI.wind : [0, 0]);

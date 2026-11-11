@@ -218,7 +218,7 @@ function brfLand() {
   for (const p of BRF.trail) if (p.parent) p.parent.remove(p); BRF.trail = [];
   camera.fov = baseFov; camera.updateProjectionMatrix(); G.spawnProt = 1;
   let name = ''; try { const p = typeof mapPoiAt === 'function' ? mapPoiAt(P.x, P.z) : null; if (p) name = p.name; } catch (e) {}
-  try { if (typeof BRP !== 'undefined') { BRP.landPoi = name || null; BRP.landKills = 0; } } catch (e) {}
+  try { if (typeof BRP !== 'undefined') { BRP.landPoi = name || null; BRP.landKills = 0; } M.me.landT = M.t; } catch (e) {}
   try { showBanner('LANDED', name ? name + ' · find a crate' : 'find a crate · watch the cloud'); } catch (e) {}
 }
 function brfFloatTick(dt) {
@@ -293,7 +293,7 @@ function brfBot(e, dt) {
   const r = e.rig; if (r) { r.armL.rotation.set(-0.2, 0, 1.1); r.armR.rotation.set(-0.2, 0, -1.1); r.legL.rotation.x = 0.15; r.legR.rotation.x = -0.1; }
   const g2 = groundAt(g.x, g.z, g.y + 0.5);
   if (g.y <= g2 + 0.02 || F.t > 90) {
-    g.y = g2; e.brFloat = null; if (e.brPuff) e.brPuff.visible = false;
+    g.y = g2; e.brFloat = null; if (e.brPuff) e.brPuff.visible = false; if (e.entry) e.entry.landT = M.t;
     try { if (nodeOf(g.x, g.z, g.y) < 0) { const o = openNear(g.x, g.z); g.x = o.x; g.z = o.z; g.y = groundAt(o.x, o.z, (o.y || TH(o.x, o.z)) + 1); } } catch (er) {}
     e.goal = null; e.spawnProt = 0.5;
   }
