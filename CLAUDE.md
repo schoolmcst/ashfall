@@ -152,6 +152,11 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.107 TEST (batch F = 45-55): hhhero.js. s.hx hero XP (hhHLv), s.sk[hero] armor/fire/craft (lobby hh-sk-*), abilities on
+  FIELD (T) hhAbility (HH.abT, HH.burstT), crew orders on STREAK (X) HH.order -> hhGoal wrapper sets e.hhTask, hhCrewWork does
+  harvest/fix/water. HH_GUNS gid (xbow/dmr/gl/bong; launchers equip as secondary), g.perk, repair, s.melee (HH_MELEE). Survivors
+  s.surv (+3 per rescue win, NPCs at base, +5% buds each). Crew names s.crewN / levels s.crew. FIXED in match.js botGoal: M.hh was
+  missing from the m2Goal condition, so crew bots never used hhGoal before. Supply extraction radius 6.5 m. Test s_horde8.
 - 1.2.106 TEST (batch E = 36-44): hhmis2.js. HH_MISSIONS is 28 (per map: defend, supply, wild, rescue, truck, signal,
   nests; stackyard defend = 7). hhHunt(kind) (horde.js) = no plant, phase 'run'; mobs use e.obj (target object with its own
   field) and hhObjHit. rescue (H.growers follow via navDir), truck (H.truck rolls on its field while you are within 12 m;

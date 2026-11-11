@@ -409,7 +409,7 @@ function botGoal(e, cands) {
   const set = (p, hold) => { e.goalT = M.t + (hold || rnd(3, 6)); return p; };
   if (e.inf) { const g = infGoal(e, set); if (g) return g; }
   if (e.camp) { const g = campGoal(e, keep, near, set); if (g) return g; }
-  if (M.kc || M.dom || M.ru || M.br || M.plug || M.heist) { const g = m2Goal(e, keep, near, set); if (g) return g; }
+  if (M.kc || M.dom || M.ru || M.br || M.plug || M.heist || M.hh) { const g = m2Goal(e, keep, near, set); if (g) return g; }
   if (e.job) { const g = botRoleGoal(e, cands, keep, near, set); if (g) return g; }
   if (M.mode === 'hp' && M.hp && !M.hp.wait) {
     const z = LAYOUT.hp[M.hp.idx];

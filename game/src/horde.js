@@ -89,7 +89,7 @@ const hhPay = (s, cost) => { for (const k in cost) if (hhGot(s, k) < cost[k]) re
 const hhHas = (s, cost) => Object.entries(cost).every(([k, v]) => hhGot(s, k) >= v);
 const hhCostTxt = (cost, s) => Object.entries(cost).map(([k, v]) => `<span style="color:${!s || (s.inv[k] | 0) >= v ? 'inherit' : '#ff6a6a'}">${v} ${HH_ALLN(k)}</span>`).join(' · ');
 const hhMarket = () => { const d = new Date(), h = Math.imul(d.getFullYear() * 400 + d.getMonth() * 31 + d.getDate(), 2654435761) >>> 0; return 0.85 + (h % 1000) / 1000 * 0.35; };   // today's price (85% to 120%)
-const hhGunDef = g => ARMORY.find(d => d.cat === g.cat && CATS[d.cat] && CATS[d.cat].slot === 'primary') || ARM.marc;
+const hhGunDef = g => (g.gid && ARM[g.gid]) || ARMORY.find(d => d.cat === g.cat && CATS[d.cat] && CATS[d.cat].slot === 'primary') || ARM.marc;
 
 /* ---------- the lobby */
 function hhOpen() { HHL.on = true; try { BRLOB.on = false; ZL.on = false; } catch (e) {} if (G.state !== 'menu') leaveGame(); hhRender('.cod-go'); showScreen('lobby'); }
@@ -555,7 +555,7 @@ function hhSupplyTick(dt) {
   if (H.phase === 'run' && H.found >= 6) { H.phase = 'extract'; H.t = Math.min(H.t, 150); let best = null, bd = -1; for (let i = 0; i < 60; i++) { const o = openNear(rnd(PLAYRECT[0] + 5, PLAYRECT[1] - 5), rnd(PLAYRECT[2] + 5, PLAYRECT[3] - 5)), d = Math.hypot(o.x - P.x, o.z - P.z); if (d > 25 && d < 55 && d > bd) { bd = d; best = o; } } best = best || openNear(0, 0);
     const vy = groundAt(best.x, best.z, 0.6), v = hhVanMesh(0x3a6a3a); v.position.set(best.x, vy, best.z); v.rotation.y = Math.random() * TAU; H.grp.add(v); H.van = { x: best.x, z: best.z, y: vy, g: v, t: 0 };
     try { showBanner('EXTRACTION VAN INBOUND', 'get to the van and hold the spot for 6 seconds'); sfx.streak(); } catch (e) {} }
-  if (H.van) { const near = playerAlive() && Math.hypot(P.x - H.van.x, P.z - H.van.z) < 5; H.van.t = near ? H.van.t + dt : Math.max(0, H.van.t - dt * 0.5); if (near) showMsgOnce(`EXTRACTING · ${Math.min(100, Math.round(H.van.t / 6 * 100))}%`); if (H.van.t >= 6) hhEnd(true); }
+  if (H.van) { const near = playerAlive() && Math.hypot(P.x - H.van.x, P.z - H.van.z) < 6.5; H.van.t = near ? H.van.t + dt : Math.max(0, H.van.t - dt * 0.5); if (near) showMsgOnce(`EXTRACTING · ${Math.min(100, Math.round(H.van.t / 6 * 100))}%`); if (H.van.t >= 6) hhEnd(true); }
 }
 function hhCacheOpen(c) {
   const H = M.hh; c.done = true; H.found++; const got = [];
@@ -615,7 +615,7 @@ function hhPlaceNear(o, isMe) {
 function hhTick(dt) {
   const H = M.hh; if (!H || M.over) return;
   if (!H.placed) { H.placed = true; hhPlaceNear(null, true); for (const e of enemies) if (e.entry) { hhPlaceNear(e); e.hhIn = true; }
-    if (H.gun) try { equipClass({ p: H.gunId, s: 'sidearm', e: 'frag', k: 'none', factory: true }); } catch (e) { reportError(e); }
+    if (H.gun) try { const gd = ARM[H.gunId], sec = gd && CATS[gd.cat] && CATS[gd.cat].slot === 'secondary', ac = activeClass(); equipClass(sec ? { p: ac.p, s: H.gunId, e: 'frag', k: 'none', factory: true } : { p: H.gunId, s: 'sidearm', e: 'frag', k: 'none', factory: true }); } catch (e) { reportError(e); }
     showBanner(H.base ? 'THE HOMESTEAD' : HH_TYPES[H.kind].n, H.base ? `grow · sell · build · ${actName('build')} to build, ${actName('use')} at the stations` : H.kind === 'wild' ? 'cut 6 of the wild weed plants, then get to the van' : H.kind === 'supply' ? 'search 6 of the 8 caches, then get to the van' : `harvest with ${actName('melee')} · ${actName('build')} to build · wave 1 in 90 s`); }
   if (playerAlive()) { if (!HH.meIn) { HH.meIn = true; if (M.t > 1) hhPlaceNear(null, true); } } else { HH.meIn = false; hhBuildMode(false); }
   for (const e of enemies) if (e.entry && !e.hhIn) { e.hhIn = true; hhPlaceNear(e); }

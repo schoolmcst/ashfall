@@ -1,12 +1,14 @@
 {
- "version": "1.2.106",
+ "version": "1.2.107",
  "notes": [
-  "HOTBOX HORDE batch E (missions): RESCUE THE GROWERS, DELIVER THE TRUCK, HOLD THE SIGNAL, DESTROY THE NESTS - 28 missions now",
-  "MISSION MAP: pick missions from cards (MAP button in the lobby)",
-  "NIGHT MISSIONS switch (darker, tougher, +40% pay), a daily MODIFIER on every mission (BIG HEADS, DOUBLE DRIFTERS, FAST, EXPLOSIVE, RICH)",
-  "DAILY MISSION: double pay on its first win of the day",
-  "WEEKLY CHALLENGES: 3 a week, ,000 + rare seeds each"
+  "HOTBOX HORDE batch F (heroes and crew): HERO LEVELS 1-20 and a SKILL TREE (ARMOUR, FIREPOWER, SCAVENGER) in the lobby",
+  "HERO ABILITIES on T: BUILDER instant wall, GUNNER burst, SCRAPPER ground pound, MEDIC heal bomb",
+  "New guns: CROSSBOW, THE TRIMMER DMR, SEED SPITTER and the wonder weapon THE BONG - crafted guns roll a PERK and can be REPAIRED",
+  "MELEE weapons to craft: BAT, MACHETE, SCYTHE",
+  "SURVIVORS: rescued growers move into your base (+5% buds each)",
+  "CREW ORDERS on X: GUARD, FOLLOW, HARVEST, REPAIR (at home they also water dry plants) - your crew keeps its names and levels up",
+  "Fixed: the crew never actually followed HOTBOX HORDE orders (they just wandered) - now they guard the plant"
  ],
- "sha256": "b0b711617b9309b416108311f4ee732502196cc39cd396fded5612b24181c5ea",
+ "sha256": "c975c618a032f3d34a67ef7a277ec5c96120cb5328bbeaa20f88ca3d56e369cb",
  "minApp": "1.0.0"
 }
