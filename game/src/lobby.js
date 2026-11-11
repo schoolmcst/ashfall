@@ -44,6 +44,7 @@ const brModeKey = k => k === 'br' || k === 'rbr' || /^obr/.test(k);   // LAST TO
 function renderLobby(focusSel) {
   if (typeof ZL !== 'undefined' && ZL.on) return renderZLobby(focusSel);
   if (typeof BRLOB !== 'undefined' && BRLOB.on) return brlobRender(focusSel);
+  if (typeof HHL !== 'undefined' && HHL.on) return hhRender(focusSel);
   if (!MODES[LOBBY.mode].online || !playlist().includes(LOBBY.mode)) LOBBY.mode = playlist()[0];
   const sel = LOBBY.mode, d = MODES[sel], online = !!d.online, st = careerOf(online), c = activeClass(), p = ARM[c.p], s = ARM[c.s];
   if (online) LOBBY.lastOn = sel; else LOBBY.lastOff = sel;

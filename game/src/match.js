@@ -47,6 +47,7 @@ const MODES = {
   obr4: { name: 'ONLINE LAST TOKE SQUADS', short: 'ONLINE BR SQUADS', icon: 'BR4', desc: 'Real people in squads of 4: battle royale with downs and revives. Last squad standing wins. Bots fill the empty spots.', teams: false, respawn: 0, score: 999, time: 0, players: 16, unit: 'KILLS', online: true, base: 'br', squad: 4 },
   oph: { name: 'ONLINE PROP HUNT', short: 'ONLINE PROPS', icon: 'PRP', desc: 'Real people, hunters against props, swapping every two minutes. Hide as a crate or a bong, or hunt them down.', teams: true, respawn: 4, score: 999, time: 6, perTeam: 6, unit: 'POINTS', online: true, base: 'ph' },
   opp: { name: 'ONLINE PUFF PUFF PASS', short: 'ONLINE PASS', icon: 'PPP', desc: 'Real people, every one for themselves, everyone on the same gun. It changes every 40 seconds.', teams: false, respawn: 2.5, score: 25, time: 0, players: 12, unit: 'KILLS', online: true, base: 'pp' },
+  hh: { name: 'HOTBOX HORDE', short: 'HORDE', icon: 'HRD', desc: 'Co-op build and defend: you and three crew bots guard THE MOTHER PLANT from five waves of THE BURNOUTS. Harvest, build walls, floors, stairs and traps, keep her alive.', teams: false, respawn: 6, score: 999, time: 0, players: 4, squad: 4, unit: 'WAVES' },
   camp: { name: 'CAMPAIGN', short: 'STORY', icon: 'CMP', desc: 'FIRST HARVEST: the story missions.', teams: true, respawn: 0, score: 0, time: 0, perTeam: 1, unit: 'STEPS' },
   range: { name: 'THE STASH YARD', short: 'RANGE', icon: 'RNG', desc: 'Firing range and tutorial: targets to shoot, the basics to learn. Nothing counts for XP or stats.', teams: false, respawn: 2, score: 0, time: 0, players: 1, unit: 'TARGETS' },
   surv: { name: 'SURVIVAL', short: 'SURV', icon: 'WAVE', desc: 'Hold out alone against endless waves. How far can you get?', teams: false, respawn: 0, score: 0, time: 0, unit: 'WAVES' },
@@ -225,6 +226,7 @@ function objSetup() {
 const netHostNow = () => !M.online || !!(NET.room && NET.room.host);
 function modeGoalText() {
   const c = M.cfg;
+  if (M.hh) return 'defend THE MOTHER PLANT for five waves';
   if (M.br) return M.squad > 1 ? 'last squad standing wins' : 'last one standing wins';
   if (M.mode === 'snd' || M.mode === 'gf') return `first to ${c.score} rounds`;
   if (M.mode === 'inf') return `survive ${Math.round((c.infLen || 300) / 60)} minutes`;

@@ -1,11 +1,11 @@
 {
- "version": "1.2.97",
+ "version": "1.2.98",
  "notes": [
-  "NIGHTBLOOM REVIVE, MORE REAL: a proper gloved hand with jointed fingers slowly closes and crushes the flower",
-  "Petals break off and fall, fine pollen dust drifts from your palm to your mate",
-  "Your mate breathes it in, coughs, props up on their elbows and staggers back up",
-  "When a bot revives you: the screen comes back from dark and blurry, a weak heartbeat gets stronger, then a deep gasp"
+  "NEW MODE: HOTBOX HORDE (co-op build and defend) - its own lobby and a new menu tile",
+  "Guard THE MOTHER PLANT with 3 crew bots through 5 waves of THE BURNOUTS (walkers, SPRINTERS, SMASHERS that wreck walls, SPITTERS that lob goo, boss THE OVERGROWN)",
+  "Harvest WOOD / STONE / METAL with melee, press H for BUILD MODE: walls, floors, stairs, SPIKE TRAPS, BUG ZAPPERS, STICKY RESIN (controller: D-pad right)",
+  "Lobby: 4 missions, 4 difficulties, 4 heroes (BUILDER, GUNNER, SCRAPPER, MEDIC), upgrades bought with SEEDS you earn"
  ],
- "sha256": "a4199c7b246ff7b3961b4130a7d48e1f64c2220eed158cb728906d03b56f7b44",
+ "sha256": "02ba17630f545e2dcb7732c3fb5fc5d642dbceb2d0d45abc50a79e260766e1d3",
  "minApp": "1.0.0"
 }

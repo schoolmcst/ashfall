@@ -152,6 +152,18 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.98 TEST: HOTBOX HORDE (horde.js; mode 'hh', def.squad 4 = me + 3 crew bots, players 4): co-op build-and-defend in the style
+  the owner asked for ("like fortnite save the world", original names/look). Own lobby (HHL, hhRender/hhAct; renderLobby
+  defers; menu tile #hhTile via a featTiles wrapper; actions -> hhAct before brlobAct). Save ashfall.hh.v1 (seeds, lv
+  plant/trap/mats, hero, mis, diff, unl, stats). HH_MISSIONS on greenhouse/stackyard/dustwater/ruins_night. hhSpot puts
+  THE MOTHER PLANT on the most open roofless spot near the middle (pot is a mkBox); flowField to it = H.field; 3 SMOKE RIFTS;
+  30 harvest nodes (melee: hhHarvest on G.meleeT). Build: bind 'build' = H (pad D-pad right); 3 m grid round the plant
+  (hhAim/hhValid/hhPlace; walls on cell edges with both edge keys, floors, 10-step stairs, traps spikes/zapper/resin);
+  pieces are runtime addBox with cloned materials (hhPieceRemove + rebuildBoxGrid). Mobs (HH_KINDS) are non-entry
+  enemies team 9 (crew bots target them), zombMat skin + tint, animZombie; hhMobTick: target near unit else plant, flowDir,
+  stuck -> hhBlocker -> bash the piece; SPITTERS hhSpit. Waves hhWaveList; 5th has THE OVERGROWN. hhEnd -> seeds, unlocks,
+  endMatch; results card via a showResults wrapper. M.hh cleared via HH.cur in hhClear (clearMatch + m3Setup). Rendering in
+  the test container is ~40x slower than simulating, so s_horde runs waves with G.noRender. Test: s_horde. Online not done.
 - 1.2.97 PUBLIC (owner said send it; includes 1.2.96) (owner: "make it more realistic"): NIGHTBLOOM revive remade - brxBloomMesh(bot) is a real hand (VM.sleeve forearm angled down, fingerless VM.glove, 3-joint fingers + thumb curl on +x), cupped vertex-coloured petals that break off (brxDropPetal -> BRX.fall), stamens, leaves; dust pollen with drag; the downed bot breathes, inhales, coughs, props up (e.revLift, read by sqBotDowned) and staggers after sqBotUp (BRX.stag); brxSnd crush/inhale/cough/gasp/beat; me revived = dark blurry #brxHaze clearing, soft flash (BRX.wake). s_bloom moves other mates away for pictures.
 - 1.2.96 PUBLIC: THE NIGHTBLOOM REVIVE replaces the joint (brextra.js): a made-up drug (a glowing purple flower that grows in
   the Nightshade cloud), drawn in the world in front of the camera (the viewmodel scene washes colours out); crush, pollen

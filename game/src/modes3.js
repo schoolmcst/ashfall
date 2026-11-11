@@ -15,6 +15,7 @@ function m3Setup() {
   if (M.mode === 'pp') ppSetup();
   try { phClear(); } catch (e) {} M.ph = null; if (M.mode === 'ph') phSetup();
   try { brClear(); } catch (e) {} M.br = null; if (M.mode === 'br') brSetup();
+  try { hhClear(); } catch (e) {} M.hh = null; if (M.mode === 'hh') hhSetup();   // HOTBOX HORDE (horde.js)
   m6Setup();   // ONE IN THE CHAMBER / HEADSHOTS ONLY (modes6.js)
   M.kf = M.mode === 'kf' ? {} : null; M.plug = null; M.heist = null; if (M.mode === 'plug') plugSetup(); if (M.mode === 'heist') heistSetup();   // modes7.js
 }
