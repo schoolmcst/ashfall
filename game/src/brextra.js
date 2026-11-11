@@ -4,9 +4,10 @@
      bursts into smoke.
    AWARDS on the LAST TOKE results: MOST DAMAGE, BEST LANDING (the quickest first kill after landing), LOOT GOBLIN (the
      most things picked up: crates, floor loot, stash boxes) and, when the winner never fired a killing shot, PACIFIST.
-   THE JOINT REVIVE: reviving a squadmate you crouch over them with a lit joint in your hand (your gun goes away); they
-     lift their head, take a hit and blow out a cloud when they get up. When a bot picks you up, the joint comes in from
-     the side of your screen and everything goes a little green and hazy. */
+   THE NIGHTBLOOM REVIVE (a made-up drug): reviving a squadmate you hold a glowing purple flower that only grows in the
+     Nightshade cloud; your hand crushes it and its pollen drifts into their face; they twitch harder and harder, then
+     jolt up in a burst of purple sparks and a zap. When a bot gets you up: purple sparkle, a heartbeat that speeds up,
+     a white-purple flash. */
 const BRX = { puppets: [], dmg: new Map(), loot: new Map(), joint: null, haze: 0 };
 EQUIP.puppet = { name: 'WEED DECOY', desc: 'A smoke copy of a soldier runs off where it lands and draws the bots\' fire for 8 s.', count: 2, max: 3, fuse: 0.9, color: 0x3a6a2a, glow: 0x8aff6a, brOnly: true };
 if (typeof BRFG_THROW !== 'undefined') BRFG_THROW.puppet = { n: 'WEED DECOY', col: 0x8aff6a };
@@ -65,32 +66,56 @@ showResults = function (winner, won) {
   try { const a = brxAwards(); if (a.length) { const el = $('resBoard'); el.insertAdjacentHTML('afterbegin', `<div class="brx-aw">${a.map(([t, n, d]) => `<div><small>${t}</small><b>${n}</b><span>${d}</span></div>`).join('')}</div>`); } } catch (e) {}
   return r;
 };
-/* ---------- the joint revive */
-function brxJointMesh() {
-  const g = new THREE.Group(), paper = new THREE.MeshStandardMaterial({ color: 0xf2eee4, roughness: 0.9 }), tip = new THREE.MeshStandardMaterial({ color: 0x3a2a1a, emissive: 0xff5a10, emissiveIntensity: 2.5 }), hand = new THREE.MeshStandardMaterial({ color: 0xc89a78, roughness: 0.8 });
-  const j = new THREE.Mesh(new THREE.CylinderGeometry(0.0055, 0.009, 0.085, 10), paper); j.rotation.z = Math.PI / 2 - 0.25; g.add(j);
-  const t = new THREE.Mesh(new THREE.SphereGeometry(0.0075, 8, 6), tip); t.position.set(-0.042, -0.011, 0); g.add(t); g.userData.tip = t;
-  const f = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.022, 0.03), hand); f.position.set(0.035, -0.012, 0); g.add(f);
-  return g;
+/* ---------- the NIGHTBLOOM revive (a made-up drug: a glowing purple flower that only grows in the Nightshade cloud) */
+function brxBloomMesh() {
+  const g = new THREE.Group(), glow = new THREE.MeshBasicMaterial({ color: 0xb04aff }), core = new THREE.MeshStandardMaterial({ color: 0xff9aff, emissive: 0xff7aff, emissiveIntensity: 3 }), stem = new THREE.MeshStandardMaterial({ color: 0x1a3a1a, roughness: 0.8 }), hand = new THREE.MeshStandardMaterial({ color: 0xc89a78, roughness: 0.8 });
+  const flower = new THREE.Group(); g.add(flower); g.userData.flower = flower;
+  for (let i = 0; i < 6; i++) { const pe = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), glow); const a = i / 6 * TAU; pe.scale.set(1, 0.35, 2); pe.position.set(Math.cos(a) * 0.014, 0.004, Math.sin(a) * 0.014); pe.rotation.y = -a; flower.add(pe); }
+  const c = new THREE.Mesh(new THREE.SphereGeometry(0.007, 8, 6), core); c.position.y = 0.008; flower.add(c); g.userData.core = c;
+  const st = new THREE.Mesh(new THREE.CylinderGeometry(0.002, 0.002, 0.05, 6), stem); st.position.y = -0.025; flower.add(st);
+  const palm = new THREE.Mesh(new THREE.BoxGeometry(0.055, 0.018, 0.05), hand); palm.position.y = -0.03; g.add(palm); g.userData.palm = palm;
+  const fingers = []; for (let i = 0; i < 4; i++) { const f = new THREE.Mesh(new THREE.BoxGeometry(0.01, 0.035, 0.01), hand); f.position.set(-0.02 + i * 0.013, -0.012, 0.024); g.add(f); fingers.push(f); } g.userData.fingers = fingers;
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.flash, color: 0xc070ff, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.6, depthWrite: false })); halo.scale.setScalar(0.09); halo.position.y = 0.006; flower.add(halo); g.userData.halo = halo;
+  g.scale.setScalar(1.7); return g;
+}
+// purple glitter (pollen in the air, sparks on the jolt)
+function brxSparks(x, y, z, n, spread, toward) {
+  for (let i = 0; i < n; i++) { const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: TEX.smoke, color: Math.random() < 0.5 ? 0xb04aff : 0xe07aff, blending: THREE.AdditiveBlending, transparent: true, opacity: 0.9, depthWrite: false })); s.position.set(x + rnd(-spread, spread), y + rnd(-spread, spread), z + rnd(-spread, spread)); s.scale.setScalar(rnd(0.06, 0.16)); scene.add(s);
+    const v = toward ? { x: (toward.x - s.position.x) * 1.2 + rnd(-0.3, 0.3), y: (toward.y - s.position.y) * 1.2 + rnd(-0.2, 0.3), z: (toward.z - s.position.z) * 1.2 + rnd(-0.3, 0.3) } : { x: rnd(-2.5, 2.5), y: rnd(0.5, 3), z: rnd(-2.5, 2.5) };
+    BRX.sparks = BRX.sparks || []; BRX.sparks.push({ s, v, t: 0, life: toward ? 0.9 : 0.7 }); }
+}
+function brxSparkTick(dt) { const L = BRX.sparks || []; for (let i = L.length - 1; i >= 0; i--) { const p = L[i]; p.t += dt; p.s.position.x += p.v.x * dt; p.s.position.y += p.v.y * dt; p.s.position.z += p.v.z * dt; p.s.material.opacity = 0.9 * (1 - p.t / p.life); if (p.t >= p.life) { scene.remove(p.s); L.splice(i, 1); } } }
+// the jolt when someone comes back (from sqBotUp / sqPlayerUp)
+function brxBloomUp(x, y, z, me) {
+  brxSparks(x, y, z, 26, 0.3, null); try { tone(180, 0.25, 0.08, 'sawtooth', 900); burst(0.15, 4000, 0.07, 'highpass'); } catch (e) {}
+  if (me) { const f = $('brxFlash'); if (f) { f.style.transition = 'none'; f.style.opacity = 0.85; requestAnimationFrame(() => { f.style.transition = 'opacity .8s'; f.style.opacity = 0; }); } }
 }
 function brxReviveTick(dt) {
-  const mine = typeof SQ !== 'undefined' && SQ.revT > 0 && SQ.revWho && SQ.revWho.downed, helped = G.downed && enemies.some(e => e.team === M.myTeam && !e.downed && e.revT > 0.05 && Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) < 1.9);
-  const on = playerAlive() && (mine || helped);
-  if (on && !BRX.joint && typeof viewmodel !== 'undefined' && viewmodel) { BRX.joint = brxJointMesh(); viewmodel.add(BRX.joint); BRX.jT = 0; }
+  brxSparkTick(dt);
+  const mine = typeof SQ !== 'undefined' && SQ.revT > 0 && SQ.revWho && SQ.revWho.downed, helper = G.downed ? enemies.find(e => e.team === M.myTeam && !e.downed && e.revT > 0.05 && Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) < 1.9) : null, helped = !!helper;
+  const on = playerAlive() && (mine || helped), REV = typeof SQ_REVIVE !== 'undefined' ? SQ_REVIVE : 2.4, pr = mine ? SQ.revT / REV : helped ? helper.revT / REV : 0;
+  if (on && !BRX.joint) { BRX.joint = brxBloomMesh(); scene.add(BRX.joint);   // in the world just in front of the camera (the gun's own view washes its colours out)
+    BRX.jT = 0; BRX.pollenT = 0; BRX.beatT = 0; }
   if (BRX.joint) {
-    BRX.jT += dt; const J = BRX.joint, k = Math.min(1, BRX.jT / 0.35);
+    BRX.jT += dt; const J = BRX.joint, U = J.userData, k = Math.min(1, BRX.jT / 0.35);
     if (!on) { if (J.parent) J.parent.remove(J); BRX.joint = null; try { const gun = gunObjs[G.cur]; if (gun) gun.visible = true; } catch (e) {} }
     else {
       try { const gun = gunObjs[G.cur]; if (gun) gun.visible = false; } catch (e) {}
-      if (mine) J.position.set(0.05, -0.13 + 0.03 * k, -0.28 - 0.08 * k); else J.position.set(0.32 - 0.24 * k, -0.1, -0.26);   // held out to them / coming in from the side
-      J.rotation.set(0, 0.3, Math.sin(NOW * 2) * 0.05); J.userData.tip.material.emissiveIntensity = 2 + Math.sin(NOW * 13) * 0.8;
-      if (Math.random() < dt * 6) try { brsqPuff((mine ? SQ.revWho.group.position.x : P.x), (mine ? SQ.revWho.group.position.y + 0.5 : P.y + 1.4), (mine ? SQ.revWho.group.position.z : P.z), 1); } catch (e) {}
+      if (mine) J.position.set(0.03, -0.11 + 0.04 * k, -0.27 - 0.06 * k); else J.position.set(0.3 - 0.22 * k, -0.08, -0.25);
+      J.userData.local = J.position.clone();
+      // 1: the flower pulses in the open hand; 2: the hand closes and crushes it; 3: pollen drifts out
+      const crush = clamp((pr - 0.35) / 0.3, 0, 1), pulse = 1 + Math.sin(NOW * 9) * 0.12;
+      U.flower.scale.setScalar(Math.max(0.05, (1 - crush * 0.9) * pulse)); U.core.material.emissiveIntensity = 3 + Math.sin(NOW * 9) * 1.5 + crush * 3; U.halo.material.opacity = 0.45 + Math.sin(NOW * 9) * 0.2 + crush * 0.3;
+      U.fingers.forEach((f, i) => { f.rotation.x = -1.4 * crush; f.position.y = -0.012 + 0.02 * crush; });
+      J.rotation.set(-0.2 * crush, 0.3, Math.sin(NOW * 2) * 0.04); camera.updateMatrixWorld(); J.quaternion.copy(camera.quaternion).multiply(new THREE.Quaternion().setFromEuler(J.rotation)); J.position.copy(J.userData.local).applyQuaternion(camera.quaternion).add(camera.position);
+      if (mine && crush > 0.6 && (BRX.pollenT -= dt) <= 0) { BRX.pollenT = 0.08; const t = SQ.revWho.group.position; const hp = new THREE.Vector3(); J.getWorldPosition(hp); try { const c = camera.position, d = new THREE.Vector3(t.x, t.y + 0.4, t.z); brxSparks(c.x + (d.x - c.x) * 0.25, c.y - 0.3, c.z + (d.z - c.z) * 0.25, 3, 0.1, d); } catch (e) {} }
     }
   }
-  // the downed squadmate lifts their head and takes it
-  if (mine) { const r = SQ.revWho.rig, pr = SQ.revT / (typeof SQ_REVIVE !== 'undefined' ? SQ_REVIVE : 2.4); if (r) { r.head.rotation.x = -0.7 * Math.min(1, pr * 2); r.armR.rotation.set(-2.2 * Math.min(1, pr * 1.6), 0, -0.3); r.elR.rotation.x = -1.6 * Math.min(1, pr * 1.6); } }
-  // the haze when a bot is getting me up
-  BRX.haze = lerp(BRX.haze, helped ? 0.35 : 0, clamp(dt * 3, 0, 1)); const h = $('brxHaze'); if (h) h.style.opacity = BRX.haze.toFixed(3);
+  // the downed squadmate: twitches harder as the pollen hits, then lifts its head
+  if (mine) { const r = SQ.revWho.rig, e = SQ.revWho; if (r) { const tw = clamp((pr - 0.5) / 0.5, 0, 1); r.head.rotation.x = -0.5 * tw + Math.sin(NOW * 40) * 0.08 * tw; r.armR.rotation.set(-0.4 - Math.sin(NOW * 31) * 0.5 * tw, 0, -0.3); r.armL.rotation.set(-0.4 + Math.sin(NOW * 27) * 0.5 * tw, 0, 0.3); e.group.rotation.z = Math.sin(NOW * 35) * 0.04 * tw; } }
+  // a bot getting me up: purple sparkle, a heartbeat
+  BRX.haze = lerp(BRX.haze, helped ? 0.3 + pr * 0.4 : 0, clamp(dt * 3, 0, 1)); const h = $('brxHaze'); if (h) h.style.opacity = BRX.haze.toFixed(3);
+  if (helped && (BRX.beatT -= dt) <= 0) { BRX.beatT = Math.max(0.35, 0.9 - pr * 0.55); try { tone(55, 0.14, 0.15, 'sine', 40); } catch (e) {} if (Math.random() < 0.7) brxSparks(P.x + rnd(-0.6, 0.6), P.y + 1.5, P.z + rnd(-0.6, 0.6), 2, 0.2, null); }
 }
 /* ---------- every frame (from brUpdate) and the round's start */
 function brxTick(dt) {
@@ -99,5 +124,5 @@ function brxTick(dt) {
 }
 function brxSetup() { for (const q of BRX.puppets) scene.remove(q.r.root); BRX.puppets = []; BRX.dmg.clear(); BRX.loot.clear(); if (M) for (const en of M.entries) { en.landT = undefined; en.firstKillT = undefined; } }
 (() => { const s = document.createElement('style'); s.textContent = `.brx-aw{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:8px;margin:0 0 12px}.brx-aw div{border:1px solid rgba(143,255,106,.35);background:rgba(20,40,20,.55);padding:8px 10px}.brx-aw small{display:block;color:#8fff6a;letter-spacing:2px;font-size:11px}.brx-aw b{display:block;font-size:17px;margin:2px 0}.brx-aw span{font-size:12px;opacity:.75}
-#brxHaze{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;background:radial-gradient(circle at 50% 50%,rgba(170,255,170,.25),rgba(80,160,80,.75))}`; document.head.appendChild(s);
-  const h = document.createElement('div'); h.id = 'brxHaze'; document.body.appendChild(h); })();
+#brxHaze{position:fixed;inset:0;pointer-events:none;z-index:5;opacity:0;background:radial-gradient(circle at 50% 50%,rgba(220,150,255,.18),rgba(110,30,170,.75))}#brxFlash{position:fixed;inset:0;pointer-events:none;z-index:6;opacity:0;background:#f2d8ff}`; document.head.appendChild(s);
+  const h = document.createElement('div'); h.id = 'brxHaze'; document.body.appendChild(h); const f = document.createElement('div'); f.id = 'brxFlash'; document.body.appendChild(f); })();

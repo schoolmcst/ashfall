@@ -35,8 +35,8 @@ function sqBotDown(e) {
   e.group.rotation.x = -1.25;   // lying down
   return true;
 }
-function sqPlayerUp() { try { brsqPuff(P.x, P.y + 1, P.z, 7); tone(320, 0.05, 0.04, 'sine', 700); } catch (e) {} G.downed = false; G.bleed = 0; G.health = 40; try { showBanner('BACK ON YOUR FEET', 'your squad picked you up'); sfx.ui(); } catch (e) {} }
-function sqBotUp(e, by) { try { brsqPuff(e.group.position.x, e.group.position.y + 1, e.group.position.z, 7); e.carried = false; if (BRSQ.carry === e) BRSQ.carry = null; } catch (er) {} e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; if (by === 'player') try { achAdd('revives'); popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
+function sqPlayerUp() { try { if (typeof brxBloomUp === 'function') brxBloomUp(P.x, P.y + 1, P.z, true); else brsqPuff(P.x, P.y + 1, P.z, 7); } catch (e) {} G.downed = false; G.bleed = 0; G.health = 40; try { showBanner('BACK ON YOUR FEET', 'your squad picked you up'); sfx.ui(); } catch (e) {} }
+function sqBotUp(e, by) { try { if (typeof brxBloomUp === 'function') brxBloomUp(e.group.position.x, e.group.position.y + 1, e.group.position.z, false); else brsqPuff(e.group.position.x, e.group.position.y + 1, e.group.position.z, 7); e.group.rotation.z = 0; e.carried = false; if (BRSQ.carry === e) BRSQ.carry = null; } catch (er) {} e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; if (by === 'player') try { achAdd('revives'); popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
 /* ---------- every frame (from brUpdate) */
 function sqUpdate(dt) {
   if (!sqOn()) return;
