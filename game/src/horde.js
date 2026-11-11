@@ -278,7 +278,7 @@ const hhCellPos = (ix, iz) => ({ x: M.hh.org.x + ix * HH_C, z: M.hh.org.z + iz *
 // a piece's box from its record (the same for a ghost, a placed piece and a piece loaded from the save)
 function hhSpec(id, ix, iz, lv, dir, up) {
   const H = M.hh, base = H.by + lv * HH_LV, c = hhCellPos(ix, iz);
-  if (id === 'half' || id === 'rail') { const ex = [0, 1, 0, -1][dir], ez = [-1, 0, 1, 0][dir], t = id === 'rail' ? 0.1 : 0.25; return { id, ix, iz, lv, dir, key: `w${ix},${iz},${lv},${dir}|w${ix + ex},${iz + ez},${lv},${(dir + 2) % 4}`, cx: c.x + ex * HH_C / 2, cz: c.z + ez * HH_C / 2, w: ex ? t : HH_C, d: ex ? HH_C : t, y: base, h: id === 'rail' ? 1.0 : 1.5 }; }
+  if (id === 'half' || id === 'rail' || id === 'barricade') { const ex = [0, 1, 0, -1][dir], ez = [-1, 0, 1, 0][dir], t = id === 'rail' ? 0.1 : 0.25; return { id, ix, iz, lv, dir, key: `w${ix},${iz},${lv},${dir}|w${ix + ex},${iz + ez},${lv},${(dir + 2) % 4}`, cx: c.x + ex * HH_C / 2, cz: c.z + ez * HH_C / 2, w: ex ? t : HH_C, d: ex ? HH_C : t, y: base, h: id === 'rail' ? 1.0 : id === 'barricade' ? 2.0 : 1.5, trap: id === 'barricade' ? 0 : undefined }; }
   if (id === 'roof') return { id, ix, iz, lv, dir, key: `c${ix},${iz},${lv}`, cx: c.x, cz: c.z, w: HH_C, d: HH_C, y: base, h: HH_LV };
   if (id === 'wall') { const ex = [0, 1, 0, -1][dir], ez = [-1, 0, 1, 0][dir]; return { id, ix, iz, lv, dir, key: `w${ix},${iz},${lv},${dir}|w${ix + ex},${iz + ez},${lv},${(dir + 2) % 4}`, cx: c.x + ex * HH_C / 2, cz: c.z + ez * HH_C / 2, w: ex ? 0.25 : HH_C, d: ex ? HH_C : 0.25, y: base, h: HH_LV }; }
   if (id === 'floor') { const top = base + (up ? HH_LV : 0); return { id, ix, iz, lv, up, key: `f${ix},${iz},${lv + (up ? 1 : 0)}`, cx: c.x, cz: c.z, w: HH_C, d: HH_C, y: top - 0.25, h: 0.25, bad: top - H.by < 1 }; }
@@ -292,7 +292,7 @@ function hhAim() {
   if (!HH.carry && P0.prop) return hhPropAim(P0.id, HH.rot | 0);
   const pid = HH.carry && HH.carry.rec ? HH.carry.rec.id : P0.id;
   const fl = Math.max(0, Math.round(((P.y || 0) - H.by) / HH_LV)), dir = Math.abs(fx) > Math.abs(fz) ? (fx > 0 ? 1 : 3) : (fz > 0 ? 2 : 0), cellOf = (x, z) => [Math.round((x - o.x) / HH_C), Math.round((z - o.z) / HH_C)];
-  if (pid === 'wall' || pid === 'half' || pid === 'rail') { const [ix, iz] = cellOf(P.x, P.z); return hhSpec(pid, ix, iz, fl, dir); }
+  if (pid === 'wall' || pid === 'half' || pid === 'rail' || pid === 'barricade') { const [ix, iz] = cellOf(P.x, P.z); return hhSpec(pid, ix, iz, fl, dir); }
   const [ix, iz] = cellOf(P.x + fx * 2.6, P.z + fz * 2.6);
   return hhSpec(pid, ix, iz, fl, dir, P.pitch > 0.3);
 }
@@ -329,7 +329,7 @@ function hhPlace() {
   if (a.prop && HH.gok) { hhPay(H.s, hhCost(P0)); return hhPropNew(a); }
   if (!HH.gok) { try { showMsg(!hhCan(P0) ? (P0.trap ? `NO ${P0.n}S · CRAFT THEM AT THE WORKBENCH` : 'NOT ENOUGH MATERIALS · HARVEST WITH ' + actName('melee')) : "CAN'T BUILD THERE"); tone(160, 0.08, 0.05, 'square'); } catch (e) {} return null; }
   if (P0.trap) H.s.traps[P0.id]--; else hhPay(H.s, hhCost(P0));
-  const p = hhPieceMake({ id: a.id, ix: a.ix, iz: a.iz, lv: a.lv, dir: a.dir, up: a.up, mat: P0.trap ? null : P0.fixed ? 'wood' : HH.mat });
+  const p = hhPieceMake({ id: a.id, ix: a.ix, iz: a.iz, lv: a.lv, dir: a.dir, up: a.up, mat: a.id === 'barricade' ? 'wood' : P0.trap ? null : P0.fixed ? 'wood' : HH.mat });
   if (H.base) { H.s.base.pieces.push(p.rec); hhSave(H.s); }
   H.built++; H.s.built = (H.s.built | 0) + 1;
   try { burst(0.08, 900, 0.12, 'lowpass'); tone(p.mat === 'metal' ? 520 : p.mat === 'stone' ? 220 : 330, 0.06, 0.05, 'triangle'); } catch (e) {}
@@ -341,7 +341,7 @@ function hhPieceMake(rec, quiet) {
   const p = Object.assign({}, a, { rec, mat: rec.mat, hp: (mx ? mx.hp : 1) * hpK, max: (mx ? mx.hp : 1) * hpK, meshes: [], boxes: [], t: quiet ? 1 : 0, uses: a.id === 'spikes' ? 50 : a.id === 'zapper' ? 40 : a.id === 'launcher' ? 30 : 1e9, cd: 0 });
   const add = (cx, cz, w, d, h, y, o) => { const n = boxes.length, m = addBox(cx, cz, w, d, h, mx.key, Object.assign({ y }, o || {})); m.material = m.material.clone(); p.meshes.push(m); if (boxes.length > n) p.boxes.push(boxes[boxes.length - 1]); return m; };
   if (a.id === 'wall' && rec.v) hhWallParts(a, rec.v, add);   // a doorway or a window (hhbuild2.js)
-  else if (a.id === 'wall' || a.id === 'floor' || a.id === 'half' || a.id === 'rail') add(a.cx, a.cz, a.w, a.d, a.h, a.y);
+  else if (a.id === 'wall' || a.id === 'floor' || a.id === 'half' || a.id === 'rail' || a.id === 'barricade') add(a.cx, a.cz, a.w, a.d, a.h, a.y);
   else if (a.id === 'roof') { const N = 10; for (let k = 0; k < N; k++) { const f = (k + 0.5) / N - 0.5, sx = [0, 1, 0, -1][a.dir], sz = [-1, 0, 1, 0][a.dir]; add(a.cx + sx * f * HH_C, a.cz + sz * f * HH_C, sx ? HH_C / N : HH_C, sz ? HH_C / N : HH_C, 0.22, a.y + (k + 1) * HH_LV / N - 0.22, { stair: ['n', 'e', 's', 'w'][a.dir] }); } }
   else if (a.id === 'ramp') { const N = 10, st = ['n', 'e', 's', 'w'][a.dir]; for (let k = 0; k < N; k++) { const f = (k + 0.5) / N - 0.5, sx = [0, 1, 0, -1][a.dir], sz = [-1, 0, 1, 0][a.dir]; add(a.cx + sx * f * HH_C, a.cz + sz * f * HH_C, sx ? HH_C / N : HH_C, sz ? HH_C / N : HH_C, (k + 1) * HH_LV / N, a.y, { stair: st }); } }
   else if (a.id === 'plot') { add(a.cx, a.cz, a.w, a.d, a.h, a.y); const soil = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.04, 2.3), hhPlantMats().soil); soil.position.set(a.cx, a.y + a.h + 0.01, a.cz); H.grp.add(soil); p.meshes.push(soil); p.plot = { soil }; }
@@ -477,7 +477,7 @@ function hhMobTick(e, dt, i) {
     else if (K.bloat) { hhBloat(e); return; }
     else if ((e.atkCd -= dt) <= 0) { e.atkT = 0.75; e.hitDone = false; e.atkCd = rnd(0.6, 1.0) * (K.boss ? 1.3 : 1); if (Math.random() < 0.5) try { sfx.zscreech(at(g.x, g.z, 14, g.y)); } catch (er) {} }
   }
-  const slow = H.traps.some(p => p.id === 'resin' && Math.abs(g.x - p.cx) < 1.5 && Math.abs(g.z - p.cz) < 1.5 && Math.abs(g.y - p.y) < 1) ? 0.4 : 1;
+  const slow = H.traps.some(p => p.id === 'resin' && Math.abs(g.x - p.cx) < 1.5 && Math.abs(g.z - p.cz) < 1.5 && Math.abs(g.y - p.y) < 1) ? 0.4 : 1; e.inResin = slow < 1;
   const ml = Math.hypot(mx, mz), sp = ml > 0.01 ? e.speed * slow * (e.slowT > 0 ? 0.5 : 1) : 0; e.slowT = Math.max(0, e.slowT - dt);
   if (ml > 0.01) { const x0 = g.x, z0 = g.z; g.x += mx / ml * sp * dt; g.z += mz / ml * sp * dt; resolve(g, 0.42 * K.sc, g.y, true);
     const moved = Math.hypot(g.x - x0, g.z - z0); if (moved < sp * dt * 0.35) { e.stuckT = (e.stuckT || 0) + dt; if (e.stuckT > 0.35) { e.bash = hhBlocker(g.x, g.z, g.y, g.x + mx, g.z + mz); e.stuckT = 0; if (!e.bash) e.avoidT = 0.8; } } else e.stuckT = 0; }
@@ -511,13 +511,13 @@ function hhTrapTick(dt) {
     if (p.id === 'resin') continue; p.cd -= dt;
     if (p.id === 'chill') { if (playerAlive() && on({ x: P.x, z: P.z, y: P.y || 0 }, p)) G.health = Math.min(G.maxHp || 100, G.health + 15 * dt); for (const e of enemies) if (e.entry && e.team === M.myTeam && on(e.group.position, p)) e.hp = Math.min(e.maxHp, e.hp + 15 * dt); continue; }
     if (p.cd > 0) continue;
-    if (p.id === 'spikes') { let any = false; for (const e of H.mobs) if (on(e.group.position, p)) { any = true; hhTrapDmg(e, 28 * tk); } if (any) { p.cd = 0.5; p.uses--; for (const m of p.meshes) if (m.userData.spike) m.position.y = 0.32; setTimeout(() => { for (const m of p.meshes) if (m.userData.spike) m.position.y = 0.18; }, 160); try { burst(0.06, 2500, 0.06, 'highpass', at(p.cx, p.cz, 18)); } catch (e) {} } }
-    else if (p.id === 'zapper') { let best = null, bd = 5; for (const e of H.mobs) { const d = Math.hypot(e.group.position.x - p.cx, e.group.position.z - p.cz); if (d < bd && Math.abs(e.group.position.y - p.y) < 2.5) { bd = d; best = e; } } if (best) { p.cd = 1.1; p.uses--; hhTrapDmg(best, 60 * tk); best.slowT = 0.6; hhZapFx(new THREE.Vector3(p.cx, p.y + 1.95, p.cz), best.group.position.clone().setY(best.group.position.y + 1.2)); } }
-    else if (p.id === 'launcher') { let any = false; for (const e of H.mobs) if (on(e.group.position, p, 1.3) && !e.K.boss) { any = true; const g = e.group.position, o = H.plant || H.org, dx = g.x - o.x, dz = g.z - o.z, L = Math.hypot(dx, dz) || 1; for (let k = 0; k < 8; k++) { g.x += dx / L * 0.9; g.z += dz / L * 0.9; resolve(g, 0.42, g.y, true); } hhTrapDmg(e, 18 * tk); e.slowT = 1; } if (any) { p.cd = 2; p.uses--; try { burst(0.3, 400, 0.2, 'lowpass', at(p.cx, p.cz, 25)); chunks('dust', new THREE.Vector3(p.cx, p.y + 0.3, p.cz), 10, 5, 0.5); } catch (e) {} } }
+    if (p.id === 'spikes') { let any = false; for (const e of H.mobs) if (on(e.group.position, p)) { any = true; hhTrapDmg(e, 28 * tk, p); } if (any) { p.cd = 0.5; p.uses--; for (const m of p.meshes) if (m.userData.spike) m.position.y = 0.32; setTimeout(() => { for (const m of p.meshes) if (m.userData.spike) m.position.y = 0.18; }, 160); try { burst(0.06, 2500, 0.06, 'highpass', at(p.cx, p.cz, 18)); } catch (e) {} } }
+    else if (p.id === 'zapper') { let best = null, bd = 5; for (const e of H.mobs) { const d = Math.hypot(e.group.position.x - p.cx, e.group.position.z - p.cz); if (d < bd && Math.abs(e.group.position.y - p.y) < 2.5) { bd = d; best = e; } } if (best) { p.cd = 1.1; p.uses--; hhTrapDmg(best, 60 * tk, p); best.slowT = 0.6; hhZapFx(new THREE.Vector3(p.cx, p.y + 1.95, p.cz), best.group.position.clone().setY(best.group.position.y + 1.2)); } }
+    else if (p.id === 'launcher') { let any = false; for (const e of H.mobs) if (on(e.group.position, p, 1.3) && !e.K.boss) { any = true; const g = e.group.position, o = H.plant || H.org, dx = g.x - o.x, dz = g.z - o.z, L = Math.hypot(dx, dz) || 1; for (let k = 0; k < 8; k++) { g.x += dx / L * 0.9; g.z += dz / L * 0.9; resolve(g, 0.42, g.y, true); } hhTrapDmg(e, 18 * tk, p); e.slowT = 1; } if (any) { p.cd = 2; p.uses--; try { burst(0.3, 400, 0.2, 'lowpass', at(p.cx, p.cz, 25)); chunks('dust', new THREE.Vector3(p.cx, p.y + 0.3, p.cz), 10, 5, 0.5); } catch (e) {} } }
     if (p.uses <= 0) { hhPieceRemove(p); try { showMsg(`A ${HH_TRAPS[p.id].n} WORE OUT`); } catch (e) {} }
   }
 }
-function hhTrapDmg(e, dmg) { try { damageEnemy(e, dmg, false, null, false, 'world'); } catch (er) {} }
+function hhTrapDmg(e, dmg, p) { const tl = p && M.hh && M.hh.s.tlv ? M.hh.s.tlv[p.id] | 0 : 0; try { damageEnemy(e, dmg * (1 + 0.35 * tl), false, null, false, 'world'); } catch (er) {} }
 function hhZapFx(a, b) {
   const pts = []; for (let k = 0; k <= 8; k++) { const f = k / 8, j = k % 8 ? 0.2 : 0; pts.push(new THREE.Vector3(a.x + (b.x - a.x) * f + rnd(-j, j), a.y + (b.y - a.y) * f + rnd(-j, j), a.z + (b.z - a.z) * f + rnd(-j, j))); }
   const l = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineBasicMaterial({ color: 0x9ad8ff })); scene.add(l); setTimeout(() => { scene.remove(l); l.geometry.dispose(); }, 110);

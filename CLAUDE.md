@@ -152,6 +152,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.104 TEST (batch C = 21-28): hhtraps2.js. HH_TRAPS pusher/ceilzap (hhSpec+hhValid wrappers: needs floor f(ix,iz,lv+1))/
+  gas/turret (HH_TUSES uses, own timers p.cd2 in a hhTrapTick wrapper; turret uses gridClear LOS + addTracer) and barricade
+  (wall-like piece from crafted stock, mat wood, removed after 12 s, never saved). hhTrapDmg(e, dmg, p) * (1 + 0.35 * s.tlv[id])
+  (WORKBENCH TRAP LEVELS). Combo: damageEnemy wrapper x1.5 when e.slowT > 0 or e.inResin. Build-mode uses tags (hhMarkers).
+  Closing a menu in the headless test leaves the game paused (no pointer lock): tests set G.state = 'playing' after it.
+  Test s_horde5.
 - 1.2.103 TEST (batch B = 11-20): hhbuild2.js. Pieces half/rail (wall slots, h 1.5 / 1.0) and roof (thin walkable steps hidden
   under a sloped slab); horde.js hhPieceMake/hhSpec/hhAim/ghost know them. Wall rec.v (1 doorway, 2 window: hhWallParts),
   rec.c paint (HH_PAINT) via a hhPieceMake wrapper; build-mode keys STREAK=edit, PRONE=paint, U=undo (HH.undo from a hhPlace
