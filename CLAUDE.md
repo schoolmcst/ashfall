@@ -163,6 +163,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   cleared, wins, kills]; s.earn counted in a hhSave wrapper), sounds (cash register, build clunks per material, trap snaps,
   wave horn, plant alarm, level-up jingle), FIRST STEPS card on first hhOpen (s.tutSeen) + #hhTut checklist in the base
   (s.tut, s.tutDone = +$500). Tests: s_horde9, mp_hhcoop (real WebRTC, 2 players).
+  CONTROLLER pass (hhpad.js, replaces hhPadTick): outside build LB ability, D-UP crew orders (stkUse wrapper), D-DOWN seed strain at
+  an empty plot; build mode D-LEFT category, Y material/turn, LB pick up, RB repair/upgrade (nadeHold blocked), LT door/window,
+  B paint, VIEW undo, hold RT to drag; fuUse is off in HH (D-RIGHT is build); pad hints rewritten in a hhDomTick wrapper;
+  station menus keep focus on redraw; B closes hhMenu / mission map / first-time card (padCloseBtn). core.js actName had
+  'BUTTON undefined' on a pad for use/build/prone/heal: PAD_ALIAS maps them. Test s_hhpad (fake gamepad; taps must be long
+  in this container, and aiming at new pieces needs rendering on).
 - 1.2.107 TEST (batch F = 45-55): hhhero.js. s.hx hero XP (hhHLv), s.sk[hero] armor/fire/craft (lobby hh-sk-*), abilities on
   FIELD (T) hhAbility (HH.abT, HH.burstT), crew orders on STREAK (X) HH.order -> hhGoal wrapper sets e.hhTask, hhCrewWork does
   harvest/fix/water. HH_GUNS gid (xbow/dmr/gl/bong; launchers equip as secondary), g.perk, repair, s.melee (HH_MELEE). Survivors

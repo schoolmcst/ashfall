@@ -69,7 +69,8 @@ const kb = a => !!keys[bind(a)] || (a === 'sprint' && bind(a) === 'ShiftLeft' &&
 // the mouse or keyboard switches straight back
 function inputMode(m) { const b = document.body; if (!b) return; const pad = m === 'pad'; if (b.classList.contains('padnav') !== pad) b.classList.toggle('padnav', pad); }
 const usingPad = () => !!(document.body && document.body.classList.contains('padnav'));
-function actName(a) { return usingPad() && typeof pb === 'function' ? (PAD_NAMES[pb(a)] || 'BUTTON ' + pb(a)) : keyName(bind(a)); }
+const PAD_ALIAS = { use: 'reload', build: 'field', prone: 'crouch', heal: 'streak' };   // actions with no button of their own share one
+function actName(a) { if (usingPad() && typeof pb === 'function') { const b = pb(a) !== undefined ? pb(a) : PAD_ALIAS[a] ? pb(PAD_ALIAS[a]) : undefined; return b === undefined ? keyName(bind(a)) : PAD_NAMES[b] || 'BUTTON ' + b; } return keyName(bind(a)); }
 function keyName(c) { if (!c) return '—'; return c.replace(/^Key/, '').replace(/^Digit/, '').replace(/^Numpad/, 'NUM ').replace('ShiftLeft', 'LEFT SHIFT').replace('ShiftRight', 'RIGHT SHIFT').replace('ControlLeft', 'LEFT CTRL').replace('ControlRight', 'RIGHT CTRL').replace('AltLeft', 'LEFT ALT').replace('AltRight', 'RIGHT ALT').replace('Space', 'SPACE').replace('Arrow', '').toUpperCase(); }
 function saveSettings() { try { localStorage.setItem(STORE, JSON.stringify(S)); } catch (e) {} }
 const best = { wave: 0, score: 0 };

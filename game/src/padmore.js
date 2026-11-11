@@ -15,7 +15,7 @@ function padPingEmote(dt, held) {
 }
 // a close / back / done / cancel button in an overlay
 function padCloseBtn(modal) {
-  const sel = '[data-tr="x"],[data-ed="x"],[data-zc="x"],[data-evc],[data-he="done"],[data-lc="no"],[data-lc="ok"],[data-close]';
+  const sel = '[data-tr="x"],[data-ed="x"],[data-zc="x"],[data-evc],[data-he="done"],[data-lc="no"],[data-lc="ok"],[data-close],[data-hm="close"],[data-mi="x"],[data-onb="x"]';
   return modal.querySelector(sel) || [...modal.querySelectorAll('button')].find(b => /^(CLOSE|BACK|DONE|CANCEL|OK|‹ BACK)$/i.test(b.textContent.trim()));
 }
 function padModal(modal, dt, mx, my, press, down) {
