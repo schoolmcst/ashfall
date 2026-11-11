@@ -104,7 +104,7 @@ function hhRender(focusSel) {
     `<div class="cod-row wide"><small>STORAGE · $${s.cash.toLocaleString()}</small><div class="hh-inv">${[...HH_MATS, ...HH_CMATS].map(k => `<span style="--c:${(HH_MAT[k] || HH_CMAT[k]).css}"><small>${HH_ALLN(k)}</small><b>${s.inv[k] | 0}</b></span>`).join('')}</div><span>SEEDS ${HH_STRAINS.filter(x => s.seeds[x.id]).map(x => `${s.seeds[x.id]} ${x.n}`).join(' · ') || 'none'} · BUDS ${HH_STRAINS.filter(x => s.buds[x.id]).map(x => `${s.buds[x.id]} ${x.n}`).join(' · ') || 'none'} · TRAPS ${Object.keys(HH_TRAPS).filter(k => s.traps[k]).map(k => `${s.traps[k]} ${HH_TRAPS[k].n}`).join(' · ') || 'none'}</span></div>` +
     `<div class="cod-row"><small>THE HOMESTEAD · LEVEL ${s.base.lv}</small><b>${ready ? `<span style="color:#7aff6a">${ready} PLANT${ready > 1 ? 'S' : ''} READY</span>` : plots.length ? `${plots.length} GROWING` : 'NOTHING PLANTED'}</b><span>${s.base.pieces.length} pieces built · workbench level ${s.base.bench}</span></div>` +
     `<div class="cod-row"><small>YOUR HORDE</small><b>${s.wins} MISSIONS DONE · $${(s.sold | 0).toLocaleString()} SOLD</b><span>${s.kills.toLocaleString()} burnouts down · ${s.grown | 0} plants harvested</span></div>`;
-  $('lobRoster').innerHTML = `<div class="ros-info"><b>HOTBOX HORDE</b><b style="font-size:12px;color:#c8a0ff">GROW · SELL · BUILD · DEFEND</b>THE HOMESTEAD is your base: build GROW PLOTS round THE MOTHER PLANT, plant seeds and come back when they are ready (they grow in real time, even with the game closed). Harvest the buds and sell them to THE BUYER. Spend the cash on seeds, upgrades and base EXPANSIONS - each one is won in a RAID at your base. Go on MISSIONS for SCRAP, WIRE, BATTERIES, NUTRIENTS and TREE SAP, then craft TRAPS and WEAPONS at the WORKBENCH. Hit anything wooden, stone or metal with your melee for building materials.<br><br><b style="font-size:11px">CONTROLS</b>${actName('build')} build mode · 1-8 pick a piece · ${actName('reload')} material · click place · ${actName('use')} use / remove · ${actName('melee')} harvest</div>`;
+  $('lobRoster').innerHTML = `<div class="ros-info"><b>HOTBOX HORDE</b><b style="font-size:12px;color:#c8a0ff">GROW · SELL · BUILD · DEFEND</b>THE HOMESTEAD is your base: build GROW PLOTS round THE MOTHER PLANT, plant seeds and come back when they are ready (they grow in real time, even with the game closed). Harvest the buds and sell them to THE BUYER. Spend the cash on seeds, upgrades and base EXPANSIONS - each one is won in a RAID at your base. Go on MISSIONS for SCRAP, WIRE, BATTERIES, NUTRIENTS and TREE SAP, then craft TRAPS and WEAPONS at the WORKBENCH. Hit anything wooden, stone or metal with your melee for building materials.<br><br><b style="font-size:11px">CONTROLS</b>${actName('build')} build mode · 1-9 pick a piece · ${actName('reload')} material / turn · click place · ${actName('inspect')} pick up and MOVE anything · ${actName('use')} use / remove · ${actName('melee')} harvest</div>`;
   if (focusSel) focusFirst(focusSel);
 }
 function hhAct(act) {
@@ -203,11 +203,12 @@ function hhSetup() {
   const c = base ? { x: 0, z: 0 } : hhSpot(), by = groundAt(c.x, c.z, 0.6), grp = new THREE.Group(); scene.add(grp);
   const H = M.hh = HH.cur = { grp, kind, base, mi, di, D: HH_DIFF[di], hero: s.hero, lv: s.lv, s, mats: s.inv, wave: 0, waves: HH_WAVES, phase: base ? 'free' : kind === 'supply' ? 'run' : 'prep', t: base ? 0 : 90, toSpawn: 0, spawnT: 0, mobs: [], pieces: [], slots: new Map(), res: new Set(), traps: [], nodes: [], spits: [], rifts: [], sboxes: [], kills: 0, built: 0, crateT: 0, placed: false, over: false, wavesWon: 0, found: 0, by, org: { x: c.x, z: c.z, y: by }, got: {} };
   const pmax = Math.round(1500 * (1 + 0.2 * (s.lv.plant | 0)));
-  if (kind !== 'supply') { H.plant = { x: c.x, z: c.z, y: by, hp: pmax, max: pmax, g: hhPlantMesh(), hitT: 0 }; H.plant.g.position.set(c.x, by, c.z); grp.add(H.plant.g); H.plantBox = mkBox(c.x, c.z, 2.4, 2.4, 1.1, { y: by }); boxes.push(H.plantBox); H.res.add('0,0'); }
+  if (base) { H.pmax = pmax; hhBaseSetup(H); }   // the plant, the crate, the stations and plots are props you place (hhbase.js)
+  if (kind !== 'supply' && !base) { H.plant = { x: c.x, z: c.z, y: by, hp: pmax, max: pmax, g: hhPlantMesh(), hitT: 0 }; H.plant.g.position.set(c.x, by, c.z); grp.add(H.plant.g); H.plantBox = mkBox(c.x, c.z, 2.4, 2.4, 1.1, { y: by }); boxes.push(H.plantBox); H.res.add('0,0'); }
   const g = s.arsenal[s.eq]; if (g && !base) { H.gun = g; H.gunId = hhGunDef(HH_GUNS.find(x => x.id === g.id)).id; }
-  if (kind !== 'supply') { const cr = base ? { x: 4.5, z: 1.5 } : openNear(c.x + 4.6, c.z + 1.5); H.crate = { x: cr.x, z: cr.z, y: groundAt(cr.x, cr.z, by + 0.6) };
+  if (kind !== 'supply' && !base) { const cr = openNear(c.x + 4.6, c.z + 1.5); H.crate = { x: cr.x, z: cr.z, y: groundAt(cr.x, cr.z, by + 0.6) };
     const cg = new THREE.Group(), m = hhStd({ color: 0x3a4a2a, roughness: 0.8 }), st = hhStd({ color: 0x111111, emissive: 0x7aff6a, emissiveIntensity: 1.4 }); const b = new THREE.Mesh(new THREE.BoxGeometry(1.2, 0.7, 0.8), m); b.position.y = 0.35; cg.add(b); const s1 = new THREE.Mesh(new THREE.BoxGeometry(1.22, 0.08, 0.82), st); s1.position.y = 0.55; cg.add(s1); cg.position.set(H.crate.x, H.crate.y, H.crate.z); grp.add(cg); H.crate.g = cg; }
-  try { H.field = H.plant ? flowField(c.x, c.z, by) : null; } catch (e) { H.field = null; }
+  try { H.field = H.plant ? flowField(H.plant.x, H.plant.z, H.plant.y) : null; } catch (e) { H.field = null; }
   const reach = (x, z, y) => { if (!H.field) return true; const n = nodeOf(x, z, y); return n >= 0 && H.field[n] >= 0; };
   const cand = [], pr = PLAYRECT, dmin = base ? 32 : 22, dmax = base ? 46 : 60;
   for (let i = 0; i < 200; i++) { const o = openNear(rnd(pr[0] + 3, pr[1] - 3), rnd(pr[2] + 3, pr[3] - 3)), y = groundAt(o.x, o.z, 0.6), d = Math.hypot(o.x - c.x, o.z - c.z); if (d < dmin || d > dmax || !reach(o.x, o.z, y)) continue; cand.push({ x: o.x, z: o.z, y, a: Math.atan2(o.z - c.z, o.x - c.x), d }); }
@@ -217,7 +218,7 @@ function hhSetup() {
   const nN = base ? 26 : 30, rmin = base ? 16 : 7;
   for (let i = 0; i < 400 && H.nodes.length < nN; i++) { const o = openNear(c.x + rnd(-45, 45), c.z + rnd(-45, 45)), d = Math.hypot(o.x - c.x, o.z - c.z); if (d < rmin || d > 50 || o.x < pr[0] + 2 || o.x > pr[1] - 2 || o.z < pr[2] + 2 || o.z > pr[3] - 2) continue; if (H.nodes.some(n => Math.hypot(n.x - o.x, n.z - o.z) < 4.5) || H.rifts.some(r => Math.hypot(r.x - o.x, r.z - o.z) < 5)) continue;
     const k = HH_MATS[H.nodes.length % 3], y = groundAt(o.x, o.z, 0.6), ng = hhNodeMesh(k); ng.position.set(o.x, y, o.z); ng.rotation.y = Math.random() * TAU; grp.add(ng); H.nodes.push({ k, x: o.x, z: o.z, y, g: ng, hp: 6, max: 6 }); }
-  if (base) hhBaseSetup(H); else if (kind === 'supply') hhSupplySetup(H);
+  if (kind === 'supply') hhSupplySetup(H);
   const gm = new THREE.MeshBasicMaterial({ color: 0x5aff8a, transparent: true, opacity: 0.32, depthWrite: false }); HH.ghost = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 1), gm); HH.ghost.visible = false; HH.ghost.renderOrder = 5; scene.add(HH.ghost);
   HH.ghost.add(new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(1, 1, 1)), new THREE.LineBasicMaterial({ color: 0xbaffd0 })));
   HH.build = false; HH.meIn = false; HH.piece = 0; HH.mat = 'wood';
@@ -232,7 +233,7 @@ function hhClear() {
     for (const p of H.pieces) hhPieceRemove(p, true);
     for (const e of H.mobs) { const i = enemies.indexOf(e); if (i >= 0) enemies.splice(i, 1); scene.remove(e.group); }
     for (const sp of H.spits) scene.remove(sp.s);
-    for (const b of [H.plantBox, ...H.sboxes]) { const i = boxes.indexOf(b); if (i >= 0) boxes.splice(i, 1); } try { rebuildBoxGrid(); } catch (e) {}
+    for (const b of [H.plantBox, ...H.sboxes, ...(H.props || []).map(p => p.box)]) { const i = boxes.indexOf(b); if (i >= 0) boxes.splice(i, 1); } try { rebuildBoxGrid(); } catch (e) {}
     HH.cur = null; if (M && M.hh === H) M.hh = null;
   }
   hhDom(false);
@@ -250,17 +251,17 @@ function hhDomTick() {
   else if (H.plant) { b.querySelector('small').textContent = 'THE MOTHER PLANT'; const k = clamp(H.plant.hp / H.plant.max, 0, 1); b.querySelector('i').style.width = (k * 100).toFixed(1) + '%'; b.querySelector('i').style.background = k > 0.5 ? '#7adf6a' : k > 0.25 ? '#ffd24a' : '#ff4a4a'; b.classList.toggle('hit', NOW - H.plant.hitT < 0.3);
     b.querySelector('span').textContent = H.phase === 'prep' ? `${H.raid ? 'RAID · ' : ''}WAVE ${H.wave + 1} OF ${H.waves} IN ${Math.ceil(H.t)} s · BUILD!` : H.phase === 'wave' ? `${H.raid ? 'RAID · ' : ''}WAVE ${H.wave} OF ${H.waves} · ${H.mobs.length + H.toSpawn} BURNOUTS LEFT` : ''; }
   const L = hhPieceList(), P0 = L[HH.piece] || L[0], cost = hhCost(P0), inv = H.s.inv;
-  const key = [...HH_MATS, ...HH_CMATS].map(k => inv[k] | 0).join() + HH.build + HH.piece + HH.mat + H.s.cash + JSON.stringify(H.s.traps);
+  const key = [...HH_MATS, ...HH_CMATS].map(k => inv[k] | 0).join() + HH.build + HH.piece + HH.mat + (HH.carry ? 1 : 0) + H.s.cash + JSON.stringify(H.s.traps);
   if (m._k === key) return; m._k = key;
-  m.innerHTML = `<div class="hh-mrow">${H.base ? `<span style="--c:#7aff8a"><small>CASH</small><b>$${H.s.cash.toLocaleString()}</b></span>` : ''}${HH_MATS.map(k2 => `<span class="${HH.build && HH.mat === k2 && !P0.trap && !P0.fixed ? 'on' : ''}" style="--c:${HH_MAT[k2].css}"><small>${HH_MAT[k2].n}</small><b>${inv[k2] | 0}</b></span>`).join('')}</div>` +
+  m.innerHTML = `<div class="hh-mrow">${H.base ? `<span style="--c:#7aff8a"><small>CASH</small><b>$${H.s.cash.toLocaleString()}</b></span>` : ''}${HH_MATS.map(k2 => `<span class="${HH.build && HH.mat === k2 && !P0.trap && !P0.prop ? 'on' : ''}" style="--c:${HH_MAT[k2].css}"><small>${HH_MAT[k2].n}</small><b>${inv[k2] | 0}</b></span>`).join('')}</div>` +
     `<div class="hh-crow">${HH_CMATS.map(k2 => `<span style="color:${HH_CMAT[k2].css}">${HH_CMAT[k2].n} <b>${inv[k2] | 0}</b></span>`).join('')}</div>` +
-    (HH.build ? `<div class="hh-prow">${L.map((p, i) => `<span class="${i === HH.piece ? 'on' : ''}${p.trap && !(H.s.traps[p.id] > 0) ? ' off' : ''}"><small>${i + 1}${p.trap ? ' · ' + (H.s.traps[p.id] | 0) : ''}</small>${p.n}</span>`).join('')}</div><div class="hh-cost">${P0.n} · ${P0.trap ? `${H.s.traps[P0.id] | 0} CRAFTED (WORKBENCH)` : Object.entries(cost).map(([k2, v]) => `${v} ${HH_ALLN(k2)}`).join(' + ')}${P0.trap || P0.fixed ? '' : ` · ${actName('reload')} MATERIAL`} · CLICK PLACE · ${actName('use')} REMOVE · ${actName('build')} EXIT</div>` : `<div class="hh-tip">${actName('build')} BUILD MODE · ${actName('melee')} HARVEST</div>`);
+    (HH.build ? `<div class="hh-prow">${L.map((p, i) => `<span class="${i === HH.piece ? 'on' : ''}${p.trap && !(H.s.traps[p.id] > 0) ? ' off' : ''}"><small>${i + 1}${p.trap ? ' · ' + (H.s.traps[p.id] | 0) : ''}</small>${p.n}</span>`).join('')}</div><div class="hh-cost">${P0.n} · ${P0.trap ? `${H.s.traps[P0.id] | 0} CRAFTED (WORKBENCH)` : Object.entries(cost).map(([k2, v]) => `${v} ${HH_ALLN(k2)}`).join(' + ')}${HH.carry ? ` · CARRYING · ${actName('reload')} TURN · ${actName('inspect')} PUT BACK` : P0.trap ? '' : P0.prop ? ` · ${actName('reload')} TURN` : ` · ${actName('reload')} MATERIAL`} · CLICK PLACE · ${actName('inspect')} MOVE · ${actName('use')} REMOVE · ${actName('build')} EXIT</div>` : `<div class="hh-tip">${actName('build')} BUILD MODE · ${actName('melee')} HARVEST</div>`);
 }
 
 /* ---------- the build grid */
 function hhPieceList() {
   const L = [{ id: 'wall', n: 'WALL', cost: 10 }, { id: 'floor', n: 'FLOOR', cost: 10 }, { id: 'ramp', n: 'STAIRS', cost: 10 }];
-  if (M.hh && M.hh.base) L.push({ id: 'plot', n: 'GROW PLOT', fixed: 1, cost: { wood: 20, stone: 10 } });
+  if (M.hh && M.hh.base) L.push({ id: 'plot', n: 'GROW PLOT', prop: 1, cost: { wood: 10, stone: 4 } });
   for (const k in HH_TRAPS) L.push({ id: k, n: HH_TRAPS[k].n, trap: 1 });
   return L;
 }
@@ -278,13 +279,17 @@ function hhSpec(id, ix, iz, lv, dir, up) {
 }
 function hhAim() {
   const H = M.hh, L = hhPieceList(), P0 = L[HH.piece] || L[0], fx = -Math.sin(P.yaw), fz = -Math.cos(P.yaw), o = H.org;
+  if (HH.carry && HH.carry.pr) return hhPropAim(HH.carry.pr.k, HH.carry.r);
+  if (!HH.carry && P0.prop) return hhPropAim(P0.id, HH.rot | 0);
+  const pid = HH.carry && HH.carry.rec ? HH.carry.rec.id : P0.id;
   const fl = Math.max(0, Math.round(((P.y || 0) - H.by) / HH_LV)), dir = Math.abs(fx) > Math.abs(fz) ? (fx > 0 ? 1 : 3) : (fz > 0 ? 2 : 0), cellOf = (x, z) => [Math.round((x - o.x) / HH_C), Math.round((z - o.z) / HH_C)];
-  if (P0.id === 'wall') { const [ix, iz] = cellOf(P.x, P.z); return hhSpec('wall', ix, iz, fl, dir); }
+  if (pid === 'wall') { const [ix, iz] = cellOf(P.x, P.z); return hhSpec('wall', ix, iz, fl, dir); }
   const [ix, iz] = cellOf(P.x + fx * 2.6, P.z + fz * 2.6);
-  return hhSpec(P0.id, ix, iz, fl, dir, P.pitch > 0.3);
+  return hhSpec(pid, ix, iz, fl, dir, P.pitch > 0.3);
 }
 function hhValid(a) {
-  const H = M.hh; if (a.bad) return false; if (H.pieces.length >= 220) return false;
+  const H = M.hh; if (a.prop) return hhPropValid(a); if (a.bad) return false; if (H.pieces.length >= 220) return false;
+  if (H.base && hhPropHit(a)) return false;   // not through the plant, the stations, the plots
   if (a.key.split('|').some(k => H.slots.has(k))) return false;
   if (a.id !== 'wall' && a.lv === 0 && H.res.has(`${a.ix},${a.iz}`)) return false;   // the plant, the stations
   if (H.base) { const R = HH_BASELV[H.s.base.lv - 1].r; if (Math.max(Math.abs(a.ix), Math.abs(a.iz)) > R) return false; if (a.id === 'plot' && H.pieces.filter(p => p.id === 'plot').length >= HH_BASELV[H.s.base.lv - 1].plots) return false; }
@@ -295,7 +300,8 @@ function hhValid(a) {
 }
 function hhGhostTick() {
   const g = HH.ghost; if (!g) return; if (!HH.build || !playerAlive()) { g.visible = false; return; }
-  const a = hhAim(), L = hhPieceList(); HH.gspec = a; HH.gok = hhValid(a) && hhCan(L[HH.piece] || L[0]);
+  const a = hhAim(), L = hhPieceList(); HH.gspec = a; HH.gok = hhValid(a) && (HH.carry ? true : hhCan(L[HH.piece] || L[0]));
+  if (HH.carry && HH.carry.pr) { const g0 = HH.carry.pr.g; g0.position.set(a.cx, a.y, a.cz); g0.rotation.y = a.r * Math.PI / 2; }
   g.visible = true; g.material.color.setHex(HH.gok ? 0x5aff8a : 0xff4a4a); g.scale.set(a.w, Math.max(a.h, 0.1), a.d); g.position.set(a.cx, a.y + a.h / 2, a.cz); g.rotation.set(0, 0, 0);
   if (a.id === 'ramp') { const Lr = Math.hypot(HH_C, HH_LV); g.scale.set(a.dir % 2 ? Lr : HH_C, 0.2, a.dir % 2 ? HH_C : Lr); const t = Math.atan2(HH_LV, HH_C); if (a.dir === 0) g.rotation.x = t; else if (a.dir === 2) g.rotation.x = -t; else if (a.dir === 1) g.rotation.z = t; else g.rotation.z = -t; }
   HH.look = hhLookPiece();
@@ -303,11 +309,15 @@ function hhGhostTick() {
 }
 function hhLookPiece() {
   const H = M.hh, ray = new THREE.Raycaster(); ray.set(camera.position, new THREE.Vector3(0, 0, -1).applyQuaternion(camera.quaternion)); ray.far = 6;
-  const ms = []; for (const p of H.pieces) for (const m of p.meshes) ms.push(m); const hit = ray.intersectObjects(ms, false)[0]; if (!hit) return null;
+  const ms = []; for (const p of H.pieces) for (const m of p.meshes) ms.push(m); if (H.props) for (const pr of H.props) if (!HH.carry || HH.carry.pr !== pr) pr.g.traverse(o => { if (o.isMesh) { o.userData.hhProp = pr; ms.push(o); } });
+  const hit = ray.intersectObjects(ms, false)[0]; if (!hit) return null;
+  if (hit.object.userData.hhProp) return { prop: hit.object.userData.hhProp };
   return H.pieces.find(p => p.meshes.includes(hit.object)) || null;
 }
 function hhPlace() {
-  const H = M.hh, L = hhPieceList(), P0 = L[HH.piece] || L[0], a = hhAim(); HH.gspec = a; HH.gok = hhValid(a) && hhCan(P0);
+  const H = M.hh, L = hhPieceList(), P0 = L[HH.piece] || L[0], a = hhAim(); HH.gspec = a; HH.gok = hhValid(a) && (HH.carry ? true : hhCan(P0));
+  if (HH.carry) { if (!HH.gok) { try { showMsg("CAN'T PUT IT THERE"); tone(160, 0.08, 0.05, 'square'); } catch (e) {} return null; } return hhCarryDrop(a); }
+  if (a.prop && HH.gok) { hhPay(H.s, hhCost(P0)); return hhPropNew(a); }
   if (!HH.gok) { try { showMsg(!hhCan(P0) ? (P0.trap ? `NO ${P0.n}S · CRAFT THEM AT THE WORKBENCH` : 'NOT ENOUGH MATERIALS · HARVEST WITH ' + actName('melee')) : "CAN'T BUILD THERE"); tone(160, 0.08, 0.05, 'square'); } catch (e) {} return null; }
   if (P0.trap) H.s.traps[P0.id]--; else hhPay(H.s, hhCost(P0));
   const p = hhPieceMake({ id: a.id, ix: a.ix, iz: a.iz, lv: a.lv, dir: a.dir, up: a.up, mat: P0.trap ? null : P0.fixed ? 'wood' : HH.mat });
@@ -360,7 +370,7 @@ function hhBlocker(x, z, y, tx, tz) {
 
 /* ---------- build mode input */
 function hhBuildMode(on) {
-  if (HH.build === on) return; HH.build = on; if (HH.ghost) HH.ghost.visible = false;
+  if (HH.build === on) return; if (!on && HH.carry) try { hhCarryCancel(); } catch (e) {} HH.build = on; if (HH.ghost) HH.ghost.visible = false;
   try { const gun = gunObjs[G.cur]; if (gun) gun.visible = !on; } catch (e) {}
   if (on) { mouseDown = false; HH.piece = Math.min(HH.piece, hhPieceList().length - 1); try { sfx.ui(); } catch (e) {} }
 }
@@ -369,7 +379,8 @@ addEventListener('keydown', e => {
   if (c === bind('build') && !e.repeat) { hhBuildMode(!HH.build); e.stopImmediatePropagation(); return; }
   if (!HH.build) return;
   const n = /^Digit([1-9])$/.exec(c); if (n) { if (+n[1] <= hhPieceList().length) HH.piece = +n[1] - 1; e.stopImmediatePropagation(); try { tone(700, 0.03, 0.03, 'square'); } catch (er) {} return; }
-  if (c === bind('reload')) { HH.mat = HH_MATS[(HH_MATS.indexOf(HH.mat) + 1) % 3]; e.stopImmediatePropagation(); try { tone(500, 0.03, 0.03, 'square'); } catch (er) {} return; }
+  if (c === bind('inspect') && !e.repeat) { e.stopImmediatePropagation(); if (HH.carry) hhCarryCancel(); else hhPickUp(); return; }
+  if (c === bind('reload')) { const L = hhPieceList(), P0 = L[HH.piece] || L[0]; if (HH.carry && HH.carry.pr) HH.carry.r = (HH.carry.r + 1) % 4; else if (P0.prop && !HH.carry) HH.rot = ((HH.rot | 0) + 1) % 4; else HH.mat = HH_MATS[(HH_MATS.indexOf(HH.mat) + 1) % 3]; e.stopImmediatePropagation(); try { tone(500, 0.03, 0.03, 'square'); } catch (er) {} return; }
   if (c === bind('swap') || c === bind('prim') || c === bind('sec') || c === bind('grenade')) { e.stopImmediatePropagation(); return; }
 }, true);
 addEventListener('mousedown', e => {
@@ -379,11 +390,11 @@ addEventListener('mousedown', e => {
 addEventListener('wheel', e => { if (!M || !M.hh || !HH.build || G.state !== 'playing') return; e.stopImmediatePropagation(); const n = hhPieceList().length; HH.piece = (HH.piece + (e.deltaY > 0 ? 1 : n - 1)) % n; }, true);
 function hhPadTick() {
   let gp = null; try { gp = (navigator.getGamepads ? [...navigator.getGamepads()] : []).find(g => g && g.connected); } catch (e) {} if (!gp) return;
-  const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), was = HH.padB || {}, now = {}; for (const i of [3, 7, 12, 13, 15]) now[i] = b(i); HH.padB = now; const press = i => now[i] && !was[i];
+  const b = i => !!(gp.buttons[i] && gp.buttons[i].pressed), was = HH.padB || {}, now = {}; for (const i of [3, 4, 7, 12, 13, 15]) now[i] = b(i); HH.padB = now; const press = i => now[i] && !was[i];
   if (press(15) && playerAlive() && !HH.menu) hhBuildMode(!HH.build);
   if (!HH.build) return; const n = hhPieceList().length;
   if (press(12)) HH.piece = (HH.piece + n - 1) % n; if (press(13)) HH.piece = (HH.piece + 1) % n;
-  if (press(3)) HH.mat = HH_MATS[(HH_MATS.indexOf(HH.mat) + 1) % 3]; if (press(7)) hhPlace();
+  if (press(3)) { if (HH.carry && HH.carry.pr) HH.carry.r = (HH.carry.r + 1) % 4; else HH.mat = HH_MATS[(HH_MATS.indexOf(HH.mat) + 1) % 3]; } if (press(7)) hhPlace(); if (press(4)) { if (HH.carry) hhCarryCancel(); else hhPickUp(); }
   pad.fire = false;
 }
 
@@ -609,7 +620,7 @@ function hhTick(dt) {
   if (G.meleeT > 0.4 && !HH.swing) { HH.swing = true; setTimeout(() => { try { if (M && M.hh) hhHarvest(); } catch (e) {} }, 140); } if (G.meleeT <= 0) HH.swing = false;
   if (H.crate) { const c = H.crate; H.crateT = Math.max(0, H.crateT - dt); if (playerAlive() && Math.hypot(P.x - c.x, P.z - c.z) < 2 && !HH.build) { showMsgOnce(H.crateT > 0 ? `AMMO CRATE · READY IN ${Math.ceil(H.crateT)} s` : `AMMO CRATE · PRESS ${actName('use')} FOR AMMO`); if (u && !HH.uH && H.crateT <= 0) { H.crateT = H.hero === 'gunner' ? 15 : 30; WEAPONS.forEach(w => { w.ammo = w.magSize; w.reserve = w.reserveMax || w.def.reserve; }); G.grenades = Math.max(G.grenades, 2); try { showMsg('AMMO REFILLED'); sfx.pickup(); } catch (e) {} } } }
   if (H.hero === 'medic' && playerAlive()) { G.health = Math.min(G.maxHp || 100, G.health + 4 * dt); for (const e of enemies) if (e.entry && e.team === M.myTeam && Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) < 8) e.hp = Math.min(e.maxHp, e.hp + 8 * dt); }
-  if (HH.build) { G.swapT = Math.max(G.swapT, 0.15); mouseDown = false; try { const gun = gunObjs[G.cur]; if (gun) gun.visible = false; } catch (e) {} if (u && !HH.uH && HH.look) { const p = HH.look; if (p.mat) hhGive(p.mat, 5); else if (HH_TRAPS[p.id] && p.uses > 20) H.s.traps[p.id] = (H.s.traps[p.id] | 0) + 1; hhPieceRemove(p); HH.look = null; try { showMsg('PIECE REMOVED'); } catch (e) {} } }
+  if (HH.build) { G.swapT = Math.max(G.swapT, 0.15); mouseDown = false; try { const gun = gunObjs[G.cur]; if (gun) gun.visible = false; } catch (e) {} if (u && !HH.uH && HH.look && HH.look.prop && !HH.carry) { hhPropRemove(HH.look.prop); HH.look = null; } else if (u && !HH.uH && HH.look && !HH.carry) { const p = HH.look; if (p.mat) hhGive(p.mat, 5); else if (HH_TRAPS[p.id] && p.uses > 20) H.s.traps[p.id] = (H.s.traps[p.id] | 0) + 1; hhPieceRemove(p); HH.look = null; try { showMsg('PIECE REMOVED'); } catch (e) {} } }
   HH.uH = u; hhPadTick();
   hhGhostTick(); hhDomTick();
 }
@@ -621,7 +632,7 @@ function hhHud() {
 }
 function hhMarkers(out) {
   const H = M.hh; if (!H) return;
-  if (H.plant) out.push({ x: H.plant.x, y: H.plant.y + 5.9, z: H.plant.z, t: H.base && !H.raid ? 'THE MOTHER PLANT' : `MOTHER PLANT ${Math.max(0, Math.round(H.plant.hp / H.plant.max * 100))}%`, c: '#b070ff' });
+  if (H.plant) out.push({ x: H.plant.x, y: H.plant.y + (H.base ? 4.1 : 5.9), z: H.plant.z, t: H.base && !H.raid ? 'THE MOTHER PLANT' : `MOTHER PLANT ${Math.max(0, Math.round(H.plant.hp / H.plant.max * 100))}%`, c: '#b070ff' });
   if (!H.base || H.raid) for (const R of H.rifts) out.push({ x: R.x, y: R.y + 4, z: R.z, t: 'RIFT', c: '#a040ff' });
   for (const n of H.nodes) if (n.hp > 0 && Math.hypot(n.x - P.x, n.z - P.z) < 14) out.push({ x: n.x, y: n.y + 1.3, z: n.z, t: HH_MAT[n.k].n, c: HH_MAT[n.k].css });
   if (H.crate && Math.hypot(H.crate.x - P.x, H.crate.z - P.z) < 30) out.push({ x: H.crate.x, y: H.crate.y + 1.2, z: H.crate.z, t: 'AMMO', c: '#7aff6a' });

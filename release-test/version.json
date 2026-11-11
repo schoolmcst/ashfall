@@ -1,12 +1,11 @@
 {
- "version": "1.2.99",
+ "version": "1.2.100",
  "notes": [
-  "HOTBOX HORDE 2.0: your own base, THE HOMESTEAD - an open field with no fences, and everything you build there is saved",
-  "GROW AND SELL: build GROW PLOTS, plant seeds (5 strains), plants grow in real time even with the game closed, feed them NUTRIENTS, harvest the buds and sell them to THE BUYER",
-  "WORKBENCH: craft traps (spikes, bug zapper, sticky resin, PUFF LAUNCHER, CHILL PAD) and guns (5 schematics, COMMON/RARE/EPIC, they wear out after 6 missions)",
-  "THE PLANS: expand your base by winning a RAID at home, buy upgrades with cash",
-  "MISSIONS for materials: DEFEND THE GROW and the new SUPPLY RUN (search caches, get to the extraction van) on 4 maps - pay in cash, SCRAP, WIRE, BATTERIES, NUTRIENTS, TREE SAP and rare seeds"
+  "HOTBOX HORDE: THE HOMESTEAD is fully customizable - in build mode look at anything and press F to pick it up and MOVE it (R turns it, click puts it down, F puts it back)",
+  "Move THE MOTHER PLANT, THE BUYER, the WORKBENCH, THE PLANS, the ammo crate, grow plots, walls, floors, stairs and traps - all saved",
+  "GROW PLOTS are small 1.2 m planters you can place anywhere (even on your floors), not on the grid",
+  "Smaller WORKBENCH, PLANS board, ammo crate and Mother Plant; THE BUYER is now a little dealer's cart"
  ],
- "sha256": "21ba6f50c267b9447384d2706a6a47c82155427c4516d5c2078b1ba51d451497",
+ "sha256": "2291244db6f90373bedfecc454ee1ebb9ead20901dbc5cc77a824a6ac92e8a99",
  "minApp": "1.0.0"
 }

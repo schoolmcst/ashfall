@@ -152,6 +152,12 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.100 TEST (owner: everything movable, smaller plots placeable anywhere, smaller stations): hhbase.js PROPS (HH_PROPS
+  plant/buyer/bench/plans/crate/plot; save base.props [{id,k,x,z,y,r}], plots keyed 'p<id>'; 1.2.99 grid plots migrate in
+  hhBaseSetup). Props are free-placed (hhPropAim snaps 25 cm, on ground or floors; hhPropValid checks base radius, plot
+  limit, every box, the player) with a walkable mkBox each (hhPropSet moves it, recomputes H.field for the plant). In build
+  mode INSPECT (F, pad LB) = hhPickUp of what you look at (prop or grid piece) -> HH.carry; click hhCarryDrop, F/leaving
+  build mode hhCarryCancel; R turns a carried/new prop. Grid pieces may not overlap props (hhPropHit). THE BUYER is a cart.
 - 1.2.99 TEST: HOTBOX HORDE 2.0 (owner: base on an open map with no fences; goal = grow weed and sell it to expand the base;
   separate missions for materials and crafting mats for traps and weapons; lots of ideas from that genre). map_homestead.js
   'homestead' (hidden, open field, pickMapFor lets mode hh load it). horde.js: save ashfall.hh.v1 now holds cash, inv
