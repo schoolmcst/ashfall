@@ -152,6 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.97 TEST (owner: "make it more realistic"): NIGHTBLOOM revive remade - brxBloomMesh(bot) is a real hand (VM.sleeve forearm angled down, fingerless VM.glove, 3-joint fingers + thumb curl on +x), cupped vertex-coloured petals that break off (brxDropPetal -> BRX.fall), stamens, leaves; dust pollen with drag; the downed bot breathes, inhales, coughs, props up (e.revLift, read by sqBotDowned) and staggers after sqBotUp (BRX.stag); brxSnd crush/inhale/cough/gasp/beat; me revived = dark blurry #brxHaze clearing, soft flash (BRX.wake). s_bloom moves other mates away for pictures.
 - 1.2.96 TEST: THE NIGHTBLOOM REVIVE replaces the joint (brextra.js): a made-up drug (a glowing purple flower that grows in
   the Nightshade cloud), drawn in the world in front of the camera (the viewmodel scene washes colours out); crush, pollen
   (brxSparks toward the downed), twitching rig, brxBloomUp jolt from sqBotUp/sqPlayerUp, #brxHaze purple + heartbeat +

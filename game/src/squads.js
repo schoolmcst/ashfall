@@ -36,7 +36,7 @@ function sqBotDown(e) {
   return true;
 }
 function sqPlayerUp() { try { if (typeof brxBloomUp === 'function') brxBloomUp(P.x, P.y + 1, P.z, true); else brsqPuff(P.x, P.y + 1, P.z, 7); } catch (e) {} G.downed = false; G.bleed = 0; G.health = 40; try { showBanner('BACK ON YOUR FEET', 'your squad picked you up'); sfx.ui(); } catch (e) {} }
-function sqBotUp(e, by) { try { if (typeof brxBloomUp === 'function') brxBloomUp(e.group.position.x, e.group.position.y + 1, e.group.position.z, false); else brsqPuff(e.group.position.x, e.group.position.y + 1, e.group.position.z, 7); e.group.rotation.z = 0; e.carried = false; if (BRSQ.carry === e) BRSQ.carry = null; } catch (er) {} e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; if (by === 'player') try { achAdd('revives'); popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
+function sqBotUp(e, by) { try { if (typeof brxBloomUp === 'function') brxBloomUp(e.group.position.x, e.group.position.y + 1, e.group.position.z, false); else brsqPuff(e.group.position.x, e.group.position.y + 1, e.group.position.z, 7); e.group.rotation.z = 0; e.carried = false; if (BRSQ.carry === e) BRSQ.carry = null; } catch (er) {} e.downed = false; e.bleed = 0; e.hp = 40; e.group.rotation.x = 0; e.revT = 0; e.revLift = undefined; if (by === 'player') try { achAdd('revives'); popScore('+50', '', 'REVIVE'); M.me.score += 50; } catch (er) {} }
 /* ---------- every frame (from brUpdate) */
 function sqUpdate(dt) {
   if (!sqOn()) return;
@@ -107,7 +107,7 @@ function sqBotDowned(e, dt) {
   if (e.team === M.myTeam && playerAlive() && !G.downed) { tx = P.x; tz = P.z; bd = Math.hypot(P.x - g.x, P.z - g.z); }
   for (const o of enemies) if (o !== e && o.team === e.team && !o.downed && o.entry && o.entry.alive !== false) { const d = Math.hypot(o.group.position.x - g.x, o.group.position.z - g.z); if (d < bd) { bd = d; tx = o.group.position.x; tz = o.group.position.z; } }
   if (tx !== null && bd > 1.4) { const l = bd || 1; g.x += (tx - g.x) / l * 0.9 * dt; g.z += (tz - g.z) / l * 0.9 * dt; resolve(g, 0.45, g.y); e.group.rotation.y = Math.atan2(tx - g.x, tz - g.z); }
-  e.group.rotation.x = -1.25; e.moveSp = 0; e.aim = 0;
+  e.group.rotation.x = e.revLift !== undefined ? e.revLift : -1.25; e.moveSp = 0; e.aim = 0;   // revLift: propping up during a revive (brextra.js)
   return true;
 }
 // bots' goal (from brGoal): a downed squadmate (or me) close by comes first, when not in a fight

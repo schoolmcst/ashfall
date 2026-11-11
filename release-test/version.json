@@ -1,9 +1,11 @@
 {
- "version": "1.2.96",
+ "version": "1.2.97",
  "notes": [
-  "New revive: NIGHTBLOOM - a glowing purple flower that only grows in the Nightshade cloud. You crush it in your hand, its pollen drifts into your squadmate's face, they twitch, then jolt back up in a burst of purple sparks",
-  "When a bot picks you up: purple sparkle, a heartbeat that speeds up and a flash as you get up"
+  "NIGHTBLOOM REVIVE, MORE REAL: a proper gloved hand with jointed fingers slowly closes and crushes the flower",
+  "Petals break off and fall, fine pollen dust drifts from your palm to your mate",
+  "Your mate breathes it in, coughs, props up on their elbows and staggers back up",
+  "When a bot revives you: the screen comes back from dark and blurry, a weak heartbeat gets stronger, then a deep gasp"
  ],
- "sha256": "b963a0eeb71d40fccc33e86f86313bef0d3511f3b3f10fda04b71bbf38c281fc",
+ "sha256": "a4199c7b246ff7b3961b4130a7d48e1f64c2220eed158cb728906d03b56f7b44",
  "minApp": "1.0.0"
 }
