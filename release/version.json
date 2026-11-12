@@ -1,10 +1,10 @@
 {
- "version": "1.2.109",
+ "version": "1.2.112",
  "notes": [
-  "HOTBOX HORDE on a controller: every action has a button (LB ability, D-PAD UP crew orders, build mode: D-PAD LEFT category, Y material / turn, RB repair / upgrade, LT door / window, B paint, VIEW undo, hold RT to drag)",
-  "Controller: B closes the HORDE station menus, the mission map and the welcome card; menus keep your place",
-  "Fixed: button prompts said BUTTON undefined on a controller for USE and BUILD"
+  "HOTBOX HORDE: new map THE OLD FUN FAIR (midway booths, carousel, big wheel, funhouse, coaster) with every mission type on it",
+  "HOTBOX HORDE: new missions - ESCORT THE SEED VAN, TWO PLANTS, BUILD RACE, RETAKE THE GROW, NIGHT HARVEST (sneak past sleeping burnouts)",
+  "HOTBOX HORDE: EXPEDITIONS (3 missions in a row, win all for triple cash) and THE LONG NIGHT (endless waves, a boss every 5th)"
  ],
- "sha256": "2e6e54e250212a3cb67b25afd67d5c7af46b44d68b2bd5f286424b7e064b31e2",
+ "sha256": "4bf70d7581a21fd05426341e51cd8f54dbb81602581683a3b3ea4b8865b53592",
  "minApp": "1.0.0"
 }

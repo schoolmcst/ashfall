@@ -7691,6 +7691,96 @@ defineMap({
   navPts: [{ x: 0, z: 0 }, { x: 30, z: 0 }, { x: -30, z: 10 }, { x: 0, z: -35 }],
   views: [[0, 1.7, 20, 0, 1.4, 0]],
 });
+/* ================================================================== THE OLD FUN FAIR (1.2.112): a HOTBOX HORDE mission map
+   An abandoned fun fair about 96 m square at dusk, an original layout: the GATE with its sign in the south, THE MIDWAY
+   (a wide path with a row of game booths and food stands) through the middle, THE CAROUSEL (west, a round platform under
+   a striped canopy, painted horses on poles), THE BIG WHEEL (north-east: two A-frame legs, a ring of gondolas, a ticket
+   booth), THE FUNHOUSE (north-west: a dark two-room maze with doorways), THE COASTER (the east edge: a track on pillars you
+   can walk under), benches, lamp posts with warm lights. HOTBOX HORDE only (hhOnly). */
+function ffMaterials() {
+  if (MAT.ffRed) return; const std = (c, o) => new THREE.MeshStandardMaterial(Object.assign({ color: C(c), roughness: 0.75 }, o || {}));
+  MAT.ffRed = std(0xb83a3a); MAT.ffCream = std(0xe8dcc0); MAT.ffTeal = std(0x2a8a8a); MAT.ffGold = std(0xc8a040, { metalness: 0.5, roughness: 0.4 }); MAT.ffPurple = std(0x6a3a8a); MAT.ffRust = std(0x7a4a32, { metalness: 0.4, roughness: 0.8 });
+  MAT.ffBulb = new THREE.MeshBasicMaterial({ color: C(0xffd890), toneMapped: false }); MAT.ffDark = std(0x1a1418, { roughness: 0.95 });
+  const c = document.createElement('canvas'); c.width = 1024; c.height = 192; const x = c.getContext('2d'); x.fillStyle = '#2a1a2e'; x.fillRect(0, 0, 1024, 192); x.strokeStyle = '#ffd24a'; x.lineWidth = 10; x.strokeRect(10, 10, 1004, 172);
+  for (let i = 0; i < 26; i++) { x.fillStyle = i % 2 ? '#ffd890' : '#ff6a5a'; x.beginPath(); x.arc(30 + i * 37.5, 24, 7, 0, 7); x.fill(); x.beginPath(); x.arc(30 + i * 37.5, 168, 7, 0, 7); x.fill(); }
+  x.fillStyle = '#ffe8a8'; x.font = 'bold 92px Georgia, serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText('THE OLD FUN FAIR', 512, 100);
+  const t = new THREE.CanvasTexture(c); t.anisotropy = 4; MAT.ffSign = new THREE.MeshBasicMaterial({ map: t, side: THREE.DoubleSide, toneMapped: false });
+}
+function buildFunFair() {
+  buildMap2Materials(); isleMaterials(); ffMaterials();
+  floorQuad(0, 0, 170, 170, 0, 'ground', 10);
+  floorQuad(0, 2, 12, 84, 0.008, 'asphalt', 8); floorQuad(0, -2, 70, 10, 0.01, 'asphalt', 8);   // THE MIDWAY and the cross path
+  const r = stashRand(7311);
+  for (let i = 0; i < 26; i++) { const a = i / 26 * TAU + r() * 0.12, d = 44 + r() * 6; treeAt(Math.cos(a) * d, Math.sin(a) * d, 0, 0.7 + r() * 0.4); }
+  // THE GATE (south)
+  for (const s of [-1, 1]) { blk(s * 6, 40, 1.2, 1.2, 6.5, 'ffRed'); blk(s * 6, 40, 1.5, 1.5, 0.4, 'ffGold', { y: 6.5, noCol: true }); }
+  blk(0, 40, 13.2, 0.5, 0.6, 'ffGold', { y: 6.9, noCol: true }); deco(new THREE.PlaneGeometry(11, 2.1), MAT.ffSign, 0, 8.3, 40.3, 0, Math.PI, 0, false); deco(new THREE.PlaneGeometry(11, 2.1), MAT.ffSign, 0, 8.3, 39.7, 0, 0, 0, false);
+  for (const s of [-1, 1]) { blk(s * 9, 40, 1.4, 1.2, 1.3, 'ffCream'); blk(s * 9, 40, 1.6, 1.4, 0.15, 'ffRed', { y: 1.3 }); }   // ticket stands
+  // THE MIDWAY: game booths both sides of the path
+  const booth = (x, z, fx, col) => { const h = 2.6;   // a stall 3 m deep, 4 m wide, open toward fx (+1 = +x)
+    blk(x - fx * 1.5, z, 0.2, 4, h, col); blk(x, z - 2, 3, 0.2, h, col); blk(x, z + 2, 3, 0.2, h, col); blk(x + fx * 1.1, z, 0.5, 3.6, 1.0, 'wood');
+    blk(x, z, 3.8, 4.4, 0.12, 'ffCream', { y: h, noCol: true }); for (let i = 0; i < 5; i++) blk(x + fx * 1.75, z - 1.6 + i * 0.8, 0.5, 0.8, 0.05, i % 2 ? 'ffRed' : 'ffCream', { y: h - 0.05, noCol: true });
+    for (let i = 0; i < 3; i++) deco(new THREE.SphereGeometry(0.22, 10, 8), [MAT.ffRed, MAT.ffTeal, MAT.ffGold][i], x + fx * 1.1, 1.25, z - 1 + i, 0, 0, 0, true); };
+  const cols = ['ffRed', 'ffTeal', 'ffPurple', 'ffRed', 'ffTeal', 'ffPurple'];
+  for (let i = 0; i < 6; i++) { const z = 26 - i * 8.5; if (Math.abs(z + 2) < 6) continue; booth(-9, z, 1, cols[i]); }
+  for (let i = 0; i < 6; i++) { const z = 22 - i * 8.5; if (Math.abs(z + 2) < 6) continue; booth(9, z, -1, cols[(i + 3) % 6]); }
+  // food stands on the cross path, benches, lamp posts with lights
+  for (const [x, z] of [[-24, -7], [22, 4]]) { blk(x, z, 5, 2.4, 2.4, 'ffCream'); blk(x, z, 5.6, 3.0, 0.15, 'ffRed', { y: 2.4, noCol: true }); blk(x, z + 1.4, 4.2, 0.5, 1.0, 'ffRed'); }
+  for (const [x, z, ax] of [[-4, 14, 0], [4, 14, 0], [-4, -16, 0], [4, -16, 0], [-14, -6, 1], [14, 2, 1]]) blk(x, z, ax ? 0.6 : 1.8, ax ? 1.8 : 0.6, 0.5, 'wood');
+  for (const [x, z] of [[-4.5, 28], [4.5, 28], [-4.5, 6], [4.5, 6], [-4.5, -12], [4.5, -12], [-4.5, -30], [4.5, -30], [-20, -2], [20, -2]]) { blk(x, z, 0.25, 0.25, 4.2, 'dark'); deco(new THREE.SphereGeometry(0.28, 10, 8), MAT.ffBulb, x, 4.4, z, 0, 0, 0, false); lampLight(x, 4.2, z, 0xffc27a, 0.9, 14); }
+  // THE CAROUSEL (west)
+  const cx = -26, cz = 14; for (let i = 0; i < 8; i++) { const a = i / 8 * TAU; slab(cx + Math.cos(a) * 3.2, cz + Math.sin(a) * 3.2, 3.2, 3.2, 0.32, 'ffCream', 0.32); }
+  slab(cx, cz, 4, 4, 0.32, 'ffGold', 0.32); blk(cx, cz, 1.2, 1.2, 4.6, 'ffGold', { y: 0.32 });
+  for (let i = 0; i < 10; i++) { const a = i / 10 * TAU, x = cx + Math.cos(a) * 4.4, z = cz + Math.sin(a) * 4.4; deco(new THREE.CylinderGeometry(0.05, 0.05, 4.3, 6), MAT.ffGold, x, 2.5, z, 0, 0, 0, false); rayAdd(new THREE.BoxGeometry(0.12, 4.3, 0.12), mat4(x, 2.5, z));
+    const hg = new THREE.Group(); hg.position.set(x, 1.4 + (i % 2) * 0.35, z); hg.rotation.y = -a; scene.add(hg); const hm = [MAT.ffCream, MAT.ffTeal, MAT.ffPurple][i % 3];
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.35, 0.4, 1.1), hm); hg.add(b); const n = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.6, 0.25), hm); n.position.set(0, 0.35, 0.5); n.rotation.x = -0.4; hg.add(n); const hd = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.24, 0.45), hm); hd.position.set(0, 0.62, 0.68); hg.add(hd);
+    for (const [lx, lz] of [[-0.12, -0.4], [0.12, -0.4], [-0.12, 0.4], [0.12, 0.4]]) { const l = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.55, 0.08), hm); l.position.set(lx, -0.42, lz); l.rotation.x = lz > 0 ? -0.5 : 0.5; hg.add(l); } }
+  const can = new THREE.Mesh(new THREE.ConeGeometry(6.4, 2.2, 20, 1, true), MAT.ffRed); can.position.set(cx, 5.8, cz); scene.add(can); const can2 = new THREE.Mesh(new THREE.ConeGeometry(6.42, 2.2, 20, 1, true), MAT.ffCream); can2.position.set(cx, 5.8, cz); can2.rotation.y = Math.PI / 20; can2.scale.set(1, 1, 1); scene.add(can2);
+  for (let i = 0; i < 20; i++) { const a = i / 20 * TAU; deco(new THREE.SphereGeometry(0.12, 8, 6), MAT.ffBulb, cx + Math.cos(a) * 6.3, 4.7, cz + Math.sin(a) * 6.3, 0, 0, 0, false); }
+  lampLight(cx, 4.2, cz, 0xffd08a, 1.1, 16);
+  // THE BIG WHEEL (north-east)
+  const wx = 24, wz = -26, R = 10.5, hy = 12.5; slab(wx, wz, 9, 5, 0.3, 'concrete', 0.3);
+  for (const s of [-1, 1]) for (const lx of [-1, 1]) { const g = new THREE.Mesh(new THREE.BoxGeometry(0.5, 13.5, 0.5), MAT.ffRust); g.position.set(wx + lx * 3.2, 6.6, wz + s * 1.6); g.rotation.z = -lx * 0.24; scene.add(g); g.castShadow = true; rayAdd(new THREE.BoxGeometry(0.5, 13.5, 0.5), g.matrixWorld.clone().compose(g.position, g.quaternion, g.scale)); }
+  blk(wx - 3.2, wz - 1.6, 0.6, 0.6, 1.2, 'ffRust'); blk(wx + 3.2, wz - 1.6, 0.6, 0.6, 1.2, 'ffRust'); blk(wx - 3.2, wz + 1.6, 0.6, 0.6, 1.2, 'ffRust'); blk(wx + 3.2, wz + 1.6, 0.6, 0.6, 1.2, 'ffRust');
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(R, 0.18, 6, 48), MAT.ffRust); ring.position.set(wx, hy, wz); scene.add(ring); const ring2 = ring.clone(); ring2.scale.setScalar(0.55); scene.add(ring2);
+  const hub = new THREE.Mesh(new THREE.CylinderGeometry(0.7, 0.7, 3.6, 12), MAT.ffGold); hub.rotation.x = Math.PI / 2; hub.position.set(wx, hy, wz); scene.add(hub);
+  for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, sp = new THREE.Mesh(new THREE.BoxGeometry(0.12, R, 0.12), MAT.ffRust); sp.position.set(wx + Math.cos(a) * R / 2, hy + Math.sin(a) * R / 2, wz); sp.rotation.z = a - Math.PI / 2; scene.add(sp);
+    const gx = wx + Math.cos(a) * R, gy = hy + Math.sin(a) * R - 1.1, gm = [MAT.ffRed, MAT.ffTeal, MAT.ffGold, MAT.ffPurple][i % 4]; const gd = new THREE.Group(); gd.position.set(gx, gy, wz); scene.add(gd);
+    const cab = new THREE.Mesh(new THREE.BoxGeometry(1.6, 1.0, 1.4), gm); gd.add(cab); const rf = new THREE.Mesh(new THREE.BoxGeometry(1.8, 0.12, 1.6), MAT.ffCream); rf.position.y = 0.95; gd.add(rf); const rod = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.8, 0.06), MAT.dark); rod.position.y = 0.6; gd.add(rod);
+    if (gy < 2.5) { boxes.push(mkBox(gx, wz, 1.6, 1.4, 1.0, { y: gy - 0.5 })); rayAdd(new THREE.BoxGeometry(1.6, 1.0, 1.4), mat4(gx, gy, wz)); } }
+  for (let i = 0; i < 24; i++) { const a = i / 24 * TAU; deco(new THREE.SphereGeometry(0.1, 6, 5), MAT.ffBulb, wx + Math.cos(a) * R, hy + Math.sin(a) * R, wz + 0.25, 0, 0, 0, false); }
+  blk(wx - 7, wz + 4, 2.4, 2.0, 2.4, 'ffTeal'); blk(wx - 7, wz + 4, 2.8, 2.4, 0.15, 'ffRed', { y: 2.4, noCol: true }); lampLight(wx, 3.5, wz + 3, 0xffc27a, 1.0, 14);
+  // THE FUNHOUSE (north-west): two dark rooms and a maze
+  const fx = -22, fz = -22, W = 14, D = 12, Hh = 4;
+  wall(fx - W / 2, fz + D / 2, fx + W / 2, fz + D / 2, Hh, 'ffPurple', { holes: [{ at: 4, w: 2.2, h: 2.6 }, { at: 10.5, w: 2.2, h: 2.6 }] });
+  wall(fx - W / 2, fz - D / 2, fx + W / 2, fz - D / 2, Hh, 'ffPurple', { holes: [{ at: 7, w: 2.0, h: 2.4 }] });
+  wall(fx - W / 2, fz - D / 2, fx - W / 2, fz + D / 2, Hh, 'ffPurple'); wall(fx + W / 2, fz - D / 2, fx + W / 2, fz + D / 2, Hh, 'ffPurple', { holes: [{ at: 6, w: 2.0, h: 2.4 }] });
+  wall(fx, fz - D / 2, fx, fz + D / 2, Hh, 'ffDark', { t: 0.3, holes: [{ at: 3, w: 1.8, h: 2.4 }, { at: 9, w: 1.8, h: 2.4 }] });
+  for (const [x0, z0, x1, z1] of [[fx - 5, fz - 2, fx - 1.5, fz - 2], [fx - 3.5, fz + 1.5, fx - 3.5, fz + 5], [fx + 2, fz - 3, fx + 5.5, fz - 3], [fx + 3.5, fz + 0.5, fx + 3.5, fz + 4]]) wall(x0, z0, x1, z1, 2.6, 'ffDark', { t: 0.25 });
+  slab(fx, fz, W + 0.4, D + 0.4, Hh + 0.3, 'ffDark', 0.3);
+  for (let i = 0; i < 7; i++) deco(new THREE.SphereGeometry(0.16, 8, 6), MAT.ffBulb, fx - 6 + i * 2, Hh + 0.6, fz + D / 2 + 0.2, 0, 0, 0, false);
+  blk(fx, fz + D / 2 + 0.35, 6, 0.1, 1.4, 'ffGold', { y: Hh - 1.4, noCol: true }); lampLight(fx - 3.5, 2.4, fz, 0xc070ff, 0.9, 9); lampLight(fx + 3.5, 2.4, fz, 0xff6a9a, 0.9, 9);
+  // THE COASTER (east edge): a track on pillars you can walk under
+  for (let i = 0; i < 15; i++) { const z = -34 + i * 5, h = 5 + Math.sin(i * 0.7) * 2.5; blk(36, z, 0.5, 0.5, h, 'ffRust'); blk(36, z, 2.0, 0.6, 0.25, 'ffRust', { y: h, noCol: true }); if (i < 14) { const h2 = 5 + Math.sin((i + 1) * 0.7) * 2.5, L = Math.hypot(5, h2 - h), m = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.18, L), MAT.ffRed); m.position.set(36, (h + h2) / 2 + 0.3, z + 2.5); m.rotation.x = -Math.atan2(h2 - h, 5); scene.add(m); m.castShadow = true; } }
+  const car = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.8, 2.2), MAT.ffTeal); car.position.set(36, 5 + Math.sin(3 * 0.7) * 2.5 + 0.8, -34 + 3 * 5); scene.add(car);
+  // a few crates and barrels for cover round the yard
+  for (const [x, z] of [[-30, 30], [28, 24], [30, 10], [-34, -4], [12, -38], [-10, -36], [16, 16], [-16, 22]]) blk(x, z, 1.3, 1.3, 1.1, 'wood');
+}
+defineMap({
+  id: 'funfair', hidden: true, hhOnly: true, name: 'THE OLD FUN FAIR', place: 'An abandoned fun fair at dusk', desc: 'Rides, a funhouse, a big wheel and a coaster: a HOTBOX HORDE mission map.',
+  play: [-46, 46, -46, 46], arena: 50, build: buildFunFair,
+  env: { top: 0x2a2a5a, horizon: 0xe8906a, fog: 0.012, sun: [-60, 18, 30], sunCol: 0xffb07a, sunI: 0.9, skySun: 0xffa07a, hemiSky: 0x7a6aa0, hemiGround: 0x3a3028, exposure: 1.05 },
+  grass: { count: 1800, avoid: (x, z) => Math.abs(x) < 8 || Math.abs(z + 2) < 6 }, spawnMaxY: 0.6,
+  layout: {
+    spawn: [{ x: 0, z: 34 }, { x: 0, z: -36 }],
+    hp: [{ x: 0, z: -2 }, { x: -26, z: 14 }, { x: 24, z: -20 }],
+    flags: [{ x: 0, z: 32 }, { x: 0, z: -34 }],
+    sites: [{ x: -26, z: 14, n: 'A' }, { x: 24, z: -20, n: 'B' }],
+  },
+  menu: { x: 0, z: 30, r: 14, y: 2.4 },
+  navPts: [{ x: 0, z: 34 }, { x: 0, z: -2 }, { x: -26, z: 20 }, { x: 24, z: -18 }, { x: -22, z: -22 }, { x: 33, z: 0 }, { x: -12, z: -36 }],
+  views: [[0, 1.7, 36, 0, 3, 0], [-10, 2, 0, -26, 3, 14], [10, 2, -8, 24, 8, -26], [-22, 1.6, -12, -22, 1.6, -22]],
+});
 /* ================================================================== WINTER STASH ISLAND (1.2.86)
    From December 1 to the end of February (and all through FROSTY NUGS) LAST TOKE's island is snowed in: snow on the
    fields and the beaches, a grey winter sky, snow falling all match, a frozen sea, no tall grass. Same island, same
@@ -7808,7 +7898,7 @@ const FU_TYPES = {
 const FU_ORDER = ['cover', 'ammo', 'silence', 'rush'];
 const FU = { charge: 0, held: false, silenceT: 0, rushT: 0, ammo: null, cover: null, seq: 0, remote: new Map(), kills: 0 };
 const fuType = () => { const c = typeof activeClass === 'function' ? activeClass() : null; return c && FU_TYPES[c.fu] ? c.fu : 'cover'; };
-const fuOn = () => !!(M && inMatch() && M.mode !== 'zomb' && M.mode !== 'camp' && M.mode !== 'range' && !M.oic);
+const fuOn = () => !!(M && inMatch() && M.mode !== 'zomb' && M.mode !== 'camp' && M.mode !== 'range' && M.mode !== 'hh' && !M.oic);   // HOTBOX HORDE has hero abilities instead
 function fuReset() { FU.charge = 0.3; FU.silenceT = FU.rushT = 0; fuCoverGone(); if (FU.ammo && FU.ammo.g.parent) FU.ammo.g.parent.remove(FU.ammo.g); FU.ammo = null; FU.kills = G.kills; for (const [, o] of FU.remote) { brkBreak(o, false, true); delete BRK.list[o.id]; } FU.remote.clear(); }
 function fuUse() {
   if (!fuOn() || !playerAlive() || FU.charge < 1 || G.downed) return;
@@ -9797,6 +9887,15 @@ function statsTab(d) { const t = ['OVERVIEW', 'WEAPONS', 'MODES']; statTab = t[(
 /* generated by tools/mknews.py: patch history for the NEWS panel (newest first) */
 const NEWS = [
 {
+"v": "1.2.112",
+"d": "2026-11-12",
+"n": [
+"HOTBOX HORDE: new map THE OLD FUN FAIR (midway booths, carousel, big wheel, funhouse, coaster) with every mission type on it",
+"HOTBOX HORDE: new missions - ESCORT THE SEED VAN, TWO PLANTS, BUILD RACE, RETAKE THE GROW, NIGHT HARVEST (sneak past sleeping burnouts)",
+"HOTBOX HORDE: EXPEDITIONS (3 missions in a row, win all for triple cash) and THE LONG NIGHT (endless waves, a boss every 5th)"
+]
+},
+{
 "v": "1.2.109",
 "d": "2026-11-11",
 "n": [
@@ -10292,7 +10391,7 @@ let LOBBY = { mode: 'tdm', map: 'random' };
 function pickMapFor(sel, mode) { const md = mode || (typeof NET !== 'undefined' && NET.on && NET.mode) || '', br = md === 'br' || (MODES[md] && MODES[md].base === 'br');
   if (br && sel !== 'edit_map') return 'stashisle';   // LAST TOKE always plays its own island (a map picked for another mode used to carry over)
   if (sel && MAPS[sel] && MAPS[sel].brOnly && !br) sel = 'random';
-  if (sel && MAPS[sel] && (mode === "camp" || (sel === "crewhouse" && mode === "range") || (sel === "homestead" && mode === "hh") || sel === "edit_map" || !MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
+  if (sel && MAPS[sel] && (mode === "camp" || (sel === "crewhouse" && mode === "range") || ((sel === "homestead" || MAPS[sel].hhOnly) && mode === "hh") || sel === "edit_map" || !MAPS[sel].hidden || (MAPS[sel].zombiesOnly && mode === "zomb"))) return sel; const pool = MAP_ORDER.filter(id => !MAPS[id].hidden && id !== curMap); return pool.length ? pool[(Math.random() * pool.length) | 0] : DEFAULT_MAP; }
 try { const o = JSON.parse(localStorage.getItem(MATCH_CFG_KEY) || 'null'); if (o && MODES[o.mode]) LOBBY.mode = o.mode; if (o && (o.map === 'random' || (MAPS[o.map] && !MAPS[o.map].hidden))) LOBBY.map = o.map; if (o && MODES[o.lastOff] && !MODES[o.lastOff].online) LOBBY.lastOff = o.lastOff; if (o && MODES[o.lastOn] && MODES[o.lastOn].online) LOBBY.lastOn = o.lastOn; if (o && Array.isArray(o.playlist)) LOBBY.playlist = o.playlist.filter(k => MODES[k] && MODES[k].online); } catch (e) {}
 function saveLobby() { try { localStorage.setItem(MATCH_CFG_KEY, JSON.stringify(LOBBY)); } catch (e) {} }
 // cfg: { mode, score, time (min), perTeam, players, skill, hardcore }
@@ -12920,7 +13019,7 @@ function brfgStandTick() {
   for (const s of BRFG.stands) for (const b of s.bals) if (b.userData.fly) { b.position.y += 0.15; b.userData.fly++; if (b.userData.fly > 200) { b.visible = false; b.userData.fly = 0; } }
 }
 /* ---------- damage numbers */
-const brfgNumsOn = () => S.dmgNums === 'all' || ((S.dmgNums === undefined || S.dmgNums === 'br') && M && M.br);
+const brfgNumsOn = () => S.dmgNums === 'all' || ((S.dmgNums === undefined || S.dmgNums === 'br') && M && (M.br || M.hh));   // LAST TOKE and HOTBOX HORDE
 const _brfgDmg = damageEnemy;
 damageEnemy = function (e, dmg, head, dir, boom, by = 'player') {
   const hp0 = e && e.hp, r = _brfgDmg(e, dmg, head, dir, boom, by);
@@ -16005,7 +16104,7 @@ function onKill(e, head, boom, bonusOnly) {
   if (G.streak % 5 === 0) { const b = G.streak * 20; extra += b; showBanner(`${G.streak} KILL STREAK`, `+${b} bonus`); sfx.streak(); }
   G.score += extra; if (!(boom && e.killedBy === 'strike')) stkAdd(pts + Math.min(extra, 100));   // streak kills don't feed streaks; bonuses count up to +100
   popScore('+' + (pts + extra), multiTxt ? 'big' : head ? 'head' : '', [multiTxt, ...tags].filter(Boolean).join(' · '));
-  feedLine(`<b>YOU</b> <span class="fw">${boom ? '✹' : WEAPONS[G.cur].name}</span> ${e.name ? `<span style="color:${isFriend(e) ? TEAM_COL[0] : TEAM_COL[1]}">${e.name}</span>` : e.type.toUpperCase()}${tags.length ? ` <span class="ft">${tags.join(' · ')}</span>` : ''} <span class="fp">+${pts + extra}</span>`);
+  feedLine(`<b>YOU</b> <span class="fw">${boom ? '✹' : WEAPONS[G.cur].name}</span> ${e.name ? `<span style="color:${isFriend(e) ? TEAM_COL[0] : TEAM_COL[1]}">${e.name}</span>` : String(e.type || (e.K && e.K.n) || (e.nest ? 'NEST' : 'ENEMY')).toUpperCase()}${tags.length ? ` <span class="ft">${tags.join(' · ')}</span>` : ''} <span class="fp">+${pts + extra}</span>`);
 }
 
 /* ---------- explosive barrels (the red ones): a hit sets them alight, then they blow and chain */
@@ -18778,7 +18877,7 @@ async function socPeekAll() {
   if (SOC.peeking || !NET.app) return; SOC.peeking = true;
   for (const f of FRIENDS.slice()) {
     const r = await socPeek(f.c);
-    if (r && r.card) { const cd = r.card.card; f.on = true; f.seen = Date.now(); f.n = cleanNick(cd.n) || f.n; f.d = String(cd.d || '').slice(0, 40); f.sp = Array.isArray(cd.sp) && cd.sp.length === 4 && ['quick', 'slot', 'code'].includes(cd.sp[0]) && MODES[cd.sp[1]] && MODES[cd.sp[1]].online ? cd.sp.map(String) : null; f.s = Array.isArray(cd.s) ? cd.s.map(v => +v || 0).slice(0, 6) : f.s; f.z = Array.isArray(cd.z) ? cd.z.map(v => +v || 0).slice(0, 4) : f.z; f.r = +cd.r || 0; f.cw = Array.isArray(cd.cw) ? cd.cw.slice(0, 3).map(v => String(v).slice(0, 40)) : null; f.cp = Math.max(0, Math.min(1e7, +cd.cp || 0)); f.ck = Math.max(0, Math.min(1e5, +cd.ck || 0)); f.ckw = String(cd.ckw || ''); f.hz = Array.isArray(cd.hz) ? cd.hz.slice(0, 5).map(v => +v || 0) : f.hz; }
+    if (r && r.card) { const cd = r.card.card; f.on = true; f.seen = Date.now(); f.n = cleanNick(cd.n) || f.n; f.d = String(cd.d || '').slice(0, 40); f.sp = Array.isArray(cd.sp) && cd.sp.length === 4 && ['quick', 'slot', 'code'].includes(cd.sp[0]) && MODES[cd.sp[1]] && MODES[cd.sp[1]].online ? cd.sp.map(String) : null; f.s = Array.isArray(cd.s) ? cd.s.map(v => +v || 0).slice(0, 6) : f.s; f.z = Array.isArray(cd.z) ? cd.z.map(v => +v || 0).slice(0, 4) : f.z; f.r = +cd.r || 0; f.cw = Array.isArray(cd.cw) ? cd.cw.slice(0, 3).map(v => String(v).slice(0, 40)) : null; f.cp = Math.max(0, Math.min(1e7, +cd.cp || 0)); f.ck = Math.max(0, Math.min(1e5, +cd.ck || 0)); f.ckw = String(cd.ckw || ''); f.hz = Array.isArray(cd.hz) ? cd.hz.slice(0, 8).map(v => +v || 0) : f.hz; }
     else f.on = false;
     if (r) r.room.leave();
     socRender();
@@ -22507,8 +22606,8 @@ const HH_MAPS = [
   { map: 'greenhouse', n: 'THE GREENHOUSE' }, { map: 'stackyard', n: 'STACKYARD' }, { map: 'dustwater', n: 'DUSTWATER' }, { map: 'ruins_night', n: 'ASH RUINS · NIGHT' },
 ];
 const HH_TYPES = { defend: { n: 'DEFEND THE GROW', d: 'guard a plant through five waves' }, supply: { n: 'SUPPLY RUN', d: 'search the caches, then get to the extraction van' }, wild: { n: 'WILD HARVEST', d: 'cut the wild weed growing out there, then get to the van' } };
-const hhRun = k => k === 'supply' || k === 'wild';   // the run-and-extract missions
-const hhHunt = k => hhRun(k) || k === 'rescue' || k === 'truck' || k === 'signal' || k === 'nests';   // no MOTHER PLANT (hhmis2.js)
+const HH_RUNK = new Set(['supply', 'wild']), hhRun = k => HH_RUNK.has(k);   // the run-and-extract missions (more join in hhmis3.js)
+const HH_HUNTK = new Set(['rescue', 'truck', 'signal', 'nests']), hhHunt = k => hhRun(k) || HH_HUNTK.has(k);   // no MOTHER PLANT (hhmis2.js)
 const HH_MISSIONS = []; for (const m of HH_MAPS) for (const t of ['defend', 'supply', 'wild']) HH_MISSIONS.push({ map: m.map, n: m.n, type: t });
 const HH_DIFF = [{ n: 'CHILL', hp: 0.7, cnt: 0.8, pay: 1, col: '#7adf6a' }, { n: 'BAKED', hp: 1, cnt: 1, pay: 1.6, col: '#ffd24a' }, { n: 'FRIED', hp: 1.5, cnt: 1.25, pay: 2.4, col: '#ff8a3a' }, { n: 'COOKED', hp: 2.2, cnt: 1.5, pay: 3.5, col: '#ff4a6a' }];
 const HH_HEROES = [
@@ -24385,6 +24484,7 @@ function hcRead() {
     R.pr = pr; R.n = cleanNick(pr.n); R.ho = !!pr.ho; R.inGame = HC.inGame && pr.g === HC.gid && HC.gid;
     R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, -5, 40); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.a = !!pr.a;
     if (R.ho) Hp = pr;
+    try { if (typeof hcExtraRead === 'function') hcExtraRead(R, pr); } catch (e) {}
     if (host && R.inGame && M.hh) {
       if (Array.isArray(pr.hs)) for (const h of pr.hs) { const seq = +h[3] | 0; if (seq <= R.seenHit) continue; R.seenHit = seq; const e = enemies.find(q => q.hcId === (h[0] | 0)); if (e && enemies.includes(e)) try { damageEnemy(e, clamp(+h[1] || 0, 0, 600), !!h[2], null, false, hcBy(R)); } catch (er) {} }
       if (Array.isArray(pr.br)) for (const b of pr.br) { const seq = +b[0] | 0; if (seq <= R.seenBr) continue; R.seenBr = seq; hcApplyBuild(b[1], R); }
@@ -24418,6 +24518,7 @@ function hcPublish() {
       if (H.base && (HC.blT = (HC.blT || 0) - 1) <= 0) { HC.blT = 40; o.bl = H.s.base.props.map(p => [p.id, p.k, r2(p.x), r2(p.z), r2(p.y || 0), p.r | 0]); o.blv = H.s.base.lv; }
     }
   }
+  Object.assign(o, HC.extra || {});   // likes, gifts, ready checks, pings (hhprog.js)
   HC.room.presence(o);
 }
 /* ---------- the host: start whatever HOTBOX HORDE match it starts, for everyone */
@@ -24545,7 +24646,7 @@ hhAct = function (act) { if (HC.on && !hcHost() && (act === 'hh-start' || act ==
    59 SOUNDS: build clunks per material, trap snaps, a wave horn, a cash register, a plant alarm, a level-up jingle.
    60 FIRST STEPS: a card the first time you open HOTBOX HORDE and a checklist in THE HOMESTEAD (plant, harvest, sell,
       build, craft a trap, play a mission) worth $500 when it is done (s.tut = done steps, s.tutDone). */
-const hhzCard = () => { try { const s = hhLoad(); return [s.earn | 0, hhzBestD(s), hhzCleared(s), s.wins | 0, s.kills | 0]; } catch (e) { return [0, -1, 0, 0, 0]; } };
+const hhzCard = () => { try { const s = hhLoad(); return [s.earn | 0, hhzBestD(s), hhzCleared(s), s.wins | 0, s.kills | 0, s.likes | 0, s.hpres | 0]; } catch (e) { return [0, -1, 0, 0, 0, 0, 0]; } };
 const hhzBestD = s => { let d = -1; for (const k in s.best || {}) { const b = s.best[k]; if (b && b.won) d = Math.max(d, b.d | 0); } return d; };
 const hhzCleared = s => Object.values(s.best || {}).filter(b => b && b.won).length;
 const _hhzCard = socMyCard;
@@ -24558,7 +24659,7 @@ renderLeaderboard = function () {
   rows.sort((a, b) => (b.h[0] - a.h[0]) || (b.h[1] - a.h[1]));
   const dn = d => d >= 0 && HH_DIFF[d] ? HH_DIFF[d].n : '—';
   $('lbTabs').innerHTML = Object.entries(LB_COLS).map(([k, [l]]) => `<button class="tab${k === SOC.lbSort ? ' on' : ''}" data-lb="${k}">${l}</button>`).join('');
-  $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>CASH EARNED</th><th>HARDEST WIN</th><th>MISSIONS CLEARED</th><th>WINS</th><th>BURNOUTS DOWN</th></tr>` + rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td><span class="dot ${r.on ? 'on' : ''}"></span> ${r.n}</td><td>$${(+r.h[0] || 0).toLocaleString()}</td><td>${dn(r.h[1] | 0)}</td><td>${r.h[2] | 0} / ${HH_MISSIONS.length}</td><td>${r.h[3] | 0}</td><td>${(+r.h[4] || 0).toLocaleString()}</td></tr>`).join('') + `</table><div class="net-hint" style="padding:10px 2px">HOTBOX HORDE: you and your friends, by cash earned. Friends' numbers update while they are online.</div>`;
+  $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>CASH EARNED</th><th>HARDEST WIN</th><th>MISSIONS CLEARED</th><th>WINS</th><th>BURNOUTS DOWN</th><th>BASE LIKES</th></tr>` + rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td><span class="dot ${r.on ? 'on' : ''}"></span> ${r.n}${r.h[6] ? ' <span style="color:#ffd24a">' + '★'.repeat(Math.min(5, r.h[6] | 0)) + '</span>' : ''}</td><td>$${(+r.h[0] || 0).toLocaleString()}</td><td>${dn(r.h[1] | 0)}</td><td>${r.h[2] | 0} / ${HH_MISSIONS.length}</td><td>${r.h[3] | 0}</td><td>${(+r.h[4] || 0).toLocaleString()}</td><td>${r.h[5] | 0}</td></tr>`).join('') + `</table><div class="net-hint" style="padding:10px 2px">HOTBOX HORDE: you and your friends, by cash earned. Friends' numbers update while they are online.</div>`;
   for (const b of $('lbTabs').children) b.onclick = () => { SOC.lbSort = b.dataset.lb; sfx.ui(); renderLeaderboard(); };
 };
 /* ---------- money in, the register rings; first-steps progress */
@@ -24713,6 +24814,674 @@ hhDomTick = function () {
   if (c && HH.build) { const L = hhPieceList(), P0 = L[HH.piece] || L[0], head = c.textContent.split(' · ')[0], cost = c.textContent.split(' · ')[1] || '';
     const s = `${head} · ${cost} · ${HH.carry ? 'CARRYING · Y TURN · LB PUT BACK' : P0.trap ? 'D-PAD UP / DOWN PIECE' : P0.prop ? 'Y TURN' : 'Y MATERIAL'} · RT PLACE · LB MOVE · X REMOVE · D-PAD RIGHT EXIT`; if (c.textContent !== s) c.textContent = s; }
   return r;
+};
+/* ================================================================== HOTBOX HORDE quality of life (1.2.110, the owner's list G = 53-60)
+   53 MINIMAP: base pieces (grey), stations (gold), THE MOTHER PLANT (green) and every burnout (red, bosses bigger).
+   54 WAVE PREVIEW: in a build phase the next wave is rolled early (H.nextQ, handed to hhStartWave by a hhWaveList wrapper)
+      and shown as chips under the top bar.
+   55 DAMAGE NUMBERS: brfight.js's numbers now show in HORDE too (setting LAST TOKE + HORDE).
+   56 BUILD GHOST: the cost line turns red when you can't pay; in THE HOMESTEAD a ring shows the edge of the base.
+   57 CUSTOM GAMES: lobby switch (s.cus): waves 3-10, burnout speed, starting materials (handed back at the end). Pays half,
+      never sets a best or unlocks a difficulty.
+   58 SAVE BACKUP: EXPORT / IMPORT the whole save as a DZH1- code (the old save is kept in ashfall.hh.bak).
+   59 BIG BASES: finished pieces stop recomputing their matrices every frame; floors don't cast shadows.
+   60 TYPE MARKERS: shape + colour badges (colour-blind safe) over each burnout and on every trap (s.marks; on by default
+      when a colour filter is set). */
+const HHQ = { ring: null, ringR: 0 };
+/* ---------- 53 the minimap */
+const _hhq53 = drawRadar;
+drawRadar = function () {
+  _hhq53.apply(this, arguments); const H = M && M.mode === 'hh' && M.hh; if (!H || !S.radar || (typeof stkJammed === 'function' && stkJammed())) return;
+  try { const c = rctx, W = 140, R = 62, sc = R / 45, cs = Math.cos(P.yaw), sn = Math.sin(P.yaw);
+    const pt = (x, z) => { const dx = x - P.x, dz = z - P.z, px = (dx * cs - dz * sn) * sc, py = (dx * sn + dz * cs) * sc; return Math.hypot(px, py) > R ? null : [W / 2 + px, W / 2 + py]; };
+    c.fillStyle = 'rgba(210,210,210,.5)'; for (const p of H.pieces) { if (p.cx === undefined) continue; const q = pt(p.cx, p.cz); if (q) c.fillRect(q[0] - 1.5, q[1] - 1.5, 3, 3); }
+    c.fillStyle = '#ffd24a'; for (const pr of H.props || []) { if (pr.k === 'plot' || pr.k === 'plant') continue; const q = pt(pr.x, pr.z); if (q) c.fillRect(q[0] - 2.5, q[1] - 2.5, 5, 5); }
+    const pl = H.plant; if (pl) { const q = pt(pl.x, pl.z); if (q) { c.fillStyle = '#5aff7a'; c.beginPath(); c.arc(q[0], q[1], 4, 0, 7); c.fill(); } }
+    for (const e of H.mobs) { const g = e.group.position, q = pt(g.x, g.z); if (!q) continue; const r = e.K && (e.K.boss || e.K.mini) ? 4 : 2; c.fillStyle = e.elite ? '#ff9a3a' : '#ff3b30'; c.fillRect(q[0] - r, q[1] - r, r * 2, r * 2); }
+  } catch (e) {}
+};
+/* ---------- 54 the next wave, rolled early */
+const _hhq54 = hhWaveList;
+hhWaveList = function (w) { const H = M && M.hh; if (H && H.nextQ && H.nextQ.w === w) { const q = H.nextQ.q; H.nextQ = null; return q.slice(); } return _hhq54.apply(this, arguments); };
+function hhqPreview(H) {
+  let el = $('hhPrev'); const show = H && H.phase === 'prep' && !hhHunt(H.kind) && !H.client && H.wave < H.waves && G.state === 'playing';
+  if (!show) { if (el) el.style.display = 'none'; return; }
+  if (!H.nextQ || H.nextQ.w !== H.wave + 1) H.nextQ = { w: H.wave + 1, q: _hhq54(H.wave + 1) };
+  if (!el) { el = document.createElement('div'); el.id = 'hhPrev'; ($('hud') || document.body).appendChild(el); }
+  const n = {}; for (const k of H.nextQ.q) n[k] = (n[k] | 0) + 1; const key = JSON.stringify(n) + H.wave; el.style.display = '';
+  if (el.dataset.k === key) return; el.dataset.k = key;
+  el.innerHTML = `<small>WAVE ${H.wave + 1} · COMING</small>` + Object.entries(n).sort((a, b) => b[1] - a[1]).map(([k, c]) => `<span style="--c:${hhqCol(k)}">${hhqShape(k)} ${c} ${(HH_KINDS[k] || { n: k }).n}</span>`).join('');
+}
+/* ---------- 56 the ghost's cost and the base ring */
+const _hhq56 = hhDomTick;
+hhDomTick = function () {
+  const r = _hhq56.apply(this, arguments), H = M && M.hh, m = $('hhMats'); if (!H || !m) return r;
+  const c = m.querySelector('.hh-cost:not(.hh-keys):not(.hh-abil)'); if (c && HH.build) { const L = hhPieceList(), P0 = L[HH.piece] || L[0]; c.classList.toggle('hhq-no', !HH.carry && !!P0 && !hhCan(P0)); }
+  return r;
+};
+function hhqRing(H) {
+  const on = H.base && HH.build && !H.client; if (!on) { if (HHQ.ring) HHQ.ring.visible = false; return; }
+  const R = (HH_BASELV[H.s.base.lv - 1].r + 0.5) * HH_C;
+  if (!HHQ.ring || HHQ.ring.parent !== H.grp || HHQ.ringR !== R) {
+    if (HHQ.ring && HHQ.ring.parent) HHQ.ring.parent.remove(HHQ.ring);
+    const pts = []; for (let i = 0; i <= 4; i++) { const a = [[-1, -1], [1, -1], [1, 1], [-1, 1], [-1, -1]][i]; pts.push(new THREE.Vector3(H.org.x + a[0] * R, H.by + 0.06, H.org.z + a[1] * R)); }
+    HHQ.ring = new THREE.Line(new THREE.BufferGeometry().setFromPoints(pts), new THREE.LineDashedMaterial({ color: 0x9aff6a, dashSize: 0.8, gapSize: 0.5, transparent: true, opacity: 0.85 })); HHQ.ring.computeLineDistances(); H.grp.add(HHQ.ring); HHQ.ringR = R;
+  }
+  HHQ.ring.visible = true;
+}
+/* ---------- 57 custom games */
+const hhqCus = s => (s.cus = Object.assign({ on: 0, waves: 5, speed: 1, mats: 0 }, s.cus));
+const HHQ_WAVES = [3, 5, 8, 10], HHQ_SPEED = [0.8, 1, 1.25, 1.5], HHQ_MATS = [0, 100, 250, 500];
+const _hhqSetup = hhSetup;
+hhSetup = function () {
+  const r = _hhqSetup.apply(this, arguments), H = M.hh; if (!H || H.base || H.client) return r; const c = hhqCus(H.s);
+  if (c.on) { H.cus = { speed: c.speed, mats: c.mats, best: JSON.stringify(H.s.best[H.mi] || null), unl: H.s.unl[H.mi] }; H.D = Object.assign({}, H.D, { pay: H.D.pay * 0.5 }); if (!hhHunt(H.kind)) H.waves = c.waves;
+    if (c.mats) for (const k of HH_MATS) H.s.inv[k] = (H.s.inv[k] | 0) + c.mats; }
+  return r;
+};
+const _hhqMob = hhMob;
+hhMob = function () { const e = _hhqMob.apply(this, arguments), H = M && M.hh; if (e && H && H.cus) e.speed *= H.cus.speed; if (e && hhqMarksOn()) hhqBadge(e); return e; };
+const _hhqEnd = hhEnd;
+hhEnd = function (won) {
+  const H = M && M.hh, cu = H && !H.over && H.cus; if (cu && cu.mats) for (const k of HH_MATS) H.s.inv[k] = Math.max(0, (H.s.inv[k] | 0) - cu.mats);
+  const r = _hhqEnd.apply(this, arguments);
+  if (cu) { const b = JSON.parse(cu.best); if (b) H.s.best[H.mi] = b; else delete H.s.best[H.mi]; if (cu.unl === undefined) delete H.s.unl[H.mi]; else H.s.unl[H.mi] = cu.unl; hhSave(H.s); }
+  return r;
+};
+/* ---------- 58 save backup */
+function hhqExport() { const raw = localStorage.getItem('ashfall.hh.v1') || JSON.stringify(hhLoad()); return 'DZH1-' + btoa(unescape(encodeURIComponent(raw))); }
+function hhqImport(code) {
+  code = String(code || '').trim().replace(/\s+/g, ''); if (!code.startsWith('DZH1-')) return 'THAT IS NOT A HORDE SAVE CODE (THEY START WITH DZH1-)';
+  let s; try { s = JSON.parse(decodeURIComponent(escape(atob(code.slice(5))))); } catch (e) { return 'THAT CODE IS BROKEN · COPY ALL OF IT'; }
+  if (!s || typeof s !== 'object' || !s.inv || !s.base) return 'THAT CODE HAS NO HORDE SAVE IN IT';
+  try { const old = localStorage.getItem('ashfall.hh.v1'); if (old) localStorage.setItem('ashfall.hh.bak', old); localStorage.setItem('ashfall.hh.v1', JSON.stringify(s)); } catch (e) { return 'COULD NOT SAVE IT'; }
+  return '';
+}
+function hhqBackup() {
+  const o = document.createElement('div'); o.className = 'onb-ov'; o.id = 'hhqBk'; const code = hhqExport();
+  o.innerHTML = `<div class="onb-box hhq-bk"><small>HOTBOX HORDE</small><h2 style="margin:0">SAVE BACKUP</h2><span>Your whole HORDE save (base, money, seeds, gear) as a code. Keep it somewhere safe, or load it on another computer.</span>
+<textarea id="hhqCode" spellcheck="false">${code}</textarea><small id="hhqMsg"></small>
+<div class="onb-acts"><button class="btn" data-hq="copy">COPY CODE</button><button class="btn" data-hq="load">LOAD A CODE</button><button class="btn" data-close data-hq="x">CLOSE</button></div></div>`;
+  document.body.appendChild(o); const ta = $('hhqCode'), msg = $('hhqMsg'); ta.onkeydown = e => e.stopPropagation();
+  o.addEventListener('click', e => { const b = e.target.closest('[data-hq]'); if (!b) return; try { sfx.ui(); } catch (er) {} const a = b.dataset.hq;
+    if (a === 'x') o.remove();
+    else if (a === 'copy') { ta.select(); try { navigator.clipboard.writeText(ta.value); } catch (er) {} try { document.execCommand('copy'); } catch (er) {} msg.textContent = 'COPIED · ' + ta.value.length.toLocaleString() + ' CHARACTERS'; }
+    else if (a === 'load') { if (ta.value.trim() === code) { msg.textContent = 'PASTE A CODE INTO THE BOX FIRST, THEN PRESS LOAD'; ta.value = ''; ta.focus(); return; } const err = hhqImport(ta.value); msg.textContent = err || 'LOADED · YOUR OLD SAVE IS KEPT AS A BACKUP'; if (!err) { setTimeout(() => { o.remove(); hhRender(); }, 700); } } });
+  setTimeout(() => { try { o.querySelector('[data-hq="copy"]').focus(); } catch (e) {} }, 40);
+}
+/* ---------- 59 big bases: freeze finished pieces */
+function hhqFreeze(H) {
+  for (const p of H.pieces) { if (p.frozen || p.t < 1 || HH_TRAPS[p.id] || p.id === 'barricade') continue; if (p.meshes.some(m => m.userData.hhY !== undefined && Math.abs(m.scale.y - m.userData.hhY) > 1e-3)) continue;
+    p.frozen = true; for (const m of p.meshes) { m.updateMatrix(); m.matrixAutoUpdate = false; if (p.id === 'floor' || p.id === 'plot') m.castShadow = false; } }
+}
+/* ---------- 60 type markers */
+const HHQ_COL = { burnout: '#E69F00', sprinter: '#56B4E9', smasher: '#D55E00', spitter: '#009E73', drifter: '#CC79A7', bloater: '#F0E442', boss: '#ffffff', shield: '#0072B2', thrower: '#009E73', bigbaked: '#D55E00', cougher: '#F0E442', rootking: '#ffffff' };
+const HHQ_SHAPE = { burnout: '●', sprinter: '▲', smasher: '■', spitter: '◆', drifter: '✦', bloater: '⬟', boss: '★', shield: '⬢', thrower: '▼', bigbaked: '■', cougher: '⬟', rootking: '★' };
+const hhqCol = k => HHQ_COL[k] || '#E69F00', hhqShape = k => HHQ_SHAPE[k] || '●';
+const hhqMarksOn = () => { try { const s = HH.cur ? HH.cur.s : hhLoad(); return s.marks === undefined ? S.cbFilter && S.cbFilter !== 'off' : !!s.marks; } catch (e) { return false; } };
+const HHQ_TEX = {};
+function hhqTex(sym, col) {
+  const k = sym + col; if (HHQ_TEX[k]) return HHQ_TEX[k]; const c = document.createElement('canvas'); c.width = c.height = 64; const x = c.getContext('2d');
+  x.fillStyle = 'rgba(0,0,0,.65)'; x.beginPath(); x.arc(32, 32, 30, 0, 7); x.fill(); x.lineWidth = 4; x.strokeStyle = col; x.stroke();
+  x.fillStyle = col; x.font = 'bold 38px sans-serif'; x.textAlign = 'center'; x.textBaseline = 'middle'; x.fillText(sym, 32, 34);
+  return (HHQ_TEX[k] = new THREE.CanvasTexture(c));
+}
+function hhqBadge(e) {
+  if (!e || !e.group || e.hhqB) return; const k = e.nest ? 'nest' : e.hk, sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: hhqTex(e.nest ? '⊗' : hhqShape(k), e.nest ? '#CC79A7' : hhqCol(k)), depthTest: false, transparent: true }));
+  const sc = e.group.scale.y || 1; sp.scale.setScalar(0.42 / sc); sp.position.y = (e.nest ? 2.4 : 2.25) / (e.nest ? 1 : 1); sp.renderOrder = 6; e.group.add(sp); e.hhqB = sp;
+}
+const HHQ_TRAPC = { spikes: ['▦', '#E69F00'], zapper: ['⚡', '#56B4E9'], resin: ['≈', '#F0E442'], launcher: ['⇧', '#D55E00'], chill: ['+', '#009E73'], pusher: ['»', '#CC79A7'], ceilzap: ['⚡', '#0072B2'], gas: ['☁', '#009E73'], turret: ['◎', '#ffffff'] };
+function hhqTrapBadge(p) {
+  const d = HHQ_TRAPC[p.id]; if (!d || !p.g || p.hhqB) return; const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: hhqTex(d[0], d[1]), depthTest: false, transparent: true }));
+  sp.scale.setScalar(0.55); sp.position.y = p.id === 'zapper' || p.id === 'turret' ? 2.6 : 0.9; sp.renderOrder = 6; p.g.add(sp); p.hhqB = sp;
+}
+function hhqMarksAll(on) { const H = M && M.hh; if (!H) return; for (const e of enemies) if (e.hhMob || e.nest) { if (on) hhqBadge(e); else if (e.hhqB) { e.hhqB.parent && e.hhqB.parent.remove(e.hhqB); e.hhqB = null; } } for (const p of H.pieces) { if (on) hhqTrapBadge(p); else if (p.hhqB) { p.hhqB.parent && p.hhqB.parent.remove(p.hhqB); p.hhqB = null; } } }
+const _hhqPM = hhPieceMake;
+hhPieceMake = function () { const p = _hhqPM.apply(this, arguments); if (p && HH_TRAPS[p.id] && hhqMarksOn()) hhqTrapBadge(p); return p; };
+const _hhqNest = hhNestMake;
+hhNestMake = function () { const e = _hhqNest.apply(this, arguments); if (e && hhqMarksOn()) hhqBadge(e); return e; };
+/* ---------- every frame */
+const _hhqTick = hhTick;
+hhTick = function (dt) {
+  const r = _hhqTick.apply(this, arguments), H = M && M.hh; if (!H) return r;
+  try { hhqPreview(H); hhqRing(H); if ((HHQ.frT = (HHQ.frT || 0) - dt) <= 0) { HHQ.frT = 1; hhqFreeze(H); } } catch (e) {}
+  return r;
+};
+const _hhqClr = hhClear;
+hhClear = function () { const H0 = HH.cur; if (H0 && H0.cus && H0.cus.mats && !H0.over && !H0.cusBack) { H0.cusBack = 1; for (const k of HH_MATS) H0.s.inv[k] = Math.max(0, (H0.s.inv[k] | 0) - H0.cus.mats); } const r = _hhqClr.apply(this, arguments); HHQ.ring = null; const el = $('hhPrev'); if (el) el.remove(); return r; };
+/* ---------- the lobby rows */
+const _hhqRender = hhRender;
+hhRender = function () {
+  const r = _hhqRender.apply(this, arguments), sel = $('lobSel'); if (!sel || !HHL.on) return r; const s = hhLoad(), c = hhqCus(s), mk = hhqMarksOn();
+  sel.insertAdjacentHTML('beforeend', `<div class="cod-row wide hhq-row"><small>CUSTOM GAME · ${c.on ? 'ON · PAYS HALF · NO RECORDS' : 'OFF'}</small><b>${c.on ? `${c.waves} WAVES · SPEED ×${c.speed} · +${c.mats} MATERIALS` : 'NORMAL MISSIONS'}</b><span>your own rules for missions</span><div class="arw"><button class="mini" data-act="hhq-cus">${c.on ? 'TURN OFF' : 'TURN ON'}</button>${c.on ? `<button class="mini" data-act="hhq-wav">WAVES</button><button class="mini" data-act="hhq-spd">SPEED</button><button class="mini" data-act="hhq-mat">MATERIALS</button>` : ''}</div></div>` +
+    `<div class="cod-row hhq-row"><small>SAVE BACKUP</small><b>EXPORT / IMPORT</b><span>your whole HORDE save as a code</span><div class="arw"><button class="mini" data-act="hhq-bk">OPEN</button></div></div>` +
+    `<div class="cod-row hhq-row"><small>TYPE MARKERS</small><b>${mk ? 'ON' : 'OFF'}</b><span>shape and colour badges on burnouts and traps</span><div class="arw"><button class="mini" data-act="hhq-mk">${mk ? 'TURN OFF' : 'TURN ON'}</button></div></div>`);
+  return r;
+};
+const _hhqAct = hhAct;
+hhAct = function (act) {
+  if (!/^hhq-/.test(act) || !HHL.on) return _hhqAct.apply(this, arguments);
+  const s = hhLoad(), c = hhqCus(s), cyc = (L, v) => L[(L.indexOf(v) + 1) % L.length];
+  if (act === 'hhq-cus') c.on = c.on ? 0 : 1; else if (act === 'hhq-wav') c.waves = cyc(HHQ_WAVES, c.waves); else if (act === 'hhq-spd') c.speed = cyc(HHQ_SPEED, c.speed); else if (act === 'hhq-mat') c.mats = cyc(HHQ_MATS, c.mats);
+  else if (act === 'hhq-mk') { s.marks = hhqMarksOn() ? 0 : 1; }
+  else if (act === 'hhq-bk') { try { sfx.ui(); } catch (e) {} hhqBackup(); return true; }
+  hhSave(s); try { sfx.ui(); } catch (e) {} hhRender(`[data-act="${act}"]`); return true;
+};
+(() => { const s = document.createElement('style'); s.textContent = `#hhPrev{position:fixed;top:126px;left:50%;transform:translateX(-50%);display:flex;gap:5px;flex-wrap:wrap;justify-content:center;max-width:620px;z-index:5;pointer-events:none}#hhPrev small{width:100%;text-align:center;font-size:9px;letter-spacing:.3em;color:#c8a0ff}#hhPrev span{font-size:10px;letter-spacing:.1em;padding:3px 8px;background:rgba(10,10,14,.7);border:1px solid var(--c);color:#fff}
+#hhMats .hhq-no{color:#ff6a6a}
+.hhq-bk textarea{width:100%;height:120px;background:rgba(0,0,0,.45);color:#cfe8c0;border:1px solid var(--line);font:11px/1.3 monospace;padding:8px;resize:vertical;word-break:break-all}`; document.head.appendChild(s); })();
+/* ================================================================== HOTBOX HORDE progress and social (1.2.111, the owner's list F = 45-52)
+   45 THE HORDE TRACK: 50 tiers of rewards from playing HORDE (s.tx XP: missions, raids, harvests, sales, building).
+   46 HORDE TROPHIES in the TROPHIES screen (counters hh*, each with its calling card).
+   47 THE COLLECTION BOOK (s.col): every burnout, strain, trap and gun you have found; $1,000 for a full page.
+   48 BASE LIKES: a friend visiting your HOMESTEAD presses L (pad D-PAD DOWN) to like it; s.likes is on the leaderboard.
+   49 TRADING: in co-op, GIVE materials, seeds or buds to a friend (presence gv, deduped by seq).
+   50 CO-OP LOBBY: READY CHECK (rc / rd), KICK (kick), and pings shared in co-op games (pg).
+   51 SEASONS: WINTER HARVEST (Dec-Feb: snow, frost burnouts, FROSTY OG seeds) and SUMMER FESTIVAL (Jun-Aug: fireflies,
+      festival burnouts, SUNSHINE HAZE seeds; sold for 50% more while it runs). HHS.force picks one for tests.
+   52 HOMESTEAD PRESTIGE (s.hpres, up to 5): at base level 5, start again from level 1 for +10% sale prices and +10%
+      materials for good, and a star on the leaderboard. Pieces outside the new edge come back as half their materials. */
+const HHP = { gvSeen: {}, rdSeen: {}, pgSeq: 0, gvSeq: 0, likedGid: 0 };
+HC.extra = HC.extra || {};
+/* ---------- 45 the track */
+const HHP_TIERS = 50, HHP_XPT = 1000;
+const HHP_REW = (() => { const L = [], seeds = ['haze', 'blue', 'north', 'milk']; for (let t = 1; t <= HHP_TIERS; t++) {
+  if (t % 10 === 0) L.push({ k: 'outfit', id: 'out' + t / 10, n: ['DIRT FARMER', 'NEON BLOOM', 'NIGHT SHIFT', 'GOLDEN LEAF', 'THE OVERGROWER'][t / 10 - 1] + ' OUTFIT' });
+  else if (t % 5 === 0) L.push({ k: 'seed', id: seeds[(t / 5 - 1) % 4], n: 3 });
+  else if (t % 3 === 0) L.push({ k: 'trap', id: ['spikes', 'zapper', 'resin', 'launcher'][(t / 3) % 4], n: 2 + (t / 15 | 0) });
+  else if (t % 2 === 0) L.push({ k: 'mat', id: ['scrap', 'wire', 'battery', 'nutri', 'sap'][(t / 2) % 5], n: 6 + t });
+  else L.push({ k: 'cash', n: 300 + t * 60 }); } return L; })();
+const hhpTier = s => Math.min(HHP_TIERS, Math.floor((s.tx | 0) / HHP_XPT));
+const hhpRewTxt = w => w.k === 'cash' ? `$${w.n.toLocaleString()}` : w.k === 'seed' ? `${w.n} ${HH_STR(w.id).n} SEEDS` : w.k === 'trap' ? `${w.n} ${HH_TRAPS[w.id].n}S` : w.k === 'mat' ? `${w.n} ${HH_ALLN(w.id)}` : w.n;
+function hhpXP(s, n, why) { const t0 = hhpTier(s); s.tx = (s.tx | 0) + Math.round(n); const t1 = hhpTier(s); if (t1 > t0 && M && M.hh && M.hh.s === s) try { showBanner(`HORDE TRACK · TIER ${t1}`, `${hhpRewTxt(HHP_REW[t1 - 1])} · claim it in the lobby`); sfx.streak(); } catch (e) {} }
+function hhpClaim(s) { s.tclaim = s.tclaim | 0; const got = []; while (s.tclaim < hhpTier(s)) { const w = HHP_REW[s.tclaim]; s.tclaim++; got.push(hhpRewTxt(w));
+    if (w.k === 'cash') s.cash += w.n; else if (w.k === 'seed') s.seeds[w.id] = (s.seeds[w.id] | 0) + w.n; else if (w.k === 'trap') s.traps[w.id] = (s.traps[w.id] | 0) + w.n; else if (w.k === 'mat') s.inv[w.id] = (s.inv[w.id] | 0) + w.n; else if (w.k === 'outfit') { s.outfits = s.outfits || {}; s.outfits[w.id] = 1; } }
+  return got; }
+function hhpTrack() {
+  const s = hhLoad(), t = hhpTier(s), o = document.createElement('div'); o.className = 'onb-ov'; o.id = 'hhpTr';
+  const row = (w, i) => `<div class="hhp-t${i < (s.tclaim | 0) ? ' got' : i < t ? ' rdy' : ''}"><small>${i + 1}</small><b>${hhpRewTxt(w)}</b></div>`;
+  o.innerHTML = `<div class="onb-box hh-mbox"><small>HOTBOX HORDE</small><h2 style="margin:0">THE HORDE TRACK · TIER ${t} / ${HHP_TIERS}</h2><span>${(s.tx | 0) % HHP_XPT} / ${HHP_XPT} XP to the next tier · missions, raids, harvests, sales and building all count</span><div class="hhp-grid">${HHP_REW.map(row).join('')}</div>
+<div class="onb-acts">${t > (s.tclaim | 0) ? `<button class="btn primary" data-hp="claim">CLAIM ${t - (s.tclaim | 0)}</button>` : ''}<button class="btn" data-close data-hp="x">CLOSE</button></div></div>`;
+  document.body.appendChild(o);
+  o.addEventListener('click', e => { const b = e.target.closest('[data-hp]'); if (!b) return; try { sfx.ui(); } catch (er) {} if (b.dataset.hp === 'claim') { const s2 = hhLoad(), got = hhpClaim(s2); hhSave(s2); try { showBanner('CLAIMED', got.slice(0, 4).join(' · ') + (got.length > 4 ? ` · +${got.length - 4} MORE` : '')); } catch (er) {} } o.remove(); hhRender(); });
+  setTimeout(() => { const b = o.querySelector('[data-hp]'); if (b) b.focus(); }, 40);
+}
+/* ---------- 46 trophies */
+const HHP_ACH = [['hh1', 'FIRST HARVEST', 'Win a HOTBOX HORDE mission', 'hhw', 1], ['hh25', 'GREEN THUMB', 'Win 25 HORDE missions', 'hhw', 25], ['hhk1k', 'WEED WHACKER', 'Take down 1,000 burnouts', 'hhk', 1000],
+  ['hhboss', 'OVERGROWN NO MORE', 'Beat THE OVERGROWN', 'hhboss', 1], ['hhcook', 'WELL DONE', 'Win a mission on COOKED', 'hhcook', 1], ['hhlv5', 'LAND BARON', 'Get THE HOMESTEAD to level 5', 'hhlv', 5],
+  ['hhcash', 'CASH CROP', 'Earn $100,000 in HORDE', 'hhcash', 100000], ['hhgrow', 'HARVEST MOON', 'Harvest 100 plants', 'hhgrown', 100], ['hhbuild', 'MASTER BUILDER', 'Build 500 pieces', 'hhbuilt', 500],
+  ['hhcoop', 'BETTER TOGETHER', 'Win a HORDE mission in co-op', 'hhcoop', 1], ['hhpres', 'FRESH SOIL', 'Prestige THE HOMESTEAD', 'hhpres', 1], ['hhbook', 'COLLECTOR', 'Fill a page of the COLLECTION BOOK', 'hhbook', 1]];
+for (const [id, n, d, k, v] of HHP_ACH) { const a = { id, n, d, k, v, secret: false }; ACH.splice(ACH.length - 1, 0, a); const c = ['#9adf5a', '#c070ff', '#ffb84a'][ACH.length % 3], it = { id: 'ach_' + id, name: n, kind: 'banner', r: v >= 100 ? 3 : v >= 5 ? 2 : 1, ach: 1, g: { t: 'rays', c: ['#0b1410', c, '#1a2a1a'], em: ['leaf', c, '#0b0c0d'] } }; COSM.push(it); COS[it.id] = it; }
+function hhpAch(s) { try { achMax('hhlv', s.base.lv | 0); achMax('hhcash', s.earn | 0); achMax('hhgrown', s.grown | 0); achMax('hhbuilt', s.built | 0); achMax('hhw', s.wins | 0); achMax('hhk', s.kills | 0); achMax('hhpres', s.hpres | 0); } catch (e) {} }
+/* ---------- 47 the collection book */
+const hhpCol = s => (s.col = Object.assign({ mob: {}, strain: {}, trap: {}, gun: {} }, s.col));
+const HHP_PAGES = () => [['mob', 'BURNOUTS', Object.keys(HH_KINDS).map(k => [k, HH_KINDS[k].n])], ['strain', 'STRAINS', HH_STRAINS.map(x => [x.id, x.n])], ['trap', 'TRAPS', Object.keys(HH_TRAPS).map(k => [k, HH_TRAPS[k].n])], ['gun', 'GUNS', HH_GUNS.map(g => [g.id, g.n])]];
+function hhpColScan(s) {
+  const c = hhpCol(s); let nw = 0; const mark = (pg, id) => { if (!c[pg][id]) { c[pg][id] = 1; nw++; } };
+  for (const x of HH_STRAINS) if ((s.seeds[x.id] | 0) > 0 || (s.buds[x.id] | 0) > 0) mark('strain', x.id);
+  for (const k in HH_TRAPS) if ((s.traps[k] | 0) > 0) mark('trap', k);
+  for (const g of s.arsenal || []) mark('gun', g.id);
+  s.colPaid = s.colPaid || {}; for (const [pg, n, items] of HHP_PAGES()) if (!s.colPaid[pg] && items.every(([id]) => c[pg][id])) { s.colPaid[pg] = 1; s.cash += 1000; try { achAdd('hhbook'); if (M && M.hh) showBanner(`COLLECTION · ${n} PAGE DONE`, '+$1,000'); } catch (e) {} }
+  return nw;
+}
+function hhpBook() {
+  const s = hhLoad(), c = hhpCol(s), o = document.createElement('div'); o.className = 'onb-ov'; o.id = 'hhpBook';
+  o.innerHTML = `<div class="onb-box hh-mbox"><small>HOTBOX HORDE</small><h2 style="margin:0">THE COLLECTION BOOK</h2>${HHP_PAGES().map(([pg, n, items]) => { const got = items.filter(([id]) => c[pg][id]).length; return `<div class="hhp-pg"><b>${n} · ${got} / ${items.length}${s.colPaid && s.colPaid[pg] ? ' · DONE' : ''}</b><div>${items.map(([id, nm]) => `<span class="${c[pg][id] ? 'on' : ''}"${pg === 'mob' && c[pg][id] ? ` style="--c:${hhqCol(id)}"` : ''}>${c[pg][id] ? (pg === 'mob' ? hhqShape(id) + ' ' : '') + nm : '? ? ?'}</span>`).join('')}</div></div>`; }).join('')}<span>a full page pays $1,000</span><div class="onb-acts"><button class="btn" data-close>CLOSE</button></div></div>`;
+  document.body.appendChild(o); o.querySelector('[data-close]').onclick = () => { try { sfx.ui(); } catch (e) {} o.remove(); }; setTimeout(() => o.querySelector('[data-close]').focus(), 40);
+}
+/* ---------- 52 prestige bonuses */
+const hhpPresK = () => { const H = M && M.hh, s = H ? H.s : null; return 1 + 0.1 * Math.min(5, (s ? s.hpres : 0) | 0); };
+const _hhpPrice = hhPrice;
+hhPrice = function (id) { let p = _hhpPrice.apply(this, arguments); p = Math.round(p * hhpPresK()); if (hhpSeason() === 'summer' && id === 'sun') p = Math.round(p * 1.5); return p; };
+const _hhpGive = hhGive;
+hhGive = function (k, n) { if (HH_MATS.includes(k)) n = Math.round(n * hhpPresK()); return _hhpGive.call(this, k, n); };
+function hhpPrestige() {
+  const s = hhLoad(); if ((s.base.lv | 0) < 5) return 'THE HOMESTEAD HAS TO BE LEVEL 5'; if ((s.hpres | 0) >= 5) return 'ALREADY AT THE TOP PRESTIGE';
+  const R = HH_BASELV[0].r, back = {}; s.base.pieces = s.base.pieces.filter(rec => { if (Math.max(Math.abs(rec.ix), Math.abs(rec.iz)) <= R) return true; const m = rec.mat; if (m && HH_MAT[m]) back[m] = (back[m] | 0) + 4; return false; });
+  for (const k in back) s.inv[k] = (s.inv[k] | 0) + back[k]; s.base.lv = 1; s.hpres = (s.hpres | 0) + 1; s.cash = Math.round(s.cash * 0.5); hhSave(s); hhpAch(s); return '';
+}
+/* ---------- 51 seasons */
+const HHS = { force: null, fx: null };
+const hhpSeason = () => { if (HHS.force !== null) return HHS.force; const m = new Date().getMonth(); return m === 11 || m <= 1 ? 'winter' : m >= 5 && m <= 7 ? 'summer' : ''; };
+HH_STRAINS.push({ id: 'frost', n: 'FROSTY OG', min: 12, yld: 6, price: 160, seed: 0, col: 0xbfe8ff, ev: 'winter' }, { id: 'sun', n: 'SUNSHINE HAZE', min: 12, yld: 6, price: 140, seed: 0, col: 0xffd84a, ev: 'summer' });
+function hhpSeasonFx(H) {
+  const ev = hhpSeason(); if (HHS.fx && (HHS.fx.parent !== H.grp || HHS.fx.userData.ev !== ev)) { if (HHS.fx.parent) HHS.fx.parent.remove(HHS.fx); HHS.fx = null; } if (!ev) return;
+  if (!HHS.fx) { const n = ev === 'winter' ? 700 : 160, pos = new Float32Array(n * 3); for (let i = 0; i < n; i++) { pos[i * 3] = rnd(-30, 30); pos[i * 3 + 1] = rnd(0, 14); pos[i * 3 + 2] = rnd(-30, 30); }
+    const g = new THREE.BufferGeometry(); g.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+    HHS.fx = new THREE.Points(g, new THREE.PointsMaterial({ color: ev === 'winter' ? 0xffffff : 0xfff07a, size: ev === 'winter' ? 0.09 : 0.12, transparent: true, opacity: ev === 'winter' ? 0.85 : 0.9, depthWrite: false })); HHS.fx.userData.ev = ev; HHS.fx.frustumCulled = false; H.grp.add(HHS.fx); }
+  const a = HHS.fx.geometry.attributes.position, d = 1 / 60; HHS.fx.position.set(P.x, 0, P.z);
+  for (let i = 0; i < a.count; i++) { if (ev === 'winter') { let y = a.getY(i) - 1.4 * d; if (y < 0) y += 14; a.setY(i, y); a.setX(i, a.getX(i) + Math.sin(NOW + i) * 0.004); } else { a.setY(i, 0.6 + 2 + Math.sin(NOW * 0.7 + i) * 1.5); a.setX(i, a.getX(i) + Math.cos(NOW * 0.5 + i * 3) * 0.01); } }
+  a.needsUpdate = true; HHS.fx.material.opacity = ev === 'summer' ? 0.5 + 0.4 * Math.sin(NOW * 3) : 0.85;
+}
+const _hhpMob = hhMob;
+hhMob = function (kind) { const e = _hhpMob.apply(this, arguments), ev = hhpSeason(); if (e && ev && !e.hcProx) { const c = new THREE.Color(ev === 'winter' ? 0x9ad8ff : 0xffb86a); e.group.traverse(o => { if (o.isMesh && o.material && o.material.color && !o.userData.hitbox && !o.isSprite) { o.material = o.material.clone(); o.material.color.lerp(c, 0.35); } }); e.season = ev; } return e; };
+/* ---------- XP, trophies, the book: from the save and the end of a mission */
+const _hhpSave = hhSave;
+hhSave = function (s) {
+  if (s && typeof s === 'object' && s.inv) { s.txs = s.txs || { g: s.grown | 0, so: s.sold | 0, b: s.built | 0 };
+    const dg = (s.grown | 0) - s.txs.g, ds = (s.sold | 0) - s.txs.so, db = (s.built | 0) - s.txs.b; if (dg > 0 || ds > 0 || db > 0) hhpXP(s, Math.max(0, dg) * 25 + Math.max(0, ds) / 40 + Math.max(0, db) * 3);
+    s.txs = { g: s.grown | 0, so: s.sold | 0, b: s.built | 0 }; hhpColScan(s); hhpAch(s); }
+  return _hhpSave.apply(this, arguments);
+};
+const _hhpEnd = hhEnd;
+hhEnd = function (won) {
+  const H = M && M.hh, first = H && !H.over; const r = _hhpEnd.apply(this, arguments); if (!first || !H) return r; const s = H.s;
+  hhpXP(s, won ? 250 + 150 * H.di : 80); if (won) { if (H.di >= 3) achAdd('hhcook'); if (HC.on && HC.inGame) achAdd('hhcoop'); const ev = hhpSeason(); if (ev) { const id = ev === 'winter' ? 'frost' : 'sun', n = 1 + (Math.random() < 0.5 ? 1 : 0); s.seeds[id] = (s.seeds[id] | 0) + n; if (H.res && H.res.pay) H.res.pay['seed:' + id] = n; } }
+  hhSave(s); return r;
+};
+const _hhpRaid = hhRaidEnd;
+hhRaidEnd = function (won) { const H = M && M.hh, r = _hhpRaid.apply(this, arguments); if (H && won) { hhpXP(H.s, 400 + 100 * H.s.base.lv); hhSave(H.s); } return r; };
+const _hhpDmg = damageEnemy;
+damageEnemy = function (e) {
+  const was = e && e.hhMob && enemies.includes(e), r = _hhpDmg.apply(this, arguments);
+  if (was && !enemies.includes(e) && M && M.hh && !e.hcProx) { const s = M.hh.s, c = hhpCol(s); if (!c.mob[e.hk]) { c.mob[e.hk] = 1; try { showMsg(`NEW IN THE COLLECTION BOOK · ${(HH_KINDS[e.hk] || {}).n}`); } catch (er) {} } if (e.K && e.K.boss) achAdd('hhboss'); }
+  return r;
+};
+/* ---------- 48-50 co-op: likes, gifts, ready checks, kicks, pings */
+function hcExtraRead(R, pr) {
+  const host = hcHost();
+  if (host && pr.lk && pr.lk === HC.gid && M && M.hh && M.hh.base && !R.liked) { R.liked = HC.gid; const s = M.hh.s; s.likes = (s.likes | 0) + 1; hhSave(s); try { showBanner(`${R.n} LIKED YOUR BASE`, `${s.likes} like${s.likes > 1 ? 's' : ''} so far`); sfx.pickup(); } catch (e) {} }
+  if (Array.isArray(pr.gv)) for (const g of pr.gv) { const seq = g[0] | 0; if (g[1] !== HC.me || seq <= (HHP.gvSeen[R.peer] | 0)) continue; HHP.gvSeen[R.peer] = seq; const k = String(g[2]), n = clamp(g[3] | 0, 1, 1000), s = HH.cur ? HH.cur.s : hhLoad();
+    if (k.startsWith('seed:')) { const id = k.slice(5); if (!HH_STRAINS.some(x => x.id === id)) continue; s.seeds[id] = (s.seeds[id] | 0) + n; } else if (k.startsWith('bud:')) { const id = k.slice(4); if (!HH_STRAINS.some(x => x.id === id)) continue; s.buds[id] = (s.buds[id] | 0) + n; } else if (HH_MAT[k] || HH_CMAT[k]) s.inv[k] = (s.inv[k] | 0) + n; else continue;
+    if (!(HH.cur && HH.cur.noSave)) hhSave(s); try { showBanner(`${R.n} SENT YOU A GIFT`, `${n} ${k.includes(':') ? HH_STR(k.split(':')[1]).n + (k.startsWith('seed') ? ' SEEDS' : ' BUDS') : HH_ALLN(k)}`); sfx.pickup(); } catch (e) {} if (HHL.on && curScreen === 'lobby') hhRender(); }
+  if (!host && R.ho) { if ((pr.rc | 0) > (HHP.rcSeen | 0)) { HHP.rcSeen = pr.rc | 0; HHP.rcOpen = pr.rc | 0; try { showMsg('READY CHECK · PRESS READY IN THE CO-OP BOX'); tone(880, 0.12, 0.06, 'triangle', 1100); } catch (e) {} if (HHL.on && curScreen === 'lobby') hhRender(); }
+    if (Array.isArray(pr.kick) && pr.kick.includes(HC.me)) { hcLeave(); HC.err = 'THE HOST TOOK YOU OUT OF THE GAME'; try { showMsg(HC.err); if (HHL.on && curScreen === 'lobby') hhRender(); } catch (e) {} return; } }
+  if (host && (pr.rd | 0) && (pr.rd | 0) === (HC.extra.rc | 0) && HHP.rdSeen[R.peer] !== pr.rd) { HHP.rdSeen[R.peer] = pr.rd; if (HHL.on && curScreen === 'lobby') hhRender(); }
+  if (Array.isArray(pr.pg) && HC.inGame && R.inGame) { const seq = pr.pg[0] | 0, key = 'hc' + R.peer; if ((PING.seen[key] | 0) < seq) { PING.seen[key] = seq; const kind = PING_ORDER[pr.pg[1] | 0]; if (kind) try { pingAdd({ kind, x: +pr.pg[2], y: +pr.pg[3], z: +pr.pg[4] }, R.n, true); pingTone(kind); } catch (e) {} } }
+}
+const _hhgPing = pingAdd;
+pingAdd = function (o, who) { const p = _hhgPing.apply(this, arguments); if (p && who === 'me' && HC.on && HC.inGame && M && M.mode === 'hh') { HHP.pgSeq++; HC.extra.pg = [HHP.pgSeq, Math.max(0, PING_ORDER.indexOf(o.kind)), Math.round(o.x * 100) / 100, Math.round((o.y || 0) * 100) / 100, Math.round(o.z * 100) / 100]; } return p; };
+function hhpLike() { const H = M && M.hh; if (!H || !H.client || !H.base || !HC.on) return; if (HHP.likedGid === HC.gid) { showMsg('YOU ALREADY LIKED THIS BASE'); return; } HHP.likedGid = HC.gid; HC.extra.lk = HC.gid; try { showMsg('YOU LIKED THIS BASE'); tone(988, 0.12, 0.05, 'triangle', 1480); } catch (e) {} }
+addEventListener('keydown', e => { if (e.code === 'KeyL' && !e.repeat && M && M.hh && M.hh.client && M.hh.base && G.state === 'playing' && !curScreen) { e.stopImmediatePropagation(); hhpLike(); } }, true);
+const _hhpPad = hhPadTick;
+hhPadTick = function () { const was = HHP.padD; let gp = null; try { gp = (navigator.getGamepads ? [...navigator.getGamepads()] : []).find(g => g && g.connected); } catch (e) {} HHP.padD = !!(gp && gp.buttons[13] && gp.buttons[13].pressed); if (HHP.padD && !was && M && M.hh && M.hh.client && M.hh.base && !HH.build) hhpLike(); return _hhpPad.apply(this, arguments); };
+function hhpGive(peer, k, n) {
+  const s = hhLoad(); let have = 0; if (k.startsWith('seed:')) have = s.seeds[k.slice(5)] | 0; else if (k.startsWith('bud:')) have = s.buds[k.slice(4)] | 0; else have = s.inv[k] | 0;
+  n = Math.min(n, have); if (n <= 0) return 'YOU HAVE NONE OF THAT';
+  if (k.startsWith('seed:')) s.seeds[k.slice(5)] -= n; else if (k.startsWith('bud:')) s.buds[k.slice(4)] -= n; else s.inv[k] -= n; hhSave(s);
+  HHP.gvSeq++; const L = (HC.extra.gv = (HC.extra.gv || []).concat([[HHP.gvSeq, peer, k, n]])); while (L.length > 8) L.shift(); return '';
+}
+/* ---------- the lobby: rows, and the co-op box extras */
+const _hhpRender = hhRender;
+hhRender = function () {
+  const r = _hhpRender.apply(this, arguments); if (!HHL.on) return r; const sel = $('lobSel'), s = hhLoad(); if (!sel) return r; const t = hhpTier(s), c = hhpCol(s), ev = hhpSeason();
+  const tot = HHP_PAGES().reduce((a, [pg, n, it]) => a + it.length, 0), got = HHP_PAGES().reduce((a, [pg, n, it]) => a + it.filter(([id]) => c[pg][id]).length, 0);
+  sel.insertAdjacentHTML('afterbegin', ev ? `<div class="cod-row wide hhp-ev ${ev}"><small>${ev === 'winter' ? 'WINTER HARVEST · DEC - FEB' : 'SUMMER FESTIVAL · JUN - AUG'}</small><b>${ev === 'winter' ? 'FROST BURNOUTS · FROSTY OG SEEDS' : 'FESTIVAL BURNOUTS · SUNSHINE HAZE SEEDS · SELLS FOR 50% MORE'}</b><span>every mission win drops event seeds</span></div>` : '');
+  sel.insertAdjacentHTML('beforeend', `<div class="cod-row hhp-row"><small>THE HORDE TRACK · ${(s.tx | 0) % HHP_XPT} / ${HHP_XPT} XP</small><b>TIER ${t} / ${HHP_TIERS}${t > (s.tclaim | 0) ? ` · <span style="color:#7aff6a">${t - (s.tclaim | 0)} TO CLAIM</span>` : ''}</b><span>next: ${t < HHP_TIERS ? hhpRewTxt(HHP_REW[t]) : 'all done'}</span><div class="arw"><button class="mini" data-act="hhp-track">OPEN</button></div></div>` +
+    `<div class="cod-row hhp-row"><small>COLLECTION BOOK</small><b>${got} / ${tot} FOUND</b><span>burnouts, strains, traps, guns</span><div class="arw"><button class="mini" data-act="hhp-book">OPEN</button></div></div>` +
+    `<div class="cod-row wide hhp-row"><small>HOMESTEAD PRESTIGE ${'★'.repeat(s.hpres | 0)}${'☆'.repeat(5 - (s.hpres | 0))}</small><b>${(s.hpres | 0) ? `+${(s.hpres | 0) * 10}% SALES AND MATERIALS` : 'NOT YET'} · ${s.likes | 0} LIKE${(s.likes | 0) === 1 ? '' : 'S'}</b><span>at base level 5: start the base again from level 1 for +10% for good (keeps half your cash)</span><div class="arw"><button class="mini" data-act="hhp-pres"${(s.base.lv | 0) >= 5 && (s.hpres | 0) < 5 ? '' : ' disabled'}>PRESTIGE</button></div></div>`);
+  const b = $('hcBox'); if (b && HC.on) { const peers = [...HC.rem.values()].filter(R => R.n);
+    let x = ''; if (hcHost() && peers.length) x += `<div class="hcx"><small>FRIENDS</small>${peers.map(R => `<div class="hcx-p"><b>${R.n}</b>${HC.extra.rc ? `<i class="${HHP.rdSeen[R.peer] === HC.extra.rc ? 'ok' : ''}">${HHP.rdSeen[R.peer] === HC.extra.rc ? 'READY' : 'NOT READY'}</i>` : ''}<button class="mini" data-hcx="kick:${R.peer}">KICK</button></div>`).join('')}<div class="cc-row"><button class="btn" data-hcx="rc">READY CHECK</button></div></div>`;
+    if (!hcHost() && HHP.rcOpen && HHP.rcOpen !== HC.extra.rd) x += `<div class="cc-row"><button class="btn primary" data-hcx="rd">READY</button></div>`;
+    if (peers.length) { const items = [...HH_MATS, ...HH_CMATS].filter(k => (s.inv[k] | 0) > 0).map(k => [k, HH_ALLN(k), s.inv[k] | 0]).concat(HH_STRAINS.filter(x => (s.seeds[x.id] | 0) > 0).map(x => ['seed:' + x.id, x.n + ' SEEDS', s.seeds[x.id]]), HH_STRAINS.filter(x => (s.buds[x.id] | 0) > 0).map(x => ['bud:' + x.id, x.n + ' BUDS', s.buds[x.id]]));
+      HHP.gTo = peers.some(R => R.peer === HHP.gTo) ? HHP.gTo : peers[0].peer; HHP.gK = items.some(i => i[0] === HHP.gK) ? HHP.gK : (items[0] || [''])[0]; HHP.gN = HHP.gN || 10; const it = items.find(i => i[0] === HHP.gK);
+      x += `<div class="hcx"><small>GIVE</small><div class="cc-row"><button class="mini" data-hcx="to">TO ${(peers.find(R => R.peer === HHP.gTo) || {}).n}</button><button class="mini" data-hcx="item">${it ? `${it[1]} (${it[2]})` : 'NOTHING TO GIVE'}</button><button class="mini" data-hcx="n">×${HHP.gN}</button><button class="mini" data-hcx="give"${it ? '' : ' disabled'}>SEND</button></div>${HHP.gMsg ? `<small>${HHP.gMsg}</small>` : ''}</div>`;
+      HHP.gItems = items; }
+    b.insertAdjacentHTML('beforeend', x);
+    for (const q of b.querySelectorAll('[data-hcx]')) q.onclick = () => { try { sfx.ui(); } catch (e) {} const a = q.dataset.hcx;
+      if (a === 'rc') { HC.extra.rc = (HC.extra.rc | 0) + 1; HHP.rdSeen = {}; } else if (a === 'rd') { HC.extra.rd = HHP.rcOpen; HHP.rcOpen = 0; }
+      else if (a.startsWith('kick:')) { const id = a.slice(5); HC.extra.kick = (HC.extra.kick || []).concat([id]).slice(-6); }
+      else if (a === 'to') { const i = peers.findIndex(R => R.peer === HHP.gTo); HHP.gTo = peers[(i + 1) % peers.length].peer; }
+      else if (a === 'item') { const L = HHP.gItems || [], i = L.findIndex(v => v[0] === HHP.gK); HHP.gK = L.length ? L[(i + 1) % L.length][0] : ''; }
+      else if (a === 'n') HHP.gN = HHP.gN === 10 ? 50 : HHP.gN === 50 ? 100 : HHP.gN === 100 ? 1 : 10;
+      else if (a === 'give') { const err = hhpGive(HHP.gTo, HHP.gK, HHP.gN); HHP.gMsg = err || `SENT ${HHP.gN} TO ${(peers.find(R => R.peer === HHP.gTo) || {}).n}`; }
+      hhRender(`[data-hcx="${a}"]`); };
+  }
+  return r;
+};
+const _hhpAct = hhAct;
+hhAct = function (act) {
+  if (!/^hhp-/.test(act) || !HHL.on) return _hhpAct.apply(this, arguments); try { sfx.ui(); } catch (e) {}
+  if (act === 'hhp-track') hhpTrack(); else if (act === 'hhp-book') hhpBook();
+  else if (act === 'hhp-pres') { const o = onbCard(`<small style="letter-spacing:.3em;color:#ffd24a">HOMESTEAD PRESTIGE</small><h2 style="margin:0">START AGAIN FROM LEVEL 1?</h2><span>THE HOMESTEAD goes back to level 1 (raid your way up again). Pieces outside the level 1 edge come back as half their materials. You keep half your cash, all your seeds, buds, traps and guns. For good: +10% on sales and materials, and a star.</span><div class="onb-acts"><button class="btn primary" data-onb="go">PRESTIGE</button><button class="btn" data-onb="x">NOT NOW</button></div>`, { go: () => { const err = hhpPrestige(); try { showBanner(err ? 'NOT YET' : 'HOMESTEAD PRESTIGE', err || 'fresh soil · +10% for good'); } catch (e) {} hhRender(); } }, false); }
+  return true;
+};
+// every frame: the season, the visit's like prompt
+const _hhpTick = hhTick;
+hhTick = function (dt) { const r = _hhpTick.apply(this, arguments), H = M && M.hh; if (!H) return r; try { hhpSeasonFx(H); if (H.client && H.base && HHP.likedGid !== HC.gid && (HHP.lkT = (HHP.lkT || 0) - dt) <= 0) { HHP.lkT = 20; showMsg(`LIKE THIS BASE? PRESS ${usingPad() ? 'D-PAD DOWN' : 'L'}`); } } catch (e) {} return r; };
+const _hhpClr = hhClear; hhClear = function () { HHS.fx = null; return _hhpClr.apply(this, arguments); };
+(() => { const s = document.createElement('style'); s.textContent = `.hhp-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:4px;max-height:52vh;overflow:auto}.hhp-t{padding:6px 7px;border:1px solid var(--line);background:rgba(0,0,0,.3);font-size:10px}.hhp-t small{display:block;color:var(--dim)}.hhp-t.rdy{border-color:#7aff6a;box-shadow:0 0 8px rgba(122,255,106,.35)}.hhp-t.got{opacity:.45}.hhp-t.got b:after{content:' ✓';color:#7aff6a}
+.hhp-pg{margin:6px 0}.hhp-pg b{display:block;letter-spacing:.2em;font-size:11px;color:#c8a0ff;margin-bottom:4px}.hhp-pg div{display:flex;flex-wrap:wrap;gap:4px}.hhp-pg span{font-size:10px;padding:3px 7px;border:1px solid rgba(255,255,255,.1);color:var(--dim)}.hhp-pg span.on{color:#fff;border-color:var(--c,#7aff6a)}
+.hhp-ev.winter{border-color:#9ad8ff!important;background:linear-gradient(90deg,rgba(154,216,255,.18),transparent)!important}.hhp-ev.summer{border-color:#ffd24a!important;background:linear-gradient(90deg,rgba(255,210,74,.18),transparent)!important}
+.hcx{margin-top:8px}.hcx>small{display:block;font-size:9px;letter-spacing:.3em;color:var(--dim)}.hcx-p{display:flex;gap:8px;align-items:center;margin-top:4px}.hcx-p b{flex:1;font-size:12px}.hcx-p i{font-style:normal;font-size:10px;color:#ff8a6a}.hcx-p i.ok{color:#7aff6a}`; document.head.appendChild(s); })();
+/* ================================================================== HOTBOX HORDE heroes, crew and gear (1.2.111, the owner's list E = 37-44)
+   37 Two new heroes: THE BOTANIST (plants grow 25% faster, the plant heals near you; BLOOM: heals the plant, you and the
+      crew, slows burnouts round you) and THE ENGINEER (traps craft 25% cheaper and hit 20% harder; DRONE: a drone over
+      you shoots burnouts for 20 s).
+   38 OUTFITS from THE HORDE TRACK (s.outfits, s.outfit): your sleeves and gloves change colour in HORDE.
+   39 GUN MODS at the WORKBENCH for the equipped gun (g.mods: mag = +50% magazine, scope = +25% headshots, glue = hits slow).
+   40 SPECIAL AMMO packs (s.ammo, s.ammoSel; one pack a mission): FIRE (burns), SHOCK (jumps to a 2nd burnout), SAP (slows).
+   41 GADGETS (s.gadget, 2 a mission; key 4 / pad D-PAD DOWN): HEAL SPRINKLER, GRAPPLE HOOK, DECOY PLANT.
+   42 CREW KIT (s.ckit 0-3 at the WORKBENCH): better guns, more damage and health for your crew.
+   43 BUDDY THE DOG (s.dog): follows you, fetches loot orbs, barks and pings burnouts near you.
+   44 CREW MORALE (s.morale 0-100): wins raise it, losses drop it, FEED THE CREW (buds or a brownie) in the lobby; happy
+      crews shoot and work better, grumpy ones worse. */
+const HHG = { drone: null, decoy: null, spr: null, grap: null, dog: null, gad: 0, vm: null };
+/* ---------- 37 heroes */
+HH_HEROES.push({ id: 'botanist', n: 'BOTANIST', col: '#9aff6a', d: 'plants grow 25% faster · THE MOTHER PLANT heals when you are close' }, { id: 'engineer', n: 'ENGINEER', col: '#6ad8ff', d: 'traps cost 25% less to craft and hit 20% harder' });
+Object.assign(HH_ABIL, { botanist: { n: 'BLOOM', cd: 35 }, engineer: { n: 'DRONE', cd: 45 } });
+const _hhgAb = hhAbility;
+hhAbility = function () {
+  const H = M && M.hh; if (!H || !['botanist', 'engineer'].includes(H.hero)) return _hhgAb.apply(this, arguments);
+  if (!playerAlive() || HH.build || HH.menu) return; const A = HH_ABIL[H.hero]; if (HH.abT > 0) { showMsg(`${A.n} · READY IN ${Math.ceil(HH.abT)} s`); return; }
+  if (H.hero === 'botanist') { if (H.plant) H.plant.hp = Math.min(H.plant.max, H.plant.hp + H.plant.max * 0.3); G.health = Math.min(G.maxHp || 100, G.health + 40);
+    for (const e of enemies) { const d = Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z); if (e.entry && e.team === M.myTeam && d < 9) e.hp = Math.min(e.maxHp, e.hp + 60); if (e.hhMob && d < 9) e.slowT = Math.max(e.slowT || 0, 4); }
+    try { chunks('leaf', new THREE.Vector3(P.x, (P.y || 0) + 1, P.z), 24, 5, 0.8); } catch (e) { try { chunks('dust', new THREE.Vector3(P.x, (P.y || 0) + 1, P.z), 18, 4, 0.6); } catch (er) {} }
+    try { showBanner('BLOOM', 'the plant, you and your crew heal · burnouts close by slow down'); tone(523, 0.3, 0.06, 'sine', 784); } catch (e) {} }
+  else { hhgDrone(H); try { showBanner('DRONE UP', 'it shoots burnouts for 20 s'); tone(220, 0.4, 0.05, 'sawtooth', 440); } catch (e) {} }
+  HH.abT = A.cd;
+};
+function hhgDrone(H) {
+  if (HHG.drone && HHG.drone.g.parent) HHG.drone.g.parent.remove(HHG.drone.g); const g = new THREE.Group(), m = hhStd({ color: 0x2a3a4a, metalness: 0.6, roughness: 0.35 });
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.12, 0.45), m); g.add(body); const eye = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshBasicMaterial({ color: 0x6ad8ff })); eye.position.set(0, -0.08, 0.2); g.add(eye);
+  const rot = []; for (const [x, z] of [[-0.3, -0.3], [0.3, -0.3], [-0.3, 0.3], [0.3, 0.3]]) { const r = new THREE.Mesh(new THREE.BoxGeometry(0.32, 0.01, 0.04), new THREE.MeshBasicMaterial({ color: 0x111111 })); r.position.set(x, 0.08, z); g.add(r); rot.push(r); }
+  g.position.set(P.x, (P.y || 0) + 3, P.z); H.grp.add(g); HHG.drone = { g, rot, t: 20, fire: 0 };
+}
+function hhgDroneTick(H, dt) {
+  const D = HHG.drone; if (!D) return; D.t -= dt; for (const r of D.rot) r.rotation.y += dt * 40;
+  const want = new THREE.Vector3(P.x + Math.sin(NOW) * 1.5, (P.y || 0) + 3.2, P.z + Math.cos(NOW) * 1.5); D.g.position.lerp(want, Math.min(1, dt * 3));
+  if ((D.fire -= dt) <= 0) { let best = null, bd = 22; for (const e of H.mobs) { const g = e.group.position, d = Math.hypot(g.x - D.g.position.x, g.z - D.g.position.z); if (d < bd && gridClear(D.g.position.x, D.g.position.z, g.x, g.z, D.g.position.y - 1, g.y + 1)) { bd = d; best = e; } }
+    if (best) { D.fire = 0.22; const to = best.group.position.clone().setY(best.group.position.y + 1.1); try { addTracer(D.g.position.clone(), to); } catch (e) {} damageEnemy(best, 12, false, null, false, 'drone'); try { tone(1400, 0.02, 0.02, 'square', 900, at(D.g.position.x, D.g.position.z, 18)); } catch (e) {} } else D.fire = 0.3; }
+  if (D.t <= 0) { if (D.g.parent) D.g.parent.remove(D.g); HHG.drone = null; }
+}
+const _hhgRate = hhRate;
+hhRate = function (st) { const r = _hhgRate.apply(this, arguments); try { const s = HH.cur ? HH.cur.s : null; if (s && s.hero === 'botanist') return r * 1.25; } catch (e) {} return r; };
+const _hhgTD = hhTrapDmg;
+hhTrapDmg = function (e, dmg, p) { const H = M && M.hh; if (H && H.hero === 'engineer') dmg *= 1.2; return _hhgTD.call(this, e, dmg, p); };
+/* ---------- 38 outfits */
+const HHG_OUT = { '': { n: 'STANDARD ISSUE' }, out1: { n: 'DIRT FARMER', s: 0x6a5232, g: 0x3a2a1a }, out2: { n: 'NEON BLOOM', s: 0x3a1a5a, g: 0x6aff5a }, out3: { n: 'NIGHT SHIFT', s: 0x1a1e2a, g: 0x0a0a0a }, out4: { n: 'GOLDEN LEAF', s: 0x8a6a1a, g: 0xd8b04a }, out5: { n: 'THE OVERGROWER', s: 0x2a5a2a, g: 0x5a3a7a } };
+function hhgOutfit(on) {
+  if (!VM.sleeve || !VM.glove) return; if (!HHG.vm) HHG.vm = { s: VM.sleeve.color.getHex(), g: VM.glove.color.getHex() };
+  const s = on && HH.cur ? HH.cur.s : null, o = s && s.outfit && HHG_OUT[s.outfit] ? HHG_OUT[s.outfit] : null;
+  VM.sleeve.color.setHex(o && o.s !== undefined ? o.s : HHG.vm.s); VM.glove.color.setHex(o && o.g !== undefined ? o.g : HHG.vm.g);
+}
+/* ---------- 39 gun mods, 40 ammo, 42 crew kit: the workbench */
+const HHG_MODS = { mag: { n: 'EXTENDED MAG', d: '+50% magazine', cost: { metal: 25, scrap: 8 } }, scope: { n: 'SCOPE', d: '+25% headshot damage', cost: { metal: 20, wire: 2, battery: 1 } }, glue: { n: 'SAP-GLUE ROUNDS', d: 'every hit slows', cost: { sap: 6, scrap: 4 } } };
+const HHG_AMMO = { fire: { n: 'FIRE ROUNDS', d: 'hits set burnouts alight', cost: { wood: 15, sap: 2 } }, shock: { n: 'SHOCK ROUNDS', d: 'a hit jumps to a second burnout', cost: { wire: 2, battery: 1 } }, sap: { n: 'SAP ROUNDS', d: 'hits slow burnouts down', cost: { sap: 3 } } };
+const HHG_KIT = [null, { n: 'SCRAP KIT', cost: { metal: 40, scrap: 10 }, gun: 'smg' }, { n: 'FIELD KIT', cost: { metal: 80, scrap: 20, wire: 5 }, gun: 'ar' }, { n: 'HEAVY KIT', cost: { metal: 140, scrap: 30, battery: 5 }, gun: 'lmg' }];
+const _hhgMD = hhMenuDo;
+hhMenuDo = function (a, v) {
+  const H = M.hh, s = H.s;
+  if (a === 'gmod') { const g = s.arsenal[s.eq], m = HHG_MODS[v]; if (!g) { showMsg('EQUIP A CRAFTED GUN FIRST (LOBBY · WEAPON)'); return; } g.mods = g.mods || {}; if (m && !g.mods[v] && hhPay(s, m.cost)) { g.mods[v] = 1; try { showMsg(`FITTED · ${m.n}`); sfx.pickup(); } catch (e) {} } hhSave(s); hhMenuRender(); return; }
+  if (a === 'ammo') { const m = HHG_AMMO[v]; s.ammo = s.ammo || {}; if (m && hhPay(s, m.cost)) { s.ammo[v] = (s.ammo[v] | 0) + 1; try { showMsg(`CRAFTED · ${m.n}`); sfx.pickup(); } catch (e) {} } hhSave(s); hhMenuRender(); return; }
+  if (a === 'ckit') { const nx = HHG_KIT[(s.ckit | 0) + 1]; if (nx && hhPay(s, nx.cost)) { s.ckit = (s.ckit | 0) + 1; try { showMsg(`YOUR CREW GOT THE ${nx.n}`); sfx.pickup(); } catch (e) {} } hhSave(s); hhMenuRender(); return; }
+  if ((a === 'trap' || a === 'trap5') && s.hero === 'engineer' && HH_TRAPS[v]) { const before = Object.assign({}, s.inv), r = _hhgMD.apply(this, arguments); for (const k in before) { const d = (before[k] | 0) - (s.inv[k] | 0); if (d > 0) s.inv[k] += Math.floor(d * 0.25); } hhSave(s); hhMenuRender(); return r; }
+  return _hhgMD.apply(this, arguments);
+};
+const _hhgMR = hhMenuRender;
+hhMenuRender = function () {
+  _hhgMR.apply(this, arguments); if (HH.menu !== 'bench') return; const o = $('hhMenu'), H = M && M.hh; if (!o || !H) return; const s = H.s, box = o.querySelector('.hh-mbox'), acts = box && box.querySelector('.onb-acts'); if (!acts) return;
+  const g = s.arsenal[s.eq], gm = (g && g.mods) || {}, btn = (act, txt, off) => `<button class="mini${off ? ' off' : ''}" data-hm="${act}"${off ? ' disabled' : ''}>${txt}</button>`, kit = HHG_KIT[(s.ckit | 0) + 1];
+  const sec = document.createElement('div'); sec.className = 'hh-sec';
+  sec.innerHTML = `<h4>GUN MODS · ${g ? HH_GUNS.find(x => x.id === g.id).n : 'NO CRAFTED GUN EQUIPPED'}</h4>${Object.entries(HHG_MODS).map(([k, m]) => `<div class="hh-li"><b>${m.n}</b><span>${m.d} · ${hhCostTxt(m.cost, s)}</span>${gm[k] ? '<span style="color:#7aff6a">FITTED</span>' : btn('gmod:' + k, 'FIT', !g || !hhHas(s, m.cost))}</div>`).join('')}
+<h4>SPECIAL AMMO · ONE PACK A MISSION · PICK IT IN THE LOBBY</h4>${Object.entries(HHG_AMMO).map(([k, m]) => `<div class="hh-li"><b>${m.n} · ${(s.ammo || {})[k] | 0}</b><span>${m.d} · ${hhCostTxt(m.cost, s)}</span>${btn('ammo:' + k, 'CRAFT', !hhHas(s, m.cost))}</div>`).join('')}
+<h4>CREW KIT · ${(s.ckit | 0) ? HHG_KIT[s.ckit].n : 'NONE'}</h4>${kit ? `<div class="hh-li"><b>${kit.n}</b><span>+15% crew damage and +25% crew health a level, a better gun · ${hhCostTxt(kit.cost, s)}</span>${btn('ckit', 'BUY', !hhHas(s, kit.cost))}</div>` : '<div class="hh-li"><span>your crew has the best kit</span></div>'}`;
+  box.insertBefore(sec, acts);
+};
+/* ---------- 41 gadgets */
+const HHG_GAD = { sprinkler: { n: 'HEAL SPRINKLER', d: 'heals you, your crew and the plant close to it for 15 s' }, grapple: { n: 'GRAPPLE HOOK', d: 'pulls you to where you aim (up to 25 m)' }, decoy: { n: 'DECOY PLANT', d: 'burnouts go for it instead for 12 s' } };
+function hhgGadget() {
+  const H = M && M.hh; if (!H || H.client || !playerAlive() || HH.build || HH.menu || G.state !== 'playing') return; const k = H.s.gadget || 'sprinkler', D = HHG_GAD[k];
+  if (HHG.gad <= 0) { showMsg(`NO ${D.n}S LEFT THIS MISSION`); return; } const fx = -Math.sin(P.yaw) * Math.cos(P.pitch), fy = Math.sin(P.pitch), fz = -Math.cos(P.yaw) * Math.cos(P.pitch), ey = (P.y || 0) + 1.6;
+  if (k === 'sprinkler') { if (HHG.spr && HHG.spr.g.parent) HHG.spr.g.parent.remove(HHG.spr.g); const g = new THREE.Group(), base = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.3, 0.2, 10), hhStd({ color: 0x2a5a8a, roughness: 0.5 })); base.position.y = 0.1; g.add(base);
+    const head = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.5, 6), hhStd({ color: 0x9aa0a8, metalness: 0.7 })); head.position.y = 0.45; g.add(head); const ring = new THREE.Mesh(new THREE.RingGeometry(4.2, 4.5, 40), new THREE.MeshBasicMaterial({ color: 0x6ad8ff, transparent: true, opacity: 0.35, side: THREE.DoubleSide })); ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05; g.add(ring);
+    g.position.set(P.x, groundAt(P.x, P.z, (P.y || 0) + 0.6), P.z); H.grp.add(g); HHG.spr = { g, head, ring, t: 15, x: P.x, z: P.z }; }
+  else if (k === 'grapple') { let x = P.x, y = ey, z = P.z, ok = null; for (let d = 0.5; d <= 25; d += 0.5) { const nx = P.x + fx * d, ny = ey + fy * d, nz = P.z + fz * d; const fl = groundAt(nx, nz, ny + 0.2); if (ny < fl || !gridClear(x, z, nx, nz, y - 0.5, ny - 0.5)) { ok = { x, y, z }; break; } x = nx; y = ny; z = nz; }
+    if (!ok) { showMsg('NOTHING TO HOOK ONTO · AIM AT A WALL, A ROOF OR THE GROUND'); return; } const back = Math.hypot(ok.x - P.x, ok.z - P.z) || 1; ok.x -= (ok.x - P.x) / back * 0.6; ok.z -= (ok.z - P.z) / back * 0.6;
+    HHG.grap = { x0: P.x, y0: P.y || 0, z0: P.z, x1: ok.x, y1: Math.max(groundAt(ok.x, ok.z, ok.y + 0.5), ok.y - 1.4), z1: ok.z, t: 0, T: Math.max(0.25, back / 30) }; try { tone(900, 0.15, 0.05, 'sawtooth', 300); } catch (e) {} }
+  else { const d0 = 3.5, o = openNear(P.x + fx * d0, P.z + fz * d0), y = groundAt(o.x, o.z, (P.y || 0) + 0.6), g = hhPlantMesh(); g.scale.setScalar(0.55); g.position.set(o.x, y, o.z); H.grp.add(g);
+    if (HHG.decoy && HHG.decoy.g.parent) HHG.decoy.g.parent.remove(HHG.decoy.g); const dc = { x: o.x, y, z: o.z, g, hp: 700, max: 700, t: 12, n: 'THE DECOY', hitT: 0 }; try { dc.field = flowField(o.x, o.z, y); } catch (e) {} HHG.decoy = dc;
+    for (const e of H.mobs) if (Math.hypot(e.group.position.x - o.x, e.group.position.z - o.z) < 18) { e.obj = dc; e.tg = null; } }
+  HHG.gad--; try { showMsg(`${D.n} · ${HHG.gad} LEFT`); } catch (e) {}
+}
+addEventListener('keydown', e => { if (e.code === bind('plate') && !e.repeat && M && M.hh && G.state === 'playing' && !curScreen && !HH.build && !HH.menu) { e.stopImmediatePropagation(); hhgGadget(); } }, true);
+const _hhgPad = hhPadTick;
+hhPadTick = function () { const was = HHG.padD; let gp = null; try { gp = (navigator.getGamepads ? [...navigator.getGamepads()] : []).find(g => g && g.connected); } catch (e) {} HHG.padD = !!(gp && gp.buttons[13] && gp.buttons[13].pressed);
+  const H = M && M.hh; if (HHG.padD && !was && H && !H.client && !HH.build && !HH.menu && G.state === 'playing' && !curScreen) { const np = H.base && HH.nearPlot && !((H.s.base.plots[HH.nearPlot.key] || {}).st); if (!np) hhgGadget(); }
+  return _hhgPad.apply(this, arguments); };
+function hhgGadTick(H, dt) {
+  const S0 = HHG.spr; if (S0) { S0.t -= dt; S0.head.rotation.y += dt * 8; const heal = 8 * dt; if (playerAlive() && Math.hypot(P.x - S0.x, P.z - S0.z) < 4.5) G.health = Math.min(G.maxHp || 100, G.health + heal);
+    for (const e of enemies) if (e.entry && e.team === M.myTeam && Math.hypot(e.group.position.x - S0.x, e.group.position.z - S0.z) < 4.5) e.hp = Math.min(e.maxHp, e.hp + heal * 1.5);
+    if (H.plant && Math.hypot(H.plant.x - S0.x, H.plant.z - S0.z) < 5) H.plant.hp = Math.min(H.plant.max, H.plant.hp + heal * 3);
+    S0.ring.material.opacity = 0.2 + 0.2 * Math.sin(NOW * 6); S0.ring.scale.setScalar(0.96 + 0.04 * Math.sin(NOW * 6));
+    if (S0.t <= 0) { if (S0.g.parent) S0.g.parent.remove(S0.g); HHG.spr = null; } }
+  const R = HHG.grap; if (R) { R.t += dt; const k = Math.min(1, R.t / R.T), e = k * k * (3 - 2 * k); P.x = R.x0 + (R.x1 - R.x0) * e; P.z = R.z0 + (R.z1 - R.z0) * e; P.y = R.y0 + (R.y1 - R.y0) * e + Math.sin(k * Math.PI) * 1.2; P.vy = 0; P.vx = P.vz = 0; if (k >= 1) { HHG.grap = null; P.onGround = false; } }
+  const D = HHG.decoy; if (D) { D.t -= dt; D.g.rotation.y += dt; if (D.t <= 0 || D.hp <= 0) { if (D.g.parent) D.g.parent.remove(D.g); for (const e of H.mobs) if (e.obj === D) e.obj = null; HHG.decoy = null; try { showMsg('THE DECOY IS GONE'); } catch (er) {} } }
+}
+/* ---------- 40 + 39 the shots */
+const _hhgDmg = damageEnemy;
+damageEnemy = function (e, dmg, head, dir, boom, by = 'player') {
+  const H = M && M.hh, gunHit = e && e.hhMob && H && by === 'player' && !(G.meleeT > 0) && !boom;
+  if (gunHit && H.gun && H.gun.mods && WEAPONS[G.cur] && WEAPONS[G.cur].def && WEAPONS[G.cur].def.id === H.gunId) { if (H.gun.mods.scope && head) dmg *= 1.25; if (H.gun.mods.glue) e.slowT = Math.max(e.slowT || 0, 0.8); }
+  const r = _hhgDmg.call(this, e, dmg, head, dir, boom, by);
+  if (gunHit && H.ammo) { if (H.ammo === 'fire') { e.burnT = 3; } else if (H.ammo === 'sap') e.slowT = Math.max(e.slowT || 0, 1.2); else if (H.ammo === 'shock' && !HHG.chain) { let best = null, bd = 5; for (const o of H.mobs) { if (o === e) continue; const d = o.group.position.distanceTo(e.group.position); if (d < bd) { bd = d; best = o; } }
+      if (best) { HHG.chain = true; try { hhZapFx(e.group.position.clone().setY(e.group.position.y + 1.1), best.group.position.clone().setY(best.group.position.y + 1.1)); damageEnemy(best, dmg * 0.4, false, null, false, 'shock'); } catch (er) {} HHG.chain = false; } } }
+  return r;
+};
+/* ---------- 43 the dog */
+function hhgDogMake(H) {
+  const rig = zdogRig(), root = rig.root; root.rotation.order = 'YXZ'; const o = openNear(P.x + 1.5, P.z + 1.5); root.position.set(o.x, groundAt(o.x, o.z, (P.y || 0) + 0.6), o.z); root.scale.setScalar(0.9); H.grp.add(root);
+  const fur = [0xb8854a, 0x8a5a2a, 0xe8d0a0]; let i = 0; root.traverse(q => { if (q.isMesh && q.material && q.material.color && !q.userData.hitbox) { q.material = q.material.clone(); q.material.color.setHex(fur[i++ % 3]); if (q.material.emissive) q.material.emissive.setHex(0); } });
+  for (const m of rig.hits) m.userData.enemy = null;
+  HHG.dog = { rig, group: root, phase: 0, phase0: Math.random() * 6, atkT: 0, tgt: null, barkT: 0, sp: 0 };
+}
+function hhgDogTick(H, dt) {
+  const D = HHG.dog; if (!D) return; const g = D.group.position; let tx = P.x + Math.sin(P.yaw + 2.2) * 2, tz = P.z + Math.cos(P.yaw + 2.2) * 2, run = 5.5;
+  const L = (H.loot || []).filter(l => l.m.parent && Math.hypot(l.m.position.x - P.x, l.m.position.z - P.z) < 30); let best = null, bd = 25; for (const l of L) { const d = Math.hypot(l.m.position.x - g.x, l.m.position.z - g.z); if (d < bd) { bd = d; best = l; } }
+  if (D.carry && D.carry.m.parent) { D.carry.m.position.set(g.x, g.y + 0.7, g.z); if (Math.hypot(P.x - g.x, P.z - g.z) < 1.4) { D.carry.m.position.set(P.x, D.carry.m.position.y, P.z); D.carry = null; try { tone(700, 0.08, 0.04, 'triangle', 900); } catch (e) {} } }
+  else if (best) { tx = best.m.position.x; tz = best.m.position.z; run = 7; if (bd < 0.9) { D.carry = best; try { showMsg('BUDDY FETCHED SOMETHING'); } catch (e) {} } }
+  const dx = tx - g.x, dz = tz - g.z, d = Math.hypot(dx, dz); let sp = 0;
+  if (d > 0.6) { if (d > 35) { const o = openNear(P.x + 1, P.z + 1); g.set(o.x, groundAt(o.x, o.z, (P.y || 0) + 0.6), o.z); } else { sp = Math.min(run, d * 2.5); let mx = dx / d, mz = dz / d; if (!gridClear(g.x, g.z, tx, tz, g.y, g.y)) { const nd = navDir(g.x, g.z, g.y); if (nd) { mx = nd[0]; mz = nd[1]; } }
+    const q = { x: g.x + mx * sp * dt, z: g.z + mz * sp * dt }; resolve(q, 0.35, g.y); g.x = q.x; g.z = q.z; g.y = groundAt(g.x, g.z, g.y + 0.6); D.group.rotation.y = Math.atan2(mx, mz); } }
+  D.sp += (sp - D.sp) * Math.min(1, dt * 6); try { animDog(D, dt, D.sp); } catch (e) {}
+  if ((D.barkT -= dt) <= 0) { D.barkT = 0.8; for (const e of H.mobs) { const q = e.group.position; if (Math.hypot(q.x - g.x, q.z - g.z) < 13 && !e.dogSeen) { e.dogSeen = true; D.barkT = 5; D.atkT = 0.55; try { pingAdd({ kind: 'enemy', x: q.x, y: q.y + 1, z: q.z }, 'BUDDY', true); burst(0.06, 900, 0.1, 'bandpass', at(g.x, g.z, 25)); setTimeout(() => burst(0.06, 900, 0.08, 'bandpass', at(g.x, g.z, 25)), 140); } catch (er) {} break; } } }
+  D.atkT = Math.max(0, D.atkT - dt);
+}
+/* ---------- 44 morale */
+const hhgMorale = s => clamp(s.morale === undefined ? 50 : s.morale | 0, 0, 100);
+const hhgMood = m => m >= 70 ? ['HAPPY', '#7aff6a'] : m <= 30 ? ['GRUMPY', '#ff6a5a'] : ['OK', '#ffd24a'];
+/* ---------- mission start / every frame / end */
+const _hhgSetup = hhSetup;
+hhSetup = function () {
+  const r = _hhgSetup.apply(this, arguments), H = M.hh; if (!H) return r; const s = H.s;
+  HHG.gad = 2; HHG.drone = HHG.decoy = HHG.spr = HHG.grap = HHG.dog = null; HHG.started = false;
+  if (!H.base && !H.client && s.ammoSel && (s.ammo || {})[s.ammoSel] > 0) { s.ammo[s.ammoSel]--; H.ammo = s.ammoSel; hhSave(s); }
+  return r;
+};
+const _hhgTick = hhTick;
+hhTick = function (dt) {
+  const H = M && M.hh, r = _hhgTick.apply(this, arguments); if (!H || M.over) return r; const s = H.s;
+  if (!HHG.started && H.placed) { HHG.started = true; hhgOutfit(true);
+    if (s.dog && !H.client) try { hhgDogMake(H); } catch (e) {}
+    const kit = s.ckit | 0, mo = hhgMorale(s), mk = mo >= 70 ? 1.1 : mo <= 30 ? 0.85 : 1;
+    for (const e of enemies) if (e.entry && !e.entry.isPlayer && e.team === M.myTeam && !e.hcAv) { e.maxHp = (e.maxHp || 100) * (1 + 0.25 * kit); e.hp = e.maxHp; e.acc = (e.acc || 0.5) * mk; e.hhDmgK = (1 + 0.15 * kit) * (mo >= 90 ? 1.1 : 1); e.hhWork = mo >= 70 ? 1.3 : mo <= 30 ? 0.8 : 1;
+      if (kit) try { const gd = hhGunDef(HH_GUNS.find(x => x.id === HHG_KIT[kit].gun)); botApplyGun(e, gd, {}); botGunVisual(e, gd, {}, null); } catch (er) {} }
+    if (H.gun && H.gun.mods && H.gun.mods.mag) for (const w of WEAPONS) if (w.def && w.def.id === H.gunId) { w.magSize = Math.round(w.magSize * 1.5); w.ammo = w.magSize; }
+    if (H.ammo) try { showMsg(`${HHG_AMMO[H.ammo].n} LOADED`); } catch (e) {} }
+  try { hhgDroneTick(H, dt); hhgGadTick(H, dt); hhgDogTick(H, dt);
+    for (const e of H.mobs) if (e.burnT > 0) { e.burnT -= dt; if ((e.burnK = (e.burnK || 0) - dt) <= 0) { e.burnK = 0.5; damageEnemy(e, 7, false, null, false, 'fire'); if (Math.random() < 0.6) try { chunks('spark', e.group.position.clone().setY(e.group.position.y + 1), 3, 2, 0.4); } catch (er) {} } }
+    if (H.hero === 'botanist' && H.plant && playerAlive() && Math.hypot(P.x - H.plant.x, P.z - H.plant.z) < 6) H.plant.hp = Math.min(H.plant.max, H.plant.hp + H.plant.max * 0.02 * dt);
+  } catch (e) {}
+  return r;
+};
+// crew damage from the kit
+const _hhgDmg2 = damageEnemy;
+damageEnemy = function (e, dmg, head, dir, boom, by) { if (e && e.hhMob && by && typeof by === 'object' && by.hhDmgK) dmg *= by.hhDmgK; return _hhgDmg2.apply(this, [e, dmg, head, dir, boom, by]); };
+const _hhgWork = hhCrewWork;
+hhCrewWork = function (dt) { const k = (() => { for (const e of enemies) if (e.hhWork) return e.hhWork; return 1; })(); return _hhgWork.call(this, dt * k); };
+const _hhgEnd = hhEnd;
+hhEnd = function (won) { const H = M && M.hh, first = H && !H.over, r = _hhgEnd.apply(this, arguments); if (first) { const s = H.s; s.morale = clamp(hhgMorale(s) + (won ? 8 : -12), 0, 100); hhSave(s); } return r; };
+const _hhgClr = hhClear;
+hhClear = function () { hhgOutfit(false); HHG.drone = HHG.decoy = HHG.spr = HHG.grap = HHG.dog = null; return _hhgClr.apply(this, arguments); };
+// the HUD line: gadget + ammo
+const _hhgDT = hhDomTick;
+hhDomTick = function () {
+  const r = _hhgDT.apply(this, arguments), m = $('hhMats'), H = M && M.hh; if (!m || !H || H.client) return r; let t = m.querySelector('.hhg-l'); if (!t) { t = document.createElement('div'); t.className = 'hh-cost hhg-l'; m.appendChild(t); }
+  const s = `${usingPad() ? 'D-PAD DOWN' : actName('plate')} ${HHG_GAD[H.s.gadget || 'sprinkler'].n} ×${HHG.gad}${H.ammo ? ' · ' + HHG_AMMO[H.ammo].n : ''}${HHG.dog ? ' · BUDDY' : ''}`; if (t.textContent !== s) t.textContent = s; return r;
+};
+/* ---------- the lobby */
+const _hhgRender = hhRender;
+hhRender = function () {
+  const r = _hhgRender.apply(this, arguments), sel = $('lobSel'); if (!sel || !HHL.on) return r; const s = hhLoad(), mo = hhgMorale(s), md = hhgMood(mo), outs = ['', ...Object.keys(s.outfits || {}).filter(k => HHG_OUT[k])], am = s.ammoSel && HHG_AMMO[s.ammoSel] ? s.ammoSel : '';
+  const crewFood = HH_STRAINS.filter(x => (s.buds[x.id] | 0) >= 5).length || (s.brownie | 0) > 0;
+  sel.insertAdjacentHTML('beforeend', `<div class="cod-row hhg-row"><small>GADGET · 2 A MISSION · ${usingPad() ? 'D-PAD DOWN' : actName('plate')}</small><b>${HHG_GAD[s.gadget || 'sprinkler'].n}</b><span>${HHG_GAD[s.gadget || 'sprinkler'].d}</span><div class="arw"><button class="mini" data-act="hhg-gad">CHANGE</button></div></div>` +
+    `<div class="cod-row hhg-row"><small>SPECIAL AMMO · ONE PACK A MISSION</small><b>${am ? `${HHG_AMMO[am].n} (${(s.ammo || {})[am] | 0} PACKS)` : 'NORMAL ROUNDS'}</b><span>craft packs at the WORKBENCH</span><div class="arw"><button class="mini" data-act="hhg-ammo">CHANGE</button></div></div>` +
+    `<div class="cod-row hhg-row"><small>OUTFIT · ${outs.length - 1} UNLOCKED ON THE HORDE TRACK</small><b>${HHG_OUT[s.outfit || ''].n}</b><span>your sleeves and gloves in HORDE</span><div class="arw"><button class="mini" data-act="hhg-out"${outs.length > 1 ? '' : ' disabled'}>CHANGE</button></div></div>` +
+    `<div class="cod-row hhg-row"><small>BUDDY THE DOG</small><b>${s.dog ? 'COMES ALONG' : 'STAYS HOME'}</b><span>fetches loot orbs, barks at burnouts</span><div class="arw"><button class="mini" data-act="hhg-dog">${s.dog ? 'LEAVE HIM' : 'TAKE HIM'}</button></div></div>` +
+    `<div class="cod-row wide hhg-row"><small>CREW MORALE · ${mo} / 100 · CREW KIT ${(s.ckit | 0) ? HHG_KIT[s.ckit].n : 'NONE'}</small><b style="color:${md[1]}">${md[0]}</b><span>${mo >= 70 ? 'they shoot straighter and work faster' : mo <= 30 ? 'they shoot worse and work slower · feed them' : 'wins cheer them up · losses bring them down'}</span><div class="arw"><button class="mini" data-act="hhg-feed"${crewFood && mo < 100 ? '' : ' disabled'}>FEED THE CREW</button></div></div>`);
+  return r;
+};
+const _hhgAct = hhAct;
+hhAct = function (act) {
+  if (!/^hhg-/.test(act) || !HHL.on) return _hhgAct.apply(this, arguments); const s = hhLoad(); try { sfx.ui(); } catch (e) {}
+  const cyc = (L, v) => L[(L.indexOf(v) + 1) % L.length];
+  if (act === 'hhg-gad') s.gadget = cyc(Object.keys(HHG_GAD), s.gadget || 'sprinkler');
+  else if (act === 'hhg-ammo') s.ammoSel = cyc(['', ...Object.keys(HHG_AMMO).filter(k => (s.ammo || {})[k] > 0)], s.ammoSel || '');
+  else if (act === 'hhg-out') s.outfit = cyc(['', ...Object.keys(s.outfits || {}).filter(k => HHG_OUT[k])], s.outfit || '');
+  else if (act === 'hhg-dog') s.dog = s.dog ? 0 : 1;
+  else if (act === 'hhg-feed') { const b = HH_STRAINS.find(x => (s.buds[x.id] | 0) >= 5); if (b) s.buds[b.id] -= 5; else if ((s.brownie | 0) > 0) s.brownie--; else return true; s.morale = Math.min(100, hhgMorale(s) + 15); try { showMsg(b ? `THE CREW ATE 5 ${b.n} BUDS · MORALE UP` : 'THE CREW SHARED A BROWNIE · MORALE UP'); } catch (e) {} }
+  hhSave(s); hhRender(`[data-act="${act}"]`); return true;
+};
+/* ================================================================== HOTBOX HORDE missions 3 (1.2.112, the owner's list D = 29-36)
+   29 EXPEDITIONS (s.exp): 3 missions in a row on different maps; if you win all three the cash is tripled.
+   30 ESCORT THE SEED VAN ('escort'): the van drives its route by itself; burnouts go for it; it stops while they're on it.
+   31 TWO PLANTS ('twin'): a second MOTHER PLANT; half of every wave goes for it; lose either and it's over.
+   32 BUILD RACE ('race'): 3 minutes and +150 of each material to build from nothing, then 3 waves 15 s apart.
+   33 RETAKE THE GROW ('retake'): the plant is overrun (35% health, burnouts round it): clear them, then hold 3 waves.
+   34 NIGHT HARVEST ('stealth'): solo at night; burnouts sleep round the wild weed; walking close, shooting or hurting one
+      wakes them (melee kills are silent). +40% pay if nobody woke up.
+   35 THE OLD FUN FAIR (map_funfair.js): every mission type is on it.
+   36 THE LONG NIGHT ('endless', lobby button): waves until THE MOTHER PLANT falls, a boss every 5th wave, pay grows with
+      every wave; s.longBest is on the leaderboard. Never sets a mission best. */
+Object.assign(HH_TYPES, {
+  escort: { n: 'ESCORT THE SEED VAN', d: 'the van drives by itself · keep the burnouts off it' },
+  twin: { n: 'TWO PLANTS', d: 'defend two MOTHER PLANTS at once · lose either and it is over' },
+  race: { n: 'BUILD RACE', d: '3 minutes to build from nothing, then 3 fast waves' },
+  retake: { n: 'RETAKE THE GROW', d: 'the plant is overrun: clear them out, then hold 3 waves' },
+  stealth: { n: 'NIGHT HARVEST', d: 'sneak round sleeping burnouts and cut the wild weed · shooting wakes them' },
+  endless: { n: 'THE LONG NIGHT', d: 'waves until the plant falls · a boss every 5th wave' },
+});
+HH_HUNTK.add('escort'); HH_RUNK.add('stealth');
+HH_MAPS.push({ map: 'funfair', n: 'THE OLD FUN FAIR' });
+const HH_NEWT = ['escort', 'twin', 'race', 'retake', 'stealth'];
+for (const m of HH_MAPS.slice(0, 4)) for (const t of HH_NEWT) HH_MISSIONS.push({ map: m.map, n: m.n, type: t });
+for (const t of ['defend', 'supply', 'wild', 'rescue', 'truck', 'signal', 'nests', ...HH_NEWT]) HH_MISSIONS.push({ map: 'funfair', n: 'THE OLD FUN FAIR', type: t });
+const HHM3 = { exp: null };
+/* ---------- setup */
+const _hh3Supply = hhSupplySetup;
+hhSupplySetup = function (H) { if (H.kind !== 'stealth') return _hh3Supply.apply(this, arguments); H.kind = 'wild'; try { _hh3Supply.apply(this, arguments); } finally { H.kind = 'stealth'; } };
+const _hh3Setup = hhSetup;
+hhSetup = function () {
+  const r = _hh3Setup.apply(this, arguments), H = M.hh; if (!H || H.base) return r; const k = H.kind, s = H.s;
+  if (k === 'endless' || (HHM3.exp && HHM3.exp.on)) H.noRec = { best: JSON.stringify(s.best[Math.max(0, H.mi)] || null), unl: s.unl[Math.max(0, H.mi)], mi: Math.max(0, H.mi) };
+  if (k === 'endless') { H.waves = 999; H.t = 60; H.objTxt = ''; }
+  if (k === 'race') { H.t = 180; H.waves = 3; for (const m of HH_MATS) hhGive(m, 150); H.raceFirst = true; }
+  if (k === 'retake' || k === 'twin') H.waves = k === 'retake' ? 3 : 5;
+  if (k === 'twin' && H.plant) { let best = null; for (let i = 0; i < 120; i++) { const o = openNear(H.plant.x + rnd(-26, 26), H.plant.z + rnd(-26, 26)), d = Math.hypot(o.x - H.plant.x, o.z - H.plant.z), y = groundAt(o.x, o.z, 0.6); if (d < 14 || d > 28 || Math.abs(groundAt(o.x, o.z, 40) - y) > 0.3) continue; best = { x: o.x, z: o.z, y }; break; }
+    if (best) { const g = hhPlantMesh(); g.position.set(best.x, best.y, best.z); H.grp.add(g); const p2 = H.plant2 = { x: best.x, z: best.z, y: best.y, g, hp: H.plant.max, max: H.plant.max, n: 'THE SECOND PLANT', hitT: 0 }; p2.box = mkBox(best.x, best.z, 2.4, 2.4, 1.1, { y: best.y }); boxes.push(p2.box); H.sboxes.push(p2.box); try { p2.field = flowField(best.x, best.z, best.y); rebuildBoxGrid(); } catch (e) {} } }
+  if (k === 'retake' && H.plant) { H.plant.hp = Math.round(H.plant.max * 0.35); H.t = 1e6; H.retake = true; for (let i = 0; i < 12; i++) { const a = i / 12 * TAU, o = openNear(H.plant.x + Math.cos(a) * rnd(5, 11), H.plant.z + Math.sin(a) * rnd(5, 11)); const e = hhMob(i % 5 === 0 ? 'smasher' : i % 3 === 0 ? 'sprinter' : 'burnout', o.x, o.z, groundAt(o.x, o.z, 0.6)); e.retakeMob = true; } }
+  if (k === 'escort') { H.t = 420; const far = (x, z, a, b) => { for (let i = 0; i < 900; i++) { const o = openNear(rnd(PLAYRECT[0] + 5, PLAYRECT[1] - 5), rnd(PLAYRECT[2] + 5, PLAYRECT[3] - 5)), d = Math.hypot(o.x - x, o.z - z); if (d >= a && d <= b) return o; } return openNear(x + a, z); };
+    const s0 = far(0, 0, 30, 70), e0 = far(-s0.x * 0.8, -s0.z * 0.8, 0, 14), g = hhVanMesh(0x3a8a4a); H.grp.add(g); const V = H.svan = { x: s0.x, z: s0.z, y: groundAt(s0.x, s0.z, 0.6), g, hp: Math.round(2200 * H.D.hp), max: Math.round(2200 * H.D.hp), to: e0, n: 'THE SEED VAN', hitT: 0 };
+    try { V.toField = flowField(e0.x, e0.z, groundAt(e0.x, e0.z, 0.6)); } catch (e) {} V.d0 = Math.hypot(e0.x - s0.x, e0.z - s0.z); H.startAt = { x: s0.x + 3, z: s0.z + 3 }; H.objTxt = 'THE VAN IS ROLLING'; }
+  if (k === 'stealth') { hhNight(true); H.t = 420; H.quiet = true; H.D = Object.assign({}, H.D);
+    for (const e of enemies.slice()) if (e.entry && !e.entry.isPlayer && e.team === M.myTeam) { const i = enemies.indexOf(e); enemies.splice(i, 1); scene.remove(e.group); }
+    M.entries = M.entries.filter(en => en.isPlayer);
+    for (const c of H.caches) for (let j = 0; j < 2; j++) { const a = Math.random() * TAU, o = openNear(c.x + Math.cos(a) * rnd(3, 6), c.z + Math.sin(a) * rnd(3, 6)); if (Math.hypot(o.x - H.org.x, o.z - H.org.z) < 16) continue; const e = hhMob(Math.random() < 0.2 ? 'smasher' : 'burnout', o.x, o.z, groundAt(o.x, o.z, 0.6)); e.sleep = true; e.group.rotation.y = Math.random() * TAU; } }
+  return r;
+};
+/* ---------- the burnouts: sleeping, picking a plant */
+function hh3Alarm(x, z, R, why) { const H = M.hh; if (!H || H.kind !== 'stealth') return; let n = 0; for (const e of H.mobs) if (e.sleep && Math.hypot(e.group.position.x - x, e.group.position.z - z) < R) { e.sleep = false; e.tgtT = 0; n++; } if (n) { if (H.quiet) try { showBanner('THEY WOKE UP', why || 'the burnouts heard you'); sfx.zscreech && sfx.zscreech(); } catch (e) {} H.quiet = false; } }
+const _hh3MobTick = hhMobTick;
+hhMobTick = function (e, dt, i) {
+  if (e.sleep) { const H = M.hh, g = e.group.position, d = playerAlive() ? Math.hypot(P.x - g.x, P.z - g.z) : 99, R = (P.eye || 1.7) < 1.35 ? 2.6 : 4.5;   // crouched or prone: closer
+    if (d < R) { hh3Alarm(g.x, g.z, 9, 'you walked too close'); } else { e.phase = (e.phase || 0) + dt * 0.4; try { animZombie(e, dt, 0); } catch (er) {} e.group.rotation.x = 0; botGround(e.group, dt); return; } }
+  return _hh3MobTick.apply(this, arguments);
+};
+const _hh3Mob = hhMob;
+hhMob = function (kind, x, z, y) {
+  const e = _hh3Mob.apply(this, arguments), H = M && M.hh; if (!e || !H || e.hcProx) return e;
+  if (H.plant2 && H.plant2.hp > 0 && Math.random() < 0.5) e.obj = H.plant2;
+  if (H.svan && H.svan.hp > 0) e.obj = H.svan;
+  return e;
+};
+const _hh3Dmg = damageEnemy;
+damageEnemy = function (e, dmg, head, dir, boom, by) {
+  const sl = e && e.sleep, r = _hh3Dmg.apply(this, arguments);
+  if (sl && M && M.hh) { const g = e.group.position, alive = enemies.includes(e), melee = G.meleeT > 0 && by === 'player'; if (alive || !melee) hh3Alarm(g.x, g.z, alive ? 12 : 8, alive ? 'one of them got hurt and screamed' : 'that was loud'); }
+  return r;
+};
+// gunfire wakes them (melee is quiet)
+const _hh3Shoot = shoot;
+shoot = function () { const r = _hh3Shoot.apply(this, arguments); const H = M && M.hh; if (H && H.kind === 'stealth' && H.quiet) hh3Alarm(P.x, P.z, 26, 'they heard the shot'); return r; };
+const _hh3Supply2 = hhSupplyTick;
+hhSupplyTick = function (dt) { const H = M.hh; if (H && H.kind === 'stealth' && H.quiet) H.spawnT = Math.max(H.spawnT, 1); return _hh3Supply2.apply(this, arguments); };
+/* ---------- every frame */
+const _hh3Tick = hhTick;
+hhTick = function (dt) {
+  const H = M && M.hh, uH0 = HH.uH, r = _hh3Tick.apply(this, arguments); if (!H || M.over || H.over || H.client) return r; const k = H.kind;
+  if (H.plant2) { if (H.plant2.hp <= 0) { hhEnd(false); return r; } H.plant2.g.rotation.y += dt * 0.2; }
+  if (H.retake) { if (!H.mobs.some(e => e.retakeMob)) { H.retake = false; H.t = 30; try { showBanner('THE GROW IS YOURS AGAIN', 'build and hold 3 waves · the first in 30 s'); sfx.streak(); } catch (e) {} } else { H.t = 1e6; H.objTxt = `CLEAR THEM OUT · ${H.mobs.filter(e => e.retakeMob).length} LEFT`; } }
+  if (k === 'escort') { const V = H.svan; hhHuntSpawn(dt, 4.5, 12); const blocked = H.mobs.some(e => Math.hypot(e.group.position.x - V.x, e.group.position.z - V.z) < 3.2);
+    if (!blocked && V.hp > 0) { const d = V.toField && flowDir(V.toField, V.x, V.z, V.y); let mx = V.to.x - V.x, mz = V.to.z - V.z; if (d) { mx = d[0]; mz = d[1]; } const L = Math.hypot(mx, mz) || 1, q = { x: V.x + mx / L * 2.1 * dt, z: V.z + mz / L * 2.1 * dt }; resolve(q, 1.2, V.y); V.x = q.x; V.z = q.z; V.y = groundAt(V.x, V.z, V.y + 0.6); V.g.rotation.y = Math.atan2(mx, mz); }
+    V.g.position.set(V.x, V.y, V.z); for (const e of H.mobs) if (!e.obj || e.obj.hp <= 0) e.obj = V;
+    for (const e of H.mobs) { const g = e.group.position; if (Math.hypot(g.x - V.x, g.z - V.z) < 3.2) { if ((e.vanT = (e.vanT || 0) - dt) <= 0) { e.vanT = 1; hhObjHit(V, e.K.dmg); } } }
+    const dEnd = Math.hypot(V.to.x - V.x, V.to.z - V.z); H.objK = 1 - dEnd / V.d0; H.objTxt = `${blocked ? 'STOPPED · ' : ''}${Math.round(Math.max(0, H.objK) * 100)}% THERE · VAN ${Math.max(0, Math.round(V.hp / V.max * 100))}%`;
+    if (dEnd < 4) hhEnd(true); else if (V.hp <= 0) hhEnd(false); }
+  if (k === 'stealth' && H.quiet) H.objTxt = 'NOBODY IS AWAKE';
+  return r;
+};
+const _hh3WaveDone = hhWaveDone;
+hhWaveDone = function () { const H = M.hh, r = _hh3WaveDone.apply(this, arguments); if (H && !H.over && H.phase === 'prep') { if (H.kind === 'race') H.t = 15; if (H.kind === 'endless') { H.t = 25; H.longPay = (H.longPay || 0) + 60 + 25 * H.wave; } } return r; };
+const _hh3WL = hhWaveList;
+hhWaveList = function (w) { const q = _hh3WL.apply(this, arguments), H = M && M.hh; if (H && H.kind === 'endless' && w % 5 === 0 && !q.includes('boss')) q.splice(Math.floor(q.length / 2), 0, 'boss'); return q; };
+const _hh3PlantHit = hhPlantHit;
+hhPlantHit = function (d) { const H = M && M.hh; if (H && H.kind === 'endless' && !H.over && H.plant && H.plant.hp - d <= 0) { H.plant.hp = 0; H.longDone = true; hhEnd(true); return; } return _hh3PlantHit.apply(this, arguments); };
+/* ---------- the end */
+const _hh3End = hhEnd;
+hhEnd = function (won) {
+  const H = M && M.hh, first = H && !H.over; if (!first) return _hh3End.apply(this, arguments); const s = H.s, k = H.kind;
+  if (k === 'stealth' && won && H.quiet) H.D.pay *= 1.4;
+  if (k === 'endless') { const held = Math.max(0, (H.wavesWon | 0)); H.D = Object.assign({}, H.D, { pay: H.D.pay * Math.max(0.3, held / 5) }); s.longBest = Math.max(s.longBest | 0, held); try { setTimeout(() => showBanner(`THE LONG NIGHT · ${held} WAVE${held === 1 ? '' : 'S'} HELD`, s.longBest === held && held ? 'a new best' : `your best: ${s.longBest}`), 400); } catch (e) {} }
+  const cash0 = s.cash; const r = _hh3End.apply(this, arguments);
+  if (H.noRec) { const b = JSON.parse(H.noRec.best); if (b) s.best[H.noRec.mi] = b; else delete s.best[H.noRec.mi]; if (H.noRec.unl === undefined) delete s.unl[H.noRec.mi]; else s.unl[H.noRec.mi] = H.noRec.unl; }
+  const E = HHM3.exp; if (E && E.on) { E.cash += Math.max(0, s.cash - cash0); E.res.push(won ? 1 : 0);
+    if (!won) { E.on = false; try { setTimeout(() => showBanner('EXPEDITION OVER', `you made it through ${E.i} of 3 · the pay so far is yours`), 900); } catch (e) {} }
+    else if (E.i >= 2) { E.on = false; const bonus = E.cash * 2; s.cash += bonus; try { setTimeout(() => showBanner('EXPEDITION DONE · CASH TRIPLED', `+$${bonus.toLocaleString()} bonus`), 900); sfx.streak(); } catch (e) {} }
+    else { E.i++; const nx = HH_MISSIONS[E.list[E.i]]; try { setTimeout(() => showBanner(`EXPEDITION · ${E.i + 1} OF 3 NEXT`, `${HH_TYPES[nx.type].n} · ${nx.n} · starts in 8 s`), 900); } catch (e) {} E.nextT = setTimeout(() => { if (!HHM3.exp || !HHM3.exp.on) return; try { HHL.on = true; const s2 = hhLoad(); s2.mis = E.list[E.i]; hhSave(s2); startMatch('hh', { map: nx.map, hhKind: nx.type }); } catch (e) { reportError(e); } }, 8000); } }
+  hhSave(s); return r;
+};
+function hh3Expedition() {
+  const pick = [], maps = new Set(), types = ['defend', 'supply', 'wild', 'rescue', 'nests', 'twin', 'escort', 'retake'];
+  for (let i = 0; i < 200 && pick.length < 3; i++) { const mi = (Math.random() * HH_MISSIONS.length) | 0, m = HH_MISSIONS[mi]; if (maps.has(m.map) || !types.includes(m.type)) continue; maps.add(m.map); pick.push(mi); }
+  HHM3.exp = { on: true, list: pick, i: 0, cash: 0, res: [] }; const m = HH_MISSIONS[pick[0]], s = hhLoad(); s.mis = pick[0]; hhSave(s);
+  try { showBanner('EXPEDITION', pick.map(i => HH_TYPES[HH_MISSIONS[i].type].n).join(' → ')); } catch (e) {} startMatch('hh', { map: m.map, hhKind: m.type });
+}
+// leaving early ends an expedition
+const _hh3Leave = leaveGame;
+leaveGame = function () { if (HHM3.exp && HHM3.exp.on && M && M.hh && !M.hh.over) { HHM3.exp.on = false; clearTimeout(HHM3.exp.nextT); } return _hh3Leave.apply(this, arguments); };
+/* ---------- markers, the top bar */
+const _hh3Mk = hhMarkers;
+hhMarkers = function (out) { _hh3Mk(out); const H = M && M.hh; if (!H) return;
+  if (H.plant2) out.push({ x: H.plant2.x, y: H.plant2.y + 3, z: H.plant2.z, t: `SECOND PLANT ${Math.max(0, Math.round(H.plant2.hp / H.plant2.max * 100))}%`, c: '#c070ff' });
+  if (H.svan) { out.push({ x: H.svan.x, y: H.svan.y + 3.2, z: H.svan.z, t: `SEED VAN ${Math.max(0, Math.round(H.svan.hp / H.svan.max * 100))}%`, c: '#7aff6a' }); out.push({ x: H.svan.to.x, y: groundAt(H.svan.to.x, H.svan.to.z, 0.6) + 3, z: H.svan.to.z, t: 'DROP-OFF', c: '#ffd24a' }); } };
+const _hh3DT = hhDomTick;
+hhDomTick = function () { const r = _hh3DT.apply(this, arguments), H = M && M.hh, b = $('hhBar'); if (!H || !b) return r;
+  if (H.kind === 'stealth') { b.querySelector('small').textContent = 'NIGHT HARVEST' + (H.quiet ? ' · NOBODY IS AWAKE' : ' · THEY ARE AWAKE'); const sp = b.querySelector('span'); sp.textContent = sp.textContent.replace('CACHES SEARCHED', 'PLANTS CUT'); }
+  if (H.kind === 'endless' && H.plant) b.querySelector('small').textContent = `THE LONG NIGHT · WAVE ${H.wave} · BEST ${H.s.longBest | 0}`;
+  if ((H.plant2 || H.retake) && H.plant) { const sp = b.querySelector('span'); if (H.retake) sp.textContent = H.objTxt; else if (H.plant2) sp.textContent += ` · SECOND PLANT ${Math.max(0, Math.round(H.plant2.hp / H.plant2.max * 100))}%`; }
+  return r; };
+/* ---------- the lobby: EXPEDITION and THE LONG NIGHT */
+const _hh3Render = hhRender;
+hhRender = function () {
+  const r = _hh3Render.apply(this, arguments), sel = $('lobSel'); if (!sel || !HHL.on) return r; const s = hhLoad(), mis = HH_MISSIONS[clamp(s.mis | 0, 0, HH_MISSIONS.length - 1)];
+  const row = sel.querySelector('.hh-misrow'); if (row) row.insertAdjacentHTML('afterend', `<div class="cod-row hhm3-row"><small>EXPEDITION · 3 MISSIONS IN A ROW</small><b>WIN ALL 3 · CASH ×3</b><span>three maps, no base in between · lose one and it ends</span><div class="arw"><button class="mini" data-act="hhm3-exp">START</button></div></div><div class="cod-row hhm3-row"><small>THE LONG NIGHT · ${mis.n}</small><b>BEST: ${s.longBest | 0} WAVE${(s.longBest | 0) === 1 ? '' : 'S'}</b><span>waves until the plant falls · a boss every 5th</span><div class="arw"><button class="mini" data-act="hhm3-long">START</button></div></div>`);
+  return r;
+};
+const _hh3Act = hhAct;
+hhAct = function (act) {
+  if (!/^hhm3-/.test(act) || !HHL.on) return _hh3Act.apply(this, arguments); if (typeof HC !== 'undefined' && HC.on && !hcHost()) { showMsg('THE HOST PICKS WHAT TO PLAY'); return true; } try { sfx.ui(); } catch (e) {}
+  if (act === 'hhm3-exp') hh3Expedition(); else { const s = hhLoad(), m = HH_MISSIONS[clamp(s.mis | 0, 0, HH_MISSIONS.length - 1)]; startMatch('hh', { map: m.map, hhKind: 'endless' }); }
+  return true;
 };
 /* ================================================================== ZOMBIES: rounds of the dead on the new maps (solo)
    Main menu ZOMBIES opens its own lobby (pick a map, start). You start with the SERVICE 9 and 500 points.
@@ -30004,7 +30773,7 @@ const SCHEMA = {
     { k: 'potg', t: 'toggle', name: 'PLAY OF THE GAME', hint: 'Your best multi-kill of the match plays before the scoreboard' },
     { k: 'killcam', t: 'toggle', name: 'KILLCAM', hint: 'With the death cam on: see your death over the killer\'s shoulder first' },
     { k: 'hitMarkers', t: 'toggle', name: 'HIT MARKERS' },
-    { k: 'dmgNums', t: 'seg', name: 'DAMAGE NUMBERS', hint: 'How much each hit did, floating off the target', opts: [['off', 'OFF'], ['br', 'LAST TOKE'], ['all', 'EVERY MODE']] },
+    { k: 'dmgNums', t: 'seg', name: 'DAMAGE NUMBERS', hint: 'How much each hit did, floating off the target', opts: [['off', 'OFF'], ['br', 'LAST TOKE + HORDE'], ['all', 'EVERY MODE']] },
     { k: 'killFx', t: 'toggle', name: 'KILL EFFECTS', hint: 'A confirm sound on every kill (sharper on headshots) and a glow round the screen that grows with your streak' },
     { k: 'dmgIndicator', t: 'toggle', name: 'DAMAGE DIRECTION INDICATOR' },
     { k: 'radar', t: 'toggle', name: 'RADAR' },
@@ -30634,7 +31403,7 @@ requestAnimationFrame(frame);
 bootStep(0);
 
 // test hook: open the page with #debug to expose a few internals for play-testing
-try { if (location.hash === '#debug') window.__A = { openNearL: (x, z) => openNear(x, z), gridClearL: (a, b, c, d, e, f) => gridClear(a, b, c, d, e, f), HH_GET: () => HH, HHM_GET: () => M && M.hh, hhL: { load: () => hhLoad(), save: s => hhSave(s), open: () => hhOpen(), wave: () => hhStartWave(), place: () => hhPlace(), build: on => hhBuildMode(on), harvest: () => hhHarvest(), aim: () => hhAim(), mob: (k, x, z, y) => hhMob(k, x, z, y), menu: k => hhMenuOpen(k), menuDo: (a, v) => hhMenuDo(a, v), close: () => hhMenuClose(), plotUse: p => hhPlotUse(p), growK: s => hhGrowK(s), raid: () => hhRaidStart(), pieces: () => hhPieceList(), cache: c => hhCacheOpen(c), pickUp: () => hhPickUp(), cancel: () => hhCarryCancel(), props: () => M.hh && M.hh.props, look: v => { HH.look = v; }, fix: () => hhFixLook(), order: () => hhOrder(), compostN: pr => hhCompostN(pr), bloat: e => hhBloat(e), price: (id, b, c) => hhPrice(id, HH_BUYERS.find(x => x.id === b), c), growStep: st => hhGrowStep(st), stars: st => hhStars(st), edit: () => hhEditLook(), paint: () => hhPaintLook(), undo: () => hhUndo(), bpSave: i => hhBpSave(i), bpBuild: i => hhBpBuild(i), night: on => hhNight(on), defScore: () => hhDefScore(M.hh) }, hhPieceRemoveL: p => hhPieceRemove(p), hhWaveL: w => hhWaveList(w), hhAbilL: () => hhAbility(), hhOrderL: () => hhOrderNext(), hhHeroL: s => hhHero2(s), HC_GET: () => HC, hcJoinL: c => hcJoin(c), hcLeaveL: () => hcLeave(), hcHostL: () => hcHost(), hcClientL: () => hcClient(), hcDmgL: (...a) => damageEnemy(...a), hhStartL: (m, c) => startMatch(m, c), hhOpenL: () => hhOpen(), lbL: k => { SOC.lbSort = k; openLeaderboard(); }, hhzCardL: () => hhzCard(), hhPlaceL: () => hhPlace(), hhValidL: a => hhValid(a), PLAYRECT_L: () => PLAYRECT, hhEndL: w => hhEnd(w), hhMobL: (k, x, z, y) => hhMob(k, x, z, y), SQ_GET: () => SQ, BRX_GET: () => BRX, brxAwardsL: () => brxAwards(), brxPuppetL: (p, y) => brxPuppet(p, y), BRN_GET: () => BRN, briBoxTakeL: (b, i) => briBoxTake(b, i), brbVaultOpenL: i => brbVaultOpen(BRB.vaults[i]), STASH_POIS_GET: () => STASH_POIS, BRP_GET: () => BRP, BRLOB_GET: () => BRLOB, brpLoadL: () => brpLoad(), brpDropBuyL: () => brpDropBuy(), endMatchL: w => endMatch(w), brpXpRowsL: () => brpXpRows(), BRI_GET: () => BRI, LT_GET: () => LT, BRFG_GET: () => BRFG, smkCloudL: (p, k, m) => smkCloud(p, k, m), BRB_GET: () => BRB, BRSQ_GET: () => BRSQ, brsqCallL: i => brsqCall(i), emoteWheelL: () => emoteWheel(), BRL_GET: () => BRL, brlTakeL: it => brlTake(it), brPack: () => brPack(), BRF_GET: () => BRF, brfCineTickL: dt => brfCineTick(dt), mapToggleL: () => mapToggle(), MAPV_GET: () => MAPV, PING_GET: () => PING, TH, TERR_GET: () => TERR, stashHeightL: (x, z) => stashHeight(x, z), zwwGiveL: m => zwwGive(m), zwwFireL: w => zwwFire(w), zwwL: () => ZWWL.length, edPrivPick, edNetCode, ccCampSt: () => CAMP.st, ccSpawnL: n => campSpawnSquad(n, { alert: true }), ccPlayL: (a, b) => campPlay(a, b), ccStepL: () => campStepDone(), ccDmgL: (...a) => damageEnemy(...a), ccDoneL: () => campComplete(), ccJoin, ccLeave, CC_GET: () => CC, ccHost: () => ccHost(), ccClient: () => ccClient(), edOpen, edPlay, edCode, edUncode, edDefine, ED_GET: () => ED, ISLE_W, isleWinter, chwOpen, CHW_GET: () => CHW, zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
+try { if (location.hash === '#debug') window.__A = { openNearL: (x, z) => openNear(x, z), gridClearL: (a, b, c, d, e, f) => gridClear(a, b, c, d, e, f), HH_GET: () => HH, HHM_GET: () => M && M.hh, hhL: { load: () => hhLoad(), save: s => hhSave(s), open: () => hhOpen(), wave: () => hhStartWave(), place: () => hhPlace(), build: on => hhBuildMode(on), harvest: () => hhHarvest(), aim: () => hhAim(), mob: (k, x, z, y) => hhMob(k, x, z, y), menu: k => hhMenuOpen(k), menuDo: (a, v) => hhMenuDo(a, v), close: () => hhMenuClose(), plotUse: p => hhPlotUse(p), growK: s => hhGrowK(s), raid: () => hhRaidStart(), pieces: () => hhPieceList(), cache: c => hhCacheOpen(c), pickUp: () => hhPickUp(), cancel: () => hhCarryCancel(), props: () => M.hh && M.hh.props, look: v => { HH.look = v; }, fix: () => hhFixLook(), order: () => hhOrder(), compostN: pr => hhCompostN(pr), bloat: e => hhBloat(e), price: (id, b, c) => hhPrice(id, HH_BUYERS.find(x => x.id === b), c), growStep: st => hhGrowStep(st), stars: st => hhStars(st), edit: () => hhEditLook(), paint: () => hhPaintLook(), undo: () => hhUndo(), bpSave: i => hhBpSave(i), bpBuild: i => hhBpBuild(i), night: on => hhNight(on), defScore: () => hhDefScore(M.hh) }, hhPieceRemoveL: p => hhPieceRemove(p), hhWaveL: w => hhWaveList(w), hhAbilL: () => hhAbility(), hhOrderL: () => hhOrderNext(), hhHeroL: s => hhHero2(s), HC_GET: () => HC, hcJoinL: c => hcJoin(c), hcLeaveL: () => hcLeave(), hcHostL: () => hcHost(), hcClientL: () => hcClient(), hcDmgL: (...a) => damageEnemy(...a), hhStartL: (m, c) => startMatch(m, c), hhOpenL: () => hhOpen(), lbL: k => { SOC.lbSort = k; openLeaderboard(); }, hhzCardL: () => hhzCard(), hhPlaceL: () => hhPlace(), hhqExportL: () => hhqExport(), HHM3_GET: () => HHM3, hhPlantHitL: d => hhPlantHit(d), hh3ExpL: () => hh3Expedition(), hh3AlarmL: (x, z, r) => hh3Alarm(x, z, r), HH_MISSIONS_L: () => HH_MISSIONS, HHG_GET: () => HHG, hhgGadgetL: () => hhgGadget(), hhAbilityL: () => hhAbility(), HHS_GET: () => HHS, HHP_GET: () => HHP, hhpXPL: (s, n) => hhpXP(s, n), hhpClaimL: s => hhpClaim(s), hhpPrestigeL: () => hhpPrestige(), hhpGiveL: (p, k, n) => hhpGive(p, k, n), hhpLikeL: () => hhpLike(), hhpSeasonL: () => hhpSeason(), ACH_L: () => ACH, hhqImportL: c => hhqImport(c), hhqMarksAllL: on => hhqMarksAll(on), HHQ_GET: () => HHQ, hhWaveListL: w => hhWaveList(w), hhValidL: a => hhValid(a), PLAYRECT_L: () => PLAYRECT, hhEndL: w => hhEnd(w), hhMobL: (k, x, z, y) => hhMob(k, x, z, y), SQ_GET: () => SQ, BRX_GET: () => BRX, brxAwardsL: () => brxAwards(), brxPuppetL: (p, y) => brxPuppet(p, y), BRN_GET: () => BRN, briBoxTakeL: (b, i) => briBoxTake(b, i), brbVaultOpenL: i => brbVaultOpen(BRB.vaults[i]), STASH_POIS_GET: () => STASH_POIS, BRP_GET: () => BRP, BRLOB_GET: () => BRLOB, brpLoadL: () => brpLoad(), brpDropBuyL: () => brpDropBuy(), endMatchL: w => endMatch(w), brpXpRowsL: () => brpXpRows(), BRI_GET: () => BRI, LT_GET: () => LT, BRFG_GET: () => BRFG, smkCloudL: (p, k, m) => smkCloud(p, k, m), BRB_GET: () => BRB, BRSQ_GET: () => BRSQ, brsqCallL: i => brsqCall(i), emoteWheelL: () => emoteWheel(), BRL_GET: () => BRL, brlTakeL: it => brlTake(it), brPack: () => brPack(), BRF_GET: () => BRF, brfCineTickL: dt => brfCineTick(dt), mapToggleL: () => mapToggle(), MAPV_GET: () => MAPV, PING_GET: () => PING, TH, TERR_GET: () => TERR, stashHeightL: (x, z) => stashHeight(x, z), zwwGiveL: m => zwwGive(m), zwwFireL: w => zwwFire(w), zwwL: () => ZWWL.length, edPrivPick, edNetCode, ccCampSt: () => CAMP.st, ccSpawnL: n => campSpawnSquad(n, { alert: true }), ccPlayL: (a, b) => campPlay(a, b), ccStepL: () => campStepDone(), ccDmgL: (...a) => damageEnemy(...a), ccDoneL: () => campComplete(), ccJoin, ccLeave, CC_GET: () => CC, ccHost: () => ccHost(), ccClient: () => ccClient(), edOpen, edPlay, edCode, edUncode, edDefine, ED_GET: () => ED, ISLE_W, isleWinter, chwOpen, CHW_GET: () => CHW, zs2Make, ZS2, zs2TrialStart, ZCUS_GET: () => ZCUS, zcusOpen, breedStart, breedCollect, breedOf, GROW_GET: () => growLoad(), STRAIN, HYBRIDS, clipBytes, clipParse, clipImport, RP_LIB, langApply, touchBuild, touchTick, sqvSay, tourNew, tourPlay, tourResult, openTour, tourGet: () => TOUR, rulesApply, rulesOn, rulesSpeed, CUS_GET: () => CUS, aimTick, aimStart, aimStop, AIM, hudEdit, hudApply, evCalendar, openEvCal, ambPick, AMB, RADIO, radioSet, radioSt, EVENTS, ACH, TRO, TRACERS, achAdd, achKill, achMatch, achCnt, trcPaint, emoteWheel, emoteDo, emotePack, podiumHtml, ptokens, pshopItems, pshopBuy, heatAdd, heatDraw, openTrophies, renderTrophies, cwStandings, cwHtml, BP3_ITEMS, SEASONS, BOX_POOL, PROG, COS, tracers, kfStabTest: (e, t) => kfStab(e, t), plugEntity, plugIsMe, heistCarrying, growPts, w2ProjHit, smkCloud, SMK, stkSeen, BLUEPRINTS, bpApply, bpOpen, knifeThrow, w2Watched, W2_STUCK, LT, LT_BUY, ltBuy, ltOpenBuy, ltCloseBuy, ltTakeContract, ltStorm, ltDrop, ltTick, ltCrate, ltSelfRevive, MV2, MOVERS, moversTick, isFriend, TAC, tacDetonate, tacTick, tacSensed, FU, FU_TYPES, fuUse, fuTick, fuCycle, fuReset, fuPack, fuRemote, BRK, brkHit, brkBlast, brkReset, brkApply, wbPierce, wbExit, WB_PEN, PHOTO, photoStart, photoEnd, photoSave, lcMake, lcApply, lcRead, socInvite, SOC, get FRIENDS_ARR() { return FRIENDS; }, rjSaved, rjGo, rjLeft, rjStandIn, rjJoined, oicPistol, OIC_LIVES, MODE_ORDER_ONLINE: () => MODE_ORDER.filter(k => MODES[k].online), netObjPack, pickMapFor, DUEL, duelTake, duelIn, mvBotTryClimb, mvLedgeAt, sqNetPick, sqNetBotTeam, sqNetApply, sqNetPres, mvLedgeAt, PING, pingDo, pingPick, pingAdd, pingPack, pingRemote, sqOn, sqPlayerDown, sqBotDown, sqUpdate, sqTeamsLeft, sqPicker, updatePlayer, MOV, markerList, FLOW, FLOWB, VH, VH_TYPES, vhEnter, vhExit, vhPlayer, vhDamage, vhBlast, vhPack, vhRemote, vhBotWant, vhBotEnter, vhBotExit, vhBotDrive, vhPhys, growZRound, growSeed, rpAutoClip, onbCheck, onbNewModes, BR_API: { get BR() { return M.br; }, brOpen, brAliveBots, brPack, brApply, brRemoteOpened, netObjPack, netObjApply, get NET() { return NET; } }, openNear, CH_API: { chState, chTotals, chClaim, crewMatch, crewMake, renderCrewBoard }, RP_LIB, rpSaveClip, rpLibShow, PH_API: { get PH() { return M.ph; }, phMeProp, phHiding, PH_KINDS, phPack }, GROW_API: { growLoad, growTick, growPlant, growWater, growLight, growFeed, growHarvest, growMatch, openGrow, STRAINS, get GROW() { return GROW; } }, ruDrop, zvSubtitle, ATT_BY_ID, attOK, charmBuild, COS, POST, postEnv, ruKey, ZWWH, SHIP, TIDE, ZWWD, BPT, bpUseSeason, bpStrip, bpSeasonPopup, PASS, SEASONS, bpGain, bpTier, dzFilter, cleanNick, chatClean, lnBlocked, navModal, focusables, LN, NAVDBG: { get lvN() { return lvN; }, get lvH() { return lvH; }, get NN() { return NN; }, NL, cellOf, MAPS }, CAMP, CAMP_MISSIONS, campPlay, campMenu, campAct, campStepDone, campBegin, campAlive, zombLobbyOff, partyWhere, ZS, ZS_ITEMS, ZS_TAPES, ZS_CHAPTERS, zsPick, zsStartCook, zsPrompt, zsComplete, zsPower, zsBoss, zsChapterNow, zsDropBlood, zsHud, zsRoundTalk, zsDialog, zsTick, ZMAPCFG, ZM, startZBench, ZS_FUSEBOX, ZS_COOK, ZU_SPOT, ZS_TEXT, zmapUse, ZWWC, zwwFire, MC, CANDY, mcEat, mcRound, mcPicker, zuCamoTex, MODES, evMatch, get FRIENDS() { return FRIENDS; }, rankMatch, rankState, rankResHtml, RANKS, djState, djMatch, crewMake, crewJoin, renderCrewBoard, evActive, evStrip, EVT, CATS, POTG, potgPlay, potgWanted, potgKill, finCheck, finStart, inspectPose, melee, endMatch, infTurn, infCount, gfStartRound, gfHp, botGunName, perfModeSet, PG, SMK, smokeBlocks, smkCloud, MV, mvRender, mvCount, mvWinner, EQUIP, adsFovFor, applyVideoSettings, cbApply, TEAM_COL, zvLoadVoices, zvUtter, zvScore, wkMatch, wkState, openWeekly, renderWeekly, presOpen, presGo, startRange, RG, XP_AT, MAXLVL, renderMenuCard, openLocker, lockerAct, LK, activeClass, renderLocker, throwGrenade, leaveGame, get MS() { return MS; }, wallMeshes, updateDeathCam, showScreen, stkHud, updateMatch, die, startDeathCam, openModes, openStreaks, kcDrop, m2Setup, domSpots, S2, STK2, stkJammed, setScoreboard, renderStreaks, markerList, zwwGive, zstCard, zombDeathText, openLeaderboard, renderLeaderboard, SOC, makeDog, zdogSpawn, zspMake, zspRoll, ZSP, zwinPick, zwinSpawn, zwinNear, zwinPrompt, zwFixAll, zblCloud, ZPU, ZPU_TYPES, zpuMake, zpuTake, zpuRemove, zpuOn, zboxCost, zpuMaybeDrop, ZWB, zwbNear, zwbPrompt, zombNav, zombSpawnPoint, zombRouteDist, zpPrompt, zombTargets2: null, sfx, AUD, audioMap, get listener() { return listener; }, get atFn() { return at; }, get actx() { return actx; }, get pickups() { return pickups; }, netShot, zcDrop, ZV, ZCHARS, ZLINES, zvSay, zvSpeak, zpTick, zpStartAnim, ZP, ZPERKS, zpBuy, zpNear, zombGunMul, zombHp, zombStagger, zombEquip, get MYCODE() { return MYCODE; }, partyJoin, partyMembers, partyWaiting, PARTY, zuNear, zombCrateTick, ZD, ZDOORS, zdOpen, zdBuy, zuBuy, zdSpawnPts, ZC, zcJoin, zcLeave, zcHostStart, zcInGame, zcDown, zcHost, zombTargets, Z, ZL, zombAct, zombBuyBox, zombBuyAmmo, openZLobby, makeZombie, botLoadout, botGunVisual, botApplyGun, withAtts, botRandomAtts, grindKill, grindCheck, grindRow, grindBadge, GRIND_IDS, grindStat, CHAT, chatAdd, chatSend, chatOpen, chatClose, VOICE, commsAct, renderPauseSide, pauseGame, nadeStep, nadeHold, nadeLaunch, mkBox, get boxesArr() { return boxes; }, rebuildBoxGrid, inputMode, PASS, BPV, bpTier, bpGain, bpSync, bpReward, bpSetPremium, openBattlePass, gunPic, THUMB, secretPairs, get PRIME_POOL() { return PRIME_POOL; }, forceBox(id, gun) { BOX_FORCE = { it: COS[id], gun: gun || null }; }, playSecretReveal, get SECRET_VID() { return SECRET_VID; }, PROG, COSM, COS, RAR, BOXES, BOX_POOL, cosmCanvas, swatchUrl, boxContents, rollBox, ownsFor, LK, renderLocker, progMatchXP, openLocker, openRewards, lockerAct, openBox, claimDaily, applyCamo, camoFor, applySticker, stickerFor, lvlInfo, XP_AT, saveProg, BOXV, HW, DR, FX, sun, SHADOWQ, applyPreset, renderSettings, buildTabs, getGrass: () => grassMesh && [grassMesh.count, grassMax], G, P, S, enemies, dying, camera, startGame, spawnEnemy, damageEnemy, hurtPlayer, throwGrenade, explode, applySetting, equipClass, ARMORY, ARM, ATTS, CLASSES, EQUIP, PERKS, ATT, applyLoadout, switchWeapon, computeStats, prosCons, attFor, slotsFor, stockFor, relMods, openLoadout, makeEnemy, shoot, startReload, pad, keys, grenadesInFlight, renderFrame, get W() { return WEAPONS; }, get gunObjs() { return gunObjs; }, selectClass, actions, pollPad, get navBlocked() { return navBlocked; }, startMatch, get M() { return M; }, PV, LOBBY, NET, toLobby, toMenu, LAYOUT, setScoreboard, buildGunModel, attachVisuals, renderer, scene, SMP, sfx, REALTEX, get STATSOBJ() { return STATS; }, get STATSON() { return STATS_ON; }, startMatchStats, statKillAt, statDeath, finishMatchStats, commitPartialStats, leaveGame, loadMap, MAPS, MAP_ORDER, get curMap() { return curMap; }, flowField, nodeOf, gridClear, get lvN() { return lvN; }, get lvH() { return lvH; }, get lvS() { return lvS; }, NL, get NN() { return NN; }, boxes, buildSpawns, get MAP_BUILD_MS() { return MAP_BUILD_MS; }, MAT, TEX, STATS: () => STATS, get curScreen() { return curScreen; }, renderPlobby, actions, hurtPlayer, STK, stkAdd, stkUse, get STK_SEL() { return STK_SEL; }, hqAtt, ironEye, get vmCamera() { return vmCamera; }, HQDATA: typeof HQDATA !== "undefined" ? HQDATA : null, endMatch, nextMatch, respawnPlayer, setActive(i) { ACTIVE_CLASS = i; }, get REC() { return REC; }, get RPLAST() { return RPLAST; }, openReplay, RV, get BRAIN() { return BRAIN; }, brainLevel, brainSummary, hcShow, oskOpen, oskKey, stunBlast, stkSeen, perkOnKill, MUS, initAudio, musRender }; } catch (e) {}
 // self-running visual test (only in builds that set window.ASHFALL_AUTOTEST): menu, combat, ragdolls, grenade, death cam
 if (window.ASHFALL_AUTOTEST) {
   try { Storage.prototype.setItem = function () {}; } catch (e) {}

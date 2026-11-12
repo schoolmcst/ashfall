@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.112 TEST (batch D = 29-36, the last of the owner's G/F/E/D picks): hhmis3.js + map_funfair.js. horde.js hhRun/hhHunt now
+- 1.2.112 PUBLIC (owner said send it) (batch D = 29-36, the last of the owner's G/F/E/D picks): hhmis3.js + map_funfair.js. horde.js hhRun/hhHunt now
   read sets HH_RUNK / HH_HUNTK (stealth joins RUNK, escort HUNTK). New kinds: escort (H.svan drives on its own toField,
   stops while a burnout is within 3.2 m, mobs e.obj = van), twin (H.plant2 with its own field; hhMob wrapper sends half
   the mobs to it; either at 0 = loss), race (H.t 180, waves 3, +150 mats, 15 s preps via a hhWaveDone wrapper), retake
@@ -165,7 +165,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   leaveGame ends it). HH_MISSIONS is 60: the old 28, then escort/twin/race/retake/stealth for the 4 old maps (28-47), then
   all 12 types on funfair (48-59). map_funfair.js THE OLD FUN FAIR (hidden + hhOnly; pickMapFor lets hhOnly maps load in
   hh): midway booths, carousel, big wheel, funhouse maze, coaster on pillars, ffMaterials (canvas sign). Test s_horde13.
-- 1.2.111 TEST (batch E = 37-44): hhgear.js. Heroes BOTANIST (hhRate x1.25, plant heals near you, BLOOM) and ENGINEER (25% of a
+- 1.2.111 PUBLIC (owner said send it) (batch E = 37-44): hhgear.js. Heroes BOTANIST (hhRate x1.25, plant heals near you, BLOOM) and ENGINEER (25% of a
   trap craft back, hhTrapDmg x1.2, DRONE: HHG.drone shoots the nearest burnout, by 'drone') via a hhAbility wrapper.
   OUTFITS s.outfit tint VM.sleeve/VM.glove while in HH (restored in hhClear). WORKBENCH: GUN MODS g.mods mag/scope/glue,
   SPECIAL AMMO s.ammo packs + s.ammoSel (H.ammo: fire = e.burnT, shock = 40% to the nearest other mob, sap = slow), CREW
@@ -173,7 +173,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   s.gadget (sprinkler/grapple/decoy, 2 a mission, key 'plate' = 4 / pad D-DOWN unless at an empty plot). BUDDY THE DOG s.dog
   (zdogRig + animDog, not an enemy; fetches H.loot orbs to you, barks + pingAdd 'BUDDY'). MORALE s.morale (+8 win, -12
   loss, FEED THE CREW +15; >=70 acc x1.1 work x1.3, <=30 acc x0.85 work x0.8). Test s_horde12.
-- 1.2.110 TEST (owner's second 60, batches G + F; the owner picked G, F, E, D): hhqol.js (53-60): drawRadar wrapper (pieces,
+- 1.2.110 PUBLIC (owner said send it) (owner's second 60, batches G + F; the owner picked G, F, E, D): hhqol.js (53-60): drawRadar wrapper (pieces,
   props, plant, mobs), wave preview H.nextQ (hhWaveList wrapper hands the rolled wave to hhStartWave; #hhPrev), damage
   numbers on in HH (brfgNumsOn), red cost .hhq-no + base edge ring (HHQ.ring), CUSTOM GAMES s.cus (waves/speed/mats, half pay,
   best/unl restored in a hhEnd wrapper, mats taken back at the end or in hhClear), SAVE BACKUP DZH1- codes (hhqExport/
