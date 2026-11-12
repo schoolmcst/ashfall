@@ -1,10 +1,10 @@
 {
- "version": "1.2.111",
+ "version": "1.2.112",
  "notes": [
-  "HOTBOX HORDE: two new heroes - THE BOTANIST (BLOOM) and THE ENGINEER (DRONE)",
-  "HOTBOX HORDE: OUTFITS from the HORDE TRACK, GUN MODS (extended mag, scope, sap-glue rounds) and SPECIAL AMMO (fire, shock, sap) at the WORKBENCH",
-  "HOTBOX HORDE: GADGETS (heal sprinkler, grapple hook, decoy plant) on 4 / D-PAD DOWN, a CREW KIT for your crew, BUDDY THE DOG, and CREW MORALE (feed the crew)"
+  "HOTBOX HORDE: new map THE OLD FUN FAIR (midway booths, carousel, big wheel, funhouse, coaster) with every mission type on it",
+  "HOTBOX HORDE: new missions - ESCORT THE SEED VAN, TWO PLANTS, BUILD RACE, RETAKE THE GROW, NIGHT HARVEST (sneak past sleeping burnouts)",
+  "HOTBOX HORDE: EXPEDITIONS (3 missions in a row, win all for triple cash) and THE LONG NIGHT (endless waves, a boss every 5th)"
  ],
- "sha256": "a12808830360c117b0415ad30d8f8625371c753f7c3a19ccece035fe02515185",
+ "sha256": "4bf70d7581a21fd05426341e51cd8f54dbb81602581683a3b3ea4b8865b53592",
  "minApp": "1.0.0"
 }
