@@ -12,8 +12,8 @@ const HH_MAPS = [
   { map: 'greenhouse', n: 'THE GREENHOUSE' }, { map: 'stackyard', n: 'STACKYARD' }, { map: 'dustwater', n: 'DUSTWATER' }, { map: 'ruins_night', n: 'ASH RUINS · NIGHT' },
 ];
 const HH_TYPES = { defend: { n: 'DEFEND THE GROW', d: 'guard a plant through five waves' }, supply: { n: 'SUPPLY RUN', d: 'search the caches, then get to the extraction van' }, wild: { n: 'WILD HARVEST', d: 'cut the wild weed growing out there, then get to the van' } };
-const hhRun = k => k === 'supply' || k === 'wild';   // the run-and-extract missions
-const hhHunt = k => hhRun(k) || k === 'rescue' || k === 'truck' || k === 'signal' || k === 'nests';   // no MOTHER PLANT (hhmis2.js)
+const HH_RUNK = new Set(['supply', 'wild']), hhRun = k => HH_RUNK.has(k);   // the run-and-extract missions (more join in hhmis3.js)
+const HH_HUNTK = new Set(['rescue', 'truck', 'signal', 'nests']), hhHunt = k => hhRun(k) || HH_HUNTK.has(k);   // no MOTHER PLANT (hhmis2.js)
 const HH_MISSIONS = []; for (const m of HH_MAPS) for (const t of ['defend', 'supply', 'wild']) HH_MISSIONS.push({ map: m.map, n: m.n, type: t });
 const HH_DIFF = [{ n: 'CHILL', hp: 0.7, cnt: 0.8, pay: 1, col: '#7adf6a' }, { n: 'BAKED', hp: 1, cnt: 1, pay: 1.6, col: '#ffd24a' }, { n: 'FRIED', hp: 1.5, cnt: 1.25, pay: 2.4, col: '#ff8a3a' }, { n: 'COOKED', hp: 2.2, cnt: 1.5, pay: 3.5, col: '#ff4a6a' }];
 const HH_HEROES = [

@@ -152,6 +152,19 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.112 TEST (batch D = 29-36, the last of the owner's G/F/E/D picks): hhmis3.js + map_funfair.js. horde.js hhRun/hhHunt now
+  read sets HH_RUNK / HH_HUNTK (stealth joins RUNK, escort HUNTK). New kinds: escort (H.svan drives on its own toField,
+  stops while a burnout is within 3.2 m, mobs e.obj = van), twin (H.plant2 with its own field; hhMob wrapper sends half
+  the mobs to it; either at 0 = loss), race (H.t 180, waves 3, +150 mats, 15 s preps via a hhWaveDone wrapper), retake
+  (plant 35%, 12 e.retakeMob round it, H.t held until they are gone), stealth (hhSupplySetup run as 'wild', night, crew
+  removed, e.sleep mobs by the plants (not within 16 m of the start); hhMobTick wrapper keeps them asleep; wake on
+  distance (2.6 m crouched / 4.5 m), damage, or a shot (shoot wrapper, 26 m); H.quiet = +40% pay), endless THE LONG NIGHT
+  (lobby button; waves 999, 25 s preps, boss every 5th via a hhWaveList wrapper, the plant's death = hhEnd(true) with pay
+  x waves/5 through a hhPlantHit wrapper, s.longBest). H.noRec restores best/unl for endless and expedition missions.
+  EXPEDITIONS HHM3.exp (3 missions on different maps; win -> the next starts 8 s after the results; 3 wins = cash x3;
+  leaveGame ends it). HH_MISSIONS is 60: the old 28, then escort/twin/race/retake/stealth for the 4 old maps (28-47), then
+  all 12 types on funfair (48-59). map_funfair.js THE OLD FUN FAIR (hidden + hhOnly; pickMapFor lets hhOnly maps load in
+  hh): midway booths, carousel, big wheel, funhouse maze, coaster on pillars, ffMaterials (canvas sign). Test s_horde13.
 - 1.2.111 TEST (batch E = 37-44): hhgear.js. Heroes BOTANIST (hhRate x1.25, plant heals near you, BLOOM) and ENGINEER (25% of a
   trap craft back, hhTrapDmg x1.2, DRONE: HHG.drone shoots the nearest burnout, by 'drone') via a hhAbility wrapper.
   OUTFITS s.outfit tint VM.sleeve/VM.glove while in HH (restored in hhClear). WORKBENCH: GUN MODS g.mods mag/scope/glue,
