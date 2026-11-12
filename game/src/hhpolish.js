@@ -4,7 +4,7 @@
    59 SOUNDS: build clunks per material, trap snaps, a wave horn, a cash register, a plant alarm, a level-up jingle.
    60 FIRST STEPS: a card the first time you open HOTBOX HORDE and a checklist in THE HOMESTEAD (plant, harvest, sell,
       build, craft a trap, play a mission) worth $500 when it is done (s.tut = done steps, s.tutDone). */
-const hhzCard = () => { try { const s = hhLoad(); return [s.earn | 0, hhzBestD(s), hhzCleared(s), s.wins | 0, s.kills | 0]; } catch (e) { return [0, -1, 0, 0, 0]; } };
+const hhzCard = () => { try { const s = hhLoad(); return [s.earn | 0, hhzBestD(s), hhzCleared(s), s.wins | 0, s.kills | 0, s.likes | 0, s.hpres | 0]; } catch (e) { return [0, -1, 0, 0, 0, 0, 0]; } };
 const hhzBestD = s => { let d = -1; for (const k in s.best || {}) { const b = s.best[k]; if (b && b.won) d = Math.max(d, b.d | 0); } return d; };
 const hhzCleared = s => Object.values(s.best || {}).filter(b => b && b.won).length;
 const _hhzCard = socMyCard;
@@ -17,7 +17,7 @@ renderLeaderboard = function () {
   rows.sort((a, b) => (b.h[0] - a.h[0]) || (b.h[1] - a.h[1]));
   const dn = d => d >= 0 && HH_DIFF[d] ? HH_DIFF[d].n : '—';
   $('lbTabs').innerHTML = Object.entries(LB_COLS).map(([k, [l]]) => `<button class="tab${k === SOC.lbSort ? ' on' : ''}" data-lb="${k}">${l}</button>`).join('');
-  $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>CASH EARNED</th><th>HARDEST WIN</th><th>MISSIONS CLEARED</th><th>WINS</th><th>BURNOUTS DOWN</th></tr>` + rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td><span class="dot ${r.on ? 'on' : ''}"></span> ${r.n}</td><td>$${(+r.h[0] || 0).toLocaleString()}</td><td>${dn(r.h[1] | 0)}</td><td>${r.h[2] | 0} / ${HH_MISSIONS.length}</td><td>${r.h[3] | 0}</td><td>${(+r.h[4] || 0).toLocaleString()}</td></tr>`).join('') + `</table><div class="net-hint" style="padding:10px 2px">HOTBOX HORDE: you and your friends, by cash earned. Friends' numbers update while they are online.</div>`;
+  $('lbBody').innerHTML = `<table class="st-table"><tr><th>#</th><th>PLAYER</th><th>CASH EARNED</th><th>HARDEST WIN</th><th>MISSIONS CLEARED</th><th>WINS</th><th>BURNOUTS DOWN</th><th>BASE LIKES</th></tr>` + rows.map((r, i) => `<tr class="${r.me ? 'me' : ''}"><td>${i + 1}</td><td><span class="dot ${r.on ? 'on' : ''}"></span> ${r.n}${r.h[6] ? ' <span style="color:#ffd24a">' + '★'.repeat(Math.min(5, r.h[6] | 0)) + '</span>' : ''}</td><td>$${(+r.h[0] || 0).toLocaleString()}</td><td>${dn(r.h[1] | 0)}</td><td>${r.h[2] | 0} / ${HH_MISSIONS.length}</td><td>${r.h[3] | 0}</td><td>${(+r.h[4] || 0).toLocaleString()}</td><td>${r.h[5] | 0}</td></tr>`).join('') + `</table><div class="net-hint" style="padding:10px 2px">HOTBOX HORDE: you and your friends, by cash earned. Friends' numbers update while they are online.</div>`;
   for (const b of $('lbTabs').children) b.onclick = () => { SOC.lbSort = b.dataset.lb; sfx.ui(); renderLeaderboard(); };
 };
 /* ---------- money in, the register rings; first-steps progress */

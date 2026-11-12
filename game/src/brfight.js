@@ -87,7 +87,7 @@ function brfgStandTick() {
   for (const s of BRFG.stands) for (const b of s.bals) if (b.userData.fly) { b.position.y += 0.15; b.userData.fly++; if (b.userData.fly > 200) { b.visible = false; b.userData.fly = 0; } }
 }
 /* ---------- damage numbers */
-const brfgNumsOn = () => S.dmgNums === 'all' || ((S.dmgNums === undefined || S.dmgNums === 'br') && M && M.br);
+const brfgNumsOn = () => S.dmgNums === 'all' || ((S.dmgNums === undefined || S.dmgNums === 'br') && M && (M.br || M.hh));   // LAST TOKE and HOTBOX HORDE
 const _brfgDmg = damageEnemy;
 damageEnemy = function (e, dmg, head, dir, boom, by = 'player') {
   const hp0 = e && e.hp, r = _brfgDmg(e, dmg, head, dir, boom, by);

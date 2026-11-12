@@ -1,10 +1,13 @@
 {
- "version": "1.2.109",
+ "version": "1.2.110",
  "notes": [
-  "HOTBOX HORDE on a controller: every action has a button (LB ability, D-PAD UP crew orders, build mode: D-PAD LEFT category, Y material / turn, RB repair / upgrade, LT door / window, B paint, VIEW undo, hold RT to drag)",
-  "Controller: B closes the HORDE station menus, the mission map and the welcome card; menus keep your place",
-  "Fixed: button prompts said BUTTON undefined on a controller for USE and BUILD"
+  "HOTBOX HORDE: the minimap shows your base and every burnout; the next wave is shown during the build phase; damage numbers; the build cost turns red when you can't pay; a ring shows the edge of your base",
+  "HOTBOX HORDE: CUSTOM GAMES (waves, burnout speed, starting materials), SAVE BACKUP codes, TYPE MARKERS (shape + colour badges on burnouts and traps)",
+  "HOTBOX HORDE: THE HORDE TRACK (50 tiers of rewards), 12 HORDE trophies, THE COLLECTION BOOK, HOMESTEAD PRESTIGE",
+  "HOTBOX HORDE co-op: like a friend's base, give materials and seeds, READY CHECK, KICK, shared pings",
+  "Seasons: WINTER HARVEST (Dec-Feb) and SUMMER FESTIVAL (Jun-Aug) with event burnouts and event seeds",
+  "Fixed: an error box popped up when you killed a burnout in HOTBOX HORDE"
  ],
- "sha256": "2e6e54e250212a3cb67b25afd67d5c7af46b44d68b2bd5f286424b7e064b31e2",
+ "sha256": "8155a0aebdd82a0e03af5cb403ad39da005ffcd7089674d6f22e007a48be77a5",
  "minApp": "1.0.0"
 }

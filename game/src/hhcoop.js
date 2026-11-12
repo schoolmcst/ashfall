@@ -43,6 +43,7 @@ function hcRead() {
     R.pr = pr; R.n = cleanNick(pr.n); R.ho = !!pr.ho; R.inGame = HC.inGame && pr.g === HC.gid && HC.gid;
     R.x = netNum(pr.x, -ARENA, ARENA); R.y = netNum(pr.y, -5, 40); R.z = netNum(pr.z, -ARENA, ARENA); R.yw = netNum(pr.yw, -1e4, 1e4); R.a = !!pr.a;
     if (R.ho) Hp = pr;
+    try { if (typeof hcExtraRead === 'function') hcExtraRead(R, pr); } catch (e) {}
     if (host && R.inGame && M.hh) {
       if (Array.isArray(pr.hs)) for (const h of pr.hs) { const seq = +h[3] | 0; if (seq <= R.seenHit) continue; R.seenHit = seq; const e = enemies.find(q => q.hcId === (h[0] | 0)); if (e && enemies.includes(e)) try { damageEnemy(e, clamp(+h[1] || 0, 0, 600), !!h[2], null, false, hcBy(R)); } catch (er) {} }
       if (Array.isArray(pr.br)) for (const b of pr.br) { const seq = +b[0] | 0; if (seq <= R.seenBr) continue; R.seenBr = seq; hcApplyBuild(b[1], R); }
@@ -76,6 +77,7 @@ function hcPublish() {
       if (H.base && (HC.blT = (HC.blT || 0) - 1) <= 0) { HC.blT = 40; o.bl = H.s.base.props.map(p => [p.id, p.k, r2(p.x), r2(p.z), r2(p.y || 0), p.r | 0]); o.blv = H.s.base.lv; }
     }
   }
+  Object.assign(o, HC.extra || {});   // likes, gifts, ready checks, pings (hhprog.js)
   HC.room.presence(o);
 }
 /* ---------- the host: start whatever HOTBOX HORDE match it starts, for everyone */

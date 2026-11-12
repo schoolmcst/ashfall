@@ -33,7 +33,7 @@ async function socPeekAll() {
   if (SOC.peeking || !NET.app) return; SOC.peeking = true;
   for (const f of FRIENDS.slice()) {
     const r = await socPeek(f.c);
-    if (r && r.card) { const cd = r.card.card; f.on = true; f.seen = Date.now(); f.n = cleanNick(cd.n) || f.n; f.d = String(cd.d || '').slice(0, 40); f.sp = Array.isArray(cd.sp) && cd.sp.length === 4 && ['quick', 'slot', 'code'].includes(cd.sp[0]) && MODES[cd.sp[1]] && MODES[cd.sp[1]].online ? cd.sp.map(String) : null; f.s = Array.isArray(cd.s) ? cd.s.map(v => +v || 0).slice(0, 6) : f.s; f.z = Array.isArray(cd.z) ? cd.z.map(v => +v || 0).slice(0, 4) : f.z; f.r = +cd.r || 0; f.cw = Array.isArray(cd.cw) ? cd.cw.slice(0, 3).map(v => String(v).slice(0, 40)) : null; f.cp = Math.max(0, Math.min(1e7, +cd.cp || 0)); f.ck = Math.max(0, Math.min(1e5, +cd.ck || 0)); f.ckw = String(cd.ckw || ''); f.hz = Array.isArray(cd.hz) ? cd.hz.slice(0, 5).map(v => +v || 0) : f.hz; }
+    if (r && r.card) { const cd = r.card.card; f.on = true; f.seen = Date.now(); f.n = cleanNick(cd.n) || f.n; f.d = String(cd.d || '').slice(0, 40); f.sp = Array.isArray(cd.sp) && cd.sp.length === 4 && ['quick', 'slot', 'code'].includes(cd.sp[0]) && MODES[cd.sp[1]] && MODES[cd.sp[1]].online ? cd.sp.map(String) : null; f.s = Array.isArray(cd.s) ? cd.s.map(v => +v || 0).slice(0, 6) : f.s; f.z = Array.isArray(cd.z) ? cd.z.map(v => +v || 0).slice(0, 4) : f.z; f.r = +cd.r || 0; f.cw = Array.isArray(cd.cw) ? cd.cw.slice(0, 3).map(v => String(v).slice(0, 40)) : null; f.cp = Math.max(0, Math.min(1e7, +cd.cp || 0)); f.ck = Math.max(0, Math.min(1e5, +cd.ck || 0)); f.ckw = String(cd.ckw || ''); f.hz = Array.isArray(cd.hz) ? cd.hz.slice(0, 8).map(v => +v || 0) : f.hz; }
     else f.on = false;
     if (r) r.room.leave();
     socRender();

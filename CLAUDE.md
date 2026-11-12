@@ -152,6 +152,20 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.110 TEST (owner's second 60, batches G + F; the owner picked G, F, E, D): hhqol.js (53-60): drawRadar wrapper (pieces,
+  props, plant, mobs), wave preview H.nextQ (hhWaveList wrapper hands the rolled wave to hhStartWave; #hhPrev), damage
+  numbers on in HH (brfgNumsOn), red cost .hhq-no + base edge ring (HHQ.ring), CUSTOM GAMES s.cus (waves/speed/mats, half pay,
+  best/unl restored in a hhEnd wrapper, mats taken back at the end or in hhClear), SAVE BACKUP DZH1- codes (hhqExport/
+  hhqImport; old save in ashfall.hh.bak), finished pieces get matrixAutoUpdate=false (no measurable change in this
+  GPU-less container), TYPE MARKERS s.marks (canvas sprite badges per kind/trap; default on with a colour filter).
+  fieldup.js fuOn is off in HH. hhprog.js (45-52): THE HORDE TRACK s.tx/s.tclaim (HHP_REW 50 tiers, outfits out1-5 at
+  10/20/../50), HORDE trophies pushed into ACH (counters hhw/hhk/hhboss/hhcook/hhlv/hhcash/hhgrown/hhbuilt/hhcoop/hhpres/
+  hhbook), COLLECTION BOOK s.col/s.colPaid, prestige s.hpres (hhPrice/hhGive wrappers +10% each), seasons hhpSeason()
+  (HHS.force; strains frost/sun; snow/firefly Points; tinted mobs e.season; event seeds on wins), co-op extras through
+  HC.extra (merged into hcPublish) + hcExtraRead(R, pr) (called from hcRead): lk likes (s.likes), gv gifts, rc/rd ready
+  check, kick, pg pings. Leaderboard hz has 7 fields now (likes, prestige). FIXED: onKill's feed line crashed on HORDE
+  kills by the player (e.type undefined) - every burnout the player killed raised the red error box.
+  Tests: s_horde10, s_horde11, mp_hhcoop2.
 - 1.2.108 + 1.2.109 PUBLIC (owner said send it; 1.2.102-1.2.107 too) (batch G = 56-60, the last of the 60): hhcoop.js HOTBOX HORDE CO-OP (up to 4; HOST CO-OP / JOIN code box in the HH
   lobby, P2P.aside('code','horde','hh'+code)). The host runs everything; a startMatch wrapper publishes st/gid/k/mp; friends
   follow with cfg.hcClient (H.client, phase 'client': no spawning, waves, raids, stations, plots or moving things). Host sends

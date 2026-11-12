@@ -15,7 +15,7 @@ const FU_TYPES = {
 const FU_ORDER = ['cover', 'ammo', 'silence', 'rush'];
 const FU = { charge: 0, held: false, silenceT: 0, rushT: 0, ammo: null, cover: null, seq: 0, remote: new Map(), kills: 0 };
 const fuType = () => { const c = typeof activeClass === 'function' ? activeClass() : null; return c && FU_TYPES[c.fu] ? c.fu : 'cover'; };
-const fuOn = () => !!(M && inMatch() && M.mode !== 'zomb' && M.mode !== 'camp' && M.mode !== 'range' && !M.oic);
+const fuOn = () => !!(M && inMatch() && M.mode !== 'zomb' && M.mode !== 'camp' && M.mode !== 'range' && M.mode !== 'hh' && !M.oic);   // HOTBOX HORDE has hero abilities instead
 function fuReset() { FU.charge = 0.3; FU.silenceT = FU.rushT = 0; fuCoverGone(); if (FU.ammo && FU.ammo.g.parent) FU.ammo.g.parent.remove(FU.ammo.g); FU.ammo = null; FU.kills = G.kills; for (const [, o] of FU.remote) { brkBreak(o, false, true); delete BRK.list[o.id]; } FU.remote.clear(); }
 function fuUse() {
   if (!fuOn() || !playerAlive() || FU.charge < 1 || G.downed) return;
