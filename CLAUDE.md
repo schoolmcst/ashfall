@@ -152,6 +152,14 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.111 TEST (batch E = 37-44): hhgear.js. Heroes BOTANIST (hhRate x1.25, plant heals near you, BLOOM) and ENGINEER (25% of a
+  trap craft back, hhTrapDmg x1.2, DRONE: HHG.drone shoots the nearest burnout, by 'drone') via a hhAbility wrapper.
+  OUTFITS s.outfit tint VM.sleeve/VM.glove while in HH (restored in hhClear). WORKBENCH: GUN MODS g.mods mag/scope/glue,
+  SPECIAL AMMO s.ammo packs + s.ammoSel (H.ammo: fire = e.burnT, shock = 40% to the nearest other mob, sap = slow), CREW
+  KIT s.ckit (crew maxHp +25%/lv, e.hhDmgK +15%/lv applied when the bot is `by`, botApplyGun + botGunVisual). GADGETS
+  s.gadget (sprinkler/grapple/decoy, 2 a mission, key 'plate' = 4 / pad D-DOWN unless at an empty plot). BUDDY THE DOG s.dog
+  (zdogRig + animDog, not an enemy; fetches H.loot orbs to you, barks + pingAdd 'BUDDY'). MORALE s.morale (+8 win, -12
+  loss, FEED THE CREW +15; >=70 acc x1.1 work x1.3, <=30 acc x0.85 work x0.8). Test s_horde12.
 - 1.2.110 TEST (owner's second 60, batches G + F; the owner picked G, F, E, D): hhqol.js (53-60): drawRadar wrapper (pieces,
   props, plant, mobs), wave preview H.nextQ (hhWaveList wrapper hands the rolled wave to hhStartWave; #hhPrev), damage
   numbers on in HH (brfgNumsOn), red cost .hhq-no + base edge ring (HHQ.ring), CUSTOM GAMES s.cus (waves/speed/mats, half pay,
