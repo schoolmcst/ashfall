@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.116 TEST (owner: textures glitch while looking around; guns look see-through; gun too bright, camo glows; stuttering).
+- 1.2.116 PUBLIC (owner said send it; includes 1.2.114 + 1.2.115) (owner: textures glitch while looking around; guns look see-through; gun too bright, camo glows; stuttering).
   gfxfix.js (loaded before gfxperf): ULTRA+ had MOTION BLUR 'low' (smears while turning) -> off in GP_PRESET.ultraplus and once
   for ULTRA+ players (S.fix116). Gun: vmSun 1.2 (was 1.6), gun materials envMapIntensity x0.6 (userData.gfEnv, via a
   gmPatchGun wrapper), camos/skins (cosmMat wrapper) env 0.55 and emissive x0.35 incl. COS_ANIM base; gfxmat gun wear edges
@@ -165,11 +165,11 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   scene compiles the wrong variant). Shadows every frame on HIGH too (even pacing; cadence only LOW/MEDIUM). gfxpost light-shaft
   sun position was overwritten by a shared temp vector (fixed). Garbage measured with test/_alloc.js: ~2 KB/frame (not a cause).
   Pictures: test/_gunshot.js (TAG=before/after).
-- 1.2.115 TEST: owner: "when I look around the textures bug, when I stop it fixes". gfxrt.js RT buffer now reprojects its history
+- 1.2.115 PUBLIC: owner: "when I look around the textures bug, when I stop it fixes". gfxrt.js RT buffer now reprojects its history
   (prevVP; turning keeps the average, n capped at 5 instead of reset to 0, 2 rays a pixel while moving); bounce light uses a fixed
   noise seed (no crawl). Test _rtmove.js (frame-to-frame change while turning, RT on vs off). Cause not confirmed: asked the owner
   for the preset and which setting stops it.
-- 1.2.114 TEST (owner asked for NVIDIA ray tracing + DLSS: impossible from WebGL, so shader stand-ins; owner said "do all"): gfxrt.js
+- 1.2.114 PUBLIC (owner asked for NVIDIA ray tracing + DLSS: impossible from WebGL, so shader stand-ins; owner said "do all"): gfxrt.js
   (loaded after gfxchar). UPSCALER S.upscale off/quality .77/balanced .67/performance .5: a postTargets wrapper shrinks POST.dw/dh;
   the final pass (gpFin, `#ifdef UPSCALE` via GP.moreFin) samples Catmull-Rom + CAS sharpening instead of FXAA; gfxpost's
   postFrame no longer skips gpFin when only the upscaler is on. BOUNCE LIGHT S.ssgi (half-size gather from GP.lin + scene colour,
