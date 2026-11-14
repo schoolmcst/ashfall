@@ -70,7 +70,7 @@ const _omZ = animZombie;
 animZombie = function (e, dt) { if (!G.noRender && e.group) { const d = Math.hypot(e.group.position.x - camera.position.x, e.group.position.z - camera.position.z); if ((d > 8 && !omVisible(e)) || d > 40) { e.omDt = (e.omDt || 0) + dt; e.omN = (e.omN || 0) + 1; if (d <= 40 || e.omN % 3) return; arguments[1] = Math.min(0.2, e.omDt); e.omDt = 0; } } return _omZ.apply(this, arguments); };
 /* ---------- O58: not focused */
 const _omFrame = frame;
-frame = function (now) { if (typeof document !== 'undefined' && !document.hasFocus() && !G.bench && !G.noRender && !/HeadlessChrome/.test(navigator.userAgent)) { const cap = G.state === 'playing' ? 30 : 15; if (now - (OM.lastF || 0) < 1000 / cap - 1) { requestAnimationFrame(frame); return; } OM.lastF = now; } return _omFrame.apply(this, arguments); };
+frame = function (now) { if (typeof document !== 'undefined' && !document.hasFocus() && !G.bench && !G.noRender && !navigator.webdriver) { const cap = G.state === 'playing' ? 30 : 15; if (now - (OM.lastF || 0) < 1000 / cap - 1) { requestAnimationFrame(frame); return; } OM.lastF = now; } return _omFrame.apply(this, arguments); };
 /* ---------- O59: tell the player what's slow */
 function omWarn(dt) {
   if (G.state !== 'playing' || G.bench || G.noRender || typeof PF === 'undefined') { OM.playT = 0; return; } OM.playT += dt; if (OM.playT < 60) return; OM.playT = 0;
