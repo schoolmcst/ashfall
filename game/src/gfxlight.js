@@ -6,8 +6,9 @@
    7  MUZZLE FLASH LIGHT: your shots and nearby bots' shots light the walls round them for a moment.
    8  NEON SPILL: neon signs, grow lamps and coloured bulbs throw their colour on the ground near you.
    9  THE MOON on night skies (opposite the sun, with a soft halo).
-   7 and 8 use a fixed set of 4 extra lights (DYNAMIC LIGHTS, HIGH and up), moved to where they matter, so the light
-   count (and every shader) stays the same during play. */
+   7: the game already had a player muzzle light and an enemy flash light (fx.js), so nothing new is added for it.
+   8 uses a fixed set of 3 extra lights (DYNAMIC LIGHTS, HIGH and up), moved to the nearest neon, so the light count
+   (and every shader) stays the same during play. */
 const GL = { lamps: [], pool: [], neon: [], night: 0, indoor: 0, expo: 1, flashT: 0, scanT: 0, spots: [] };
 if (S.dynLights === undefined) S.dynLights = /^(high|ultra|ultraplus)$/.test(qKey());
 (() => { try { const V = SCHEMA.VIDEO, at = V.findIndex(it => it.k === 'ao'); if (!V.some(it => it.k === 'dynLights')) V.splice(at, 0, { k: 'dynLights', t: 'toggle', name: 'DYNAMIC LIGHTS', hint: 'Muzzle flashes and neon signs light up the walls and ground round them' }); VIDEO_KEYS.add('dynLights'); } catch (e) {} })();
@@ -57,19 +58,15 @@ batchAdd = function (key, geo, m) { const r = _glBatch.apply(this, arguments); t
 function glScanNeon() { /* spots come from batchAdd while the map is built; close ones are merged */ const out = []; for (const s of GL.spots) { const o = out.find(q => Math.hypot(q.x - s.x, q.y - s.y, q.z - s.z) < 3); if (o) continue; out.push(s); } GL.spots = out; }
 /* ---------- 7 + 8: the pooled lights */
 function glPool() {
-  const want = S.dynLights && !S.perfMode ? 4 : 0;
+  const want = S.dynLights && !S.perfMode ? 3 : 0;
   if (GL.pool.length === want) return; for (const p of GL.pool) scene.remove(p.l); GL.pool = [];
   for (let i = 0; i < want; i++) { const l = new THREE.PointLight(0xffffff, 0, 8, 2); l.castShadow = false; scene.add(l); GL.pool.push({ l, t: 0 }); }
 }
-function glFlash(x, y, z, col, k) { if (!GL.pool.length) return; const p = GL.pool[0]; p.l.position.set(x, y, z); p.l.color.setHex(col || 0xffb060); p.l.intensity = 2.6 * (k || 1); p.l.distance = 7; p.t = 0.06; }
-const _glShoot = shoot;
-shoot = function () { const f0 = G.flashT; const r = _glShoot.apply(this, arguments); if (G.flashT > 0 && G.flashT !== f0) try { const d = new THREE.Vector3(); camera.getWorldDirection(d); glFlash(camera.position.x + d.x * 0.9, camera.position.y + d.y * 0.9 - 0.15, camera.position.z + d.z * 0.9); } catch (e) {} return r; };
-for (const nm of ['botShoot', 'enemyShoot']) { const f = window[nm]; if (typeof f !== 'function') continue; const w = function (e) { const r = f.apply(this, arguments); try { if (GL.pool.length && e && e.group && GL.pool[0].t <= 0 && Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) < 22) { const m = enemyMuzzle(e, new THREE.Vector3()); glFlash(m.x, m.y, m.z, 0xffa850, 0.8); } } catch (er) {} return r; }; if (nm === 'botShoot') botShoot = w; else enemyShoot = w; }
 function glPoolTick(dt) {
-  glPool(); if (!GL.pool.length) return; const f = GL.pool[0]; if (f.t > 0) { f.t -= dt; if (f.t <= 0) f.l.intensity = 0; }
+  glPool(); if (!GL.pool.length) return;
   if ((GL.scanT -= dt) > 0) return; GL.scanT = 0.4;
   const near = GL.spots.map(s => [s, Math.hypot(s.x - P.x, s.z - P.z)]).filter(q => q[1] < 30).sort((a, b) => a[1] - b[1]).slice(0, 3);
-  for (let i = 1; i < 4; i++) { const p = GL.pool[i], q = near[i - 1]; if (!q) { p.l.intensity = 0; continue; } const s = q[0]; p.l.position.set(s.x, s.y - 0.2, s.z); p.l.color.copy(s.c); p.l.intensity = 1.1 * (1 - q[1] / 30); p.l.distance = 9; }
+  for (let i = 0; i < 3; i++) { const p = GL.pool[i], q = near[i]; if (!q) { p.l.intensity = 0; continue; } const s = q[0]; p.l.position.set(s.x, s.y - 0.2, s.z); p.l.color.copy(s.c); p.l.intensity = 1.1 * (1 - q[1] / 30); p.l.distance = 9; }
 }
 /* ---------- 4: indoor light and eyes that adjust */
 function glIndoorTick(dt) {

@@ -212,7 +212,7 @@ postFrame = function (draw) {
     postPass(M.dof, GP.dof); f.dofT.value = GP.dof.texture; }
   f.maskT.value = GP.mask ? GP.mask.texture : POST.rt.texture; f.adsBlur.value = ads ? 0.55 * Math.min(1, ((G.ads || 0) - 0.6) / 0.4) : 0;
   if (D.FOG) { const fog = scene.fog, mp = MAPS[curMap] || {}; f.fogCol.value.copy(fog ? fog.color : new THREE.Color(0x888888)); f.fogDen.value = (mp.hfog || 0.004) * (1 + GP.wet * 1.2); f.fogH0.value = mp.hfogH !== undefined ? mp.hfogH : 0.2; f.fogFall.value = 1.2; f.hazeK.value = mp.indoor ? 0 : 0.12; }
-  f.lensK.value = clamp((S.bloom == null ? 100 : S.bloom) / 100, 0, 2); f.caK.value = 0.012; f.nv.value = GP.nv; f.dmg.value = GP.dmg; f.lowhp.value = GP.lowhp;
+  f.lensK.value = clamp((S.bloom == null ? 100 : S.bloom) / 100, 0, 2); f.caK.value = 0.012; f.nv.value = GP.nv; f.dmg.value = GP.dmg; f.lowhp.value = Math.max(GP.lowhp, (GP.blastBlur || 0) * 0.7);
   const g = GP.grade || gpGradeFor(curMap), on = S.post && S.post !== 'off'; f.tint.value.set(...(on ? g.tint : [1, 1, 1])); f.shTint.value.set(...(on ? g.sh : [0, 0, 0])); f.gsat.value = on ? g.sat : 1;
   try { if (typeof GA !== 'undefined') { for (let i = 0; i < 4; i++) f.shim.value[i].copy(GA.shim[i]); f.flashK.value = GA.flash; } } catch (e) {}
   let src = POST.rt.texture;
