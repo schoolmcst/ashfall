@@ -68,12 +68,15 @@ function gcSteps() {
   try { if (G.state === 'playing' && P.onGround) step(P, P.x, groundAt(P.x, P.z, (P.y || 0) + 0.3), P.z); for (const e of enemies) if (e.group && (e.entry || e.zombie || e.hhMob) && Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) < 18) step(e, e.group.position.x, e.group.position.y, e.group.position.z); } catch (e) {}
 }
 /* ---------- 46: live scope glass */
+function gcPipMat() { if (!GC.pip) { GC.pip = new THREE.WebGLRenderTarget(256, 256, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); GC.pip.texture.encoding = THREE.sRGBEncoding; GC.pipCam = new THREE.PerspectiveCamera(20, 1, 0.1, 400); }
+  if (!GC.pipMat) { GC.pipMat = VM.lens.clone(); Object.assign(GC.pipMat, { emissiveMap: GC.pip.texture, opacity: 0.95 }); GC.pipMat.emissive = new THREE.Color(0xffffff); GC.pipMat.color = new THREE.Color(0x000000); } return GC.pipMat; }
+// the scope glass gets its own material while scoped (swapping materials never rebuilds a shader; editing VM.lens did, twice a scope)
 function gcPip() {
   const u = gunObjs && gunObjs[G.cur], ads = (G.ads || 0) > 0.35 && !G.scoped && G.state === 'playing' && S.scopePip && !S.perfMode;
-  let lens = null; if (ads && u) u.traverse(o => { if (!lens && o.isMesh && o.material === VM.lens && o.visible) lens = o; });
-  if (!lens) { if (GC.lensOn) { Object.assign(VM.lens, GC.lens0); VM.lens.needsUpdate = true; GC.lensOn = false; } return; }
-  if (!GC.pip) { GC.pip = new THREE.WebGLRenderTarget(256, 256, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); GC.pip.texture.encoding = THREE.sRGBEncoding; GC.pipCam = new THREE.PerspectiveCamera(20, 1, 0.1, 400); }
-  if (!GC.lensOn) { GC.lens0 = { map: VM.lens.map, emissiveMap: VM.lens.emissiveMap, opacity: VM.lens.opacity, transparent: VM.lens.transparent }; GC.lens0.emissive = VM.lens.emissive.clone(); GC.lens0.color = VM.lens.color.clone(); VM.lens.emissiveMap = GC.pip.texture; VM.lens.emissive = new THREE.Color(0xffffff); VM.lens.color = new THREE.Color(0x000000); VM.lens.opacity = 0.95; VM.lens.needsUpdate = true; GC.lensOn = true; }
+  let lens = null; if (ads && u) u.traverse(o => { if (!lens && o.isMesh && (o.material === VM.lens || (GC.pipMat && o.material === GC.pipMat)) && o.visible) lens = o; });
+  if (!lens) { if (GC.lensMesh && GC.lensMesh.material === GC.pipMat) GC.lensMesh.material = VM.lens; GC.lensMesh = null; GC.lensOn = false; return; }
+  const pm = gcPipMat(); if (lens !== GC.lensMesh && GC.lensMesh && GC.lensMesh.material === pm) GC.lensMesh.material = VM.lens; lens.material = pm; GC.lensMesh = lens; GC.lensOn = true;
+  if ((GC.pipN = (GC.pipN || 0) + 1) % 2) return;   // the scope picture is redrawn every 2nd frame
   const c = GC.pipCam; c.position.copy(camera.position); c.quaternion.copy(camera.quaternion); c.fov = Math.max(6, camera.fov / 1.6); c.updateProjectionMatrix();
   const prev = renderer.getRenderTarget(), au = renderer.shadowMap.autoUpdate; renderer.shadowMap.autoUpdate = false; renderer.setRenderTarget(GC.pip); renderer.clear(); renderer.render(scene, c); renderer.setRenderTarget(prev); renderer.shadowMap.autoUpdate = au;
 }

@@ -32383,7 +32383,7 @@ function gpFree() { for (const k of ['lin', 'ao', 'ao2', 'sh', 'sh2', 'ssr', 'do
 function gpTargets() {
   gpFree(); GP.w = POST.w; GP.h = POST.h; const hw = Math.max(2, POST.w >> 1), hh = Math.max(2, POST.h >> 1), qw = Math.max(2, POST.w >> 2), qh = Math.max(2, POST.h >> 2);
   const mk = (w, h, half, near) => { const t = new THREE.WebGLRenderTarget(w, h, { minFilter: near ? THREE.NearestFilter : THREE.LinearFilter, magFilter: near ? THREE.NearestFilter : THREE.LinearFilter, format: THREE.RGBAFormat, depthBuffer: false, stencilBuffer: false, type: half ? THREE.HalfFloatType : THREE.UnsignedByteType }); t.texture.generateMipmaps = false; return t; };
-  GP.lin = mk(hw, hh, true, true); GP.ao = mk(hw, hh); GP.ao2 = mk(hw, hh); GP.sh = mk(qw, qh); GP.sh2 = mk(qw, qh); GP.ssr = mk(hw, hh); GP.dof = mk(hw, hh); GP.mask = mk(qw, qh); GP.mb = mk(POST.w, POST.h);
+  GP.lin = mk(hw, hh, true, true); GP.ao = mk(hw, hh); GP.ao2 = mk(hw, hh); GP.sh = mk(qw, qh); GP.sh2 = mk(qw, qh); GP.ssr = mk(hw, hh); GP.dof = mk(hw, hh); GP.mask = mk(hw, hh); GP.mb = mk(POST.w, POST.h);
   GP.mb.texture.encoding = THREE.sRGBEncoding;
 }
 /* ---------- the shaders */
@@ -32437,7 +32437,7 @@ function gpMats() {
 }
 // the finishing pass: post.js's look plus the new effects, compiled for the settings in use
 function gpFin(D) {
-  const key = JSON.stringify(D); if (GP.fin && GP.finKey === key) return GP.fin; if (GP.fin) GP.fin.dispose(); GP.finKey = key;
+  const key = JSON.stringify(D); if (GP.fin && GP.finKey === key) return GP.fin; GP.finC = GP.finC || {}; GP.finKey = key; if (GP.finC[key]) return (GP.fin = GP.finC[key]);
   const old = postMats().fin, fs = old.fragmentShader;
   const head = 'uniform sampler2D dep; uniform sampler2D aoT; uniform sampler2D shT; uniform sampler2D ssrT; uniform sampler2D dofT; uniform sampler2D maskT; uniform vec3 shCol; uniform float shK; uniform vec3 fogCol; uniform float fogDen; uniform float fogH0; uniform float fogFall; uniform float hazeK; uniform vec3 camPos; uniform mat3 camRot; uniform float tanY; uniform float asp; uniform float far; uniform float time; uniform float lensK; uniform float caK; uniform float nv; uniform float dmg; uniform float lowhp; uniform vec3 tint; uniform vec3 shTint; uniform float gsat; uniform float adsBlur; uniform float dofK; uniform vec4 shim[4]; uniform float flashK;\n' +
     'float hsh(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }\n';
@@ -32449,16 +32449,18 @@ function gpFin(D) {
     '#ifdef CA', '  { vec2 d = (vUv - 0.5) * caK * dot(vUv - 0.5, vUv - 0.5) * 2.0; c.r = texture2D(src, min((vUv + d) * sc, sc - px)).r; c.b = texture2D(src, min((vUv - d) * sc, sc - px)).b; }', '#endif',
     '#ifdef ADSBLUR', '  if (adsBlur > 0.01) { float m = texture2D(maskT, vUv).r; if (m > 0.5) { vec3 b = vec3(0.0); for (int i = 0; i < 8; i++) { float a = float(i) * 0.785; b += texture2D(src, uv + vec2(cos(a), sin(a)) * px * 2.5).rgb; } c = mix(c, b / 8.0, adsBlur * m); } }', '#endif',
     '  if (lowhp > 0.01) { vec2 q = vUv - 0.5; float e = smoothstep(0.08, 0.35, dot(q, q)) * lowhp; if (e > 0.01) { vec3 b = vec3(0.0); for (int i = 0; i < 6; i++) { float a = float(i) * 1.047; b += texture2D(src, min(uv + vec2(cos(a), sin(a)) * px * 6.0 * e, sc - px)).rgb; } c = mix(c, b / 6.0, e); } }',
-    '#ifdef DOF', '  { vec4 d = texture2D(dofT, vUv); c = mix(c, d.rgb, smoothstep(0.0, 1.0, d.a) * dofK); }', '#endif',
+    '#ifdef DOF', '  { vec4 d = texture2D(dofT, vUv); c = mix(c, d.rgb, smoothstep(0.0, 1.0, d.a) * dofK * (1.0 - step(0.5, texture2D(maskT, vUv).r))); }', '#endif',
   ].join('\n'));
   body = body.replace('  vec3 l = lin(c);', [
     '  vec3 l = lin(c);',
+    '  vec3 l0 = l; float vmK = 1.0 - smoothstep(0.3, 0.7, texture2D(maskT, vUv).r);',
     '  float zz = texture2D(dep, vUv).r;',
     '#ifdef AO', '  l *= mix(1.0, texture2D(aoT, vUv).r, 1.0 - smoothstep(60.0, 110.0, zz));', '#endif',
     '#ifdef SSR', '  { vec4 r = texture2D(ssrT, vUv); l = mix(l, lin(r.rgb), clamp(r.a, 0.0, 0.85)); }', '#endif',
     '#ifdef FOG', '  if (zz < far * 0.9) { vec2 n2 = vUv * 2.0 - 1.0; vec3 rd = camRot * normalize(vec3(n2.x * tanY * asp, n2.y * tanY, -1.0)); float dist = zz / max(-normalize(vec3(n2.x * tanY * asp, n2.y * tanY, -1.0)).z, 0.1); float wy = camPos.y + rd.y * dist, ha = 0.5 * (camPos.y + wy);',
     '    float f = 1.0 - exp(-dist * fogDen * exp(-max(ha - fogH0, 0.0) * fogFall)); f = clamp(f + smoothstep(110.0, 380.0, dist) * hazeK, 0.0, 0.9); l = mix(l, lin(fogCol), f); }', '#endif',
     '#ifdef SHAFTS', '  l += lin(texture2D(shT, vUv).rgb) * shCol * shK;', '#endif',
+    '  l = mix(l0, l, vmK);',
     '#ifdef LENS', '  if (useBloom > 0.5) { vec3 st = vec3(0.0); for (int i = -4; i <= 4; i++) st += texture2D(bloom, vUv + vec2(float(i) * 0.018, 0.0)).rgb; float dirt = smoothstep(0.55, 0.9, hsh(floor(vUv * vec2(9.0, 6.0)))) * 0.6 + 0.4 * smoothstep(0.3, 0.0, length(fract(vUv * vec2(9.0, 6.0)) - 0.5)); l += st / 9.0 * vec3(0.7, 0.85, 1.2) * 0.35 * lensK + texture2D(bloom, vUv).rgb * dirt * 0.4 * lensK; }', '#endif',
   ].join('\n'));
   body = body.replace('  vec3 ex = max(l - 0.8, 0.0); l = min(l, vec3(0.8)) + ex / (1.0 + ex / 0.25);', [
@@ -32477,6 +32479,7 @@ function gpFin(D) {
   if (body.split('#ifdef').length < 9) console.warn('gpFin: a post.js line changed, some effects were not added');
   if (GP.moreU) GP.moreU(u);
   GP.fin = new THREE.ShaderMaterial({ uniforms: u, vertexShader: old.vertexShader, fragmentShader: body, defines: D2, depthTest: false, depthWrite: false, toneMapped: false });
+  GP.finC[key] = GP.fin;
   return GP.fin;
 }
 /* ---------- depth: copied right after the world is drawn, before the gun */
@@ -32507,7 +32510,7 @@ postFrame = function (draw) {
   // the original pipeline, but its final pass is swapped for ours
   const Mo = postMats(), oldFin = Mo.fin, ao = S.ao && S.ao !== 'off', mbl = S.mblur && S.mblur !== 'off', photo = G.state === 'photo';
   const ads = S.dof && G.state === 'playing' && (G.ads || 0) > 0.6 && !G.scoped;
-  const D = { AO: dep && ao, SHAFTS: dep && S.shafts, SSR: dep && S.ssr, FOG: dep && S.hfog, DOF: dep && S.dof && (GP.menuDof > 0.02 || photo), ADSBLUR: dep && ads, LENS: S.lensFx && S.post && S.post !== 'off', CA: S.chroma, FILMIC: S.tone === 'filmic', SHIMMER: typeof GA !== 'undefined' && GA.shim.some(h => h.w > 0) };
+  const D = { AO: dep && ao, SHAFTS: dep && S.shafts, SSR: dep && S.ssr, FOG: dep && S.hfog, DOF: dep && S.dof, ADSBLUR: dep && S.dof, LENS: S.lensFx && S.post && S.post !== 'off', CA: S.chroma, FILMIC: S.tone === 'filmic', SHIMMER: typeof GA !== 'undefined' };
   if (GP.moreD) Object.assign(D, GP.moreD(dep));
   const fin = gpFin(D); Mo.fin = fin; POST.quad.material = fin;
   if (dep) GP.capture = true;
@@ -32520,16 +32523,17 @@ postFrame = function (draw) {
   cam.updateMatrixWorld(); f.camPos.value.setFromMatrixPosition(cam.matrixWorld); f.camRot.value.setFromMatrix4(cam.matrixWorld);
   const lib = m => { m.uniforms.dep.value = GP.lin.texture; m.uniforms.px.value.set(1 / GP.lin.width, 1 / GP.lin.height); m.uniforms.tanY.value = tanY; m.uniforms.asp.value = asp; };
   // gun mask (for the aiming blur and to keep the gun out of motion blur)
-  if (dep && (ads || mbl) && typeof vmScene !== 'undefined' && viewmodel && viewmodel.visible) { const om = vmScene.overrideMaterial, cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha(); vmScene.overrideMaterial = M.white; renderer.setRenderTarget(GP.mask); renderer.setClearColor(0x000000, 1); renderer.clear(); _gpRender(vmScene, vmCamera); vmScene.overrideMaterial = om; renderer.setClearColor(cc, ca); }
+  if (dep && typeof vmScene !== 'undefined' && viewmodel && viewmodel.visible) { const om = vmScene.overrideMaterial, cc = renderer.getClearColor(GP.cc || (GP.cc = new THREE.Color())), ca = renderer.getClearAlpha(); vmScene.overrideMaterial = M.white; renderer.setRenderTarget(GP.mask); renderer.setClearColor(0x000000, 1); renderer.clear(); _gpRender(vmScene, vmCamera); vmScene.overrideMaterial = om; renderer.setClearColor(cc, ca); }
   else if (dep && GP.mask) { renderer.setRenderTarget(GP.mask); renderer.setClearColor(0x000000, 1); renderer.clear(); }
   if (D.AO) { lib(M.ao); M.ao.uniforms.far.value = cam.far; M.ao.uniforms.k.value = S.ao === 'high' ? 1.0 : 0.75; const want = S.ao === 'high' ? 14 : 8; if (M.ao.defines.SAMPLES !== want) { M.ao.defines.SAMPLES = want; M.ao.needsUpdate = true; } postPass(M.ao, GP.ao);
     const b = M.blur.uniforms; b.dep.value = GP.lin.texture; b.src.value = GP.ao.texture; b.dir.value.set(1 / GP.ao.width, 0); postPass(M.blur, GP.ao2); b.src.value = GP.ao2.texture; b.dir.value.set(0, 1 / GP.ao.height); postPass(M.blur, GP.ao); f.aoT.value = GP.ao.texture; }
-  if (D.SHAFTS) { const sp = _v3a.copy(SUN_POS).normalize().multiplyScalar(400).add(cam.position).project(cam), face = cam.getWorldDirection(new THREE.Vector3()).dot(_v3a.copy(SUN_POS).normalize());
-    if (face > 0.15 && sp.z < 1) { const su = new THREE.Vector2(sp.x * 0.5 + 0.5, sp.y * 0.5 + 0.5); const a = M.shm.uniforms; a.src.value = POST.rt.texture; a.dep.value = GP.lin.texture; a.sc.value.set(sx, sy); a.sun.value.copy(su); a.far.value = cam.far; a.asp.value = asp; postPass(M.shm, GP.sh);
+  if (D.SHAFTS) { const sp = _v3a.copy(SUN_POS).normalize().multiplyScalar(400).add(cam.position).project(cam), face = cam.getWorldDirection(GP.fw || (GP.fw = new THREE.Vector3())).dot((GP.sd || (GP.sd = new THREE.Vector3())).copy(SUN_POS).normalize());
+    if (face > 0.15 && sp.z < 1) { const su = (GP.su || (GP.su = new THREE.Vector2())).set(sp.x * 0.5 + 0.5, sp.y * 0.5 + 0.5); const a = M.shm.uniforms; a.src.value = POST.rt.texture; a.dep.value = GP.lin.texture; a.sc.value.set(sx, sy); a.sun.value.copy(su); a.far.value = cam.far; a.asp.value = asp; postPass(M.shm, GP.sh);
       const b = M.shr.uniforms; b.src.value = GP.sh.texture; b.sun.value.copy(su); postPass(M.shr, GP.sh2); f.shT.value = GP.sh2.texture; f.shK.value = 0.55 * Math.min(1, (face - 0.15) * 2); f.shCol.value.copy(skyMat.uniforms.sunCol.value); }
     else { f.shK.value = 0; f.shT.value = GP.sh2.texture; } }
   if (D.SSR) { lib(M.ssr); const s = M.ssr.uniforms; s.src.value = POST.rt.texture; s.sc.value.set(sx, sy); s.camRot.value.setFromMatrix4(cam.matrixWorld); s.k.value = 0.12 + 0.5 * GP.wet; s.far.value = cam.far; postPass(M.ssr, GP.ssr); f.ssrT.value = GP.ssr.texture; }
-  if (D.DOF) { const d = M.dof.uniforms; d.src.value = POST.rt.texture; d.dep.value = GP.lin.texture; d.sc.value.set(sx, sy); d.px.value.set(1 / GP.dof.width, 1 / GP.dof.height);
+  if (!(D.DOF && (GP.menuDof > 0.02 || photo))) f.dofK.value = 0;
+  else { const d = M.dof.uniforms; d.src.value = POST.rt.texture; d.dep.value = GP.lin.texture; d.sc.value.set(sx, sy); d.px.value.set(1 / GP.dof.width, 1 / GP.dof.height);
     if (photo) { d.focus.value = typeof PHOTO !== 'undefined' && PHOTO.focus ? PHOTO.focus : 8; d.range.value = typeof PHOTO !== 'undefined' && PHOTO.range ? PHOTO.range : 12; d.allb.value = 0; d.maxR.value = 7; f.dofK.value = typeof PHOTO !== 'undefined' && PHOTO.dofOff ? 0 : 1; }
     else { d.allb.value = 1; d.maxR.value = 5; f.dofK.value = GP.menuDof; }
     postPass(M.dof, GP.dof); f.dofT.value = GP.dof.texture; }
@@ -32662,7 +32666,7 @@ function gmPatch(mat, kind, key) {
       '    diffuseColor.rgb *= 1.0 - 0.32 * wet - 0.22 * pud; roughnessFactor = mix(roughnessFactor, 0.2, wet * 0.75); roughnessFactor = mix(roughnessFactor, 0.03, pud); }',
       '  if (gmSnow > 0.01) { vec2 ruv = (vGmW.xz - gmRect.xy) / gmRect.zw; float rh = texture2D(gmRoof, ruv).r * 80.0 - 10.0; float open = (ruv.x < 0.0 || ruv.y < 0.0 || ruv.x > 1.0 || ruv.y > 1.0) ? 1.0 : step(rh - 0.35, vGmW.y); float sn = smoothstep(0.55, 0.85, up) * open * gmSnow * (0.75 + 0.25 * gmN(vGmW.xz * 1.7)); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.92, 0.94, 0.98), sn); roughnessFactor = mix(roughnessFactor, 0.85, sn); } }'].join('\n');
     if (kind === 'gun') code = [
-      '{ float edge = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 3.0) * gmWear; roughnessFactor = mix(roughnessFactor, 0.22, edge * 0.6); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.62, 0.6, 0.57), edge * 0.22);',
+      '{ float edge = pow(1.0 - abs(dot(normalize(normal), normalize(vViewPosition))), 3.0) * gmWear; roughnessFactor = mix(roughnessFactor, 0.3, edge * 0.3); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.5, 0.49, 0.47), edge * 0.07);',
       '  float g = gmN(vGmW.xz * 18.0 + vGmW.y * 7.0); diffuseColor.rgb *= 0.92 + 0.08 * g;',
       '  if (gmFight > 0.01) { float sp = smoothstep(0.72, 0.8, gmN(vGmW.xz * 40.0 + vGmW.yz * 23.0)); diffuseColor.rgb = mix(diffuseColor.rgb, diffuseColor.rgb * vec3(0.55, 0.47, 0.4), gmFight * 0.6 * g); diffuseColor.rgb = mix(diffuseColor.rgb, vec3(0.28, 0.03, 0.02), sp * gmFight * 0.7); roughnessFactor = mix(roughnessFactor, 0.85, gmFight * 0.4); } }'].join('\n');
     sh.fragmentShader = 'uniform float gmSnow; uniform sampler2D gmRoof; uniform vec4 gmRect; uniform float gmWet; uniform float gmTime; uniform float gmFight; uniform float gmWear; varying vec3 vGmW;\n' + GM_NOISE + sh.fragmentShader.replace('#include <normal_fragment_maps>', '#include <normal_fragment_maps>\n' + code);
@@ -32876,14 +32880,14 @@ function gxCasingTick(dt) { for (const c of casings) { if (!c.on) continue; if (
 const _gxBoom = explosionFx;
 explosionFx = function (p, power) {
   const r = _gxBoom.apply(this, arguments); if (!gxOn()) return r;
-  try { const y = p.y < 1.4 ? (TERR.on ? TH(p.x, p.z) : 0) + 0.05 : p.y; const g = new THREE.Mesh(new THREE.RingGeometry(0.6, 1.0, 40), new THREE.MeshBasicMaterial({ color: 0xffe8c0, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false })); g.rotation.x = -Math.PI / 2; g.position.set(p.x, y, p.z); scene.add(g); GX.rings.push({ m: g, t: 0 });
+  try { const y = p.y < 1.4 ? (TERR.on ? TH(p.x, p.z) : 0) + 0.05 : p.y; const g = (GX.ringPool = GX.ringPool || []).pop() || new THREE.Mesh(GX.ringGeo || (GX.ringGeo = new THREE.RingGeometry(0.6, 1.0, 40)), new THREE.MeshBasicMaterial({ color: 0xffe8c0, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false })); g.material.opacity = 0.6; g.scale.setScalar(1); g.rotation.x = -Math.PI / 2; g.position.set(p.x, y, p.z); scene.add(g); GX.rings.push({ m: g, t: 0 });
     for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; puff(p.x + Math.cos(a) * 1.2, y + 0.2, p.z + Math.sin(a) * 1.2, { color: 0x8a7a64, size: 0.9, grow: 2.6, life: 1.6, vx: Math.cos(a) * 5, vz: Math.sin(a) * 5, vy: 0.3, op: 0.5 }); }
     for (let i = 0; i < 4; i++) puff(p.x + rnd(-1, 1), y + 1 + i * 0.6, p.z + rnd(-1, 1), { color: 0x2a2826, size: 2.2, grow: 3, life: 5 + i, vy: 0.5 + i * 0.2, vx: 0.3, op: 0.42 });
     chunks('wood', p, 8, 7, 1.2); chunks('metal', p, 6, 8, 1.1);
     const d = Math.hypot(p.x - P.x, p.z - P.z); if (S.shakeFx && d < 14 && G.state === 'playing') { const k = 1 - d / 14; G.shake = Math.max(G.shake || 0, 0.05 * k); GX.blast = Math.max(GX.blast, k); } } catch (e) {}
   return r;
 };
-function gxRingTick(dt) { for (let i = GX.rings.length - 1; i >= 0; i--) { const q = GX.rings[i]; q.t += dt; const k = q.t / 0.45; q.m.scale.setScalar(1 + k * 9); q.m.material.opacity = 0.6 * Math.max(0, 1 - k); if (k >= 1) { scene.remove(q.m); q.m.geometry.dispose(); q.m.material.dispose(); GX.rings.splice(i, 1); } } GX.blast = Math.max(0, GX.blast - dt * 2.5); }
+function gxRingTick(dt) { for (let i = GX.rings.length - 1; i >= 0; i--) { const q = GX.rings[i]; q.t += dt; const k = q.t / 0.45; q.m.scale.setScalar(1 + k * 9); q.m.material.opacity = 0.6 * Math.max(0, 1 - k); if (k >= 1) { scene.remove(q.m); GX.ringPool.push(q.m); GX.rings.splice(i, 1); } } GX.blast = Math.max(0, GX.blast - dt * 2.5); }
 /* ---------- 35 fire smoke and embers */
 function gxFireTick(dt) { if (!gxOn() || typeof BRFG === 'undefined') return; for (const f of BRFG.fires || []) { if ((f.gxT = (f.gxT || 0) - dt) > 0) continue; f.gxT = 0.25; const x = f.x + rnd(-1, 1) * (f.R || 2) * 0.5, z = f.z + rnd(-1, 1) * (f.R || 2) * 0.5, y = (f.y || 0) + 0.4; puff(x, y + 0.6, z, { color: 0x302c2a, size: 0.8, grow: 2.6, life: 3, vy: 1.6, vx: 0.4, op: 0.35, minor: 1 }); puff(x, y, z, { fire: 1, size: 0.6, grow: -0.1, life: 0.45, vy: 1.2, op: 0.85, minor: 1 }); if (Math.random() < 0.5) chunks('spark', new THREE.Vector3(x, y + 0.3, z), 2, 1.5, 1.2, 2); } }
 /* ---------- 37 footprints */
@@ -32983,12 +32987,15 @@ function gcSteps() {
   try { if (G.state === 'playing' && P.onGround) step(P, P.x, groundAt(P.x, P.z, (P.y || 0) + 0.3), P.z); for (const e of enemies) if (e.group && (e.entry || e.zombie || e.hhMob) && Math.hypot(e.group.position.x - P.x, e.group.position.z - P.z) < 18) step(e, e.group.position.x, e.group.position.y, e.group.position.z); } catch (e) {}
 }
 /* ---------- 46: live scope glass */
+function gcPipMat() { if (!GC.pip) { GC.pip = new THREE.WebGLRenderTarget(256, 256, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); GC.pip.texture.encoding = THREE.sRGBEncoding; GC.pipCam = new THREE.PerspectiveCamera(20, 1, 0.1, 400); }
+  if (!GC.pipMat) { GC.pipMat = VM.lens.clone(); Object.assign(GC.pipMat, { emissiveMap: GC.pip.texture, opacity: 0.95 }); GC.pipMat.emissive = new THREE.Color(0xffffff); GC.pipMat.color = new THREE.Color(0x000000); } return GC.pipMat; }
+// the scope glass gets its own material while scoped (swapping materials never rebuilds a shader; editing VM.lens did, twice a scope)
 function gcPip() {
   const u = gunObjs && gunObjs[G.cur], ads = (G.ads || 0) > 0.35 && !G.scoped && G.state === 'playing' && S.scopePip && !S.perfMode;
-  let lens = null; if (ads && u) u.traverse(o => { if (!lens && o.isMesh && o.material === VM.lens && o.visible) lens = o; });
-  if (!lens) { if (GC.lensOn) { Object.assign(VM.lens, GC.lens0); VM.lens.needsUpdate = true; GC.lensOn = false; } return; }
-  if (!GC.pip) { GC.pip = new THREE.WebGLRenderTarget(256, 256, { minFilter: THREE.LinearFilter, magFilter: THREE.LinearFilter }); GC.pip.texture.encoding = THREE.sRGBEncoding; GC.pipCam = new THREE.PerspectiveCamera(20, 1, 0.1, 400); }
-  if (!GC.lensOn) { GC.lens0 = { map: VM.lens.map, emissiveMap: VM.lens.emissiveMap, opacity: VM.lens.opacity, transparent: VM.lens.transparent }; GC.lens0.emissive = VM.lens.emissive.clone(); GC.lens0.color = VM.lens.color.clone(); VM.lens.emissiveMap = GC.pip.texture; VM.lens.emissive = new THREE.Color(0xffffff); VM.lens.color = new THREE.Color(0x000000); VM.lens.opacity = 0.95; VM.lens.needsUpdate = true; GC.lensOn = true; }
+  let lens = null; if (ads && u) u.traverse(o => { if (!lens && o.isMesh && (o.material === VM.lens || (GC.pipMat && o.material === GC.pipMat)) && o.visible) lens = o; });
+  if (!lens) { if (GC.lensMesh && GC.lensMesh.material === GC.pipMat) GC.lensMesh.material = VM.lens; GC.lensMesh = null; GC.lensOn = false; return; }
+  const pm = gcPipMat(); if (lens !== GC.lensMesh && GC.lensMesh && GC.lensMesh.material === pm) GC.lensMesh.material = VM.lens; lens.material = pm; GC.lensMesh = lens; GC.lensOn = true;
+  if ((GC.pipN = (GC.pipN || 0) + 1) % 2) return;   // the scope picture is redrawn every 2nd frame
   const c = GC.pipCam; c.position.copy(camera.position); c.quaternion.copy(camera.quaternion); c.fov = Math.max(6, camera.fov / 1.6); c.updateProjectionMatrix();
   const prev = renderer.getRenderTarget(), au = renderer.shadowMap.autoUpdate; renderer.shadowMap.autoUpdate = false; renderer.setRenderTarget(GC.pip); renderer.clear(); renderer.render(scene, c); renderer.setRenderTarget(prev); renderer.shadowMap.autoUpdate = au;
 }
@@ -33147,7 +33154,7 @@ setInterval(() => { try { grPhotoUI(); } catch (e) {} }, 200);
    O14 decals were already pooled (70) and now fade (gfxfx.js). O16: shadows already follow you within SHADOW DISTANCE.
    O15 HORDE BASES: finished base pieces are merged by material (one draw per material); a piece that gets hit, edited
        or removed comes back out of the merge until things settle.
-   O17 SHADOWS are redrawn every 2nd frame on MEDIUM and HIGH (every frame on ULTRA).
+   O17 SHADOWS are redrawn every 2nd frame on LOW and MEDIUM (every frame on HIGH and up: even frame times, 1.2.116).
    O18 a separate static shadow cache isn't possible with this renderer's shadows; O17 covers most of the saving.
    O19 MAP LAMPS: maps with more than 8 lamps keep 6 real lights, moved to the lamps nearest you (every light costs
        every lit pixel on screen). The lamps' glowing bulbs stay.
@@ -33246,7 +33253,7 @@ function odLampTick(force) {
   OD.lampPool.forEach((l, i) => { const q = near[i] && near[i][0]; if (!q) { l.intensity = 0; return; } l.position.set(q.x, q.y, q.z); l.color.copy(q.col); l.distance = q.d; l.intensity = q.l.intensity !== undefined ? q.l.intensity : q.i; });
 }
 /* ---------- O17: shadows every 2nd frame below ULTRA */
-function odShadowTick() { const every = /^(ultra|ultraplus)$/.test(qKey()) ? 1 : 2; OD.frame++; renderer.shadowMap.autoUpdate = every === 1 || (OD.frame % every === 0) || G.state !== 'playing'; if (!renderer.shadowMap.autoUpdate) renderer.shadowMap.needsUpdate = false; }
+function odShadowTick() { const every = /^(high|ultra|ultraplus)$/.test(qKey()) ? 1 : 2; OD.frame++; renderer.shadowMap.autoUpdate = every === 1 || (OD.frame % every === 0) || G.state !== 'playing'; if (!renderer.shadowMap.autoUpdate) renderer.shadowMap.needsUpdate = false; }
 /* ---------- hooks */
 const _odLoad = loadMap;
 loadMap = function () { OD.lamps = []; for (const im of OD.inst) { if (im.parent) im.parent.remove(im); } OD.inst = []; const r = _odLoad.apply(this, arguments); if (r !== false) try { odScan(); odLampSetup(); odGrass(); OD.hhGroups = []; } catch (e) { reportError(e); } return r; };
@@ -33346,6 +33353,53 @@ function omWarn(dt) {
 }
 const _omTick = tick;
 tick = function (dt) { const r = _omTick.apply(this, arguments); try { omWarn(dt); } catch (e) {} return r; };
+/* ================================================================== GRAPHICS FIXES (1.2.116, the owner's report)
+   - "the textures bug when I look around, fine when I stop": ULTRA+ had MOTION BLUR on, which smears the picture while
+     you turn. It is off in ULTRA+ now (and switched off once for players on ULTRA+; it can still be turned on).
+   - "the light is too bright on my gun, my camo glows way too much": the gun's own sun is softer, guns and camos take
+     less from the sky reflection map (1.2.113 made it brighter), worn edges are subtler, and glowing camos/skins glow at
+     about a third of the old strength (they were blooming to white).
+   - The see-through gun is fixed in gfxpost.js (the depth effects no longer draw over the gun). */
+if (typeof GP_PRESET !== 'undefined' && GP_PRESET.ultraplus) GP_PRESET.ultraplus.mblur = 'off';
+try { if (!S.fix116) { S.fix116 = 1; if (qKey() === 'ultraplus' && S.mblur && S.mblur !== 'off') S.mblur = 'off'; saveSettings(); } } catch (e) {}
+const GFX_FIX = { vmSun: 1.2, gunEnv: 0.6, camoEnv: 0.55, glow: 0.35 };
+try { vmSun.intensity = GFX_FIX.vmSun; } catch (e) {}
+// guns: less sky reflection (each material scaled once)
+function gfxGunEnv(m) { if (!m || !m.isMeshStandardMaterial || m.userData.gfEnv) return; m.userData.gfEnv = 1; m.envMapIntensity = (m.envMapIntensity == null ? 1 : m.envMapIntensity) * (m.userData.cosm ? 1 : GFX_FIX.gunEnv); }
+const _gfGun = gmPatchGun;
+gmPatchGun = function () { const r = _gfGun.apply(this, arguments); try { for (const k in VM) if (!/glove|sleeve|skin|lens/.test(k)) gfxGunEnv(VM[k]); for (const g of gunObjs) g && g.traverse(o => { if (o.isMesh && !o.material.transparent) gfxGunEnv(o.material); }); } catch (e) {} return r; };
+// camos and skins: softer reflections, a third of the glow
+const _gfCosm = cosmMat;
+cosmMat = function (id) {
+  const had = !!COS_MAT[id], m = _gfCosm.apply(this, arguments); if (had || !m || m.userData.gfGlow) return m; m.userData.gfGlow = 1;
+  m.envMapIntensity = GFX_FIX.camoEnv; m.userData.gfEnv = 1;
+  if (m.emissiveMap) { m.emissiveIntensity *= GFX_FIX.glow; for (const a of COS_ANIM) if (a.mat === m) a.base *= GFX_FIX.glow; }
+  return m;
+};
+/* ---------- STUTTER: shaders that used to compile in the middle of a fight
+   - the gun's look (worn edges, grime) was put on by a 2-second timer, so its shaders compiled up to 2 s after you spawned or
+     swapped guns; now it is done when the gun is made, and the gun's shaders are compiled right then (gfxWarmGun)
+   - the live scope glass edited the lens material (a shader rebuild on every scope in and out): it swaps materials now (gfxchar.js)
+   - explosion rings were made and thrown away (the shader was deleted and rebuilt every grenade): pooled now (gfxfx.js)
+   - the final post shader was rebuilt when aiming, in menus and near heat shimmer: one shader now (gfxpost.js) */
+function gfxWarmGun() {
+  try { gmPatchGun(); } catch (e) {}
+  try { const u = gunObjs && gunObjs[G.cur]; let lens = null; if (u && S.scopePip && typeof gcPipMat === 'function') u.traverse(o => { if (!lens && o.isMesh && o.material === VM.lens) lens = o; });
+    if (lens) { lens.material = gcPipMat(); renderer.compile(vmScene, vmCamera); lens.material = VM.lens; }
+    renderer.compile(vmScene, vmCamera); } catch (e) {}
+}
+// compiled inside the real scene: in three.js r128 even unlit materials carry the scene's light count and fog in their shader
+function gfxWarmFx() {
+  try { const t = scene; if (!GX.ringPool) GX.ringPool = []; if (!GX.ringPool.length) GX.ringPool.push(new THREE.Mesh(GX.ringGeo || (GX.ringGeo = new THREE.RingGeometry(0.6, 1.0, 40)), new THREE.MeshBasicMaterial({ color: 0xffe8c0, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false })));
+    const m = GX.ringPool[0]; t.add(m); const g = new THREE.PlaneGeometry(1, 1), ex = []; if (typeof decals !== 'undefined' && decals.mats) for (const k in decals.mats) { const q = new THREE.Mesh(g, decals.mats[k]); t.add(q); ex.push(q); }
+    renderer.compile(t, camera); t.remove(m); for (const q of ex) t.remove(q); g.dispose(); } catch (e) {}
+}
+const _gfEquip = equipClass;
+equipClass = function () { const r = _gfEquip.apply(this, arguments); gfxWarmGun(); return r; };
+const _gfSwitch = switchWeapon;
+switchWeapon = function () { const r = _gfSwitch.apply(this, arguments); try { gmPatchGun(); } catch (e) {} return r; };
+const _gfLoad = loadMap;
+loadMap = function () { const r = _gfLoad.apply(this, arguments); if (r !== false) { gfxWarmGun(); gfxWarmFx(); } return r; };
 /* ================================================================== GRAPHICS: measuring (1.2.113, the owner's optimisation list O1-O5)
    O1 THE BENCHMARK TOUR: Settings > VIDEO > RUN BENCHMARK TOUR runs the heavy-fight benchmark on 3 maps (12 s each) and
       gives a SCORE (average and 1% low together); the last 6 runs are kept (ashfall.bench.v1) so before/after is easy.

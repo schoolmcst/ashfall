@@ -152,6 +152,19 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.116 TEST (owner: textures glitch while looking around; guns look see-through; gun too bright, camo glows; stuttering).
+  gfxfix.js (loaded before gfxperf): ULTRA+ had MOTION BLUR 'low' (smears while turning) -> off in GP_PRESET.ultraplus and once
+  for ULTRA+ players (S.fix116). Gun: vmSun 1.2 (was 1.6), gun materials envMapIntensity x0.6 (userData.gfEnv, via a
+  gmPatchGun wrapper), camos/skins (cosmMat wrapper) env 0.55 and emissive x0.35 incl. COS_ANIM base; gfxmat gun wear edges
+  subtler. SEE-THROUGH GUN: gfxpost's depth effects (AO/SSR/fog/shafts/GI/RT/DOF) used the world depth behind the gun; the gun
+  mask (GP.mask, half size now) is drawn every frame and the final shader keeps l0 where the mask is (vmK). STUTTER (shader
+  compiles mid-match, found with test/_stutter.js + test/_firsts.js): gpFin variants are cached (GP.finC) and DOF/ADSBLUR/
+  SHIMMER no longer toggle defines; gun looks patched + vmScene compiled on equipClass/loadMap (gfxWarmGun), the scope glass
+  swaps to GC.pipMat (gcPipMat) instead of editing VM.lens, scope picture every 2nd frame; explosion rings pooled (GX.ringPool);
+  rings + decal mats compiled IN THE REAL SCENE at load (gfxWarmFx; r128 bakes light count + fog into every program, a temp
+  scene compiles the wrong variant). Shadows every frame on HIGH too (even pacing; cadence only LOW/MEDIUM). gfxpost light-shaft
+  sun position was overwritten by a shared temp vector (fixed). Garbage measured with test/_alloc.js: ~2 KB/frame (not a cause).
+  Pictures: test/_gunshot.js (TAG=before/after).
 - 1.2.115 TEST: owner: "when I look around the textures bug, when I stop it fixes". gfxrt.js RT buffer now reprojects its history
   (prevVP; turning keeps the average, n capped at 5 instead of reset to 0, 2 rays a pixel while moving); bounce light uses a fixed
   noise seed (no crawl). Test _rtmove.js (frame-to-frame change while turning, RT on vs off). Cause not confirmed: asked the owner

@@ -63,7 +63,7 @@ function gpFree() { for (const k of ['lin', 'ao', 'ao2', 'sh', 'sh2', 'ssr', 'do
 function gpTargets() {
   gpFree(); GP.w = POST.w; GP.h = POST.h; const hw = Math.max(2, POST.w >> 1), hh = Math.max(2, POST.h >> 1), qw = Math.max(2, POST.w >> 2), qh = Math.max(2, POST.h >> 2);
   const mk = (w, h, half, near) => { const t = new THREE.WebGLRenderTarget(w, h, { minFilter: near ? THREE.NearestFilter : THREE.LinearFilter, magFilter: near ? THREE.NearestFilter : THREE.LinearFilter, format: THREE.RGBAFormat, depthBuffer: false, stencilBuffer: false, type: half ? THREE.HalfFloatType : THREE.UnsignedByteType }); t.texture.generateMipmaps = false; return t; };
-  GP.lin = mk(hw, hh, true, true); GP.ao = mk(hw, hh); GP.ao2 = mk(hw, hh); GP.sh = mk(qw, qh); GP.sh2 = mk(qw, qh); GP.ssr = mk(hw, hh); GP.dof = mk(hw, hh); GP.mask = mk(qw, qh); GP.mb = mk(POST.w, POST.h);
+  GP.lin = mk(hw, hh, true, true); GP.ao = mk(hw, hh); GP.ao2 = mk(hw, hh); GP.sh = mk(qw, qh); GP.sh2 = mk(qw, qh); GP.ssr = mk(hw, hh); GP.dof = mk(hw, hh); GP.mask = mk(hw, hh); GP.mb = mk(POST.w, POST.h);
   GP.mb.texture.encoding = THREE.sRGBEncoding;
 }
 /* ---------- the shaders */
@@ -117,7 +117,7 @@ function gpMats() {
 }
 // the finishing pass: post.js's look plus the new effects, compiled for the settings in use
 function gpFin(D) {
-  const key = JSON.stringify(D); if (GP.fin && GP.finKey === key) return GP.fin; if (GP.fin) GP.fin.dispose(); GP.finKey = key;
+  const key = JSON.stringify(D); if (GP.fin && GP.finKey === key) return GP.fin; GP.finC = GP.finC || {}; GP.finKey = key; if (GP.finC[key]) return (GP.fin = GP.finC[key]);
   const old = postMats().fin, fs = old.fragmentShader;
   const head = 'uniform sampler2D dep; uniform sampler2D aoT; uniform sampler2D shT; uniform sampler2D ssrT; uniform sampler2D dofT; uniform sampler2D maskT; uniform vec3 shCol; uniform float shK; uniform vec3 fogCol; uniform float fogDen; uniform float fogH0; uniform float fogFall; uniform float hazeK; uniform vec3 camPos; uniform mat3 camRot; uniform float tanY; uniform float asp; uniform float far; uniform float time; uniform float lensK; uniform float caK; uniform float nv; uniform float dmg; uniform float lowhp; uniform vec3 tint; uniform vec3 shTint; uniform float gsat; uniform float adsBlur; uniform float dofK; uniform vec4 shim[4]; uniform float flashK;\n' +
     'float hsh(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }\n';
@@ -129,16 +129,18 @@ function gpFin(D) {
     '#ifdef CA', '  { vec2 d = (vUv - 0.5) * caK * dot(vUv - 0.5, vUv - 0.5) * 2.0; c.r = texture2D(src, min((vUv + d) * sc, sc - px)).r; c.b = texture2D(src, min((vUv - d) * sc, sc - px)).b; }', '#endif',
     '#ifdef ADSBLUR', '  if (adsBlur > 0.01) { float m = texture2D(maskT, vUv).r; if (m > 0.5) { vec3 b = vec3(0.0); for (int i = 0; i < 8; i++) { float a = float(i) * 0.785; b += texture2D(src, uv + vec2(cos(a), sin(a)) * px * 2.5).rgb; } c = mix(c, b / 8.0, adsBlur * m); } }', '#endif',
     '  if (lowhp > 0.01) { vec2 q = vUv - 0.5; float e = smoothstep(0.08, 0.35, dot(q, q)) * lowhp; if (e > 0.01) { vec3 b = vec3(0.0); for (int i = 0; i < 6; i++) { float a = float(i) * 1.047; b += texture2D(src, min(uv + vec2(cos(a), sin(a)) * px * 6.0 * e, sc - px)).rgb; } c = mix(c, b / 6.0, e); } }',
-    '#ifdef DOF', '  { vec4 d = texture2D(dofT, vUv); c = mix(c, d.rgb, smoothstep(0.0, 1.0, d.a) * dofK); }', '#endif',
+    '#ifdef DOF', '  { vec4 d = texture2D(dofT, vUv); c = mix(c, d.rgb, smoothstep(0.0, 1.0, d.a) * dofK * (1.0 - step(0.5, texture2D(maskT, vUv).r))); }', '#endif',
   ].join('\n'));
   body = body.replace('  vec3 l = lin(c);', [
     '  vec3 l = lin(c);',
+    '  vec3 l0 = l; float vmK = 1.0 - smoothstep(0.3, 0.7, texture2D(maskT, vUv).r);',
     '  float zz = texture2D(dep, vUv).r;',
     '#ifdef AO', '  l *= mix(1.0, texture2D(aoT, vUv).r, 1.0 - smoothstep(60.0, 110.0, zz));', '#endif',
     '#ifdef SSR', '  { vec4 r = texture2D(ssrT, vUv); l = mix(l, lin(r.rgb), clamp(r.a, 0.0, 0.85)); }', '#endif',
     '#ifdef FOG', '  if (zz < far * 0.9) { vec2 n2 = vUv * 2.0 - 1.0; vec3 rd = camRot * normalize(vec3(n2.x * tanY * asp, n2.y * tanY, -1.0)); float dist = zz / max(-normalize(vec3(n2.x * tanY * asp, n2.y * tanY, -1.0)).z, 0.1); float wy = camPos.y + rd.y * dist, ha = 0.5 * (camPos.y + wy);',
     '    float f = 1.0 - exp(-dist * fogDen * exp(-max(ha - fogH0, 0.0) * fogFall)); f = clamp(f + smoothstep(110.0, 380.0, dist) * hazeK, 0.0, 0.9); l = mix(l, lin(fogCol), f); }', '#endif',
     '#ifdef SHAFTS', '  l += lin(texture2D(shT, vUv).rgb) * shCol * shK;', '#endif',
+    '  l = mix(l0, l, vmK);',
     '#ifdef LENS', '  if (useBloom > 0.5) { vec3 st = vec3(0.0); for (int i = -4; i <= 4; i++) st += texture2D(bloom, vUv + vec2(float(i) * 0.018, 0.0)).rgb; float dirt = smoothstep(0.55, 0.9, hsh(floor(vUv * vec2(9.0, 6.0)))) * 0.6 + 0.4 * smoothstep(0.3, 0.0, length(fract(vUv * vec2(9.0, 6.0)) - 0.5)); l += st / 9.0 * vec3(0.7, 0.85, 1.2) * 0.35 * lensK + texture2D(bloom, vUv).rgb * dirt * 0.4 * lensK; }', '#endif',
   ].join('\n'));
   body = body.replace('  vec3 ex = max(l - 0.8, 0.0); l = min(l, vec3(0.8)) + ex / (1.0 + ex / 0.25);', [
@@ -157,6 +159,7 @@ function gpFin(D) {
   if (body.split('#ifdef').length < 9) console.warn('gpFin: a post.js line changed, some effects were not added');
   if (GP.moreU) GP.moreU(u);
   GP.fin = new THREE.ShaderMaterial({ uniforms: u, vertexShader: old.vertexShader, fragmentShader: body, defines: D2, depthTest: false, depthWrite: false, toneMapped: false });
+  GP.finC[key] = GP.fin;
   return GP.fin;
 }
 /* ---------- depth: copied right after the world is drawn, before the gun */
@@ -187,7 +190,7 @@ postFrame = function (draw) {
   // the original pipeline, but its final pass is swapped for ours
   const Mo = postMats(), oldFin = Mo.fin, ao = S.ao && S.ao !== 'off', mbl = S.mblur && S.mblur !== 'off', photo = G.state === 'photo';
   const ads = S.dof && G.state === 'playing' && (G.ads || 0) > 0.6 && !G.scoped;
-  const D = { AO: dep && ao, SHAFTS: dep && S.shafts, SSR: dep && S.ssr, FOG: dep && S.hfog, DOF: dep && S.dof && (GP.menuDof > 0.02 || photo), ADSBLUR: dep && ads, LENS: S.lensFx && S.post && S.post !== 'off', CA: S.chroma, FILMIC: S.tone === 'filmic', SHIMMER: typeof GA !== 'undefined' && GA.shim.some(h => h.w > 0) };
+  const D = { AO: dep && ao, SHAFTS: dep && S.shafts, SSR: dep && S.ssr, FOG: dep && S.hfog, DOF: dep && S.dof, ADSBLUR: dep && S.dof, LENS: S.lensFx && S.post && S.post !== 'off', CA: S.chroma, FILMIC: S.tone === 'filmic', SHIMMER: typeof GA !== 'undefined' };
   if (GP.moreD) Object.assign(D, GP.moreD(dep));
   const fin = gpFin(D); Mo.fin = fin; POST.quad.material = fin;
   if (dep) GP.capture = true;
@@ -200,16 +203,17 @@ postFrame = function (draw) {
   cam.updateMatrixWorld(); f.camPos.value.setFromMatrixPosition(cam.matrixWorld); f.camRot.value.setFromMatrix4(cam.matrixWorld);
   const lib = m => { m.uniforms.dep.value = GP.lin.texture; m.uniforms.px.value.set(1 / GP.lin.width, 1 / GP.lin.height); m.uniforms.tanY.value = tanY; m.uniforms.asp.value = asp; };
   // gun mask (for the aiming blur and to keep the gun out of motion blur)
-  if (dep && (ads || mbl) && typeof vmScene !== 'undefined' && viewmodel && viewmodel.visible) { const om = vmScene.overrideMaterial, cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha(); vmScene.overrideMaterial = M.white; renderer.setRenderTarget(GP.mask); renderer.setClearColor(0x000000, 1); renderer.clear(); _gpRender(vmScene, vmCamera); vmScene.overrideMaterial = om; renderer.setClearColor(cc, ca); }
+  if (dep && typeof vmScene !== 'undefined' && viewmodel && viewmodel.visible) { const om = vmScene.overrideMaterial, cc = renderer.getClearColor(GP.cc || (GP.cc = new THREE.Color())), ca = renderer.getClearAlpha(); vmScene.overrideMaterial = M.white; renderer.setRenderTarget(GP.mask); renderer.setClearColor(0x000000, 1); renderer.clear(); _gpRender(vmScene, vmCamera); vmScene.overrideMaterial = om; renderer.setClearColor(cc, ca); }
   else if (dep && GP.mask) { renderer.setRenderTarget(GP.mask); renderer.setClearColor(0x000000, 1); renderer.clear(); }
   if (D.AO) { lib(M.ao); M.ao.uniforms.far.value = cam.far; M.ao.uniforms.k.value = S.ao === 'high' ? 1.0 : 0.75; const want = S.ao === 'high' ? 14 : 8; if (M.ao.defines.SAMPLES !== want) { M.ao.defines.SAMPLES = want; M.ao.needsUpdate = true; } postPass(M.ao, GP.ao);
     const b = M.blur.uniforms; b.dep.value = GP.lin.texture; b.src.value = GP.ao.texture; b.dir.value.set(1 / GP.ao.width, 0); postPass(M.blur, GP.ao2); b.src.value = GP.ao2.texture; b.dir.value.set(0, 1 / GP.ao.height); postPass(M.blur, GP.ao); f.aoT.value = GP.ao.texture; }
-  if (D.SHAFTS) { const sp = _v3a.copy(SUN_POS).normalize().multiplyScalar(400).add(cam.position).project(cam), face = cam.getWorldDirection(new THREE.Vector3()).dot(_v3a.copy(SUN_POS).normalize());
-    if (face > 0.15 && sp.z < 1) { const su = new THREE.Vector2(sp.x * 0.5 + 0.5, sp.y * 0.5 + 0.5); const a = M.shm.uniforms; a.src.value = POST.rt.texture; a.dep.value = GP.lin.texture; a.sc.value.set(sx, sy); a.sun.value.copy(su); a.far.value = cam.far; a.asp.value = asp; postPass(M.shm, GP.sh);
+  if (D.SHAFTS) { const sp = _v3a.copy(SUN_POS).normalize().multiplyScalar(400).add(cam.position).project(cam), face = cam.getWorldDirection(GP.fw || (GP.fw = new THREE.Vector3())).dot((GP.sd || (GP.sd = new THREE.Vector3())).copy(SUN_POS).normalize());
+    if (face > 0.15 && sp.z < 1) { const su = (GP.su || (GP.su = new THREE.Vector2())).set(sp.x * 0.5 + 0.5, sp.y * 0.5 + 0.5); const a = M.shm.uniforms; a.src.value = POST.rt.texture; a.dep.value = GP.lin.texture; a.sc.value.set(sx, sy); a.sun.value.copy(su); a.far.value = cam.far; a.asp.value = asp; postPass(M.shm, GP.sh);
       const b = M.shr.uniforms; b.src.value = GP.sh.texture; b.sun.value.copy(su); postPass(M.shr, GP.sh2); f.shT.value = GP.sh2.texture; f.shK.value = 0.55 * Math.min(1, (face - 0.15) * 2); f.shCol.value.copy(skyMat.uniforms.sunCol.value); }
     else { f.shK.value = 0; f.shT.value = GP.sh2.texture; } }
   if (D.SSR) { lib(M.ssr); const s = M.ssr.uniforms; s.src.value = POST.rt.texture; s.sc.value.set(sx, sy); s.camRot.value.setFromMatrix4(cam.matrixWorld); s.k.value = 0.12 + 0.5 * GP.wet; s.far.value = cam.far; postPass(M.ssr, GP.ssr); f.ssrT.value = GP.ssr.texture; }
-  if (D.DOF) { const d = M.dof.uniforms; d.src.value = POST.rt.texture; d.dep.value = GP.lin.texture; d.sc.value.set(sx, sy); d.px.value.set(1 / GP.dof.width, 1 / GP.dof.height);
+  if (!(D.DOF && (GP.menuDof > 0.02 || photo))) f.dofK.value = 0;
+  else { const d = M.dof.uniforms; d.src.value = POST.rt.texture; d.dep.value = GP.lin.texture; d.sc.value.set(sx, sy); d.px.value.set(1 / GP.dof.width, 1 / GP.dof.height);
     if (photo) { d.focus.value = typeof PHOTO !== 'undefined' && PHOTO.focus ? PHOTO.focus : 8; d.range.value = typeof PHOTO !== 'undefined' && PHOTO.range ? PHOTO.range : 12; d.allb.value = 0; d.maxR.value = 7; f.dofK.value = typeof PHOTO !== 'undefined' && PHOTO.dofOff ? 0 : 1; }
     else { d.allb.value = 1; d.maxR.value = 5; f.dofK.value = GP.menuDof; }
     postPass(M.dof, GP.dof); f.dofT.value = GP.dof.texture; }

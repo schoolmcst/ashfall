@@ -44,14 +44,14 @@ function gxCasingTick(dt) { for (const c of casings) { if (!c.on) continue; if (
 const _gxBoom = explosionFx;
 explosionFx = function (p, power) {
   const r = _gxBoom.apply(this, arguments); if (!gxOn()) return r;
-  try { const y = p.y < 1.4 ? (TERR.on ? TH(p.x, p.z) : 0) + 0.05 : p.y; const g = new THREE.Mesh(new THREE.RingGeometry(0.6, 1.0, 40), new THREE.MeshBasicMaterial({ color: 0xffe8c0, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false })); g.rotation.x = -Math.PI / 2; g.position.set(p.x, y, p.z); scene.add(g); GX.rings.push({ m: g, t: 0 });
+  try { const y = p.y < 1.4 ? (TERR.on ? TH(p.x, p.z) : 0) + 0.05 : p.y; const g = (GX.ringPool = GX.ringPool || []).pop() || new THREE.Mesh(GX.ringGeo || (GX.ringGeo = new THREE.RingGeometry(0.6, 1.0, 40)), new THREE.MeshBasicMaterial({ color: 0xffe8c0, transparent: true, opacity: 0.6, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending, toneMapped: false })); g.material.opacity = 0.6; g.scale.setScalar(1); g.rotation.x = -Math.PI / 2; g.position.set(p.x, y, p.z); scene.add(g); GX.rings.push({ m: g, t: 0 });
     for (let i = 0; i < 12; i++) { const a = i / 12 * TAU; puff(p.x + Math.cos(a) * 1.2, y + 0.2, p.z + Math.sin(a) * 1.2, { color: 0x8a7a64, size: 0.9, grow: 2.6, life: 1.6, vx: Math.cos(a) * 5, vz: Math.sin(a) * 5, vy: 0.3, op: 0.5 }); }
     for (let i = 0; i < 4; i++) puff(p.x + rnd(-1, 1), y + 1 + i * 0.6, p.z + rnd(-1, 1), { color: 0x2a2826, size: 2.2, grow: 3, life: 5 + i, vy: 0.5 + i * 0.2, vx: 0.3, op: 0.42 });
     chunks('wood', p, 8, 7, 1.2); chunks('metal', p, 6, 8, 1.1);
     const d = Math.hypot(p.x - P.x, p.z - P.z); if (S.shakeFx && d < 14 && G.state === 'playing') { const k = 1 - d / 14; G.shake = Math.max(G.shake || 0, 0.05 * k); GX.blast = Math.max(GX.blast, k); } } catch (e) {}
   return r;
 };
-function gxRingTick(dt) { for (let i = GX.rings.length - 1; i >= 0; i--) { const q = GX.rings[i]; q.t += dt; const k = q.t / 0.45; q.m.scale.setScalar(1 + k * 9); q.m.material.opacity = 0.6 * Math.max(0, 1 - k); if (k >= 1) { scene.remove(q.m); q.m.geometry.dispose(); q.m.material.dispose(); GX.rings.splice(i, 1); } } GX.blast = Math.max(0, GX.blast - dt * 2.5); }
+function gxRingTick(dt) { for (let i = GX.rings.length - 1; i >= 0; i--) { const q = GX.rings[i]; q.t += dt; const k = q.t / 0.45; q.m.scale.setScalar(1 + k * 9); q.m.material.opacity = 0.6 * Math.max(0, 1 - k); if (k >= 1) { scene.remove(q.m); GX.ringPool.push(q.m); GX.rings.splice(i, 1); } } GX.blast = Math.max(0, GX.blast - dt * 2.5); }
 /* ---------- 35 fire smoke and embers */
 function gxFireTick(dt) { if (!gxOn() || typeof BRFG === 'undefined') return; for (const f of BRFG.fires || []) { if ((f.gxT = (f.gxT || 0) - dt) > 0) continue; f.gxT = 0.25; const x = f.x + rnd(-1, 1) * (f.R || 2) * 0.5, z = f.z + rnd(-1, 1) * (f.R || 2) * 0.5, y = (f.y || 0) + 0.4; puff(x, y + 0.6, z, { color: 0x302c2a, size: 0.8, grow: 2.6, life: 3, vy: 1.6, vx: 0.4, op: 0.35, minor: 1 }); puff(x, y, z, { fire: 1, size: 0.6, grow: -0.1, life: 0.45, vy: 1.2, op: 0.85, minor: 1 }); if (Math.random() < 0.5) chunks('spark', new THREE.Vector3(x, y + 0.3, z), 2, 1.5, 1.2, 2); } }
 /* ---------- 37 footprints */

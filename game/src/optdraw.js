@@ -13,7 +13,7 @@
    O14 decals were already pooled (70) and now fade (gfxfx.js). O16: shadows already follow you within SHADOW DISTANCE.
    O15 HORDE BASES: finished base pieces are merged by material (one draw per material); a piece that gets hit, edited
        or removed comes back out of the merge until things settle.
-   O17 SHADOWS are redrawn every 2nd frame on MEDIUM and HIGH (every frame on ULTRA).
+   O17 SHADOWS are redrawn every 2nd frame on LOW and MEDIUM (every frame on HIGH and up: even frame times, 1.2.116).
    O18 a separate static shadow cache isn't possible with this renderer's shadows; O17 covers most of the saving.
    O19 MAP LAMPS: maps with more than 8 lamps keep 6 real lights, moved to the lamps nearest you (every light costs
        every lit pixel on screen). The lamps' glowing bulbs stay.
@@ -112,7 +112,7 @@ function odLampTick(force) {
   OD.lampPool.forEach((l, i) => { const q = near[i] && near[i][0]; if (!q) { l.intensity = 0; return; } l.position.set(q.x, q.y, q.z); l.color.copy(q.col); l.distance = q.d; l.intensity = q.l.intensity !== undefined ? q.l.intensity : q.i; });
 }
 /* ---------- O17: shadows every 2nd frame below ULTRA */
-function odShadowTick() { const every = /^(ultra|ultraplus)$/.test(qKey()) ? 1 : 2; OD.frame++; renderer.shadowMap.autoUpdate = every === 1 || (OD.frame % every === 0) || G.state !== 'playing'; if (!renderer.shadowMap.autoUpdate) renderer.shadowMap.needsUpdate = false; }
+function odShadowTick() { const every = /^(high|ultra|ultraplus)$/.test(qKey()) ? 1 : 2; OD.frame++; renderer.shadowMap.autoUpdate = every === 1 || (OD.frame % every === 0) || G.state !== 'playing'; if (!renderer.shadowMap.autoUpdate) renderer.shadowMap.needsUpdate = false; }
 /* ---------- hooks */
 const _odLoad = loadMap;
 loadMap = function () { OD.lamps = []; for (const im of OD.inst) { if (im.parent) im.parent.remove(im); } OD.inst = []; const r = _odLoad.apply(this, arguments); if (r !== false) try { odScan(); odLampSetup(); odGrass(); OD.hhGroups = []; } catch (e) { reportError(e); } return r; };
