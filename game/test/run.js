@@ -9,6 +9,7 @@ const fs = require('fs'), path = require('path');
   const p = await b.newPage({ viewport: { width: 1280, height: 720 } });
   const errs = [];
   if (!process.env.INTRO) await p.addInitScript(() => { window.BR_SKIPINTRO = 1; });   // LAST TOKE warm-up and bong intro off unless INTRO=1
+  if (process.env.NSETS) await p.addInitScript(s => { window.NSETS = s; }, process.env.NSETS);
   if (process.env.NOREALTEX) await p.addInitScript(() => { window.NO_REALTEX = 1; });
   if (process.env.NCS) await p.addInitScript(v => { window.NCS = v; }, process.env.NCS);
   if (process.env.NAVT) await p.addInitScript(v => { window.NAVT = JSON.parse(v); }, process.env.NAVT);

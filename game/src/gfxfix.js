@@ -45,3 +45,11 @@ const _gfSwitch = switchWeapon;
 switchWeapon = function () { const r = _gfSwitch.apply(this, arguments); try { gmPatchGun(); } catch (e) {} return r; };
 const _gfLoad = loadMap;
 loadMap = function () { const r = _gfLoad.apply(this, arguments); if (r !== false) { gfxWarmGun(); gfxWarmFx(); } return r; };
+/* ---------- 1.2.117: "small black lines, like film grain, with FILM GRAIN off" (measured with test/_noise.js)
+   The UPSCALER (on by default in ULTRA+) left a fine checker pattern from scaling 77% up, and its sharpening stacked with the
+   normal sharpen pass, so edges got dark halos; CHROMATIC ABERRATION (also ULTRA+) added colour fringes on every edge.
+   ULTRA+ now has both off (switched off once for ULTRA+ players); the upscaler sharpens far less and the normal sharpen pass is
+   skipped while it is on. */
+if (typeof GP_PRESET !== 'undefined' && GP_PRESET.ultraplus) Object.assign(GP_PRESET.ultraplus, { chroma: false, upscale: 'off' });
+try { if (!S.fix117) { S.fix117 = 1; if (qKey() === 'ultraplus') { S.chroma = false; if (S.upscale === 'quality') S.upscale = 'off'; } saveSettings(); } } catch (e) {}
+{ const _gfFinal = GP.onFinal; GP.onFinal = f => { if (_gfFinal) _gfFinal(f); if (S.upscale && S.upscale !== 'off' && f.sharp) f.sharp.value = 0; }; }

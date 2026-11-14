@@ -152,6 +152,14 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.117 TEST (owner: "small black lines, like film grain, but grain is off"). test/_noise.js (fine-noise score + crops, one
+  effect off at a time; NSETS env = JSON of setting sets, MAPS, VIEWI) found it: ULTRA+ had the UPSCALER on (QUALITY 77%: a
+  checker pattern from the scale, CAS sharpening stacked on the normal sharpen = dark edge halos) and CHROMATIC ABERRATION on
+  (colour fringes on edges). gfxfix.js: ULTRA+ now has upscale 'off' and chroma false (switched once for ULTRA+ players,
+  S.fix117); GP.onFinal wrapper sets sharp 0 while the upscaler is on; gfxrt.js casK 0.15/0.3/0.45 (was 0.5/0.75/1).
+  TEST NOTE: window.__A.applyPreset is the core.js original (ui.js builds __A before gfxpost/gfxlight/gfxchar wrap it), so
+  it does NOT apply the effect presets: use __A.applyPresetL(k). Earlier picture tests that called applyPreset('ultraplus')
+  really ran MEDIUM-like effects.
 - 1.2.116 PUBLIC (owner said send it; includes 1.2.114 + 1.2.115) (owner: textures glitch while looking around; guns look see-through; gun too bright, camo glows; stuttering).
   gfxfix.js (loaded before gfxperf): ULTRA+ had MOTION BLUR 'low' (smears while turning) -> off in GP_PRESET.ultraplus and once
   for ULTRA+ players (S.fix116). Gun: vmSun 1.2 (was 1.6), gun materials envMapIntensity x0.6 (userData.gfEnv, via a

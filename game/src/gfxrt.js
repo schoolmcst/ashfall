@@ -14,8 +14,8 @@
      bounce light) until the picture settles; SAVE takes the finished picture. */
 const GR = { photo: false, n: 0, grid: null, dirty: true, accA: null, accB: null, gi: null, gi2: null, rtNew: null, mats: null, lastCam: new THREE.Matrix4(), still: 0, frame: 0 };
 const GR_UPS = { off: 1, quality: 0.77, balanced: 0.67, performance: 0.5 };
-for (const [k, v] of Object.entries({ upscale: 'off', ssgi: false, rtShadows: false })) if (S[k] === undefined) S[k] = /^(ultraplus)$/.test(qKey()) ? (k === 'upscale' ? 'quality' : true) : k === 'ssgi' && qKey() === 'ultra' ? true : v;
-if (typeof GP_PRESET !== 'undefined') { const P2 = { lowplus: ['performance', false, false], low: ['off', false, false], medium: ['off', false, false], high: ['off', false, false], ultra: ['off', true, false], ultraplus: ['quality', true, true] }; for (const k in P2) if (GP_PRESET[k]) Object.assign(GP_PRESET[k], { upscale: P2[k][0], ssgi: P2[k][1], rtShadows: P2[k][2] }); }
+for (const [k, v] of Object.entries({ upscale: 'off', ssgi: false, rtShadows: false })) if (S[k] === undefined) S[k] = /^(ultraplus)$/.test(qKey()) ? (k === 'upscale' ? 'off' : true) : k === 'ssgi' && qKey() === 'ultra' ? true : v;
+if (typeof GP_PRESET !== 'undefined') { const P2 = { lowplus: ['performance', false, false], low: ['off', false, false], medium: ['off', false, false], high: ['off', false, false], ultra: ['off', true, false], ultraplus: ['off', true, true] }; for (const k in P2) if (GP_PRESET[k]) Object.assign(GP_PRESET[k], { upscale: P2[k][0], ssgi: P2[k][1], rtShadows: P2[k][2] }); }
 (() => { try { const V = SCHEMA.VIDEO, at = V.findIndex(it => it.k === 'ao'); const add = [
   { k: 'upscale', t: 'seg', name: 'UPSCALER', hint: 'Draws the world smaller and sharpens it back up (like FSR): more FPS. HUD stays sharp', opts: [['off', 'OFF'], ['quality', 'QUALITY'], ['balanced', 'BALANCED'], ['performance', 'PERFORMANCE']] },
   { k: 'ssgi', t: 'toggle', name: 'BOUNCE LIGHT', hint: 'Light bounces off nearby surfaces (screen-space global illumination)' },
@@ -112,7 +112,7 @@ GP.morePasses = (f, X) => {
     r.camW.value.copy(cam.matrixWorld); r.camRot.value.setFromMatrix4(cam.matrixWorld); r.sunDir.value.copy(SUN_POS).normalize(); r.seed.value = Math.random() * 100; r.spp.value = GR.photo ? 4 : moved ? 2 : 1; r.soft.value = GR.photo ? 0.06 : 0.035;
     r.prev.value = GR.accA.texture; r.blend.value = 1 / GR.n; r.prevVP.value.copy(GR.prevVP); postPass(R.rt, GR.accB); GR.prevVP.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); const t = GR.accA; GR.accA = GR.accB; GR.accB = t;
     f.rtT.value = GR.accA.texture; f.rtSun.value = GR.photo ? 1.0 : 0.55; f.rtSky.value = GR.photo ? 0.9 : 0.6; f.rtAll.value = GR.photo ? 1 : 0; f.shFar.value = S.shadowDist || 100; }
-  f.casK.value = S.upscale === 'performance' ? 1 : S.upscale === 'balanced' ? 0.75 : 0.5;
+  f.casK.value = S.upscale === 'performance' ? 0.45 : S.upscale === 'balanced' ? 0.3 : 0.15;
 };
 // the box scene changes with the map, HORDE building and broken cover
 const _grLoad = loadMap; loadMap = function () { const r = _grLoad.apply(this, arguments); GR.dirty = true; return r; };
