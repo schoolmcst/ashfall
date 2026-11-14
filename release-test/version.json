@@ -1,8 +1,11 @@
 {
- "version": "1.2.115",
+ "version": "1.2.116",
  "notes": [
-  "FIX: ray-traced shadows and bounce light no longer go grainy while you look around"
+  "FIX: textures no longer smear when you look around (motion blur is off on ULTRA+; you can still turn it on)",
+  "FIX: guns no longer look see-through (fog, shading and reflections are kept off the gun)",
+  "FIX: softer light on your gun, and glowing camos glow about a third as much",
+  "PERFORMANCE: no more hitches from shaders building mid-fight (aiming, scopes, swapping guns, grenades); shadows redraw every frame on HIGH for smoother frame pacing"
  ],
- "sha256": "4648e8e3f18703874074bad3ee286da6ffcc9cab80f273534cac2300a0667c72",
+ "sha256": "7fc70ceb71a0d0eab4d2b5f53c5aaf1fd5a46ff13b44f27eb4af70ff69a290ee",
  "minApp": "1.0.0"
 }
