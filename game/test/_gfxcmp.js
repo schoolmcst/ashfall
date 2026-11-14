@@ -4,7 +4,7 @@ module.exports = async p => {
   const out = process.env.SHOTS || '/tmp', res = {}, ids = (process.env.MAPS || 'docks,funfair,town_night').split(','), sets = (process.env.SETS || 'old,new').split(',');
   await p.evaluate(() => { for (const o of document.querySelectorAll('.onb-ov,#hcSplash,.app-notes')) o.remove(); window.__A.G.noRender = true; });
   const CFG = { old: { post: 'high', ao: 'off', shafts: false, ssr: false, hfog: false, dof: false, mblur: 'off', lensFx: false, chroma: false, tone: 'classic' },
-    new: { post: 'high', ao: 'high', shafts: true, ssr: true, hfog: true, dof: false, mblur: 'off', lensFx: true, chroma: false, tone: 'filmic' },
+    new: { post: 'high', ao: 'high', shafts: true, ssr: true, hfog: true, dof: false, mblur: 'off', lensFx: true, chroma: false, tone: 'filmic', dynLights: true },
     ao: { post: 'high', ao: 'high', shafts: false, ssr: false, hfog: false, dof: false, mblur: 'off', lensFx: false, chroma: false, tone: 'classic' } };
   for (const id of ids) {
     const r = await p.evaluate(([id, sets, CFG, process_sky, rain]) => { const A = window.__A; try { (A.loadMapL || A.loadMap)(id); A.S.dynLights = true; for (let i = 0; i < 3; i++) A.tickL(0.016); } catch (e) { return { err: String(e) }; }

@@ -142,7 +142,7 @@ function gpFin(D) {
     '#ifdef LENS', '  if (useBloom > 0.5) { vec3 st = vec3(0.0); for (int i = -4; i <= 4; i++) st += texture2D(bloom, vUv + vec2(float(i) * 0.018, 0.0)).rgb; float dirt = smoothstep(0.55, 0.9, hsh(floor(vUv * vec2(9.0, 6.0)))) * 0.6 + 0.4 * smoothstep(0.3, 0.0, length(fract(vUv * vec2(9.0, 6.0)) - 0.5)); l += st / 9.0 * vec3(0.7, 0.85, 1.2) * 0.35 * lensK + texture2D(bloom, vUv).rgb * dirt * 0.4 * lensK; }', '#endif',
   ].join('\n'));
   body = body.replace('  vec3 ex = max(l - 0.8, 0.0); l = min(l, vec3(0.8)) + ex / (1.0 + ex / 0.25);', [
-    '#ifdef FILMIC', '  l = l * l / (l + 0.015); l = l / (1.0 + l * 0.22) * 1.2; vec3 ex = max(l - 0.9, 0.0); l = min(l, vec3(0.9)) + ex / (1.0 + ex / 0.2);', '#else', '  vec3 ex = max(l - 0.8, 0.0); l = min(l, vec3(0.8)) + ex / (1.0 + ex / 0.25);', '#endif',
+    '#ifdef FILMIC', '  l = l / (1.0 + l * 0.22) * 1.2; vec3 ex = max(l - 0.9, 0.0); l = min(l, vec3(0.9)) + ex / (1.0 + ex / 0.2);', '#else', '  vec3 ex = max(l - 0.8, 0.0); l = min(l, vec3(0.8)) + ex / (1.0 + ex / 0.25);', '#endif',
   ].join('\n'));
   body = body.replace('  vec2 q = vUv - 0.5; c *= 1.0 - vig * smoothstep(0.25, 0.85, dot(q, q) * 2.2);', [
     '  c *= tint; c += shTint * (1.0 - smoothstep(0.0, 0.45, y)); c = mix(vec3(luma(c)), c, gsat);',
@@ -199,7 +199,7 @@ postFrame = function (draw) {
   // gun mask (for the aiming blur and to keep the gun out of motion blur)
   if (dep && (ads || mbl) && typeof vmScene !== 'undefined' && viewmodel && viewmodel.visible) { const om = vmScene.overrideMaterial, cc = renderer.getClearColor(new THREE.Color()), ca = renderer.getClearAlpha(); vmScene.overrideMaterial = M.white; renderer.setRenderTarget(GP.mask); renderer.setClearColor(0x000000, 1); renderer.clear(); _gpRender(vmScene, vmCamera); vmScene.overrideMaterial = om; renderer.setClearColor(cc, ca); }
   else if (dep && GP.mask) { renderer.setRenderTarget(GP.mask); renderer.setClearColor(0x000000, 1); renderer.clear(); }
-  if (D.AO) { lib(M.ao); M.ao.uniforms.far.value = cam.far; M.ao.uniforms.k.value = S.ao === 'high' ? 1.25 : 0.9; const want = S.ao === 'high' ? 14 : 8; if (M.ao.defines.SAMPLES !== want) { M.ao.defines.SAMPLES = want; M.ao.needsUpdate = true; } postPass(M.ao, GP.ao);
+  if (D.AO) { lib(M.ao); M.ao.uniforms.far.value = cam.far; M.ao.uniforms.k.value = S.ao === 'high' ? 1.0 : 0.75; const want = S.ao === 'high' ? 14 : 8; if (M.ao.defines.SAMPLES !== want) { M.ao.defines.SAMPLES = want; M.ao.needsUpdate = true; } postPass(M.ao, GP.ao);
     const b = M.blur.uniforms; b.dep.value = GP.lin.texture; b.src.value = GP.ao.texture; b.dir.value.set(1 / GP.ao.width, 0); postPass(M.blur, GP.ao2); b.src.value = GP.ao2.texture; b.dir.value.set(0, 1 / GP.ao.height); postPass(M.blur, GP.ao); f.aoT.value = GP.ao.texture; }
   if (D.SHAFTS) { const sp = _v3a.copy(SUN_POS).normalize().multiplyScalar(400).add(cam.position).project(cam), face = cam.getWorldDirection(new THREE.Vector3()).dot(_v3a.copy(SUN_POS).normalize());
     if (face > 0.15 && sp.z < 1) { const su = new THREE.Vector2(sp.x * 0.5 + 0.5, sp.y * 0.5 + 0.5); const a = M.shm.uniforms; a.src.value = POST.rt.texture; a.dep.value = GP.lin.texture; a.sc.value.set(sx, sy); a.sun.value.copy(su); a.far.value = cam.far; a.asp.value = asp; postPass(M.shm, GP.sh);
