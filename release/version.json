@@ -1,11 +1,9 @@
 {
- "version": "1.2.116",
+ "version": "1.2.117",
  "notes": [
-  "FIX: textures no longer smear when you look around (motion blur is off on ULTRA+; you can still turn it on)",
-  "FIX: guns no longer look see-through (fog, shading and reflections are kept off the gun)",
-  "FIX: softer light on your gun, and glowing camos glow about a third as much",
-  "PERFORMANCE: no more hitches from shaders building mid-fight (aiming, scopes, swapping guns, grenades); shadows redraw every frame on HIGH for smoother frame pacing"
+  "FIX: no more fine grain and thin dark lines on ULTRA+ (the upscaler and chromatic aberration were on there; both are off now and still in Settings > Video)",
+  "The upscaler sharpens much more gently when you turn it on"
  ],
- "sha256": "7fc70ceb71a0d0eab4d2b5f53c5aaf1fd5a46ff13b44f27eb4af70ff69a290ee",
+ "sha256": "8fee4c738fc249dbe1ca0daa5feb87f279c21b88cd72581725cce4ed7436b422",
  "minApp": "1.0.0"
 }

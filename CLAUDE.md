@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.117 TEST (owner: "small black lines, like film grain, but grain is off"). test/_noise.js (fine-noise score + crops, one
+- 1.2.117 PUBLIC (owner said send it) (owner: "small black lines, like film grain, but grain is off"). test/_noise.js (fine-noise score + crops, one
   effect off at a time; NSETS env = JSON of setting sets, MAPS, VIEWI) found it: ULTRA+ had the UPSCALER on (QUALITY 77%: a
   checker pattern from the scale, CAS sharpening stacked on the normal sharpen = dark edge halos) and CHROMATIC ABERRATION on
   (colour fringes on edges). gfxfix.js: ULTRA+ now has upscale 'off' and chroma false (switched once for ULTRA+ players,
