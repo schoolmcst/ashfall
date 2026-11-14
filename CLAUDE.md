@@ -152,6 +152,43 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.113 TEST (owner: "60 graphics things + 60 ways to optimize" -> "do it all and show pics"). Files load at the end of
+  build.sh: gfxpost, gfxlight, gfxmat, gfxatmo, gfxfx, gfxchar, optdraw, optmore, gfxperf (gfxperf last: its renderer.render /
+  tick / renderFrame timing wrappers are outermost).
+  gfxperf.js O1-O5: BENCHMARK TOUR (pfbTour: BENCHX.map + BENCH_DUR in bench.js, 3 maps x 12 s, SCORE = (avg*0.6 + 1%low*0.4)*100,
+  history ashfall.bench.v1, action 'perf-tour'), frame breakdown PF {logic, scene, shadow (renderer.shadowMap.render wrapped), vm,
+  post, gpu}, renderer.info.autoReset = false and reset once per renderFrame (the counts were only the last pass before), GPU
+  time from EXT_disjoint_timer_query_webgl2, AUTO steps the preset down after 40 s under 40 FPS (S.autoTier/autoGpu/autoSteps).
+  gfxpost.js (A1-3, A10, B12, C21, C27, E45, F51-60): postTargets wrapper gives POST.rt a DepthTexture (no MSAA, FXAA instead)
+  when a depth effect is on (GP_DEPTH); renderer.render wrapper copies depth to GP.lin (linear metres, half size, half float)
+  right after the world and before the gun; passes AO (+contact), shafts (quarter), SSR, DOF (menus/photo; ADS gun blur via a
+  vm mask), motion blur (full size, camW/prevVP); gpFin builds the final shader from post.js's fin with string replaces and
+  #defines per setting (AO SHAFTS SSR FOG DOF ADSBLUR LENS CA FILMIC SHIMMER). New settings ao/shafts/ssr/hfog/dof/mblur/lensFx/
+  chroma/tone (GP_PRESET per tier), presets ULTRA+ ('ultraplus') and LOW+ ('lowplus', optmore). GP_GRADE per-map tint.
+  Night vision when scoped on night maps, damage edges, low-health blur, flashK (lightning), shim[4] (heat shimmer).
+  gfxlight.js: sky shader adds stars/moon/low-sun (skyMat uniforms night/moonDir/low set in an applyEnv wrapper), night lamp
+  flicker/broken (lampLight wrapper GL.lamps), neon spill (batchAdd wrapper records emissive spots; 3 pooled PointLights,
+  DYNAMIC LIGHTS setting), indoor light (roof test via groundAt above the camera; scales hemi + exposure, never replaces).
+  gfxmat.js: gmPatch on MAT (detail, cavity on brick/stone, wet + puddles + settling snow gated by a roof height map GM.roof
+  built per map from groundAt), gun wear + fight grime (VM materials), glass, reflection map with ground + horizon, grime decals
+  (merged, gmMerge), screens. gfxatmo.js: rain splashes (instanced), lens drops canvas, smoke extra/lit puffs, dust motes, cloth
+  wind (MAT keys festBanner/awning/cloth...), paper, heat shimmer sources, lightning; GA.forceWx overrides ambPick (tests).
+  gfxfx.js: muzzle smoke, more impacts by material, casings roll, explosion ring/dust/smoke + shake (S.shakeFx), fire smoke,
+  decals shrink after 25 s, footprints (instanced), tracer glow + trails, additive effects toneMapped=false.
+  gfxchar.js: soldier shader (skin/cloth/gear by colour) + rim, idle sway, scarf tail + eyes + head turn (HIGH+), live scope
+  glass (S.scopePip renders the scene into VM.lens's emissiveMap), zombie skin + eyes, footstep dust/splash.
+  KNOWN: muzzle light (fx.js), reload hands (game1.js), breathing (animEnemy), mipmaps, decal pooling, GPU choice were already there.
+  Tests: s_gfx1 (counters/breakdown/tour), s_gfx3 (weather in a match), s_gfx4 (bots/effects), _gfxcmp.js (SETS=old,new,ao
+  MAPS=.. SKY=1 RAIN=1 pictures), _optbench.js (fixed views: draws/tris/CPU ms per map + logic ms per tick).
+  1.2.113 also has the optimisations: optdraw.js: flushBatches wrapper chunks heavy batches (>20k tris) into 80 m squares on maps
+  wider than 150 m; odScan after a load: auto-instances identical small loose meshes (r < 1 m, 4+, no name/userData) and
+  size-culls the rest; far-soldier detail + every-3rd-frame animation; grass shader shrinks far blades; particles (spritePool
+  sprites and chunkPools meshes) drawn through 2 + 7 InstancedMeshes (originals hidden each frame); HORDE base pieces merged
+  by material when settled (OD.hhGroups); shadows every 2nd frame below ULTRA; map lamps > 8 pooled to 6 nearest real lights;
+  OD.lt = load-time breakdown per step. optmore.js: see its header (LOW/MEDIUM lite patches, renderer.compile at load,
+  mediump passes, sharpen by resolution, no AO/SSR while scoped, decal texture cache, MEMORY info row, 32-voice sound cap,
+  off-screen animation skip, unfocused-window frame cap, slow-part hints, LOW+). Terrain tiling was tried and removed (more
+  draws, no saving: STASH ISLAND's triangles are terrain 97k + tree canopies 83k + grass 38k).
 - 1.2.112 PUBLIC (owner said send it) (batch D = 29-36, the last of the owner's G/F/E/D picks): hhmis3.js + map_funfair.js. horde.js hhRun/hhHunt now
   read sets HH_RUNK / HH_HUNTK (stealth joins RUNK, escort HUNTK). New kinds: escort (H.svan drives on its own toField,
   stops while a burnout is within 3.2 m, mobs e.obj = van), twin (H.plant2 with its own field; hhMob wrapper sends half

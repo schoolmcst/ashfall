@@ -219,5 +219,6 @@ postFrame = function (draw) {
   if (dep && mbl) { const m = M.mb.uniforms; m.src.value = POST.rt.texture; m.dep.value = GP.lin.texture; m.mask.value = GP.mask.texture; m.sc.value.set(sx, sy); _m4a.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); GP.vp.copy(_m4a); m.camW.value.copy(cam.matrixWorld); m.tanY.value = tanY; m.asp.value = asp; m.prevVP.value.copy(GP.hasPrev ? GP.prevVP : _m4a); GP.hasPrev = true; m.k.value = (S.mblur === 'high' ? 1.0 : 0.5) * Math.min(1, 1 / 60 / Math.max(dt, 1 / 240));
     postPass(M.mb, GP.mb); GP.prevVP.copy(_m4a); src = GP.mb.texture; f.sc.value.set(1, 1); }
   f.src.value = src;
+  try { if (GP.onFinal) GP.onFinal(f); } catch (e) {}
   if (finalOut) postPass(fin, null);
 };

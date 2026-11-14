@@ -47,7 +47,7 @@ loadMap = function (id) {
   glScanNeon(); return r;
 };
 function glLampTick(dt) {
-  for (const L of GL.lamps) { if (!L.kind || !L.l.parent) continue; L.ph += dt;
+  for (const L of GL.lamps) { if (!L.kind) continue; L.ph += dt;
     if (L.kind === 1) { const n = Math.sin(L.ph * 23) * Math.sin(L.ph * 7.3) + Math.sin(L.ph * 61) * 0.3; L.l.intensity = L.i0 * (n > 0.85 ? 0.15 : 0.88 + 0.12 * Math.sin(L.ph * 40)); }
     else { L.l.intensity = 0; if (Math.random() < dt * 0.25) { L.l.intensity = L.i0 * 1.4; try { chunks('spark', new THREE.Vector3(L.x, L.y, L.z), 6, 3, 0.5); } catch (e) {} } } }
 }
