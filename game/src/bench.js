@@ -1,9 +1,10 @@
 /* ================================================================== benchmark: a scripted heavy fight that measures this machine */
 // Runs on its own (no input needed): 12+ soldiers, constant fire, ragdolls, explosions, a slow 360° pan.
 // Dynamic resolution is held off during the run so the numbers reflect the chosen settings.
-const BENCH_WARM = 2, BENCH_DUR = 20;
+const BENCH_WARM = 2; let BENCH_DUR = 20;
+const BENCHX = { map: null };   // the 3-map tour sets the map and length (gfxperf.js)
 function startBench() {
-  initAudio(); clearMenuSoldiers(); clearMatch(); loadMap(DEFAULT_MAP); resetGame();
+  initAudio(); clearMenuSoldiers(); clearMatch(); loadMap(BENCHX.map || DEFAULT_MAP); resetGame();
   G.bench = { t: 0, skipped: 0, dts: [], calls: 0, tris: 0, maxCalls: 0, n: 0, killT: 3, boomT: 7, dynRes: S.dynRes };
   S.dynRes = false; applyPR();
   G.state = 'playing'; showScreen(null); mouseDown = true;
