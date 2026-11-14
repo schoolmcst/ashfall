@@ -1,11 +1,8 @@
 {
- "version": "1.2.114",
+ "version": "1.2.115",
  "notes": [
-  "GRAPHICS: UPSCALER (Settings > Video): OFF / QUALITY / BALANCED / PERFORMANCE - draws the world smaller and sharpens it back up for more FPS, the HUD stays sharp",
-  "GRAPHICS: BOUNCE LIGHT - light bounces off nearby walls and floors (on in ULTRA)",
-  "GRAPHICS: RAY-TRACED SHADOWS - real rays traced against the map for far shadows and sky occlusion (ULTRA+)",
-  "PHOTO MODE: RAY TRACE button - traces many rays a pixel for soft shadows and bounce light, then save the picture"
+  "FIX: ray-traced shadows and bounce light no longer go grainy while you look around"
  ],
- "sha256": "a11b5f2b5c67d85b33dc905fb26589f5bbd677179909c4249c4533fe9d1e539c",
+ "sha256": "4648e8e3f18703874074bad3ee286da6ffcc9cab80f273534cac2300a0667c72",
  "minApp": "1.0.0"
 }

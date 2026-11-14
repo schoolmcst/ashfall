@@ -152,6 +152,10 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.115 TEST: owner: "when I look around the textures bug, when I stop it fixes". gfxrt.js RT buffer now reprojects its history
+  (prevVP; turning keeps the average, n capped at 5 instead of reset to 0, 2 rays a pixel while moving); bounce light uses a fixed
+  noise seed (no crawl). Test _rtmove.js (frame-to-frame change while turning, RT on vs off). Cause not confirmed: asked the owner
+  for the preset and which setting stops it.
 - 1.2.114 TEST (owner asked for NVIDIA ray tracing + DLSS: impossible from WebGL, so shader stand-ins; owner said "do all"): gfxrt.js
   (loaded after gfxchar). UPSCALER S.upscale off/quality .77/balanced .67/performance .5: a postTargets wrapper shrinks POST.dw/dh;
   the final pass (gpFin, `#ifdef UPSCALE` via GP.moreFin) samples Catmull-Rom + CAS sharpening instead of FXAA; gfxpost's

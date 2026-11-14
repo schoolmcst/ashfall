@@ -83,13 +83,16 @@ function grMats() {
   const blur3 = mk('uniform sampler2D src; uniform sampler2D dep; uniform vec2 dir; varying vec2 vUv; void main(){ float z0 = texture2D(dep, vUv).r; vec3 s = vec3(0.0); float w = 0.0; for (int i = -4; i <= 4; i++) { vec2 uv = vUv + dir * float(i); float z = texture2D(dep, uv).r; float k = 1.0 / (1.0 + abs(z - z0) * 4.0 / max(z0, 0.5)); s += texture2D(src, uv).rgb * k; w += k; } gl_FragColor = vec4(s / w, 1.0); }',
     { src: { value: null }, dep: { value: null }, dir: { value: new THREE.Vector2() } });
   // 3 + 4: trace rays against the boxes; r = sun visibility, g = sky visibility (averaged over frames in acc)
-  const rt = mk(GP_LIB + '\n' + GR_TRACE + '\nuniform mat4 camW; uniform mat3 camRot; uniform vec3 sunDir; uniform float seed; uniform float spp; uniform float soft; uniform sampler2D prev; uniform float blend;\n' +
-    'void main(){ vec3 p = vpos(vUv); float z = -p.z; vec4 old = texture2D(prev, vUv); if (z > 400.0) { gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0); return; } vec3 n = vnorm(vUv, p); vec3 w = (camW * vec4(p, 1.0)).xyz, nw = normalize(camRot * n); vec3 o = w + nw * 0.06;\n' +
+  const rt = mk(GP_LIB + '\n' + GR_TRACE + '\nuniform mat4 camW; uniform mat3 camRot; uniform vec3 sunDir; uniform float seed; uniform float spp; uniform float soft; uniform sampler2D prev; uniform float blend; uniform mat4 prevVP;\n' +
+    'void main(){ vec3 p = vpos(vUv); float z = -p.z; vec4 old = vec4(1.0); if (z > 400.0) { gl_FragColor = vec4(1.0, 1.0, 0.0, 1.0); return; } vec3 n = vnorm(vUv, p); vec3 w = (camW * vec4(p, 1.0)).xyz, nw = normalize(camRot * n); vec3 o = w + nw * 0.06;\n' +
     '  float sun = 0.0, sky = 0.0; for (int s = 0; s < 8; s++) { if (float(s) >= spp) break; float h1 = hash(vUv * 517.0 + seed + float(s) * 7.13), h2 = hash(vUv * 331.0 + seed * 1.7 + float(s) * 3.71);\n' +
     '    vec3 sd = normalize(sunDir + (vec3(h1, h2, hash(vUv + seed + float(s))) - 0.5) * soft); sun += dot(nw, sd) > 0.0 ? traceBoxes(o, sd, 150.0) : 0.0;\n' +
     '    vec3 t1 = normalize(abs(nw.y) < 0.9 ? cross(nw, vec3(0.0, 1.0, 0.0)) : cross(nw, vec3(1.0, 0.0, 0.0))), t2 = cross(nw, t1); float ph = h1 * 6.2832, ct = sqrt(1.0 - h2), st = sqrt(h2); vec3 hd = normalize(t1 * cos(ph) * st + t2 * sin(ph) * st + nw * ct); sky += traceBoxes(o, hd, 6.0); }\n' +
-    '  vec4 nw4 = vec4(sun / spp, sky / spp, 0.0, 1.0); gl_FragColor = mix(old, nw4, blend); }',
-    Object.assign(U(), { boxT: { value: null }, listT: { value: null }, cellT: { value: null }, grid: { value: new THREE.Vector4() }, gsz: { value: new THREE.Vector2() }, boxW: { value: 1 }, listW: { value: 1 }, maxY: { value: 20 }, camW: { value: new THREE.Matrix4() }, camRot: { value: new THREE.Matrix3() }, sunDir: { value: new THREE.Vector3() }, seed: { value: 0 }, spp: { value: 1 }, soft: { value: 0.04 }, prev: { value: null }, blend: { value: 1 } }));
+    '  vec4 nw4 = vec4(sun / spp, sky / spp, 0.0, 1.0);\n' +
+    // reprojection: find where this spot was on screen last frame and keep its average (turning no longer restarts it)
+    '  vec4 pp = prevVP * vec4(w, 1.0); vec2 puv = pp.xy / pp.w * 0.5 + 0.5; float ok = (pp.w > 0.0 && puv.x > 0.002 && puv.y > 0.002 && puv.x < 0.998 && puv.y < 0.998) ? 1.0 : 0.0;\n' +
+    '  old = texture2D(prev, puv); gl_FragColor = ok > 0.5 ? mix(old, nw4, blend) : nw4; }',
+    Object.assign(U(), { boxT: { value: null }, listT: { value: null }, cellT: { value: null }, grid: { value: new THREE.Vector4() }, gsz: { value: new THREE.Vector2() }, boxW: { value: 1 }, listW: { value: 1 }, maxY: { value: 20 }, camW: { value: new THREE.Matrix4() }, camRot: { value: new THREE.Matrix3() }, sunDir: { value: new THREE.Vector3() }, seed: { value: 0 }, spp: { value: 1 }, soft: { value: 0.04 }, prev: { value: null }, blend: { value: 1 }, prevVP: { value: new THREE.Matrix4() } }));
   return (GR.mats = { gi, blur3, rt });
 }
 function grTargets() {
@@ -100,14 +103,14 @@ function grTargets() {
 }
 GP.morePasses = (f, X) => {
   const want = S.ssgi || S.rtShadows || GR.photo; if (!want) return; grTargets(); const R = grMats(), cam = X.cam;
-  if (S.ssgi || GR.photo) { const g = R.gi.uniforms; X.lib(R.gi); g.src.value = POST.rt.texture; g.sc.value.set(X.sx, X.sy); g.seed.value = (GR.frame++ % 64) * 0.37; postPass(R.gi, GR.gi);
+  if (S.ssgi || GR.photo) { const g = R.gi.uniforms; X.lib(R.gi); g.src.value = POST.rt.texture; g.sc.value.set(X.sx, X.sy); g.seed.value = 0; GR.frame++; postPass(R.gi, GR.gi);
     const b = R.blur3.uniforms; b.dep.value = GP.lin.texture; b.src.value = GR.gi.texture; b.dir.value.set(1.5 / GR.gi.width, 0); postPass(R.blur3, GR.gi2); b.src.value = GR.gi2.texture; b.dir.value.set(0, 1.5 / GR.gi.height); postPass(R.blur3, GR.gi); f.giT.value = GR.gi.texture; f.giK.value = GR.photo ? 1.1 : 0.9; }
   if (S.rtShadows || GR.photo) { if (GR.dirty || !GR.grid) grBuild(); const G2 = GR.grid, r = R.rt.uniforms; X.lib(R.rt);
     // still camera -> keep averaging; moving -> take mostly the new frame
-    const moved = !GR.lastCam.equals(cam.matrixWorld); GR.lastCam.copy(cam.matrixWorld); if (moved) { GR.n = 0; } GR.n = Math.min(GR.photo ? 1024 : 16, GR.n + 1);
+    const moved = !GR.lastCam.equals(cam.matrixWorld); GR.lastCam.copy(cam.matrixWorld); if (moved) GR.n = GR.photo ? 0 : Math.min(GR.n, 5); GR.n = Math.min(GR.photo ? 1024 : 16, GR.n + 1); if (!GR.prevVP) { GR.prevVP = new THREE.Matrix4(); GR.n = 1; }
     Object.assign(r.boxT, { value: G2.box }); r.listT.value = G2.list; r.cellT.value = G2.cell; r.grid.value.set(G2.x0, G2.z0, G2.cs, 0); r.gsz.value.set(G2.gw, G2.gh); r.boxW.value = G2.bw; r.listW.value = G2.lw; r.maxY.value = G2.maxY;
-    r.camW.value.copy(cam.matrixWorld); r.camRot.value.setFromMatrix4(cam.matrixWorld); r.sunDir.value.copy(SUN_POS).normalize(); r.seed.value = Math.random() * 100; r.spp.value = GR.photo ? 4 : 1; r.soft.value = GR.photo ? 0.06 : 0.035;
-    r.prev.value = GR.accA.texture; r.blend.value = 1 / GR.n; postPass(R.rt, GR.accB); const t = GR.accA; GR.accA = GR.accB; GR.accB = t;
+    r.camW.value.copy(cam.matrixWorld); r.camRot.value.setFromMatrix4(cam.matrixWorld); r.sunDir.value.copy(SUN_POS).normalize(); r.seed.value = Math.random() * 100; r.spp.value = GR.photo ? 4 : moved ? 2 : 1; r.soft.value = GR.photo ? 0.06 : 0.035;
+    r.prev.value = GR.accA.texture; r.blend.value = 1 / GR.n; r.prevVP.value.copy(GR.prevVP); postPass(R.rt, GR.accB); GR.prevVP.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); const t = GR.accA; GR.accA = GR.accB; GR.accB = t;
     f.rtT.value = GR.accA.texture; f.rtSun.value = GR.photo ? 1.0 : 0.55; f.rtSky.value = GR.photo ? 0.9 : 0.6; f.rtAll.value = GR.photo ? 1 : 0; f.shFar.value = S.shadowDist || 100; }
   f.casK.value = S.upscale === 'performance' ? 1 : S.upscale === 'balanced' ? 0.75 : 0.5;
 };
