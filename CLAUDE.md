@@ -152,6 +152,16 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
+- 1.2.114 TEST (owner asked for NVIDIA ray tracing + DLSS: impossible from WebGL, so shader stand-ins; owner said "do all"): gfxrt.js
+  (loaded after gfxchar). UPSCALER S.upscale off/quality .77/balanced .67/performance .5: a postTargets wrapper shrinks POST.dw/dh;
+  the final pass (gpFin, `#ifdef UPSCALE` via GP.moreFin) samples Catmull-Rom + CAS sharpening instead of FXAA; gfxpost's
+  postFrame no longer skips gpFin when only the upscaler is on. BOUNCE LIGHT S.ssgi (half-size gather from GP.lin + scene colour,
+  depth-aware blur, `#ifdef GI`). RAY-TRACED SHADOWS S.rtShadows: grBuild packs `boxes` into float DataTextures (box min/max,
+  4 m cell grid, max 24 boxes a cell; GR.dirty on loadMap / rebuildBoxGrid), GR_TRACE = xz DDA (40 cells) + slab tests; a half-size
+  pass writes r = sun visibility (past SHADOW DISTANCE) and g = sky visibility (6 m hemisphere ray), averaged while the camera is
+  still (GR.n, 16 frames; 1024 in photo). RAY TRACE button in PHOTO mode (GR.photo, #grRT, 4 rays a pixel a frame, 256 = done).
+  Hooks in gfxpost.js: GP.moreD / moreFin / moreU / morePasses. GP_PRESET: ULTRA = bounce light, ULTRA+ = all three (QUALITY
+  upscale). post.js POST_OK no longer skips post in the benchmark. Test: _rtcmp.js (SETS=new,rt,up,photo MAPS=..).
 - 1.2.113 PUBLIC (owner said send it) (owner: "60 graphics things + 60 ways to optimize" -> "do it all and show pics"). Files load at the end of
   build.sh: gfxpost, gfxlight, gfxmat, gfxatmo, gfxfx, gfxchar, optdraw, optmore, gfxperf (gfxperf last: its renderer.render /
   tick / renderFrame timing wrappers are outermost).

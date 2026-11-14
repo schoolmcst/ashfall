@@ -10,7 +10,7 @@
    Presets: LOW = OFF, MEDIUM = LOW, HIGH and ULTRA = HIGH. PERFORMANCE MODE turns it off. */
 const POST = { rt: null, ms: false, w: 0, h: 0, lv: [], quad: null, cam: null, mats: null, half: false, failed: false,
   grade: { bloom: 0.5, th: 0.78, knee: 0.2, sat: 1.1, con: 1.05, warm: 0.035, vig: 0.18 } };
-const POST_OK = () => !POST.failed && ((S.post && S.post !== 'off') || (S.cbFilter && S.cbFilter !== 'off')) && !G.bench;
+const POST_OK = () => !POST.failed && ((S.post && S.post !== 'off') || (S.cbFilter && S.cbFilter !== 'off') || (S.upscale && S.upscale !== 'off'));   // 1.2.115: the benchmark measures post effects too (it used to switch them off)
 const CBF = { off: 0, deut: 1, prot: 2, trit: 3 };
 // the grade for a map: from how dark its sky is (night maps glow more), or the map's own env.grade
 function postEnv(e) {

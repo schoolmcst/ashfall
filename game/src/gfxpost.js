@@ -15,7 +15,7 @@
    Depth effects need the picture without MSAA (FXAA smooths the edges instead). Every effect is compiled in only when
    its setting is on (shader defines), so OFF costs nothing. A card without half-float pictures skips the depth effects. */
 const GP = { lin: null, ao: null, ao2: null, sh: null, sh2: null, ssr: null, dof: null, mask: null, mb: null, w: 0, h: 0, mats: null, finKey: '', fin: null, prevVP: new THREE.Matrix4(), vp: new THREE.Matrix4(), wet: 0, nv: 0, dmg: 0, gradeMap: '', grade: null, failed: false, menuDof: 0 };
-const GP_DEPTH = () => !GP.failed && POST.half !== false && renderer.capabilities.isWebGL2 && (S.ao && S.ao !== 'off' || S.shafts || S.ssr || S.hfog || S.dof || (S.mblur && S.mblur !== 'off'));
+const GP_DEPTH = () => !GP.failed && POST.half !== false && renderer.capabilities.isWebGL2 && (S.ao && S.ao !== 'off' || S.shafts || S.ssr || S.hfog || S.dof || (S.mblur && S.mblur !== 'off') || S.ssgi || S.rtShadows || (typeof GR !== 'undefined' && GR.photo));
 /* ---------- settings, presets */
 Object.assign(QUALITY, { ultraplus: Object.assign({}, QUALITY.ultra, { scale: 100, prCap: 2 }) });
 const GP_PRESET = { low: { ao: 'off', shafts: false, ssr: false, hfog: false, dof: false, mblur: 'off', lensFx: false, chroma: false, tone: 'classic' },
@@ -151,9 +151,11 @@ function gpFin(D) {
     '  c += flashK * vec3(0.75, 0.82, 1.0) * (0.35 + 0.65 * step(far * 0.9, zz));',
     '  if (nv > 0.01) { float L2 = luma(c); vec3 g = vec3(0.12, 1.0, 0.25) * (L2 * 1.9 + 0.04) + (hsh(vUv * 734.0 + time) - 0.5) * 0.12; g *= 1.0 - smoothstep(0.18, 0.26, dot(q, q)); c = mix(c, g, nv); }',
   ].join('\n'));
+  if (GP.moreFin) body = GP.moreFin(body);
   const D2 = {}; for (const k in D) if (D[k]) D2[k] = 1;
   const u = Object.assign({}, THREE.UniformsUtils.clone(old.uniforms), { dep: { value: null }, aoT: { value: null }, shT: { value: null }, ssrT: { value: null }, dofT: { value: null }, maskT: { value: null }, shCol: { value: new THREE.Color() }, shK: { value: 0 }, fogCol: { value: new THREE.Color() }, fogDen: { value: 0 }, fogH0: { value: 0 }, fogFall: { value: 0.5 }, hazeK: { value: 0 }, camPos: { value: new THREE.Vector3() }, camRot: { value: new THREE.Matrix3() }, tanY: { value: 1 }, asp: { value: 1 }, far: { value: 500 }, time: { value: 0 }, lensK: { value: 1 }, caK: { value: 0.01 }, nv: { value: 0 }, dmg: { value: 0 }, lowhp: { value: 0 }, tint: { value: new THREE.Vector3(1, 1, 1) }, shTint: { value: new THREE.Vector3() }, gsat: { value: 1 }, adsBlur: { value: 0 }, dofK: { value: 1 }, shim: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] }, flashK: { value: 0 } });
   if (body.split('#ifdef').length < 9) console.warn('gpFin: a post.js line changed, some effects were not added');
+  if (GP.moreU) GP.moreU(u);
   GP.fin = new THREE.ShaderMaterial({ uniforms: u, vertexShader: old.vertexShader, fragmentShader: body, defines: D2, depthTest: false, depthWrite: false, toneMapped: false });
   return GP.fin;
 }
@@ -180,12 +182,13 @@ function gpUpdateState(dt) {
 }
 const _gpFrame = postFrame;
 postFrame = function (draw) {
-  const dep = GP_DEPTH(); if (!dep && !GP.fin) return _gpFrame.apply(this, arguments);
+  const dep = GP_DEPTH(); if (!dep && !GP.fin && !(S.upscale && S.upscale !== 'off')) return _gpFrame.apply(this, arguments);
   const t0 = performance.now(), dt = Math.min(0.1, (t0 - (GP.lastT || t0)) / 1000); GP.lastT = t0; gpUpdateState(dt);
   // the original pipeline, but its final pass is swapped for ours
   const Mo = postMats(), oldFin = Mo.fin, ao = S.ao && S.ao !== 'off', mbl = S.mblur && S.mblur !== 'off', photo = G.state === 'photo';
   const ads = S.dof && G.state === 'playing' && (G.ads || 0) > 0.6 && !G.scoped;
   const D = { AO: dep && ao, SHAFTS: dep && S.shafts, SSR: dep && S.ssr, FOG: dep && S.hfog, DOF: dep && S.dof && (GP.menuDof > 0.02 || photo), ADSBLUR: dep && ads, LENS: S.lensFx && S.post && S.post !== 'off', CA: S.chroma, FILMIC: S.tone === 'filmic', SHIMMER: typeof GA !== 'undefined' && GA.shim.some(h => h.w > 0) };
+  if (GP.moreD) Object.assign(D, GP.moreD(dep));
   const fin = gpFin(D); Mo.fin = fin; POST.quad.material = fin;
   if (dep) GP.capture = true;
   // the wrapped call draws the world (depth copied mid-way), the bloom chain, then our final pass (with nothing new set yet: set below and re-run the final)
@@ -219,6 +222,7 @@ postFrame = function (draw) {
   if (dep && mbl) { const m = M.mb.uniforms; m.src.value = POST.rt.texture; m.dep.value = GP.lin.texture; m.mask.value = GP.mask.texture; m.sc.value.set(sx, sy); _m4a.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); GP.vp.copy(_m4a); m.camW.value.copy(cam.matrixWorld); m.tanY.value = tanY; m.asp.value = asp; m.prevVP.value.copy(GP.hasPrev ? GP.prevVP : _m4a); GP.hasPrev = true; m.k.value = (S.mblur === 'high' ? 1.0 : 0.5) * Math.min(1, 1 / 60 / Math.max(dt, 1 / 240));
     postPass(M.mb, GP.mb); GP.prevVP.copy(_m4a); src = GP.mb.texture; f.sc.value.set(1, 1); }
   f.src.value = src;
+  try { if (GP.morePasses && dep) GP.morePasses(f, { M, cam, tanY, asp, sx, sy, lib, D, dt }); } catch (e) { reportError(e); }
   try { if (GP.onFinal) GP.onFinal(f); } catch (e) {}
   if (finalOut) postPass(fin, null);
 };
