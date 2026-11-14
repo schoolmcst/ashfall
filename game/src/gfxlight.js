@@ -53,7 +53,7 @@ function glLampTick(dt) {
 /* ---------- 8: where the neon is (from what the map batched) */
 const GL_NEON = /neon|Neon|Glow|glow|Sign|Bulb|bulb|growLamp|redLight|blueLight|greenLight|hbxLamp|lighthouseLamp|fireGlow|furnaceGlow|chemGlow|screen|Screen/;
 const _glBatch = batchAdd;
-batchAdd = function (key, geo, m) { const r = _glBatch.apply(this, arguments); try { if (GL_NEON.test(key) && m && MAT[key] && GL.spots.length < 400) { const mat = MAT[key], c = (mat.emissive && mat.emissiveIntensity > 0.3 && (mat.emissive.r + mat.emissive.g + mat.emissive.b) > 0.4) ? mat.emissive : mat.isMeshBasicMaterial ? mat.color : null; if (c) { const e = m.elements; GL.spots.push({ x: e[12], y: e[13], z: e[14], c: new THREE.Color(c) }); } } } catch (e) {} return r; };
+batchAdd = function (key, geo, m) { const r = _glBatch.apply(this, arguments); try { if (GL_NEON.test(key) && m && MAT[key] && GL.spots.length < 400) { const mat = MAT[key], c = (mat.emissive && mat.emissiveIntensity > 0.3 && (mat.emissive.r + mat.emissive.g + mat.emissive.b) > 0.4) ? mat.emissive : mat.isMeshBasicMaterial ? mat.color : null; if (c) { const e = m.elements; GL.spots.push({ x: e[12], y: e[13], z: e[14], c: new THREE.Color(c), fire: /fire|Fire|furnace/.test(key) }); } } } catch (e) {} return r; };
 function glScanNeon() { /* spots come from batchAdd while the map is built; close ones are merged */ const out = []; for (const s of GL.spots) { const o = out.find(q => Math.hypot(q.x - s.x, q.y - s.y, q.z - s.z) < 3); if (o) continue; out.push(s); } GL.spots = out; }
 /* ---------- 7 + 8: the pooled lights */
 function glPool() {

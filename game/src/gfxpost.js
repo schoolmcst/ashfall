@@ -119,10 +119,11 @@ function gpMats() {
 function gpFin(D) {
   const key = JSON.stringify(D); if (GP.fin && GP.finKey === key) return GP.fin; if (GP.fin) GP.fin.dispose(); GP.finKey = key;
   const old = postMats().fin, fs = old.fragmentShader;
-  const head = 'uniform sampler2D dep; uniform sampler2D aoT; uniform sampler2D shT; uniform sampler2D ssrT; uniform sampler2D dofT; uniform sampler2D maskT; uniform vec3 shCol; uniform float shK; uniform vec3 fogCol; uniform float fogDen; uniform float fogH0; uniform float fogFall; uniform float hazeK; uniform vec3 camPos; uniform mat3 camRot; uniform float tanY; uniform float asp; uniform float far; uniform float time; uniform float lensK; uniform float caK; uniform float nv; uniform float dmg; uniform float lowhp; uniform vec3 tint; uniform vec3 shTint; uniform float gsat; uniform float adsBlur; uniform float dofK;\n' +
+  const head = 'uniform sampler2D dep; uniform sampler2D aoT; uniform sampler2D shT; uniform sampler2D ssrT; uniform sampler2D dofT; uniform sampler2D maskT; uniform vec3 shCol; uniform float shK; uniform vec3 fogCol; uniform float fogDen; uniform float fogH0; uniform float fogFall; uniform float hazeK; uniform vec3 camPos; uniform mat3 camRot; uniform float tanY; uniform float asp; uniform float far; uniform float time; uniform float lensK; uniform float caK; uniform float nv; uniform float dmg; uniform float lowhp; uniform vec3 tint; uniform vec3 shTint; uniform float gsat; uniform float adsBlur; uniform float dofK; uniform vec4 shim[4]; uniform float flashK;\n' +
     'float hsh(vec2 p){ return fract(sin(dot(p, vec2(12.9898, 78.233))) * 43758.5453); }\n';
   let body = fs.replace('void main(){', head + 'void main(){');
   // sampling: chromatic aberration, the aiming gun blur, low-health edge blur, then the depth effects on the linear colour
+  body = body.replace('  vec2 uv = min(vUv * sc, sc - px);', '  vec2 uv = min(vUv * sc, sc - px);\n#ifdef SHIMMER\n  for (int i = 0; i < 4; i++) { vec4 h = shim[i]; if (h.w > 0.0) { vec2 d = (vUv - h.xy) * vec2(asp, 1.0); float k = h.w * (1.0 - smoothstep(0.0, h.z, length(d))) * smoothstep(-0.05, 0.1, vUv.y - h.y + h.z); uv += vec2(sin(vUv.y * 90.0 + time * 7.0), cos(vUv.x * 70.0 + time * 5.0)) * 0.0022 * k * sc; } }\n  uv = min(uv, sc - px);\n#endif');
   body = body.replace("  vec3 c = fxaa > 0.5 ? fxaaAt(uv) : texture2D(src, uv).rgb;", [
     '  vec3 c = fxaa > 0.5 ? fxaaAt(uv) : texture2D(src, uv).rgb;',
     '#ifdef CA', '  { vec2 d = (vUv - 0.5) * caK * dot(vUv - 0.5, vUv - 0.5) * 2.0; c.r = texture2D(src, min((vUv + d) * sc, sc - px)).r; c.b = texture2D(src, min((vUv - d) * sc, sc - px)).b; }', '#endif',
@@ -147,10 +148,11 @@ function gpFin(D) {
     '  c *= tint; c += shTint * (1.0 - smoothstep(0.0, 0.45, y)); c = mix(vec3(luma(c)), c, gsat);',
     '  vec2 q = vUv - 0.5; c *= 1.0 - vig * smoothstep(0.25, 0.85, dot(q, q) * 2.2);',
     '  if (dmg > 0.01) { float e = smoothstep(0.05, 0.4, dot(q, q) * 2.0) * dmg; c = mix(c, vec3(luma(c)) * vec3(1.25, 0.45, 0.4), e); }',
+    '  c += flashK * vec3(0.75, 0.82, 1.0) * (0.35 + 0.65 * step(far * 0.9, zz));',
     '  if (nv > 0.01) { float L2 = luma(c); vec3 g = vec3(0.12, 1.0, 0.25) * (L2 * 1.9 + 0.04) + (hsh(vUv * 734.0 + time) - 0.5) * 0.12; g *= 1.0 - smoothstep(0.18, 0.26, dot(q, q)); c = mix(c, g, nv); }',
   ].join('\n'));
   const D2 = {}; for (const k in D) if (D[k]) D2[k] = 1;
-  const u = Object.assign({}, THREE.UniformsUtils.clone(old.uniforms), { dep: { value: null }, aoT: { value: null }, shT: { value: null }, ssrT: { value: null }, dofT: { value: null }, maskT: { value: null }, shCol: { value: new THREE.Color() }, shK: { value: 0 }, fogCol: { value: new THREE.Color() }, fogDen: { value: 0 }, fogH0: { value: 0 }, fogFall: { value: 0.5 }, hazeK: { value: 0 }, camPos: { value: new THREE.Vector3() }, camRot: { value: new THREE.Matrix3() }, tanY: { value: 1 }, asp: { value: 1 }, far: { value: 500 }, time: { value: 0 }, lensK: { value: 1 }, caK: { value: 0.01 }, nv: { value: 0 }, dmg: { value: 0 }, lowhp: { value: 0 }, tint: { value: new THREE.Vector3(1, 1, 1) }, shTint: { value: new THREE.Vector3() }, gsat: { value: 1 }, adsBlur: { value: 0 }, dofK: { value: 1 } });
+  const u = Object.assign({}, THREE.UniformsUtils.clone(old.uniforms), { dep: { value: null }, aoT: { value: null }, shT: { value: null }, ssrT: { value: null }, dofT: { value: null }, maskT: { value: null }, shCol: { value: new THREE.Color() }, shK: { value: 0 }, fogCol: { value: new THREE.Color() }, fogDen: { value: 0 }, fogH0: { value: 0 }, fogFall: { value: 0.5 }, hazeK: { value: 0 }, camPos: { value: new THREE.Vector3() }, camRot: { value: new THREE.Matrix3() }, tanY: { value: 1 }, asp: { value: 1 }, far: { value: 500 }, time: { value: 0 }, lensK: { value: 1 }, caK: { value: 0.01 }, nv: { value: 0 }, dmg: { value: 0 }, lowhp: { value: 0 }, tint: { value: new THREE.Vector3(1, 1, 1) }, shTint: { value: new THREE.Vector3() }, gsat: { value: 1 }, adsBlur: { value: 0 }, dofK: { value: 1 }, shim: { value: [new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4(), new THREE.Vector4()] }, flashK: { value: 0 } });
   if (body.split('#ifdef').length < 9) console.warn('gpFin: a post.js line changed, some effects were not added');
   GP.fin = new THREE.ShaderMaterial({ uniforms: u, vertexShader: old.vertexShader, fragmentShader: body, defines: D2, depthTest: false, depthWrite: false, toneMapped: false });
   return GP.fin;
@@ -183,7 +185,7 @@ postFrame = function (draw) {
   // the original pipeline, but its final pass is swapped for ours
   const Mo = postMats(), oldFin = Mo.fin, ao = S.ao && S.ao !== 'off', mbl = S.mblur && S.mblur !== 'off', photo = G.state === 'photo';
   const ads = S.dof && G.state === 'playing' && (G.ads || 0) > 0.6 && !G.scoped;
-  const D = { AO: dep && ao, SHAFTS: dep && S.shafts, SSR: dep && S.ssr, FOG: dep && S.hfog, DOF: dep && S.dof && (GP.menuDof > 0.02 || photo), ADSBLUR: dep && ads, LENS: S.lensFx && S.post && S.post !== 'off', CA: S.chroma, FILMIC: S.tone === 'filmic' };
+  const D = { AO: dep && ao, SHAFTS: dep && S.shafts, SSR: dep && S.ssr, FOG: dep && S.hfog, DOF: dep && S.dof && (GP.menuDof > 0.02 || photo), ADSBLUR: dep && ads, LENS: S.lensFx && S.post && S.post !== 'off', CA: S.chroma, FILMIC: S.tone === 'filmic', SHIMMER: typeof GA !== 'undefined' && GA.shim.some(h => h.w > 0) };
   const fin = gpFin(D); Mo.fin = fin; POST.quad.material = fin;
   if (dep) GP.capture = true;
   // the wrapped call draws the world (depth copied mid-way), the bloom chain, then our final pass (with nothing new set yet: set below and re-run the final)
@@ -212,6 +214,7 @@ postFrame = function (draw) {
   if (D.FOG) { const fog = scene.fog, mp = MAPS[curMap] || {}; f.fogCol.value.copy(fog ? fog.color : new THREE.Color(0x888888)); f.fogDen.value = (mp.hfog || 0.004) * (1 + GP.wet * 1.2); f.fogH0.value = mp.hfogH !== undefined ? mp.hfogH : 0.2; f.fogFall.value = 1.2; f.hazeK.value = mp.indoor ? 0 : 0.12; }
   f.lensK.value = clamp((S.bloom == null ? 100 : S.bloom) / 100, 0, 2); f.caK.value = 0.012; f.nv.value = GP.nv; f.dmg.value = GP.dmg; f.lowhp.value = GP.lowhp;
   const g = GP.grade || gpGradeFor(curMap), on = S.post && S.post !== 'off'; f.tint.value.set(...(on ? g.tint : [1, 1, 1])); f.shTint.value.set(...(on ? g.sh : [0, 0, 0])); f.gsat.value = on ? g.sat : 1;
+  try { if (typeof GA !== 'undefined') { for (let i = 0; i < 4; i++) f.shim.value[i].copy(GA.shim[i]); f.flashK.value = GA.flash; } } catch (e) {}
   let src = POST.rt.texture;
   if (dep && mbl) { const m = M.mb.uniforms; m.src.value = POST.rt.texture; m.dep.value = GP.lin.texture; m.mask.value = GP.mask.texture; m.sc.value.set(sx, sy); _m4a.multiplyMatrices(cam.projectionMatrix, cam.matrixWorldInverse); GP.vp.copy(_m4a); m.camW.value.copy(cam.matrixWorld); m.tanY.value = tanY; m.asp.value = asp; m.prevVP.value.copy(GP.hasPrev ? GP.prevVP : _m4a); GP.hasPrev = true; m.k.value = (S.mblur === 'high' ? 1.0 : 0.5) * Math.min(1, 1 / 60 / Math.max(dt, 1 / 240));
     postPass(M.mb, GP.mb); GP.prevVP.copy(_m4a); src = GP.mb.texture; f.sc.value.set(1, 1); }
