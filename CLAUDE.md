@@ -152,7 +152,7 @@ The owner (GitHub `schoolmcst`) asks for changes in chat; you make them, test th
   shoot the friend locally, the friend follows CAMP.i and the end). Fixed: camp escort tick ran past its last waypoint.
   window.__A is built in ui.js BEFORE later files wrap functions: export lazy lambdas (ccPlayL etc.), not the functions.
   Tests: s_batch7b, s_zbay, s_editor, s_camp (MISSION=c2m1/2/3), mp_campcoop.
-- 1.2.113 TEST (owner: "60 graphics things + 60 ways to optimize" -> "do it all and show pics"). Files load at the end of
+- 1.2.113 PUBLIC (owner said send it) (owner: "60 graphics things + 60 ways to optimize" -> "do it all and show pics"). Files load at the end of
   build.sh: gfxpost, gfxlight, gfxmat, gfxatmo, gfxfx, gfxchar, optdraw, optmore, gfxperf (gfxperf last: its renderer.render /
   tick / renderFrame timing wrappers are outermost).
   gfxperf.js O1-O5: BENCHMARK TOUR (pfbTour: BENCHX.map + BENCH_DUR in bench.js, 3 maps x 12 s, SCORE = (avg*0.6 + 1%low*0.4)*100,

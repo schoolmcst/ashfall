@@ -1,10 +1,12 @@
 {
- "version": "1.2.112",
+ "version": "1.2.113",
  "notes": [
-  "HOTBOX HORDE: new map THE OLD FUN FAIR (midway booths, carousel, big wheel, funhouse, coaster) with every mission type on it",
-  "HOTBOX HORDE: new missions - ESCORT THE SEED VAN, TWO PLANTS, BUILD RACE, RETAKE THE GROW, NIGHT HARVEST (sneak past sleeping burnouts)",
-  "HOTBOX HORDE: EXPEDITIONS (3 missions in a row, win all for triple cash) and THE LONG NIGHT (endless waves, a boss every 5th)"
+  "GRAPHICS: ambient occlusion and contact shadows, light shafts, screen-space reflections, height fog and haze, depth of field, motion blur (off by default), lens glare, filmic look, a colour grade for each map, night vision through scopes at night, damage and low-health screen effects",
+  "GRAPHICS: a night sky with stars and a moon, flickering lamps at night, neon that lights the ground, darker rooms with eyes that adjust, wet surfaces and puddles in the rain, snow that settles, deeper brick and stone, close-up detail, gun wear and fight grime, glass, grime and moss on walls",
+  "GRAPHICS: rain splashes and drops on the lens, lightning, thicker smoke, dust indoors, cloth in the wind, blowing paper, heat shimmer, more impact effects, explosion shockwaves, footprints in snow and sand, glowing tracers, soldier shading and rim light, blinking eyes, live scope glass, rotting zombie skin",
+  "NEW PRESETS: ULTRA+ (everything on) and LOW+ (lightest, for very weak PCs); new VIDEO settings for each effect; BENCHMARK TOUR (3 maps with a score); the frame graph shows where each frame's time goes",
+  "SPEED: particles, repeated decorations and big HORDE bases draw in far fewer calls, far soldiers and off-screen characters cost less, shadows update every 2nd frame below ULTRA, maps with many lamps use 6 real lights, shaders compile while a map loads, AUTO lowers the preset if your first minute is slow"
  ],
- "sha256": "4bf70d7581a21fd05426341e51cd8f54dbb81602581683a3b3ea4b8865b53592",
+ "sha256": "95c5486131f2825ad47dbf5a52ce136450bda8956c1c523c28aeadc55ce0b11a",
  "minApp": "1.0.0"
 }
