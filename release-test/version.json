@@ -1,12 +1,11 @@
 {
- "version": "1.2.113",
+ "version": "1.2.114",
  "notes": [
-  "GRAPHICS: ambient occlusion and contact shadows, light shafts, screen-space reflections, height fog and haze, depth of field, motion blur (off by default), lens glare, filmic look, a colour grade for each map, night vision through scopes at night, damage and low-health screen effects",
-  "GRAPHICS: a night sky with stars and a moon, flickering lamps at night, neon that lights the ground, darker rooms with eyes that adjust, wet surfaces and puddles in the rain, snow that settles, deeper brick and stone, close-up detail, gun wear and fight grime, glass, grime and moss on walls",
-  "GRAPHICS: rain splashes and drops on the lens, lightning, thicker smoke, dust indoors, cloth in the wind, blowing paper, heat shimmer, more impact effects, explosion shockwaves, footprints in snow and sand, glowing tracers, soldier shading and rim light, blinking eyes, live scope glass, rotting zombie skin",
-  "NEW PRESETS: ULTRA+ (everything on) and LOW+ (lightest, for very weak PCs); new VIDEO settings for each effect; BENCHMARK TOUR (3 maps with a score); the frame graph shows where each frame's time goes",
-  "SPEED: particles, repeated decorations and big HORDE bases draw in far fewer calls, far soldiers and off-screen characters cost less, shadows update every 2nd frame below ULTRA, maps with many lamps use 6 real lights, shaders compile while a map loads, AUTO lowers the preset if your first minute is slow"
+  "GRAPHICS: UPSCALER (Settings > Video): OFF / QUALITY / BALANCED / PERFORMANCE - draws the world smaller and sharpens it back up for more FPS, the HUD stays sharp",
+  "GRAPHICS: BOUNCE LIGHT - light bounces off nearby walls and floors (on in ULTRA)",
+  "GRAPHICS: RAY-TRACED SHADOWS - real rays traced against the map for far shadows and sky occlusion (ULTRA+)",
+  "PHOTO MODE: RAY TRACE button - traces many rays a pixel for soft shadows and bounce light, then save the picture"
  ],
- "sha256": "95c5486131f2825ad47dbf5a52ce136450bda8956c1c523c28aeadc55ce0b11a",
+ "sha256": "a11b5f2b5c67d85b33dc905fb26589f5bbd677179909c4249c4533fe9d1e539c",
  "minApp": "1.0.0"
 }

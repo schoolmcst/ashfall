@@ -42,7 +42,7 @@ GP.moreFin = body => {
   body = body.replace('  vec3 c = fxaa > 0.5 ? fxaaAt(uv) : texture2D(src, uv).rgb;', '#ifdef UPSCALE\n  vec3 c = cas(uv, fxaa > 0.5 ? mix(cr(uv), fxaaAt(uv), 0.6) : cr(uv));\n#else\n  vec3 c = fxaa > 0.5 ? fxaaAt(uv) : texture2D(src, uv).rgb;\n#endif');
   body = body.replace("  float zz = texture2D(dep, vUv).r;", [
     '  float zz = texture2D(dep, vUv).r;',
-    '#ifdef RT', '  if (zz < 400.0) { vec4 rt = texture2D(rtT, vUv); l *= mix(1.0, rt.g, rtSky); l *= mix(1.0, mix(0.45, 1.0, rt.r), rtSun * max(rtAll, smoothstep(shFar * 0.8, shFar, zz))); }', '#endif',
+    '#ifdef RT', '  if (zz < 400.0) { vec2 bq = px * 2.5; vec4 rt = (texture2D(rtT, vUv) * 2.0 + texture2D(rtT, vUv + vec2(bq.x, bq.y)) + texture2D(rtT, vUv - vec2(bq.x, bq.y)) + texture2D(rtT, vUv + vec2(bq.x, -bq.y)) + texture2D(rtT, vUv - vec2(bq.x, -bq.y)) + texture2D(rtT, vUv + vec2(bq.x * 2.0, 0.0)) + texture2D(rtT, vUv - vec2(bq.x * 2.0, 0.0))) / 8.0; l *= mix(1.0, rt.g, rtSky); l *= mix(1.0, mix(0.45, 1.0, rt.r), rtSun * max(rtAll, smoothstep(shFar * 0.8, shFar, zz))); }', '#endif',
     '#ifdef GI', '  if (zz < 120.0) { vec3 g = texture2D(giT, vUv).rgb; l += g * giK * clamp(l * 1.6 + 0.12, 0.0, 1.0) * (1.0 - smoothstep(80.0, 120.0, zz)); }', '#endif'].join('\n'));
   return body;
 };

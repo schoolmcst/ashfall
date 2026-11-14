@@ -11,7 +11,7 @@ module.exports = async p => {
     const r = await p.evaluate(([id, sets, CFG]) => { const A = window.__A; try { A.loadMapL(id); for (let i = 0; i < 3; i++) A.tickL(0.016); } catch (e) { return { err: String(e) }; }
       const vs = (A.MAPS[id].views || []).slice(), pick = [vs[0], vs[Math.min(vs.length - 1, 2)]], shots = [], errs = [], ms = {}; const GR = A.GR_GET();
       A.renderer.setSize(960, 540, false); A.camera.aspect = 16 / 9; A.camera.updateProjectionMatrix();
-      for (const v of pick) for (const k of sets) { A.S.renderScale = 100; Object.assign(A.S, CFG[k]); GR.photo = k === 'photo'; A.camera.position.set(v[0], v[1] + 0.3, v[2]); A.camera.lookAt(v[3], v[4], v[5]); A.camera.updateMatrixWorld();
+      for (const v of pick) for (const k of sets) { A.S.renderScale = 100; Object.assign(A.S, CFG[k]); GR.photo = k === 'photo'; const gy = A.TERR_GET() && A.TERR_GET().on !== false && A.TH ? Math.max(0, A.TH(v[0], v[2]) || 0) : 0, gy2 = gy ? Math.max(0, A.TH(v[3], v[5]) || 0) : 0; A.camera.position.set(v[0], v[1] + 0.3 + gy, v[2]); A.camera.lookAt(v[3], v[4] + gy2, v[5]); A.camera.updateMatrixWorld();
         const n = k === 'photo' ? 64 : 4; try { const t = performance.now(); for (let i = 0; i < n; i++) A.renderFrame(); ms[k] = ((ms[k] || 0) + (performance.now() - t) / n / pick.length); } catch (e) { errs.push(String(e)); } shots.push([k, A.renderer.domElement.toDataURL('image/jpeg', 0.9)]); }
       GR.photo = false; const gl = A.renderer.getContext(), e = gl.getError();
       return { shots, errs, failed: A.POST.failed, gp: A.GP_GET().failed, glErr: e, boxes: GR.grid && GR.grid.n, ms: Object.fromEntries(Object.entries(ms).map(([k, v]) => [k, Math.round(v)])) };
